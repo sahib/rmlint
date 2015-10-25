@@ -1,0 +1,88 @@
+#ShredderProgress {
+    border-width: 0;
+    border-radius: 0;
+    -GtkProgressBar-min-horizontal-bar-height: 10px;
+    -GtkProgressBar-xpadding: 0;
+    -GtkProgressBar-ypadding: 0;
+    /*
+    background: linear-gradient(alpha(black, 0.1), transparent);
+    background: linear-gradient(transparent, alpha(black, 0.1));
+    */
+}
+
+/* This will look pretty much like a normal label.
+ * Just include a fix for doing the blending right.
+ */
+#ShredderIndicatiorLabelEmpty {
+    border-color: alpha(white, 0);
+
+    /* Keep the padding of the colored version.
+     * That way the size won't change, possibly leading to jumpy layout.
+     */
+    padding: 1px 6px;
+    border-width: 2px;
+}
+
+/* That's probably a dumb way to find the colors.
+ * We inherit the theme colors and try to modify them
+ * so they fit our needs. A hue-changing functions would be nice.
+ *
+ * See here for reference on the used theme colors:
+ * https://gitorious.org/gtk-theme/adwaita-clean-dark/source/master:gtk-3.0/gtk.css
+ */
+
+@define-color indicator_label_error   
+    alpha(mix(@error_color, @theme_selected_fg_color, 0.3), 0.9);
+@define-color indicator_label_success 
+    alpha(mix(shade(@success_color, 0.85), @theme_selected_fg_color, 0.3), 0.9);
+@define-color indicator_label_warning  
+    alpha(mix(@warning_color, @theme_selected_fg_color, 0.3), 0.9);
+@define-color indicator_label_theme 
+    mix(@theme_selected_bg_color, @theme_selected_fg_color, 0.3);
+
+#ShredderIndicatorLabelError {
+    background-color: @indicator_label_error;
+    border-color: alpha(mix(@indicator_label_error, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+#ShredderIndicatorLabelSuccess {
+    background-color: @indicator_label_success;
+    border-color: alpha(mix(@indicator_label_success, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+#ShredderIndicatorLabelWarning {
+    background-color: @indicator_label_warning;
+    border-color: alpha(mix(@indicator_label_warning, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+#ShredderIndicatorLabelTheme {
+    background-color: @indicator_label_theme;
+    border-color: alpha(mix(@indicator_label_theme, @theme_selected_fg_color, 0.66), 0.5);
+}
+
+/* Color of the background grid (should be a slight gray) */
+@define-color script_editor rgb(220, 220, 220);
+
+#ShredderScriptEditor {
+    font: monospaced 9;
+}
+
+#ShredderLocationEntry {
+    padding: 0px;
+    transition-property: background-color, background-image;
+    transition: 200ms ease-in-out;
+}
+
+#ShredderLocationEntry.original {
+    /* Draw a grid, like on mm paper */
+    background-size: 20px 20px, 20px 20px, 5px 5px, 5px 5px;
+    background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+    background-image: linear-gradient(alpha(@theme_fg_color, 0.066) 1px, transparent 1px),
+                      linear-gradient(90deg, alpha(@theme_fg_color, 0.066) 1px, transparent 1px),
+                      linear-gradient(alpha(@theme_fg_color, 0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, alpha(@theme_fg_color, 0.02) 1px, transparent 1px);
+}
+
+#ShredderLocationEntry.selected {
+    background-color: alpha(@theme_selected_bg_color, 0.4);
+}

@@ -31,15 +31,16 @@ typedef struct RmFmtHandlerNull { RmFmtHandler parent; } RmFmtHandlerNull;
 
 static RmFmtHandlerNull NULL_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(NULL_HANDLER_IMPL),
-        .name = "null",
-        .head = NULL,
-        .elem = NULL,
-        .prog = NULL,
-        .foot = NULL,
-        .valid_keys = {NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(NULL_HANDLER_IMPL),
+            .name = "null",
+            .head = NULL,
+            .elem = NULL,
+            .prog = NULL,
+            .foot = NULL,
+            .valid_keys = {NULL},
+        },
 };
 
 RmFmtHandler *NULL_HANDLER = (RmFmtHandler *)&NULL_HANDLER_IMPL;

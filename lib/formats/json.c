@@ -26,6 +26,7 @@
 #include "../formats.h"
 #include "../utilities.h"
 #include "../preprocess.h"
+#include "../checksums/spooky-c.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -37,7 +38,33 @@ typedef struct RmFmtHandlerJSON {
 
     /* More human readable output? */
     bool pretty;
+
+    /* set of already existing ids */
+    GHashTable *id_set;
 } RmFmtHandlerJSON;
+
+//////////////////////////////////////////
+//          FILE ID GENERATOR           //
+//////////////////////////////////////////
+
+static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
+                                       const char *file_path, char *cksum) {
+    guint32 hash = 0;
+    hash = file->inode ^ file->dev;
+    hash ^= file->file_size;
+
+    for(int i = 0; i < 8192; ++i) {
+        hash ^= spooky_hash32(file_path, strlen(file_path), i);
+        hash ^= spooky_hash32(cksum, strlen(cksum), i);
+
+        if(!g_hash_table_contains(self->id_set, GUINT_TO_POINTER(hash))) {
+            break;
+        }
+    }
+
+    g_hash_table_add(self->id_set, GUINT_TO_POINTER(hash));
+    return hash;
+}
 
 //////////////////////////////////////////
 //  POOR MAN'S JSON FORMATTING TOOLBOX  //
@@ -143,6 +170,8 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
     fprintf(out, "[\n");
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
+    self->id_set = g_hash_table_new(NULL, NULL);
+
     if(rm_fmt_get_config_value(session->formats, "json", "oneline")) {
         self->pretty = false;
     }
@@ -155,6 +184,10 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
             rm_fmt_json_key(out, "cwd", session->cfg->iwd);
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "args", session->cfg->joined_argv);
+            rm_fmt_json_sep(self, out);
+            rm_fmt_json_key(out, "version", RM_VERSION);
+            rm_fmt_json_sep(self, out);
+            rm_fmt_json_key(out, "rev", RM_VERSION_GIT_REVISION);
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "progress", 0); /* Header is always first. */
             rm_fmt_json_sep(self, out);
@@ -171,7 +204,7 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
     }
 }
 
-static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
     if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
@@ -203,21 +236,33 @@ static void rm_fmt_foot(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     }
 
     fprintf(out, "]\n");
+    g_hash_table_unref(self->id_set);
 }
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
-                        RmFile *file) {
-    char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
-    memset(checksum_str, '0', sizeof(checksum_str));
-    checksum_str[sizeof(checksum_str) - 1] = 0;
+static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
+    memset(checksum_str, '0', size);
+    checksum_str[size - 1] = 0;
     rm_digest_hexstring(file->digest, checksum_str);
+}
+
+static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
+                        RmFile *file) {
+    if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
+        return;
+    }
+    char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
+    rm_fmt_json_cksum(file, checksum_str, sizeof(checksum_str));
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
     /* Make it look like a json element */
     rm_fmt_json_open(self, out);
     {
-        rm_fmt_json_key_int(out, "id", GPOINTER_TO_UINT(file));
+        RM_DEFINE_PATH(file);
+
+        rm_fmt_json_key_int(out, "id",
+                            rm_fmt_json_generate_id(self, file, file_path, checksum_str));
+
         rm_fmt_json_sep(self, out);
         rm_fmt_json_key(out, "type", rm_file_lint_type_to_string(file->lint_type));
         rm_fmt_json_sep(self, out);
@@ -234,11 +279,16 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
             rm_fmt_json_sep(self, out);
         }
 
-        RM_DEFINE_PATH(file);
         rm_fmt_json_key_unsafe(out, "path", file_path);
         rm_fmt_json_sep(self, out);
         if(file->lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {
             rm_fmt_json_key_int(out, "size", file->file_size);
+            rm_fmt_json_sep(self, out);
+            if(file->twin_count >= 0) {
+                rm_fmt_json_key_int(out, "twins", file->twin_count);
+                rm_fmt_json_sep(self, out);
+            }
+            rm_fmt_json_key_int(out, "depth", file->depth);
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "inode", file->inode);
             rm_fmt_json_sep(self, out);
@@ -251,8 +301,16 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
                 RmFile *hardlink_head = file->hardlinks.hardlink_head;
 
                 if(hardlink_head && hardlink_head != file) {
-                    rm_fmt_json_key_int(out, "hardlink_of",
-                                        GPOINTER_TO_UINT(hardlink_head));
+                    char orig_checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
+                    rm_fmt_json_cksum(hardlink_head, orig_checksum_str,
+                                      sizeof(orig_checksum_str));
+
+                    RM_DEFINE_PATH(hardlink_head);
+
+                    guint32 orig_id = rm_fmt_json_generate_id(
+                        self, hardlink_head, hardlink_head_path, orig_checksum_str);
+
+                    rm_fmt_json_key_int(out, "hardlink_of", orig_id);
                     rm_fmt_json_sep(self, out);
                 }
             }
@@ -264,15 +322,16 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
 
 static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(JSON_HANDLER_IMPL),
-        .name = "json",
-        .head = rm_fmt_head,
-        .elem = rm_fmt_elem,
-        .prog = NULL,
-        .foot = rm_fmt_foot,
-        .valid_keys = {"no_header", "no_footer", "oneline", NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(JSON_HANDLER_IMPL),
+            .name = "json",
+            .head = rm_fmt_head,
+            .elem = rm_fmt_elem,
+            .prog = NULL,
+            .foot = rm_fmt_foot,
+            .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
+        },
     .pretty = true};
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;

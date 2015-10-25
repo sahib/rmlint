@@ -38,14 +38,26 @@
 #include "treemerge.h"
 
 typedef struct RmFileTables {
-    GHashTable *dev_table;
-    GHashTable *size_groups;
+    /* List of all files found during traversal */
+    GQueue *all_files;
+
+    /* GSList of GList's, one for each file size */
+    GSList *size_groups;
+
+    /* Used for finding inode matches */
     GHashTable *node_table;
-    GHashTable *mtime_filter;
-    GHashTable *basename_filter;
-    GQueue *file_queue;
+
+    /* Used for finding path doubles */
+    GHashTable *unique_paths_table;
+
+    // GHashTable *mtime_filter;
+    // GHashTable *basename_filter;
+    // GQueue *file_queue;
+    /*array of lists, one for each "other lint" type */
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
-    GRecMutex lock;
+
+    /* lock for access to *list during traversal */
+    GMutex lock;
 } RmFileTables;
 
 struct RmFmtTable;
@@ -65,6 +77,12 @@ typedef struct RmSession {
     /* Treemerging for -D */
     struct RmTreeMerger *dir_merger;
 
+    /* Shredder session */
+    struct RmShredTag *shredder;
+
+    /* Disk Scheduler */
+    struct _RmMDS *mds;
+
     /* Support for swapping path memory to disk */
     RmSwapTable *meta_cache;
     int meta_cache_path_id;
@@ -78,6 +96,7 @@ typedef struct RmSession {
     RmOff total_filtered_files;
     RmOff total_lint_size;
     RmOff shred_bytes_remaining;
+    RmOff shred_bytes_total;
     RmOff shred_files_remaining;
     RmOff shred_bytes_after_preprocess;
     RmOff dup_counter;
@@ -109,7 +128,7 @@ typedef struct RmSession {
     int paranoia_count;
 
     /* count for -o and -O; initialized to -1 */
-    char output_cnt[2];
+    int output_cnt[2];
 
     /* true if a cmdline parse error happened */
     bool cmdline_parse_error;
@@ -119,6 +138,12 @@ typedef struct RmSession {
 
     /* true once traverse finished running */
     bool traverse_finished;
+
+    /* List of path to json files that should be re-outputted. */
+    GQueue replay_files;
+
+    /* Version of the linux kernel (0 on other operating systems) */
+    int kernel_version[2];
 } RmSession;
 
 /**
@@ -147,6 +172,17 @@ void rm_session_abort(RmSession *session);
  * Threadsafe.
  */
 bool rm_session_was_aborted(RmSession *session);
+
+/**
+ * @brief Check the kernel version of the Linux kernel.
+ *
+ * @param session Session to ask. Version is cached in the session.
+ * @param major The major version it should have at least.
+ * @param minor The minor version it should have at least.
+ *
+ * @return True if the kernel is recent enough.
+ */
+bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option

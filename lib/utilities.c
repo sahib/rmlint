@@ -37,7 +37,6 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include <fts.h>
 #include <libgen.h>
 
 #include "config.h"
@@ -136,6 +135,20 @@ bool rm_util_path_is_hidden(const char *path) {
     return false;
 }
 
+int rm_util_path_depth(const char *path) {
+    int depth = 0;
+
+    while(path) {
+        /* Skip trailing slashes */
+        if(*path == G_DIR_SEPARATOR && path[1] != 0) {
+            depth++;
+        }
+        path = strchr(&path[1], G_DIR_SEPARATOR);
+    }
+
+    return depth;
+}
+
 GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key,
                                  RmNewFunc default_func) {
     gpointer value = g_hash_table_lookup(table, key);
@@ -158,6 +171,39 @@ ino_t rm_util_parent_node(const char *path) {
         g_free(parent_path);
         return -1;
     }
+}
+
+void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src) {
+    g_return_if_fail(dest);
+    g_return_if_fail(src);
+
+    if(src->length == 0) {
+        return;
+    }
+
+    src->head->prev = dest->tail;
+    if(dest->tail) {
+        dest->tail->next = src->head;
+    } else {
+        dest->head = src->head;
+    }
+    dest->tail = src->tail;
+    dest->length += src->length;
+    src->length = 0;
+    src->head = src->tail = NULL;
+}
+
+gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data) {
+    gint removed = 0;
+
+    for(GList *iter = queue->head, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if(func(iter->data, user_data)) {
+            g_queue_delete_link(queue, iter);
+            ++removed;
+        }
+    }
+    return removed;
 }
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
@@ -211,6 +257,7 @@ bool rm_util_is_nonstripped(_U const char *path, _U RmStat *statp) {
     /* Protect program from using an older library */
     if(elf_version(EV_CURRENT) == EV_NONE) {
         rm_log_error_line(_("ELF Library is out of date!"));
+        rm_sys_close(fd);
         return false;
     }
 
@@ -287,7 +334,6 @@ RmUserList *rm_userlist_new(void) {
     RmUserList *self = g_malloc0(sizeof(RmUserList));
     self->users = g_sequence_new(NULL);
     self->groups = g_sequence_new(NULL);
-    g_mutex_init(&self->mutex);
 
     setpwent();
     while((node = getpwent()) != NULL) {
@@ -305,19 +351,24 @@ RmUserList *rm_userlist_new(void) {
     }
 
     endgrent();
+    g_mutex_init(&self->lock);
     return self;
 }
 
 bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
                           bool *valid_uid, bool *valid_gid) {
-    g_assert(self);
+    rm_assert_gentle(self);
+    bool gid_found = FALSE;
+    bool uid_found = FALSE;
 
-    g_mutex_lock(&self->mutex);
-    bool gid_found =
-        g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid), rm_userlist_cmp_ids, NULL);
-    bool uid_found =
-        g_sequence_lookup(self->users, GUINT_TO_POINTER(uid), rm_userlist_cmp_ids, NULL);
-    g_mutex_unlock(&self->mutex);
+    g_mutex_lock(&self->lock);
+    {
+        gid_found = g_sequence_lookup(self->groups, GUINT_TO_POINTER(gid),
+                                      rm_userlist_cmp_ids, NULL);
+        uid_found = g_sequence_lookup(self->users, GUINT_TO_POINTER(uid),
+                                      rm_userlist_cmp_ids, NULL);
+    }
+    g_mutex_unlock(&self->lock);
 
     if(valid_uid != NULL) {
         *valid_uid = uid_found;
@@ -331,11 +382,11 @@ bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
 }
 
 void rm_userlist_destroy(RmUserList *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     g_sequence_free(self->users);
     g_sequence_free(self->groups);
-    g_mutex_clear(&self->mutex);
+    g_mutex_clear(&self->lock);
     g_free(self);
 }
 
@@ -376,7 +427,7 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
             return;
         }
 
-        if(json_node_get_int(mtime_node) < stat_buf.st_mtim.tv_sec) {
+        if(json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(&stat_buf)) {
             /* file is newer than stored checksum */
             return;
         }
@@ -385,7 +436,7 @@ void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
         if(!rm_trie_set_value(file_trie, path, cksum_copy)) {
             g_free(cksum_copy);
         }
-        rm_log_debug("* Adding cache entry %s (%s)\n", path, cksum);
+        rm_log_debug_line("* Adding cache entry %s (%s)", path, cksum);
     }
 }
 
@@ -399,13 +450,8 @@ int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {
     rm_log_info_line(_("caching is not supported due to missing json-glib library."));
     return EXIT_FAILURE;
 #else
-    g_assert(file_trie);
-    g_assert(json_path);
-
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
+    rm_assert_gentle(file_trie);
+    rm_assert_gentle(json_path);
 
     int result = EXIT_FAILURE;
     GError *error = NULL;
@@ -503,7 +549,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
-#elif HAVE_SYSCTL
+#elif HAVE_SYSCTL && !RM_IS_APPLE
     /* try with sysctl() */
     int device_num = 0;
     char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
@@ -573,7 +619,7 @@ typedef struct RmMountEntries {
 } RmMountEntries;
 
 static void rm_mount_list_close(RmMountEntries *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     for(GList *iter = self->entries; iter; iter = iter->next) {
         RmMountEntry *entry = iter->data;
@@ -589,7 +635,7 @@ static void rm_mount_list_close(RmMountEntries *self) {
 }
 
 static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     if(self->current) {
         self->current = self->current->next;
@@ -664,6 +710,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
         for(int i = 0; reflinkfs_types[i] && !reflinkfs_found; ++i) {
             if(strcmp(reflinkfs_types[i], wrap_entry->type) == 0) {
                 reflinkfs_found = reflinkfs_types[i];
+                break;
             }
         }
 
@@ -675,32 +722,35 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                                 GUINT_TO_POINTER(1));
 
             GLogLevelFlags log_level = G_LOG_LEVEL_DEBUG;
+
             if(evilfs_found->unusual) {
                 log_level = G_LOG_LEVEL_WARNING;
                 rm_log_warning_prefix();
+            } else {
+                rm_log_debug_prefix();
             }
 
             g_log("rmlint", log_level,
-                  _("`%s` mount detected at %s (#%u); Ignoring all files in it."),
+                  _("`%s` mount detected at %s (#%u); Ignoring all files in it.\n"),
                   evilfs_found->name, wrap_entry->dir, (unsigned)dir_stat.st_dev);
         }
 
-        rm_log_debug("Filesystem %s: %s\n", wrap_entry->dir,
-                     (reflinkfs_found) ? "reflink" : "normal");
+        rm_log_debug_line("Filesystem %s: %s", wrap_entry->dir,
+                          (reflinkfs_found) ? "reflink" : "normal");
 
         if(reflinkfs_found != NULL) {
             RmStat dir_stat;
             rm_sys_stat(wrap_entry->dir, &dir_stat);
             g_hash_table_insert(table->reflinkfs_table,
                                 GUINT_TO_POINTER(dir_stat.st_dev),
-                                GUINT_TO_POINTER(1));
+                                (gpointer)reflinkfs_found);
         }
     }
 
     return self;
 }
 
-#if HAVE_SYSCTL
+#if HAVE_SYSCTL && !RM_IS_APPLE
 
 static GHashTable *DISK_TABLE = NULL;
 
@@ -736,7 +786,7 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
                                  _U size_t disk_size, _U dev_t *result) {
 #if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
-#elif HAVE_SYSCTL
+#elif HAVE_SYSCTL && !RM_IS_APPLE
     if(DISK_TABLE == NULL) {
         rm_mounts_freebsd_list_disks();
     }
@@ -755,9 +805,9 @@ int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char 
             return 0;
         }
     }
-#endif
-
+#else
     return -1;
+#endif
 }
 
 static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
@@ -827,8 +877,8 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                  * when?
                  * Treat as a non-rotational device using devname dev as whole_disk key
                  * */
-                rm_log_debug(RED "devno_to_wholedisk failed for %s\n" RESET,
-                             entry->fsname);
+                rm_log_debug_line(RED "devno_to_wholedisk failed for %s" RESET,
+                                  entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
                 strncpy(diskname, entry->fsname, sizeof(diskname));
                 is_rotational = false;
@@ -843,16 +893,16 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
             self->part_table, GUINT_TO_POINTER(stat_buf_folder.st_dev));
         if(!existing || (existing->disk == 0 && whole_disk != 0)) {
             if(existing) {
-                rm_log_debug("Replacing part_table entry %s for path %s with %s\n",
-                             existing->fsname, entry->dir, entry->fsname);
+                rm_log_debug_line("Replacing part_table entry %s for path %s with %s",
+                                  existing->fsname, entry->dir, entry->fsname);
             }
             g_hash_table_insert(self->part_table,
                                 GUINT_TO_POINTER(stat_buf_folder.st_dev),
                                 rm_part_info_new(entry->dir, entry->fsname, whole_disk));
         } else {
-            rm_log_debug("Skipping duplicate mount entry for dir %s dev %02u:%02u\n",
-                         entry->dir, major(stat_buf_folder.st_dev),
-                         minor(stat_buf_folder.st_dev));
+            rm_log_debug_line("Skipping duplicate mount entry for dir %s dev %02u:%02u",
+                              entry->dir, major(stat_buf_folder.st_dev),
+                              minor(stat_buf_folder.st_dev));
             continue;
         }
 
@@ -869,14 +919,14 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                                 rm_disk_info_new(diskname, is_rotational));
         }
 
-        rm_log_info(
-            "%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)\n",
+        rm_log_debug_line(
+            "%02u:%02u %50s -> %02u:%02u %-12s (underlying disk: %s; rotational: %3s)",
             major(stat_buf_folder.st_dev), minor(stat_buf_folder.st_dev), entry->dir,
             major(whole_disk), minor(whole_disk), entry->fsname, diskname,
             is_rotational ? "yes" : "no");
     }
 
-#if HAVE_SYSCTL
+#if HAVE_SYSCTL && !RM_IS_APPLE
     if(DISK_TABLE) {
         g_hash_table_unref(DISK_TABLE);
     }
@@ -943,18 +993,6 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path) {
-    if(self == NULL) {
-        return -1;
-    }
-
-    RmStat stat_buf;
-    if(rm_sys_stat(path, &stat_buf) == -1) {
-        return -1;
-    }
-    return rm_mounts_is_nonrotational(self, stat_buf.st_dev);
-}
-
 dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
     if(self == NULL) {
         return 0;
@@ -970,40 +1008,39 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
          * a recognisable partition */
         char *prev = g_strdup(path);
         while(TRUE) {
-                char *temp = g_strdup(prev);
-                char *parent_path = g_strdup(dirname(temp));
-                g_free(temp);
+            char *temp = g_strdup(prev);
+            char *parent_path = g_strdup(dirname(temp));
+            g_free(temp);
 
-                RmStat stat_buf;
-                if(!rm_sys_stat(parent_path, &stat_buf)) {
-                    RmPartitionInfo *parent_part = g_hash_table_lookup(
-                        self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
-                    if(parent_part) {
-                        /* create new partition table entry */
-                        rm_log_debug("Adding partition info for " GREEN "%s" RESET
-                                     " - looks like subvolume %s on disk " GREEN
-                                     "%s" RESET "\n",
-                                     path, prev, parent_part->name);
-                        part = rm_part_info_new(prev, parent_part->fsname,
-                                                parent_part->disk);
-                        g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
-                                            part);
-                        if(g_hash_table_contains(self->reflinkfs_table,
-                                                 GUINT_TO_POINTER(stat_buf.st_dev))) {
-                            g_hash_table_insert(self->reflinkfs_table,
-                                                GUINT_TO_POINTER(partition),
-                                                GUINT_TO_POINTER(1));
-                        }
-                        g_free(prev);
-                        g_free(parent_path);
-                        return parent_part->disk;
+            RmStat stat_buf;
+            if(!rm_sys_stat(parent_path, &stat_buf)) {
+                RmPartitionInfo *parent_part = g_hash_table_lookup(
+                    self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
+                if(parent_part) {
+                    /* create new partition table entry */
+                    rm_log_debug_line("Adding partition info for " GREEN "%s" RESET
+                                      " - looks like subvolume %s on disk " GREEN
+                                      "%s" RESET,
+                                      path, prev, parent_part->name);
+                    part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
+                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
+                                        part);
+                    if(g_hash_table_contains(self->reflinkfs_table,
+                                             GUINT_TO_POINTER(stat_buf.st_dev))) {
+                        g_hash_table_insert(self->reflinkfs_table,
+                                            GUINT_TO_POINTER(partition),
+                                            GUINT_TO_POINTER(1));
                     }
+                    g_free(prev);
+                    g_free(parent_path);
+                    return parent_part->disk;
                 }
-                g_free(prev);
-                prev = parent_path;
-                g_assert(strcmp(prev, "/") != 0);
-                g_assert(strcmp(prev, ".") != 0);
             }
+            g_free(prev);
+            prev = parent_path;
+            rm_assert_gentle(strcmp(prev, "/") != 0);
+            rm_assert_gentle(strcmp(prev, ".") != 0);
+        }
     }
 }
 
@@ -1020,30 +1057,16 @@ dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
     return rm_mounts_get_disk_id(self, stat_buf.st_dev, path);
 }
 
-char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device) {
-    if(self == NULL) {
-        return NULL;
-    }
-
-    RmPartitionInfo *part =
-        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(device));
-    if(part) {
-        RmDiskInfo *disk =
-            g_hash_table_lookup(self->disk_table, GINT_TO_POINTER(part->disk));
-        return disk->name;
-    } else {
-        return NULL;
-    }
-}
-
 bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
-    g_assert(self);
+    if(self == NULL) {
+        return false;
+    }
 
     return g_hash_table_contains(self->evilfs_table, GUINT_TO_POINTER(to_check));
 }
 
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
-    g_assert(self);
+    rm_assert_gentle(self);
     if(g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(source))) {
         if(source == dest) {
             return true;
@@ -1052,8 +1075,8 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
                 g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
             RmPartitionInfo *dest_part =
                 g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
-            g_assert(source_part);
-            g_assert(dest_part);
+            rm_assert_gentle(source_part);
+            rm_assert_gentle(dest_part);
             return (strcmp(source_part->fsname, dest_part->fsname) == 0);
         }
     } else {
@@ -1065,14 +1088,14 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 //    FIEMAP IMPLEMENATION     //
 /////////////////////////////////
 
-
 #if HAVE_FIEMAP
 
 /* Return fiemap structure containing n_extents for file descriptor fd.
  * Return NULL if errors encountered.
  * Needs to be freed with g_free if not NULL.
  * */
-static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const int file_offset){
+static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
+                                           const int file_offset) {
     /* struct fiemap does not allocate any extents by default,
      * so we allocate the nominated number
      * */
@@ -1086,7 +1109,7 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const in
 
     if(ioctl(fd, FS_IOC_FIEMAP, (unsigned long)fm) == -1) {
         g_free(fm);
-        fm=NULL;
+        fm = NULL;
     }
     return fm;
 }
@@ -1098,63 +1121,64 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents, const in
  * file offset to &file_offset_next.
  * */
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
-    /* TODO: add fake_fiemap option */
-    RmOff result=0;
+    RmOff result = 0;
     bool done = FALSE;
 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
 
-    while (!done) {
+    while(!done) {
         /* read in one extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
-        if (!fm) {
+        if(!fm) {
             done = TRUE;
         } else {
-            if (!file_offset_next) {
+            if(!file_offset_next) {
                 /* no need to find end of fragment so one loop is enough*/
                 done = TRUE;
             }
-            if (fm->fm_mapped_extents > 0) {
+            if(fm->fm_mapped_extents > 0) {
                 /* retrieve data from fiemap */
                 struct fiemap_extent *fm_ext = fm->fm_extents;
                 file_offset += fm_ext[0].fe_length;
-                if (result == 0) {
+                if(result == 0) {
                     /* this is the first extent */
                     result = fm_ext[0].fe_physical;
-                    if (result==0) {
+                    if(result == 0) {
                         /* looks suspicious - let's get out of here */
                         done = TRUE;
                     }
-                } else if (fm_ext[0].fe_physical > expected ||
-                           fm_ext[0].fe_physical < result) {
+                } else if(fm_ext[0].fe_physical > expected ||
+                          fm_ext[0].fe_physical < result) {
                     /* current extent is not contiguous with previous, so we can stop*/
                     done = TRUE;
-                    if (file_offset_next) {
+                    if(file_offset_next) {
                         /* caller wants to know logical offset of next fragment */
                         *file_offset_next = fm_ext[0].fe_logical;
                     }
-                } 
-                if (fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
-                    if (!done) {
+                }
+                if(fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
+                    if(!done) {
                         done = TRUE;
-                        if (file_offset_next) {
-                            /* caller wants to know logical offset of next fragment - signal
+                        if(file_offset_next) {
+                            /* caller wants to know logical offset of next fragment -
+                             * signal
                              * that it is EOF */
-                            *file_offset_next =  G_MAXUINT64;
+                            *file_offset_next =
+                                fm_ext[0].fe_logical + fm_ext[0].fe_length;
                         }
                     }
                 }
-                if (!done) {
+                if(!done) {
                     expected = fm_ext[0].fe_physical + fm_ext[0].fe_length;
                 }
             } else {
                 /* got no extents from rm_offset_get_fiemap */
-                done=true;
-                if (file_offset_next) {
+                done = true;
+                if(file_offset_next) {
                     /* caller wants to know logical offset of next fragment but
                      * we have an error... */
-                    *file_offset_next =  0;
+                    *file_offset_next = 0;
                 }
             }
             g_free(fm);
@@ -1163,57 +1187,62 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
     return result;
 }
 
-RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next) {
-    /* TODO: add fake_fiemap option */
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
+                              RmOff *file_offset_next) {
     int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result=rm_offset_get_from_fd(fd, file_offset, file_offset_next);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next);
     rm_sys_close(fd);
     return result;
 }
 
-
 bool rm_offsets_match(char *path1, char *path2) {
-    bool result=FALSE;
+    bool result = FALSE;
     int fd1 = rm_sys_open(path1, O_RDONLY);
-    if(fd1 != -1) {
-        int fd2 = rm_sys_open(path2, O_RDONLY);
-        if(fd2 != -1) {
-            RmOff file1_offset_next = 0;
-            RmOff file2_offset_next = 0;
-            while ( !result &&
-                    (   rm_offset_get_from_fd(fd1, file1_offset_next, &file1_offset_next) ==
-                        rm_offset_get_from_fd(fd2, file2_offset_next, &file2_offset_next)
-                    ) &&
-                    file1_offset_next != 0 &&
-                    file1_offset_next == file2_offset_next ) {
-                if (file1_offset_next == G_MAXUINT64 || file2_offset_next == G_MAXUINT64) {
-                    /* phew, we got to the end */
-                    result = TRUE;
-                }
-            }
-            rm_sys_close(fd2);
-        } else {
-            rm_log_info("Error opening %s in rm_offsets_match\n", path2);
-        }
-        rm_sys_close(fd1);
-    } else {
-        rm_log_info("Error opening %s in rm_offsets_match\n", path1);
+    if(fd1 == -1) {
+        rm_log_info_line("Error opening %s in rm_offsets_match", path1);
+        return FALSE;
     }
+
+    int fd2 = rm_sys_open(path2, O_RDONLY);
+    if(fd2 == -1) {
+        rm_log_info_line("Error opening %s in rm_offsets_match", path2);
+        rm_sys_close(fd1);
+        return FALSE;
+    }
+
+    RmOff file1_offset_next = 0;
+    RmOff file2_offset_next = 0;
+    RmOff file_offset_current = 0;
+    while(!result &&
+          (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
+           rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
+          file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
+        if(file1_offset_next == file_offset_current) {
+            /* phew, we got to the end */
+            result = TRUE;
+            break;
+        }
+        file_offset_current = file1_offset_next;
+    }
+
+    rm_sys_close(fd2);
+    rm_sys_close(fd1);
     return result;
 }
 
 #else /* Probably FreeBSD */
 
-RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset) {
+RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset, _U RmOff *file_offset_next) {
     return 0;
 }
 
-RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset) {
-    return 0
+RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset,
+                              _U RmOff *file_offset_next) {
+    return 0;
 }
 
 bool rm_offsets_match(char *path1, char *path2) {
@@ -1266,6 +1295,10 @@ time_t rm_iso8601_parse(const char *string) {
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
-    const struct tm *now_ctime = localtime(&stamp);
-    return (strftime(buf, buf_size, "%FT%T%z", now_ctime) != 0);
+    struct tm now_ctime;
+    if(localtime_r(&stamp, &now_ctime) != NULL) {
+        return (strftime(buf, buf_size, "%FT%T%z", &now_ctime) != 0);
+    }
+
+    return false;
 }

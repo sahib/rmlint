@@ -141,7 +141,9 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
     }
 
     RM_DEFINE_PATH(file);
-    fprintf(out, "%s %s\n", MAYBE_RESET(out, session), file_path);
+    char *esc_path = rm_util_strsub(file_path, "'", "'\"'\"'");
+    fprintf(out, "%s '%s'\n", MAYBE_RESET(out, session), esc_path);
+    g_free(esc_path);
 }
 
 static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out,
@@ -155,15 +157,16 @@ static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out,
 
 static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(PRETTY_HANDLER_IMPL),
-        .name = "pretty",
-        .head = rm_fmt_head,
-        .elem = rm_fmt_elem,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(PRETTY_HANDLER_IMPL),
+            .name = "pretty",
+            .head = rm_fmt_head,
+            .elem = rm_fmt_elem,
+            .prog = rm_fmt_prog,
+            .foot = NULL,
+            .valid_keys = {NULL},
+        },
 
     /* Initialize own stuff */
     .last_lint_type = RM_LINT_TYPE_UNKNOWN,

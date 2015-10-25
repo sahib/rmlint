@@ -46,10 +46,12 @@ typedef enum RmDigestType {
     RM_DIGEST_BASTARD,
     RM_DIGEST_MURMUR512,
     RM_DIGEST_CITY512,
+    RM_DIGEST_XXHASH,
+    RM_DIGEST_FARMHASH,
 
     /* special kids in town */
     RM_DIGEST_CUMULATIVE, /* hash([a, b]) = hash([b, a]) */
-    RM_DIGEST_EXT,        /* external hash functions     */
+    RM_DIGEST_EXT,        /* read hash as string         */
     RM_DIGEST_PARANOID    /* direct block comparisons    */
 } RmDigestType;
 
@@ -58,30 +60,94 @@ typedef struct RmUint128 {
     guint64 second;
 } RmUint128;
 
+typedef struct RmParanoid {
+    /* the buffers containing file data byte-by-byte */
+    GSList *buffers;
+    /* pointer to the last buffer (for efficient appends) */
+    GSList *buffer_tail;
+
+    /* A hash is built for every paranoid digest.
+     * So we can make rm_digest_hash() and rm_digest_hexstring() work.
+     */
+    struct RmDigest *shadow_hash;
+
+    /* Optional: if known, a potentially matching *completed* RMDigest
+     * can be provided and will be progressively compared against
+     * this RmDigest *during* rm_digest_buffered_update(); this speeds
+     * up subsequent calls to rm_digest_equal() significantly.
+     */
+    struct RmDigest *twin_candidate;
+
+    /* Pointer to current buffer in twin_candidate->paranoid->buffers */
+    GSList *twin_candidate_buffer;
+    GSList *rejects;
+
+    /* Optional: incoming queue for additional twin candidate RmDigest's */
+    GAsyncQueue *incoming_twin_candidates;
+} RmParanoid;
+
 typedef struct RmDigest {
+    /* Different storage structures are used depending on digest type: */
     union {
         GChecksum *glib_checksum;
         RmUint128 *checksum;
+        RmParanoid *paranoid;
     };
+
+    /* digest type */
     RmDigestType type;
+
+    /* digest size in bytes */
     gsize bytes;
-
-    /* only one both configurations are valid */
-    union {
-        struct {
-            gsize paranoid_offset;
-
-            /* A SPOOKY hash is built for every paranoid digest.
-             * So we can make rm_digest_hash() and rm_digest_hexstring() work.
-             */
-            struct RmDigest *shadow_hash;
-        };
-        struct {
-            RmOff initial_seed1;
-            RmOff initial_seed2;
-        };
-    };
 } RmDigest;
+
+/////////// RmBufferPool and RmBuffer ////////////////
+
+typedef struct RmBufferPool {
+    /* Place where recycled buffers are stored */
+    GSList *stack;
+
+    /* size of each buffer */
+    gsize buffer_size;
+
+    /* how many new buffers can we allocate before hitting mem limit? */
+    gsize avail_buffers;
+
+    /* Buffers that were kept for paranoia (internal) */
+    gsize kept_buffers;
+
+    gsize min_kept_buffers;
+    gsize max_kept_buffers;
+
+    /* Flag to prevent double warnings. */
+    bool mem_warned;
+
+    /* concurrent accesses may happen */
+    GMutex lock;
+    GCond change;
+} RmBufferPool;
+
+/* Represents one block of read data */
+typedef struct RmBuffer {
+    /* note that first (sizeof(pointer)) bytes of this structure get overwritten
+     * when it gets pushed to the RmBufferPool stack, so first couple of
+     * elements can't be reused */
+
+    /* checksum the data belongs to */
+    struct RmDigest *digest;
+
+    /* len of the data actualy filled */
+    guint32 len;
+
+    /* user utility data field */
+    gpointer user_data;
+
+    /* the pool the buffer belongs to */
+    RmBufferPool *pool;
+
+    /* pointer to the data block */
+    unsigned char *data;
+} RmBuffer;
 
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
@@ -91,6 +157,17 @@ typedef struct RmDigest {
  * @return RM_DIGEST_UNKNOWN on error, the type otherwise.
  */
 RmDigestType rm_string_to_digest_type(const char *string);
+
+/* Hash type to MultiHash ID.
+ * Idea of Multihash to encode hash algorithm and size into
+ * the first two bytes of the hash.
+ *
+ * There is no standard yet, I used this one and randomly assigned
+ * the other numbers:
+ *
+ *   https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18
+ */
+int rm_digest_type_to_multihash_id(RmDigestType type);
 
 /**
  * @brief Convert a RmDigestType to a human readable string.
@@ -106,8 +183,11 @@ const char *rm_digest_type_to_string(RmDigestType type);
  *
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
+ * @param ext_size Size of the digest in case on RM_DIGEST_EXT
+ * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff paranoid_size, bool use_shadow_hash);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
+                        bool use_shadow_hash);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.
@@ -122,6 +202,14 @@ void rm_digest_free(RmDigest *digest);
  * @param size the size of data
  */
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
+
+/**
+ * @brief Hash a datablock and add it to the current checksum.
+ *
+ * @param digest a pointer to a RmDigest
+ * @param buffer a RmBuffer of data.
+ */
+void rm_digest_buffered_update(RmBuffer *buffer);
 
 /**
  * @brief Convert the checksum to a hexstring (like `md5sum`)
@@ -150,7 +238,7 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
  *
  * @return pointer to result (note: result length will = digest->bytes)
  */
-guint8 *rm_digest_steal_buffer(RmDigest *digest);
+guint8 *rm_digest_steal(RmDigest *digest);
 
 /**
  * @brief Hash a Digest, suitable for GHashTable.
@@ -183,12 +271,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b);
 RmDigest *rm_digest_copy(RmDigest *digest);
 
 /**
- * @brief Return the number of bytes RM_DIGEST_PARANOID allocates for
- * it's checksum.
- */
-RmOff rm_digest_paranoia_bytes(void);
-
-/**
  * For RM_DIGEST_PARANOID this is  the number of bytes in the
  * shadow hash.
  *
@@ -202,5 +284,60 @@ int rm_digest_get_bytes(RmDigest *self);
  * This is mainly useful for using an adjusted buffer for symlinks.
  */
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
+
+/**
+ * Release any kept (paranoid) buffers.
+ */
+void rm_digest_release_buffers(RmDigest *digest);
+
+/**
+ * @brief Return the size of an individual buffer.
+ */
+RmOff rm_buffer_size(RmBufferPool *pool);
+
+/**
+ * @brief Create a new buffer pool.
+ *
+ * A buffer pool holds a number of same-sized RmBuffer structs
+ * up to a maximum number of bytes.
+ *
+ * If the limit is hit, rm_buffer_pool_get() will block till
+ * other buffers were released.
+ *
+ * @param buffer_size The size of each buffer.
+ * @param max_mem Maxmimum number of bytes the pool may allocate.
+ * @param max_kept_mem Maximum number of bytes the pool may cache.
+ *
+ * @return A readily usable RmBufferPool.
+ */
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem);
+
+/**
+ * @brief Destroy a RmBufferPool.
+ *
+ * This will wait for the currently pending action to finish.
+ *
+ * This can only be safely called when no parallel access to the pool is done.
+ */
+void rm_buffer_pool_destroy(RmBufferPool *pool);
+
+/**
+ * @brief Retrieve a RmBuffer.
+ *
+ * This might be either a previsouly used one or initially allocate one.
+ */
+RmBuffer *rm_buffer_pool_get(RmBufferPool *pool);
+
+/**
+ * @brief Release a previosuly retrieved buffer.
+ *
+ * It will be either cached or freed if over the limit.
+ */
+void rm_buffer_pool_release(RmBuffer *buf);
+
+/**
+ * @brief Send a new (pending) paranoid digest match `candidate` for `target`.
+ */
+void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate);
 
 #endif /* end of include guard */

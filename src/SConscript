@@ -11,16 +11,23 @@ Import('VERSION_NAME')
 Import('create_uninstall_target')
 Import('library')
 
-program = env.Program(
-    '../rmlint', ['rmlint.c', library]
-)
+programs = []
+for progname in ['rmlint']:
+    print("Building " + progname)
+    program = env.Program(
+        '../' + progname, [progname + '.c', library]
+    )
 
-env.Depends(program, [library])
+    env.Depends(program, [library])
+    programs.append(program)
+
+    if 'uninstall' in COMMAND_LINE_TARGETS:
+        create_uninstall_target(env, "$PREFIX/bin/" + progname)
+
 
 if 'install' in COMMAND_LINE_TARGETS:
-    env.Alias('install', env.Install('$PREFIX/bin', [program]))
+    env.Alias('install', env.Install('$PREFIX/bin', programs))
 
-if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, "$PREFIX/bin/rmlint")
 
-Return('program')
+env.Default(programs)
+Return('programs')

@@ -25,15 +25,17 @@ def build_config_template(target, source, env):
             HAVE_FIEMAP=env['HAVE_FIEMAP'],
             HAVE_XATTR=env['HAVE_XATTR'],
             HAVE_SHA512=env['HAVE_SHA512'],
-            HAVE_SSE42=env['HAVE_SSE42'],
             HAVE_BIGFILES=env['HAVE_BIGFILES'],
             HAVE_STAT64=env['HAVE_BIG_STAT'],
+            HAVE_POSIX_FADVISE=env['HAVE_POSIX_FADVISE'],
             HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
             HAVE_BLKID=env['HAVE_BLKID'],
             HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
             HAVE_SYSCTL=env['HAVE_SYSCTL'],
             HAVE_SQLITE3=env['HAVE_SQLITE3'],
             HAVE_LINUX_LIMITS=env['HAVE_LINUX_LIMITS'],
+            HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
+            HAVE_UNAME=env['HAVE_UNAME'],
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
@@ -48,6 +50,8 @@ def prepare_c_source(text):
     # Prepare the Python source to be compatible with C-strings
     text = text.replace('"', '\\"')
     text = text.replace('\\n', '\\\\n')
+    text = text.replace('%', '%%')
+    text = text.replace('%%s', '%s')
     text = '\\n"\n"'.join(text.splitlines())
     return text
 
@@ -88,7 +92,9 @@ library = env.Library(
     '../rmlint',
     Glob('*.c')           +
     Glob('checksums/*.c') +
-    Glob('formats/*.c')
+    Glob('checksums/xxhash/*.c') +
+    Glob('formats/*.c') +
+    Glob('fts/*.c')
 )
 
 headers = Glob('*.h')

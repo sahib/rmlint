@@ -44,11 +44,46 @@
 
 #if HAVE_XATTR
 
+/* Compat wrappers for MacOSX and other platforms.
+ */
+
+#if RM_IS_APPLE
+
+ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size) {
+    return getxattr(path, name, value, size, 0, 0);
+}
+
+ssize_t rm_sys_setxattr(
+    const char *path, const char *name, const void *value, size_t size, int flags) {
+    return setxattr(path, name, value, size, 0, flags);
+}
+
+int rm_sys_removexattr(const char *path, const char *name) {
+    return removexattr(path, name, 0);
+}
+
+#else
+
+ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size) {
+    return getxattr(path, name, value, size);
+}
+
+ssize_t rm_sys_setxattr(
+    const char *path, const char *name, const void *value, size_t size, int flags) {
+    return setxattr(path, name, value, size, flags);
+}
+
+int rm_sys_removexattr(const char *path, const char *name) {
+    return removexattr(path, name);
+}
+
+#endif
+
 static int rm_xattr_build_key(RmSession *session,
                               const char *suffix,
                               char *buf,
                               size_t buf_size) {
-    g_assert(session);
+    rm_assert_gentle(session);
 
     /* Be safe, assume caller is not concentrated. */
     memset(buf, 0, sizeof(buf_size));
@@ -62,15 +97,15 @@ static int rm_xattr_build_key(RmSession *session,
 }
 
 static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
-    g_assert(file);
-    g_assert(file->digest);
+    rm_assert_gentle(file);
+    rm_assert_gentle(file->digest);
 
     memset(buf, '0', buf_size);
     buf[buf_size - 1] = 0;
 
     if(file->digest->type == RM_DIGEST_PARANOID) {
-        g_assert(file->digest->shadow_hash);
-        return rm_digest_hexstring(file->digest->shadow_hash, buf);
+        rm_assert_gentle(file->digest->paranoid->shadow_hash);
+        return rm_digest_hexstring(file->digest->paranoid->shadow_hash, buf);
     } else {
         return rm_digest_hexstring(file->digest, buf);
     }
@@ -94,7 +129,8 @@ static int rm_xattr_set(RmFile *file,
                         const char *value,
                         size_t value_size) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("setxattr", setxattr(file_path, key, value, value_size, 0));
+    return rm_xattr_is_fail("setxattr",
+                            rm_sys_setxattr(file_path, key, value, value_size, 0));
 }
 
 static int rm_xattr_get(RmFile *file,
@@ -102,12 +138,14 @@ static int rm_xattr_get(RmFile *file,
                         char *out_value,
                         size_t value_size) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("getxattr", getxattr(file_path, key, out_value, value_size));
+
+    return rm_xattr_is_fail("getxattr",
+                            rm_sys_getxattr(file_path, key, out_value, value_size));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("removexattr", removexattr(file_path, key));
+    return rm_xattr_is_fail("removexattr", rm_sys_removexattr(file_path, key));
 }
 
 #endif
@@ -117,9 +155,9 @@ static int rm_xattr_del(RmFile *file, const char *key) {
 ////////////////////////////
 
 int rm_xattr_write_hash(RmSession *session, RmFile *file) {
-    g_assert(file);
-    g_assert(file->digest);
-    g_assert(session);
+    rm_assert_gentle(file);
+    rm_assert_gentle(file->digest);
+    rm_assert_gentle(session);
 
 #if HAVE_XATTR
     if(file->has_ext_cksum || session->cfg->write_cksum_to_xattr == false) {
@@ -146,8 +184,8 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
 }
 
 char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
-    g_assert(file);
-    g_assert(session);
+    rm_assert_gentle(file);
+    rm_assert_gentle(session);
 
 #if HAVE_XATTR
     if(session->cfg->read_cksum_from_xattr == false) {
@@ -183,8 +221,8 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
 }
 
 int rm_xattr_clear_hash(RmSession *session, RmFile *file) {
-    g_assert(file);
-    g_assert(session);
+    rm_assert_gentle(file);
+    rm_assert_gentle(session);
 
 #if HAVE_XATTR
     int error = 0;

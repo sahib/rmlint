@@ -14,7 +14,7 @@ def create_data(len, flips=None):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_small_diffs():
 
-    if os.environ.get('USE_VALGRIND'):
+    if use_valgrind():
         N = 32
     else:
         # Takes horribly long elsewhise
@@ -47,3 +47,21 @@ def test_small_diffs():
             assert len(data) == 2
         else:
             assert len(data) == 0
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_one_byte_file_negative():
+    create_file('1', 'one')
+    create_file('2', 'two')
+    head, *data, footer = run_rmlint('-S a')
+
+    assert len(data) == 0
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_one_byte_file_positive():
+    create_file('1', 'one')
+    create_file('1', 'two')
+    head, *data, footer = run_rmlint('-S a')
+
+    assert len(data) == 2

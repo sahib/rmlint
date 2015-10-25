@@ -36,21 +36,25 @@ typedef struct RmFmtHandlerProgress {
     /* must be first */
     RmFmtHandler parent;
 
-    /* user data */
+    /* Current progress value */
     gdouble percent;
-    gdouble last_unknown_pos;
-    RmOff total_lint_bytes;
 
+    /* Colorstripe offset of the progressbar */
+    int stripe_offset;
+
+    /* Text printed on the right side */
     char text_buf[1024];
     guint32 text_len;
-    guint32 update_counter;
+
+    /* Config keys: */
     guint32 update_interval;
     guint8 use_unicode_glyphs;
-
     bool plain;
 
+    /* Bookkeeping */
     RmFmtProgressState last_state;
     struct winsize terminal;
+    GTimer *timer;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
@@ -71,6 +75,10 @@ static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
 
 static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self,
                                         int max_len, FILE *out) {
+    /* This is very ugly, but more or less required since we need to translate
+     * the text to different languages and still determine the right textlength.
+     */
+
     char num_buf[32] = {0};
     char preproc_buf[128] = {0};
     memset(num_buf, 0, sizeof(num_buf));
@@ -127,7 +135,9 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
     /* Support unicode messages - tranlsated text might contain some. */
     self->text_len = g_utf8_strlen(self->text_buf, self->text_len);
 
-    /* Get rid of colors */
+    /* Get rid of colors to get the correct length of the text. This is
+     * necessary to correctly guess the length of the displayed text in cells.
+     */
     int text_iter = 0;
     for(char *iter = &self->text_buf[0]; *iter; iter++) {
         if(*iter == '\x1b') {
@@ -233,23 +243,26 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     /* true when we do not know when 100% is reached.
      * Show a moving something in this case.
      * */
-    bool is_unknown = self->percent > 1.1;
 
     rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_LEFT_BRACKET, RED);
+
+    bool is_unknown = self->percent > 1.1;
+    if(g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+        self->stripe_offset++;
+    }
 
     for(int i = 0; i < width - 2; ++i) {
         if(i < cells) {
             if(is_unknown) {
-                if((int)self->last_unknown_pos % 4 == i % 4) {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_LOW,
-                                                   BLUE);
-                } else if((int)self->last_unknown_pos % 2 == i % 2) {
-                    rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_TICK_HIGH,
-                                                   YELLOW);
-                } else {
-                    rm_fmt_progressbar_print_glyph(out, session, self,
-                                                   PROGRESS_TICK_SPACE, GREEN);
-                }
+                static const int glyphs[3] = {PROGRESS_TICK_LOW, PROGRESS_TICK_HIGH,
+                                              PROGRESS_TICK_SPACE};
+                static const char *colors[3] = {
+                    BLUE, BLUE, GREEN,
+                };
+
+                int index = (i + self->stripe_offset) % 3;
+                rm_fmt_progressbar_print_glyph(out, session, self, glyphs[index],
+                                               colors[index]);
             } else {
                 const char *color = (self->percent > 1.01) ? BLUE : GREEN;
                 RmProgressBarGlyph glyph =
@@ -264,8 +277,6 @@ static void rm_fmt_progress_print_bar(RmSession *session, RmFmtHandlerProgress *
     }
 
     rm_fmt_progressbar_print_glyph(out, session, self, PROGRESS_RIGHT_BRACKET, RED);
-
-    self->last_unknown_pos = fmod(self->last_unknown_pos + 0.005, width - 2);
 }
 
 static void rm_fmt_prog(RmSession *session,
@@ -273,7 +284,20 @@ static void rm_fmt_prog(RmSession *session,
                         FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
+
+    bool force_draw = false;
+
+    if(self->timer == NULL) {
+        self->timer = g_timer_new();
+        force_draw = true;
+    }
+
     if(state == RM_PROGRESS_STATE_SUMMARY) {
+        return;
+    }
+
+    if(session->replay_files.length > 0) {
+        /* Makes not much sense to print a progressbar with --replay */
         return;
     }
 
@@ -297,11 +321,8 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(self->update_interval == 0) {
-            self->update_interval = 50;
+            self->update_interval = 50; /* milliseconds */
         }
-
-        self->last_unknown_pos = 0;
-        self->total_lint_bytes = 1;
 
         fprintf(out, "\e[?25l"); /* Hide the cursor */
         fflush(out);
@@ -317,36 +338,35 @@ static void rm_fmt_prog(RmSession *session,
         }
     }
 
-    if(state == RM_PROGRESS_STATE_SHREDDER) {
-        self->total_lint_bytes =
-            MAX(self->total_lint_bytes, session->shred_bytes_remaining);
-    }
-
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         self->percent = 1.05;
         if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
             fprintf(out, "\n");
         }
-        self->update_counter = 0;
+        g_timer_start(self->timer);
+        force_draw = true;
     }
 
     if(state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) {
-        self->update_counter = 0;
+        g_timer_start(self->timer);
+        force_draw = true;
     }
 
     if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
-        self->update_counter = 0;
+        g_timer_start(self->timer);
+        force_draw = true;
     }
 
-    if(ioctl(fileno(out), TIOCGWINSZ, &self->terminal) != 0) {
-        //rm_log_warning_line(_("Cannot figure out terminal width."));
-    }
-
+    /* Try to get terminal width, might fail on some terminals. */
+    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
     self->last_state = state;
 
-    if(self->update_counter++ % self->update_interval == 0) {
+    if(force_draw ||
+       g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+        /* Max. 70% (-1 char) are allowed for the text */
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
+
         rm_fmt_progress_format_text(session, self, text_width, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
@@ -357,32 +377,36 @@ static void rm_fmt_prog(RmSession *session,
         rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
         rm_fmt_progress_print_text(self, text_width, out);
         fprintf(out, "%s\r", MAYBE_RESET(out, session));
+        g_timer_start(self->timer);
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
+        g_timer_destroy(self->timer);
     }
 }
 
 static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(PROGRESS_HANDLER_IMPL),
-        .name = "progressbar",
-        .head = NULL,
-        .elem = NULL,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {"update_interval", "ascii", "fancy", NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(PROGRESS_HANDLER_IMPL),
+            .name = "progressbar",
+            .head = NULL,
+            .elem = NULL,
+            .prog = rm_fmt_prog,
+            .foot = NULL,
+            .valid_keys = {"update_interval", "ascii", "fancy", NULL},
+        },
 
     /* Initialize own stuff */
     .percent = 0.0f,
     .text_len = 0,
     .text_buf = {0},
-    .update_counter = 0,
+    .timer = NULL,
     .use_unicode_glyphs = true,
     .plain = true,
+    .stripe_offset = 0,
     .last_state = RM_PROGRESS_STATE_INIT};
 
 RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *)&PROGRESS_HANDLER_IMPL;

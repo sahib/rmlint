@@ -4,7 +4,91 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.3.0 (No name yet)] -- [unreleased]
+## [2.4.0 Myopic Micrathene] -- 2015-10-25
+
+### Fixed
+
+- ``rmlint`` should compile on Mac OSX now.
+- Bugfix: Broken ``chown`` calls in sh script (thanks Shukrat Mukimov)
+- Bugfix: memory corruption when specifying ``-T dd`` alone.
+- Bugfix: Make ``-D`` and ``-k / -K`` play together nicely (thanks phiresky).
+- Smaller compile time troubles fixed.
+- Progressbar uses timeout-based redraws which leads to much smoother drawing
+  and less cpu footprint.
+- ``pretty`` formatter (default) produces now valid escaped commands.
+  It is still intented for visual output only. That's why a note for this was
+  added.
+
+### Added
+
+- A fully working graphical user interface which is installed as a python module
+  by default (can be disabled via compile option ie ``scons --without-gui``). 
+  It can be started via  ``rmlint --gui``.
+- Support for automatic deduplication on btrfs using  ``BTRFS_IOC_FILE_EXTENT_SAME``.
+  The Shellscript now will contain calls to  ``rmlint  --btrfs $source $dest``
+  for duplicates on ``btrfs`` filesystems if  the user specified ``-c sh:clone``.
+- Benchmark suite that will track the performance of rmlint from release to release.
+  This helps developers detect any speed regressions or improvements and is a tool
+  to help develop and validate optimization strategies.
+- Shell/Python-script now does more sanity checks before removing and can be told to
+  re-compare files byte-by-byte before removing them (``-p`` option when running
+  the ``.sh`` file).
+- Add a new ``--hash`` option so rmlint can be used as a very fast file hashing
+  utility, eg ``rmlint --hash`` works like ``sha1sum``, or ``rmlint --hash -d md5``
+  works like ``md5sum``.  Also does sha256, sha512, murmur{128}, spooky{32,64,128},
+  city{128}.
+- ``--sort-by`` learned new keys: ``l`` (path length) and ``d`` (path depth).
+- New ``--unmatched-basename`` option only finds twins with differing basenames.
+- Smaller performance and memory optimisations in shredder.
+
+### Changed
+
+- ``-g`` now checks if there is already a ``sh`` and ``json`` formatter before
+  it adds one.
+- ``-PP`` now defaults to ``xxhash`` as hashing algorithm.
+- ``-o / --output`` learned to guess the formatter you want to use from the file ending.
+  For example ``-o /tmp/test.json`` will work like ``-o json:/tmp/test.json``.
+- JSON output contains ``rmlint`` version and revision now.
+- ``--replay`` learned to merge several json files.
+- Internal refactoring (credits go to Daniel) of the scheduler and hashing
+  library. The duplicate finding process has be split in separate modules.
+
+## [2.3.0 Ominous Oscar] -- 2015-06-15
+
+### Fixed
+
+- Compiles on Mac OSX now. See also: https://github.com/sahib/rmlint/issues/139
+- Fix a crash that happened with ``-e``.
+- Protect other lint than duplicates by ``-k`` or ``-K``.
+- ``chown`` in sh script fixed (was ``chmod`` by accident).
+
+### Added
+
+- ``--replay``: Re-output a previously written json file. Allow filtering 
+  by using all other standard options (like size or directory filtering).
+- ``--sort-by``: Similar to ``-S``, but sorts groups of files. So showing
+  the group with the biggest size sucker is as easy as ``-y s``.
+
+### Changed
+
+- ``-S``'s long options is ``--rank-by`` now (prior ``--sortcriteria``).
+- ``-o`` can guess the formatter from the filename if given.
+- Remove some optimisations that gave no visible effect.
+- Simplified FIEMAP optimisation to reduce initial delay and reduce memory overhead
+- Improved hashing strategy for large disks (do repeated smaller sweeps across
+  the disk instead of incrementally hashing every file on the disk)
+
+## [2.2.1 Dreary Dropbear Bugfixes]
+
+### Fixed
+
+- Incorrect handling of -W, --no-with-color option
+- Handling of $PKG_CONFIG in SConstruct
+- Failure to build manpage
+- Various BSD compatibility issues
+- Nonstandard header sequence in modules using fts
+- Removed some unnecessary warnings
+
 
 ## [2.2.0 Dreary Dropbear] -- 2015-05-09
 
@@ -44,7 +128,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   physical disk to enable fast reading without disk thrash.  The improved
   algorithm now increases the number of cpu threads used to hash the data
   as it is read in.  Also an improved mutex strategy reduces the wait time
-  before the hash results can be processed.   
+  before the hash results can be processed.
   Note the new threading strategy is particularly effective on the
   "paranoid" (byte-by-byte) file comparison method (option -pp), which is
   now almost as fast as the default (SHA1 hash) method.
@@ -60,7 +144,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   the core got slower very fast due to linear lookups. Fixed.
 - performance regression: No SSDs were detected due to two bugs.
 - commandline aborts also on non-fatal option misuses.
-- Some statistic counts were updated wrong sometimes. 
+- Some statistic counts were updated wrong sometimes.
 - Fixes in treemerge to respect directories tagges as originals.
 - Ignore "evil" fs types like bindfs, nullfs completely.
 - Fix race in file tree traversal.
@@ -100,7 +184,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 Initial release of the rewrite.
 
 [unreleased]: https://github.com/sahib/rmlint/compare/master...develop
-[2.2.0 Dreary Dropbear]: https://github.com/sahib/rmlint/compare/master...develop
+[2.2.1 Dreary Dropbear Bugfixes]: https://github.com/sahib/rmlint/compare/master...develop
+[2.2.0 Dreary Dropbear]: https://github.com/sahib/rmlint/releases/tag/v2.2.0
 [2.1.0 Malnourished Molly]: https://github.com/sahib/rmlint/releases/tag/v2.1.0
 [2.0.0 Personable Pidgeon]: https://github.com/sahib/rmlint/releases/tag/v2.0.0
 [keepachangelog.com]: http://keepachangelog.com/

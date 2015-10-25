@@ -15,9 +15,14 @@ docs/rmlint.1
 .scons*
 .sconf*
 .rope*
+*.pyc
 
 docs/_build
 __pycache__
 
+lib/config.h
 lib/formats/py.c
-lib/formats/py.c
+lib/formats/sh.c
+uninstall-
+gui/app/resources/app.gresource
+*.a

@@ -54,9 +54,13 @@ typedef struct RmFmtTable {
     GHashTable *name_to_handler;
     GHashTable *path_to_handler;
     GHashTable *handler_to_file;
+    GHashTable *handler_set;
     GHashTable *config;
     GRecMutex state_mtx;
     RmSession *session;
+
+    /* Group of RmFiles that will be cached until exit */
+    GQueue groups;
 } RmFmtTable;
 
 /* Callback definitions */
@@ -127,6 +131,15 @@ RmFmtTable *rm_fmt_open(RmSession *session);
 void rm_fmt_close(RmFmtTable *self);
 
 /**
+ * @brief If cfg->cache_file_structs is true,
+ *        all files written by rm_fmt_write can
+ *        be flushed at once with this function.
+ *
+ * @param self
+ */
+void rm_fmt_flush(RmFmtTable *self);
+
+/**
  * @brief Get the number of added formatters.
  *
  * @param self The table.
@@ -161,7 +174,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path);
  * implementation of the handler - it might also do just nothing.
  * @note argument order is to enable calling via g_queue_foreach()
  */
-void rm_fmt_write(RmFile *result, RmFmtTable *self);
+void rm_fmt_write(RmFile *result, RmFmtTable *self, gint64 twin_count);
 
 /**
  * @brief Change the state of rmlint.
@@ -239,6 +252,11 @@ void rm_fmt_unlock_state(RmFmtTable *self);
 bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 
 /**
+ * @brief Check if there is at least one formatter with `name`.
+ */
+bool rm_fmt_has_formatter(RmFmtTable *self, const char *name);
+
+/**
  * You can use this template for implementing new RmFmtHandlers.
  * All callbacks are not required to be implemented, leave them to NULL if
  * you do not implement them:
@@ -246,7 +264,7 @@ bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 typedef struct RmFmtHandlerProgress {
     RmFmtHandler parent;
 
-    char percent;
+    guint8 percent;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {

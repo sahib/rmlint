@@ -38,6 +38,143 @@
 #include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
 #include "checksums/spooky-c.h"
+#include "checksums/cfarmhash.h"
+#include "checksums/xxhash/xxhash.h"
+
+#define _RM_CHECKSUM_DEBUG 0
+
+///////////////////////////////////////
+//    BUFFER POOL IMPLEMENTATION     //
+///////////////////////////////////////
+
+RmOff rm_buffer_size(RmBufferPool *pool) {
+    return pool->buffer_size;
+}
+
+RmBuffer *rm_buffer_new(RmBufferPool *pool) {
+    RmBuffer *self = g_slice_new0(RmBuffer);
+    self->pool = pool;
+    self->data = g_slice_alloc(pool->buffer_size);
+    return self;
+}
+
+static void rm_buffer_free(RmBuffer *buf) {
+    g_slice_free1(buf->pool->buffer_size, buf->data);
+    g_slice_free(RmBuffer, buf);
+}
+
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem) {
+    RmBufferPool *self = g_slice_new(RmBufferPool);
+    self->stack = NULL;
+    self->buffer_size = buffer_size;
+    self->avail_buffers = MAX(max_mem / buffer_size, 1);
+    self->min_kept_buffers = self->avail_buffers;
+    self->max_kept_buffers = MAX(max_kept_mem / buffer_size, 1);
+    self->kept_buffers = 0;
+
+    rm_log_debug_line("rm_buffer_pool_init: allocated max %" G_GSIZE_FORMAT
+                      " buffers of %" G_GSIZE_FORMAT " bytes each",
+                      self->avail_buffers, self->buffer_size);
+    g_cond_init(&self->change);
+    g_mutex_init(&self->lock);
+    return self;
+}
+
+void rm_buffer_pool_destroy(RmBufferPool *pool) {
+    rm_log_debug_line("had %" G_GSIZE_FORMAT " unused read buffers",
+                      pool->min_kept_buffers);
+
+    /* Wait for all buffers to come back */
+    g_mutex_lock(&pool->lock);
+    {
+        /* Free 'em */
+        g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
+    }
+    g_mutex_unlock(&pool->lock);
+
+    g_mutex_clear(&pool->lock);
+    g_cond_clear(&pool->change);
+    g_slice_free(RmBufferPool, pool);
+}
+
+RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
+    RmBuffer *buffer = NULL;
+    g_mutex_lock(&pool->lock);
+    {
+        while(!buffer) {
+            if(pool->stack) {
+                buffer = pool->stack->data;
+                pool->stack = g_slist_delete_link(pool->stack, pool->stack);
+            } else if(pool->avail_buffers > 0) {
+                buffer = rm_buffer_new(pool);
+            } else {
+                if(!pool->mem_warned) {
+                    rm_log_warning_line(
+                        "read buffer limit reached - waiting for "
+                        "processing to catch up");
+                    pool->mem_warned = true;
+                }
+                g_cond_wait(&pool->change, &pool->lock);
+            }
+        }
+        pool->avail_buffers--;
+
+        if(pool->avail_buffers < pool->min_kept_buffers) {
+            pool->min_kept_buffers = pool->avail_buffers;
+        }
+    }
+    g_mutex_unlock(&pool->lock);
+
+    rm_assert_gentle(buffer);
+    return buffer;
+}
+
+void rm_buffer_pool_release(RmBuffer *buf) {
+    RmBufferPool *pool = buf->pool;
+    g_mutex_lock(&pool->lock);
+    {
+        pool->avail_buffers++;
+        g_cond_signal(&pool->change);
+        pool->stack = g_slist_prepend(pool->stack, buf);
+    }
+    g_mutex_unlock(&pool->lock);
+}
+
+/* make another buffer available if one is being kept (in paranoid digest) */
+static void rm_buffer_pool_signal_keeping(_U RmBuffer *buf) {
+    RmBufferPool *pool = buf->pool;
+
+    g_mutex_lock(&pool->lock);
+    {
+        pool->avail_buffers++;
+        pool->kept_buffers++;
+        g_cond_signal(&pool->change);
+    }
+    g_mutex_unlock(&pool->lock);
+}
+
+static void rm_buffer_pool_release_kept(RmBuffer *buf) {
+    RmBufferPool *pool = buf->pool;
+    g_mutex_lock(&pool->lock);
+    {
+        if(pool->kept_buffers > pool->max_kept_buffers) {
+            rm_buffer_free(buf);
+        } else {
+            pool->stack = g_slist_prepend(pool->stack, buf);
+        }
+        pool->kept_buffers--;
+        g_cond_signal(&pool->change);
+    }
+    g_mutex_unlock(&pool->lock);
+}
+
+static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
+    return (a->len == b->len && memcmp(a->data, b->data, a->len) == 0);
+}
+
+///////////////////////////////////////
+//      RMDIGEST IMPLEMENTATION      //
+///////////////////////////////////////
 
 RmDigestType rm_string_to_digest_type(const char *string) {
     if(string == NULL) {
@@ -50,6 +187,10 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 #endif
     } else if(!strcasecmp(string, "city512")) {
         return RM_DIGEST_CITY512;
+    } else if(!strcasecmp(string, "xxhash")) {
+        return RM_DIGEST_XXHASH;
+    } else if(!strcasecmp(string, "farmhash")) {
+        return RM_DIGEST_XXHASH;
     } else if(!strcasecmp(string, "murmur512")) {
         return RM_DIGEST_MURMUR512;
     } else if(!strcasecmp(string, "sha256")) {
@@ -84,25 +225,43 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
-    static const char *names[] =
-        {[RM_DIGEST_UNKNOWN] = "unknown",       [RM_DIGEST_MURMUR] = "murmur",
-         [RM_DIGEST_SPOOKY] = "spooky",         [RM_DIGEST_SPOOKY32] = "spooky32",
-         [RM_DIGEST_SPOOKY64] = "spooky64",     [RM_DIGEST_CITY] = "city",
-         [RM_DIGEST_MD5] = "md5",               [RM_DIGEST_SHA1] = "sha1",
-         [RM_DIGEST_SHA256] = "sha256",         [RM_DIGEST_SHA512] = "sha512",
-         [RM_DIGEST_MURMUR256] = "murmur256",   [RM_DIGEST_CITY256] = "city256",
-         [RM_DIGEST_BASTARD] = "bastard",       [RM_DIGEST_MURMUR512] = "murmur512",
-         [RM_DIGEST_CITY512] = "city512",       [RM_DIGEST_EXT] = "ext",
-         [RM_DIGEST_CUMULATIVE] = "cumulative", [RM_DIGEST_PARANOID] = "paranoid"};
+    static const char *names[] = {[RM_DIGEST_UNKNOWN] = "unknown",
+                                  [RM_DIGEST_MURMUR] = "murmur",
+                                  [RM_DIGEST_SPOOKY] = "spooky",
+                                  [RM_DIGEST_SPOOKY32] = "spooky32",
+                                  [RM_DIGEST_SPOOKY64] = "spooky64",
+                                  [RM_DIGEST_CITY] = "city",
+                                  [RM_DIGEST_MD5] = "md5",
+                                  [RM_DIGEST_SHA1] = "sha1",
+                                  [RM_DIGEST_SHA256] = "sha256",
+                                  [RM_DIGEST_SHA512] = "sha512",
+                                  [RM_DIGEST_MURMUR256] = "murmur256",
+                                  [RM_DIGEST_CITY256] = "city256",
+                                  [RM_DIGEST_BASTARD] = "bastard",
+                                  [RM_DIGEST_MURMUR512] = "murmur512",
+                                  [RM_DIGEST_CITY512] = "city512",
+                                  [RM_DIGEST_EXT] = "ext",
+                                  [RM_DIGEST_CUMULATIVE] = "cumulative",
+                                  [RM_DIGEST_PARANOID] = "paranoid",
+                                  [RM_DIGEST_FARMHASH] = "farmhash",
+                                  [RM_DIGEST_XXHASH] = "xxhash"};
 
     return names[MIN(type, sizeof(names) / sizeof(names[0]))];
 }
 
-RmOff rm_digest_paranoia_bytes(void) {
-    return 16 * 1024 * 1024;
-    /* this is big enough buffer size to make seek time fairly insignificant relative to
-     * sequential read time,
-     * eg 16MB read at typical 100 MB/s read rate = 160ms read vs typical seek time 10ms*/
+int rm_digest_type_to_multihash_id(RmDigestType type) {
+    static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,  [RM_DIGEST_MURMUR] = 17,
+                        [RM_DIGEST_SPOOKY] = 14,   [RM_DIGEST_SPOOKY32] = 16,
+                        [RM_DIGEST_SPOOKY64] = 18, [RM_DIGEST_CITY] = 15,
+                        [RM_DIGEST_MD5] = 1,       [RM_DIGEST_SHA1] = 2,
+                        [RM_DIGEST_SHA256] = 4,    [RM_DIGEST_SHA512] = 6,
+                        [RM_DIGEST_MURMUR256] = 7, [RM_DIGEST_CITY256] = 8,
+                        [RM_DIGEST_BASTARD] = 9,   [RM_DIGEST_MURMUR512] = 10,
+                        [RM_DIGEST_CITY512] = 11,  [RM_DIGEST_EXT] = 12,
+                        [RM_DIGEST_FARMHASH] = 19, [RM_DIGEST_CUMULATIVE] = 13,
+                        [RM_DIGEST_PARANOID] = 14};
+
+    return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }
 
 #define ADD_SEED(digest, seed)                                              \
@@ -113,16 +272,13 @@ RmOff rm_digest_paranoia_bytes(void) {
         }                                                                   \
     }
 
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
-                        RmOff paranoid_size, bool use_shadow_hash) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
+                        bool use_shadow_hash) {
     RmDigest *digest = g_slice_new0(RmDigest);
 
     digest->checksum = NULL;
     digest->type = type;
     digest->bytes = 0;
-
-    digest->initial_seed1 = seed1;
-    digest->initial_seed2 = seed2;
 
     switch(type) {
     case RM_DIGEST_SPOOKY32:
@@ -131,6 +287,8 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
          */
         digest->bytes = 64 / 8;
         break;
+    case RM_DIGEST_XXHASH:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_SPOOKY64:
         digest->bytes = 64 / 8;
         break;
@@ -162,7 +320,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         break;
     case RM_DIGEST_EXT:
         /* gets allocated on rm_digest_update() */
-        digest->bytes = paranoid_size;
+        digest->bytes = ext_size;
         break;
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
@@ -176,18 +334,16 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
         digest->bytes = 128 / 8;
         break;
     case RM_DIGEST_PARANOID:
-        g_assert(paranoid_size <= rm_digest_paranoia_bytes());
-        g_assert(paranoid_size > 0);
-        digest->bytes = paranoid_size;
-        digest->paranoid_offset = 0;
+        digest->bytes = 0;
+        digest->paranoid = g_slice_new0(RmParanoid);
+        digest->paranoid->incoming_twin_candidates = g_async_queue_new();
         if(use_shadow_hash) {
-            digest->shadow_hash = rm_digest_new(RM_DIGEST_SPOOKY, seed1, seed2, 0, false);
-        } else {
-            digest->shadow_hash = NULL;
+            digest->paranoid->shadow_hash =
+                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
         }
         break;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
 
     /* starting values to let us generate up to 4 different hashes in parallel with
@@ -196,16 +352,14 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
     static const RmOff seeds[4] = {0x0000000000000000, 0xf0f0f0f0f0f0f0f0,
                                    0x3333333333333333, 0xaaaaaaaaaaaaaaaa};
 
-    if(digest->bytes > 0) {
+    if(digest->bytes > 0 && type != RM_DIGEST_PARANOID) {
         const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
 
         /* checksum type - allocate memory and initialise */
         digest->checksum = g_slice_alloc0(digest->bytes);
         for(gsize block = 0; block < (digest->bytes / 16); block++) {
-            digest->checksum[block].first =
-                seeds[block % n_seeds] ^ digest->initial_seed1;
-            digest->checksum[block].second =
-                seeds[block % n_seeds] ^ digest->initial_seed2;
+            digest->checksum[block].first = seeds[block % n_seeds] ^ seed1;
+            digest->checksum[block].second = seeds[block % n_seeds] ^ seed2;
         }
     }
 
@@ -218,17 +372,16 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2,
 }
 
 void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    g_assert(new_size < digest->bytes);
-    g_assert(digest->type == RM_DIGEST_PARANOID);
-
-    RmUint128 *old_checksum = digest->checksum;
-    gsize old_bytes = digest->bytes;
-
-    digest->checksum = g_slice_alloc0(new_size);
+    rm_assert_gentle(digest->type == RM_DIGEST_PARANOID);
     digest->bytes = new_size;
-    memcpy(digest->checksum, old_checksum, new_size);
+}
 
-    g_slice_free1(old_bytes, old_checksum);
+void rm_digest_release_buffers(RmDigest *digest) {
+    if(digest->paranoid && digest->paranoid->buffers) {
+        g_slist_free_full(digest->paranoid->buffers,
+                          (GDestroyNotify)rm_buffer_pool_release_kept);
+        digest->paranoid->buffers = NULL;
+    }
 }
 
 void rm_digest_free(RmDigest *digest) {
@@ -241,12 +394,20 @@ void rm_digest_free(RmDigest *digest) {
         digest->glib_checksum = NULL;
         break;
     case RM_DIGEST_PARANOID:
-        if(digest->shadow_hash) {
-            rm_digest_free(digest->shadow_hash);
+        if(digest->paranoid->shadow_hash) {
+            rm_digest_free(digest->paranoid->shadow_hash);
         }
+        rm_digest_release_buffers(digest);
+        if(digest->paranoid->incoming_twin_candidates) {
+            g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
+        }
+        g_slist_free(digest->paranoid->rejects);
+        g_slice_free(RmParanoid, digest->paranoid);
+        break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_MURMUR512:
+    case RM_DIGEST_XXHASH:
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
@@ -254,6 +415,7 @@ void rm_digest_free(RmDigest *digest) {
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
         if(digest->checksum) {
@@ -262,7 +424,7 @@ void rm_digest_free(RmDigest *digest) {
         }
         break;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
     g_slice_free(RmDigest, digest);
 }
@@ -277,7 +439,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
  * */
 #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
-        g_assert(data);
+        rm_assert_gentle(data);
 
         digest->bytes = size / 2;
         digest->checksum = g_slice_alloc0(digest->bytes);
@@ -301,8 +463,14 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         digest->checksum[0].first = spooky_hash64(data, size, digest->checksum[0].first);
         break;
     case RM_DIGEST_SPOOKY:
-        spooky_hash128(data, size, &digest->checksum[0].first,
-                       &digest->checksum[0].second);
+        spooky_hash128(data, size, (uint64_t *)&digest->checksum[0].first,
+                       (uint64_t *)&digest->checksum[0].second);
+        break;
+    case RM_DIGEST_XXHASH:
+        digest->checksum[0].first = XXH64(data, size, digest->checksum[0].first);
+        break;
+    case RM_DIGEST_FARMHASH:
+        digest->checksum[0].first = cfarmhash((const char *)data, size);
         break;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_MURMUR256:
@@ -328,11 +496,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             * (available on Intel Nehalem and up; my amd box doesn't have this though)
             */
             uint128 old = {digest->checksum[block].first, digest->checksum[block].second};
-#if RM_PLATFORM_64 && HAVE_SSE42
-            old = CityHashCrc128WithSeed((const char *)data, size, old);
-#else
             old = CityHash128WithSeed((const char *)data, size, old);
-#endif
             memcpy(&digest->checksum[block], &old, sizeof(uint128));
         }
         break;
@@ -341,11 +505,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
                             &digest->checksum[0]);
 
         uint128 old = {digest->checksum[1].first, digest->checksum[1].second};
-#if RM_PLATFORM_64 && HAVE_SSE42
-        old = CityHashCrc128WithSeed((const char *)data, size, old);
-#else
         old = CityHash128WithSeed((const char *)data, size, old);
-#endif
         memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
     case RM_DIGEST_CUMULATIVE: {
@@ -363,20 +523,92 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         }
     } break;
     case RM_DIGEST_PARANOID:
-        g_assert(size + digest->paranoid_offset <= digest->bytes);
-        memcpy((char *)digest->checksum + digest->paranoid_offset, data, size);
-        digest->paranoid_offset += size;
-        if(digest->shadow_hash) {
-            rm_digest_update(digest->shadow_hash, data, size);
-        }
-        break;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
+    }
+}
+
+void rm_digest_buffered_update(RmBuffer *buffer) {
+    RmDigest *digest = buffer->digest;
+    if(digest->type != RM_DIGEST_PARANOID) {
+        rm_digest_update(digest, buffer->data, buffer->len);
+        rm_buffer_pool_release(buffer);
+    } else {
+        RmParanoid *paranoid = digest->paranoid;
+
+        /* efficiently append buffer to buffers GSList */
+        if(!paranoid->buffers) {
+            /* first buffer */
+            paranoid->buffers = g_slist_prepend(NULL, buffer);
+            paranoid->buffer_tail = paranoid->buffers;
+        } else {
+            paranoid->buffer_tail = g_slist_append(paranoid->buffer_tail, buffer)->next;
+        }
+
+        digest->bytes += buffer->len;
+        rm_buffer_pool_signal_keeping(buffer);
+
+        if(paranoid->shadow_hash) {
+            rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
+        }
+
+        if(paranoid->twin_candidate) {
+            /* do a running check that digest remains the same as its candidate twin */
+            if(rm_buffer_equal(buffer, paranoid->twin_candidate_buffer->data)) {
+                /* buffers match; move ptr to next one ready for next buffer */
+                paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
+            } else {
+                /* buffers don't match - delete candidate (new candidate might be added on
+                 * next
+                 * call to rm_digest_buffered_update) */
+                paranoid->twin_candidate = NULL;
+                paranoid->twin_candidate_buffer = NULL;
+#if _RM_CHECKSUM_DEBUG
+                rm_log_debug_line("Ejected candidate match at buffer #%u",
+                                  g_slist_length(paranoid->buffers));
+#endif
+            }
+        }
+
+        while(!paranoid->twin_candidate && paranoid->incoming_twin_candidates &&
+              (paranoid->twin_candidate =
+                   g_async_queue_try_pop(paranoid->incoming_twin_candidates))) {
+            /* validate the new candidate by comparing the previous buffers (not
+             * including current)*/
+            paranoid->twin_candidate_buffer = paranoid->twin_candidate->paranoid->buffers;
+            GSList *iter_self = paranoid->buffers;
+            gboolean match = TRUE;
+            while(match && iter_self) {
+                match = (rm_buffer_equal(paranoid->twin_candidate_buffer->data,
+                                         iter_self->data));
+                iter_self = iter_self->next;
+                paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
+            }
+            if(paranoid->twin_candidate && !match) {
+/* reject the twin candidate, also add to rejects list to speed up rm_digest_equal() */
+#if _RM_CHECKSUM_DEBUG
+                rm_log_debug_line("Rejected twin candidate %p for %p",
+                                  paranoid->twin_candidate, paranoid);
+#endif
+                if(!paranoid->shadow_hash) {
+                    /* we use the rejects file to speed up rm_digest_equal */
+                    paranoid->rejects =
+                        g_slist_prepend(paranoid->rejects, paranoid->twin_candidate);
+                }
+                paranoid->twin_candidate = NULL;
+                paranoid->twin_candidate_buffer = NULL;
+#if _RM_CHECKSUM_DEBUG
+            } else {
+                rm_log_debug_line("Added twin candidate %p for %p",
+                                  paranoid->twin_candidate, paranoid);
+#endif
+            }
+        }
     }
 }
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
-    g_assert(digest);
+    rm_assert_gentle(digest);
 
     RmDigest *self = NULL;
 
@@ -390,7 +622,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self->type = digest->type;
         self->glib_checksum = g_checksum_copy(digest->glib_checksum);
         break;
-    case RM_DIGEST_PARANOID:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
@@ -400,103 +631,168 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR512:
+    case RM_DIGEST_XXHASH:
+    case RM_DIGEST_FARMHASH:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
-        self = rm_digest_new(digest->type, digest->initial_seed1, digest->initial_seed2,
-                             digest->bytes, digest->shadow_hash != NULL);
-
-        if(self->type == RM_DIGEST_PARANOID) {
-            self->paranoid_offset = digest->paranoid_offset;
-            if(self->shadow_hash) {
-                rm_digest_free(self->shadow_hash);
-                self->shadow_hash = rm_digest_copy(digest->shadow_hash);
-            }
-        }
+        self = rm_digest_new(digest->type, 0, 0, digest->bytes, FALSE);
 
         if(self->checksum && digest->checksum) {
             memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
         }
 
         break;
+    case RM_DIGEST_PARANOID:
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
     }
 
     return self;
 }
 
-guint8 *rm_digest_steal_buffer(RmDigest *digest) {
-    guint8 *result = g_slice_alloc0(digest->bytes);
-    RmDigest *copy = NULL;
-    gsize buflen = digest->bytes;
-
-    switch(digest->type) {
+static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
+    switch(digest_type) {
     case RM_DIGEST_MD5:
     case RM_DIGEST_SHA512:
     case RM_DIGEST_SHA256:
     case RM_DIGEST_SHA1:
         /* for all of the above, reading the digest is destructive, so we
          * need to take a copy */
-        copy = rm_digest_copy(digest);
-        g_checksum_get_digest(copy->glib_checksum, result, &buflen);
-        g_assert(buflen == digest->bytes);
-        rm_digest_free(copy);
-        break;
+        return TRUE;
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
     case RM_DIGEST_CITY256:
-    case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY512:
+    case RM_DIGEST_XXHASH:
+    case RM_DIGEST_FARMHASH:
+    case RM_DIGEST_MURMUR256:
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
-    case RM_DIGEST_PARANOID:
     case RM_DIGEST_EXT:
-        memcpy(result, digest->checksum, digest->bytes);
-        break;
+    case RM_DIGEST_PARANOID:
+        return FALSE;
     default:
-        g_assert_not_reached();
+        rm_assert_gentle_not_reached();
+        return FALSE;
     }
+}
 
+guint8 *rm_digest_steal(RmDigest *digest) {
+    guint8 *result = g_slice_alloc0(digest->bytes);
+    gsize buflen = digest->bytes;
+
+    if(rm_digest_needs_steal(digest->type)) {
+        /* reading the digest is destructive, so we need to take a copy */
+        RmDigest *copy = rm_digest_copy(digest);
+        g_checksum_get_digest(copy->glib_checksum, result, &buflen);
+        rm_assert_gentle(buflen == digest->bytes);
+        rm_digest_free(copy);
+    } else {
+        memcpy(result, digest->checksum, digest->bytes);
+    }
     return result;
 }
 
 guint rm_digest_hash(RmDigest *digest) {
     guint8 *buf = NULL;
     gsize bytes = 0;
+    guint hash = 0;
 
     if(digest->type == RM_DIGEST_PARANOID) {
-        if(digest->shadow_hash) {
-            buf = rm_digest_steal_buffer(digest->shadow_hash);
-            bytes = digest->shadow_hash->bytes;
+        if(digest->paranoid->shadow_hash) {
+            buf = rm_digest_steal(digest->paranoid->shadow_hash);
+            bytes = digest->paranoid->shadow_hash->bytes;
+        } else {
+            /* steal the first few bytes of the first buffer */
+            if(digest->paranoid->buffers) {
+                RmBuffer *buffer = digest->paranoid->buffers->data;
+                if(buffer->len >= sizeof(guint)) {
+                    hash = *(guint *)buffer->data;
+                    return hash;
+                }
+            }
         }
     } else {
-        buf = rm_digest_steal_buffer(digest);
+        buf = rm_digest_steal(digest);
         bytes = digest->bytes;
     }
 
-    guint hash = 0;
     if(buf != NULL) {
-        hash = *(RmOff *)buf;
+        rm_assert_gentle(bytes >= sizeof(guint));
+        hash = *(guint *)buf;
         g_slice_free1(bytes, buf);
     }
     return hash;
 }
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
-    guint8 *buf_a = rm_digest_steal_buffer(a);
-    guint8 *buf_b = rm_digest_steal_buffer(b);
+    rm_assert_gentle(a && b);
 
-    gboolean result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
+    if(a->type != b->type) {
+        return false;
+    }
 
-    g_slice_free1(a->bytes, buf_a);
-    g_slice_free1(b->bytes, buf_b);
+    if(a->bytes != b->bytes) {
+        return false;
+    }
 
-    return result;
+    if(a->type == RM_DIGEST_PARANOID) {
+        if(!a->paranoid->buffers) {
+            /* buffers have been freed so we need to rely on shadow hash */
+            return rm_digest_equal(a->paranoid->shadow_hash, b->paranoid->shadow_hash);
+        }
+        /* check if pre-matched twins */
+        if(a->paranoid->twin_candidate == b || b->paranoid->twin_candidate == a) {
+            return true;
+        }
+        /* check if already rejected */
+        if(g_slist_find(a->paranoid->rejects, b) ||
+           g_slist_find(b->paranoid->rejects, a)) {
+            // rm_log_error_line("Optimisation sufficiently optimised");
+            return false;
+        }
+        /* all the "easy" ways failed... do manual check of all buffers */
+        GSList *a_iter = a->paranoid->buffers;
+        GSList *b_iter = b->paranoid->buffers;
+        guint bytes = 0;
+        while(a_iter && b_iter) {
+            if(!rm_buffer_equal(a_iter->data, b_iter->data)) {
+                rm_log_error_line(
+                    "Paranoid digest compare found mismatch - must be hash collision in "
+                    "shadow hash");
+                return false;
+            }
+            bytes += ((RmBuffer *)a_iter->data)->len;
+            a_iter = a_iter->next;
+            b_iter = b_iter->next;
+        }
+
+        return (!a_iter && !b_iter && bytes == a->bytes);
+
+    } else if(rm_digest_needs_steal(a->type)) {
+        guint8 *buf_a = rm_digest_steal(a);
+        guint8 *buf_b = rm_digest_steal(b);
+
+        gboolean result;
+
+        if(a->bytes != b->bytes) {
+            result = false;
+        } else {
+            result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
+        }
+
+        g_slice_free1(a->bytes, buf_a);
+        g_slice_free1(b->bytes, buf_b);
+
+        return result;
+    } else {
+        return !memcmp(a->checksum, b->checksum, MIN(a->bytes, b->bytes));
+    }
 }
 
 int rm_digest_hexstring(RmDigest *digest, char *buffer) {
@@ -508,12 +804,12 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     }
 
     if(digest->type == RM_DIGEST_PARANOID) {
-        if(digest->shadow_hash) {
-            input = rm_digest_steal_buffer(digest->shadow_hash);
-            bytes = digest->shadow_hash->bytes;
+        if(digest->paranoid->shadow_hash) {
+            input = rm_digest_steal(digest->paranoid->shadow_hash);
+            bytes = digest->paranoid->shadow_hash->bytes;
         }
     } else {
-        input = rm_digest_steal_buffer(digest);
+        input = rm_digest_steal(digest);
         bytes = digest->bytes;
     }
 
@@ -539,9 +835,16 @@ int rm_digest_get_bytes(RmDigest *self) {
 
     if(self->type != RM_DIGEST_PARANOID) {
         return self->bytes;
-    } else if(self->shadow_hash) {
-        return self->shadow_hash->bytes;
+    } else if(self->paranoid->shadow_hash) {
+        return self->paranoid->shadow_hash->bytes;
     } else {
         return 0;
     }
+}
+
+void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
+    if(!target->paranoid->incoming_twin_candidates) {
+        target->paranoid->incoming_twin_candidates = g_async_queue_new();
+    }
+    g_async_queue_push(target->paranoid->incoming_twin_candidates, candidate);
 }

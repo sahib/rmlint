@@ -37,8 +37,12 @@ typedef struct RmFmtHandlerPy {
     /* must be first */
     RmFmtHandler parent;
 
+    /* HACK: Actual handler might be bigger, add padding. */
+    char _dummy[1024];
+
     /* Filehandle to pass to the JSON Formatter. */
     FILE *json_out;
+
 } RmFmtHandlerPy;
 
 /////////////////////////

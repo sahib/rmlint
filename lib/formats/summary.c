@@ -30,6 +30,8 @@
 #include <string.h>
 #include <search.h>
 
+#include <sys/ioctl.h>
+
 typedef struct RmFmtHandlerSummary {
     /* must be first */
     RmFmtHandler parent;
@@ -37,10 +39,6 @@ typedef struct RmFmtHandlerSummary {
 
 #define ARROW \
     fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
-
-static int rm_fmt_summary_cmp(gconstpointer key, gconstpointer value) {
-    return strcmp((char *)key, *(char **)value);
-}
 
 static void rm_fmt_prog(RmSession *session,
                         _U RmFmtHandler *parent,
@@ -58,7 +56,24 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(rm_session_was_aborted(session)) {
+        /* Clear the whole terminal line.
+         * Progressbar might leave some junk.
+         */
+        struct winsize terminal;
+        ioctl(fileno(out), TIOCGWINSZ, &terminal);
+        for(int i = 0; i < terminal.ws_col; ++i) {
+            fprintf(out, " ");
+        }
+
+        fprintf(out, "\n");
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
+    }
+
+    if(rm_fmt_has_formatter(session->formats, "pretty") &&
+       rm_fmt_has_formatter(session->formats, "sh")) {
+        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not "
+                             "the above output."));
+        fprintf(out, "\n");
     }
 
     char numbers[3][512];
@@ -96,9 +111,16 @@ static void rm_fmt_prog(RmSession *session,
     while(g_hash_table_iter_next(&iter, (gpointer *)&path, (gpointer *)&handler)) {
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};
         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);
+        bool forbidden_found = false;
 
-        if(lfind(path, forbidden, &forbidden_len, sizeof(const char *),
-                 rm_fmt_summary_cmp)) {
+        for(gsize i = 0; i < forbidden_len; i++) {
+            if(g_strcmp0(forbidden[i], path) == 0) {
+                forbidden_found = true;
+                break;
+            }
+        }
+
+        if(forbidden_found) {
             continue;
         }
 
@@ -120,15 +142,16 @@ static void rm_fmt_prog(RmSession *session,
 
 static RmFmtHandlerSummary SUMMARY_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(SUMMARY_HANDLER_IMPL),
-        .name = "summary",
-        .head = NULL,
-        .elem = NULL,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(SUMMARY_HANDLER_IMPL),
+            .name = "summary",
+            .head = NULL,
+            .elem = NULL,
+            .prog = rm_fmt_prog,
+            .foot = NULL,
+            .valid_keys = {NULL},
+        },
 };
 
 RmFmtHandler *SUMMARY_HANDLER = (RmFmtHandler *)&SUMMARY_HANDLER_IMPL;

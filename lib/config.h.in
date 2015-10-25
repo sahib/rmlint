@@ -14,11 +14,13 @@
 #define HAVE_BIGFILES      ({HAVE_BIGFILES})
 #define HAVE_STAT64        ({HAVE_STAT64})
 #define HAVE_BIG_OFF_T     ({HAVE_BIG_OFF_T})
-#define HAVE_SSE42         ({HAVE_SSE42})
 #define HAVE_SYSBLOCK      ({HAVE_SYSBLOCK})
 #define HAVE_SYSCTL        ({HAVE_SYSCTL})
 #define HAVE_SQLITE3       ({HAVE_SQLITE3})
 #define HAVE_LINUX_LIMITS  ({HAVE_LINUX_LIMITS})
+#define HAVE_POSIX_FADVISE ({HAVE_POSIX_FADVISE})
+#define HAVE_BTRFS_H       ({HAVE_BTRFS_H})
+#define HAVE_UNAME         ({HAVE_UNAME})
 
 #define RM_DEFAULT_DIGEST RM_DIGEST_SHA1
 #define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
@@ -71,10 +73,13 @@
 
 #define _U G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
+#define LLI G_GINT64_FORMAT
 
 
 #define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)
 #define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
+
+#define RM_IS_APPLE (defined(__APPLE__) && defined(__MACH__))
 
 #include <glib.h>
 
@@ -113,6 +118,11 @@ typedef guint64 RmOff;
     rm_log_warning(_("INFO")); \
     rm_log_warning(": "RESET); \
 
+#define rm_log_debug_prefix() \
+    rm_log_debug(BLUE);       \
+    rm_log_debug(_("DEBUG")); \
+    rm_log_debug(": "RESET);  \
+
 ///////////////
 
 #define rm_log_error_line(...) \
@@ -130,7 +140,23 @@ typedef guint64 RmOff;
     rm_log_warning(__VA_ARGS__); \
     rm_log_warning("\n");        \
 
+#define rm_log_debug_line(...) \
+    rm_log_debug_prefix()      \
+    rm_log_debug(__VA_ARGS__); \
+    rm_log_debug("\n");        \
+
 /* Domain for reporting errors. Needed by GOptions */
 #define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
+
+#define rm_assert_gentle(cond)                                                                \
+    if(!(cond)) {{                                                                            \
+        rm_log_error_line("BUG: Assertion failed at `%s@%d`: %s", __FILE__, __LINE__, #cond); \
+        rm_log_error_line("     Will try to continue in 2 seconds. Expect crashes.");         \
+        g_usleep(2 * 1000 * 1000);                                                            \
+    }}
+    
+
+#define RM_NOT_REACHED (0)
+#define rm_assert_gentle_not_reached() rm_assert_gentle(RM_NOT_REACHED)
 
 #endif

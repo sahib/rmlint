@@ -1,6 +1,7 @@
       
 ======
 
+
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
 
@@ -94,8 +95,8 @@ AUTHORS
 Here's a list of developers to blame:
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2014
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2014
+*Christopher Pahl*                   https://github.com/sahib      2010-2015
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2015
 ===================================  ============================= ===========================================
 
 There are some other people that helped us of course.

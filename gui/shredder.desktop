@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Shredder Duplicate Finder
+GenericName=Duplicate Finder
+Comment=Find and delete duplicates
+TryExec=rmlint
+Exec=rmlint --gui
+Icon=shredder
+Categories=System;

@@ -72,6 +72,10 @@ def check_git_rev(context):
         rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
     except subprocess.CalledProcessError:
         print('Unable to find git revision.')
+    except AttributeError:
+        # Patch for some special sandbox permission problems.
+        # See https://github.com/sahib/rmlint/issues/143#issuecomment-139929733
+        print('Not allowed.')
 
     rev = rev or 'unknown'
     conf.env['gitrev'] = rev
@@ -85,13 +89,26 @@ def check_libelf(context):
     if GetOption('with_libelf') is False:
         rc = 0
 
-    if rc and tests.CheckHeader(context, 'libelf.h'):
+    if rc and tests.CheckHeader(context, 'libelf.h', header="#include <stdlib.h>"):
         rc = 0
 
     if rc and tests.CheckLib(context, ['libelf']):
         rc = 0
 
     conf.env['HAVE_LIBELF'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_uname(context):
+    rc = 1
+
+    if rc and tests.CheckHeader(context, 'sys/utsname.h', header=""):
+        rc = 0
+
+    conf.env['HAVE_UNAME'] = rc
 
     context.did_show_result = True
     context.Result(rc)
@@ -210,6 +227,22 @@ def check_sysctl(context):
     return rc
 
 
+def check_posix_fadvise(context):
+    rc = 1
+
+    if tests.CheckDeclaration(
+        context, 'posix_fadvise',
+        includes='#include <fcntl.h>'
+    ):
+        rc = 0
+
+    conf.env['HAVE_POSIX_FADVISE'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_xattr(context):
     rc = 1
 
@@ -260,24 +293,6 @@ def check_c11(context):
     return rc
 
 
-def check_sse42(context):
-    if GetOption('with_sse') is False:
-        rc = 0
-    else:
-        rc = 1
-
-        if tests.CheckDeclaration(context, '__SSE4_2__'):
-            rc = 0
-        else:
-            conf.env.Prepend(CFLAGS=['-msse4.2'])
-
-    conf.env['HAVE_SSE42'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
 def check_sqlite3(context):
     rc = 1
     if tests.CheckHeader(context, 'sqlite3.h'):
@@ -287,6 +302,20 @@ def check_sqlite3(context):
         rc = 0
 
     conf.env['HAVE_SQLITE3'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+def check_btrfs_h(context):
+    rc = 1
+    if tests.CheckHeader(
+        context, 'linux/btrfs.h',
+        header='#include <stdlib.h>\n#include <sys/ioctl.h>'
+    ):
+        rc = 0
+
+    conf.env['HAVE_BTRFS_H'] = rc
     context.did_show_result = True
     context.Result(rc)
     return rc
@@ -409,7 +438,7 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib']:
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -464,16 +493,18 @@ conf = Configure(env, custom_tests={
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
     'check_xattr': check_xattr,
-    'check_sse42': check_sse42,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_sysctl': check_sysctl,
+    'check_posix_fadvise': check_posix_fadvise,
     'check_sys_block': check_sys_block,
     'check_bigfiles': check_bigfiles,
     'check_c11': check_c11,
     'check_gettext': check_gettext,
     'check_sqlite3': check_sqlite3,
-    'check_linux_limits': check_linux_limits
+    'check_linux_limits': check_linux_limits,
+    'check_btrfs_h': check_btrfs_h,
+    'check_uname': check_uname
 })
 
 if not conf.CheckCC():
@@ -549,9 +580,6 @@ if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
 
-conf.env.Append(CCFLAGS=['-march=native'])
-conf.check_sse42()
-
 # Optional flags:
 conf.env.Append(CFLAGS=[
     '-Wall', '-W', '-Wextra',
@@ -567,9 +595,9 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_sysctl()
 conf.check_blkid()
 conf.check_sys_block()
-conf.check_sysctl()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
@@ -578,6 +606,9 @@ conf.check_sha512()
 conf.check_gettext()
 conf.check_sqlite3()
 conf.check_linux_limits()
+conf.check_posix_fadvise()
+conf.check_btrfs_h()
+conf.check_uname()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
@@ -589,10 +620,14 @@ if conf.env['HAVE_SQLITE3']:
 env = conf.Finish()
 
 library = SConscript('lib/SConscript')
-program = SConscript('src/SConscript', exports='library')
-SConscript('tests/SConscript', exports='program')
+programs = SConscript('src/SConscript', exports='library')
+env.Default(library)
+
+SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
+SConscript('gui/SConscript')
+
 
 def build_tar_gz(target=None, source=None, env=None):
     tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
@@ -669,7 +704,6 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Support for SHA512 (needs glib >= 2.31)               : {sha512}
-    Support for SSE4.2 instructions for fast CityHash     : {sse42}
     Support for swapping metadata to disk (needs SQLite3) : {sqlite3}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
@@ -709,7 +743,6 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
-            sse42=yesno(env['HAVE_SSE42']),
             sqlite3=yesno(env['HAVE_SQLITE3']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),

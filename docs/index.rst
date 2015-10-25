@@ -1,6 +1,13 @@
 |
 |
 
+.. image:: _static/shredder.svg
+   :width: 25%
+   :align: center
+
+|
+
+
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. It is able to find:
 
@@ -46,34 +53,32 @@ to remove it. It is able to find:
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: https://rmlint.rtfd.org
+   :width: 8%
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
    :target: https://travis-ci.org/sahib/rmlint
+   :width: 8%
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
+   :width: 8%
 
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/releases
+   :width: 8%
 
-.. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
-   :target: https://github.com/sahib/rmlint/releases/latest
+.. image:: https://badge.waffle.io/sahib/rmlint.svg?label=ready&title=Ready
+   :target: https://waffle.io/sahib/rmlint
+   :width: 7%
 
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+   :width: 8%
 
 
 .. raw:: html
 
     </center>
-
-
-.. .. DANGER::
-.. 
-..     ``rmlint`` is currently in the progress of being rewritten. 
-..     This means that it still may contain bugs that might burn your data.
-.. 
-..     Use at your own risk!
 
 User manual
 -----------
@@ -86,10 +91,23 @@ They show you the basic principles and most of the advanced options:
 
    install
    tutorial
+   gui
+   cautions
    faq
 
 If you have usage questions or find weird behaviour, you can also try to reach
 us via *IRC* in ``#rmlint`` on ``irc.freenode.net``.
+
+Since version ``2.4.0`` we also feature an optional graphical user interface:
+
+.. raw:: html
+
+   <center>
+    <iframe src="https://player.vimeo.com/video/139999878" width="780"
+    height="450"
+    frameborder="0" webkitallowfullscreen mozallowfullscreen
+    allowfullscreen></iframe>
+   </center>
 
 Informative reference
 ---------------------
@@ -157,6 +175,7 @@ consider a donation. You can donate either via *Flattr* or via *PayPal*:
 .. image:: http://api.flattr.com/button/flattr-badge-large.png
    :target: http://flattr.com/thing/302682/libglyr
    :align: center 
+   :width: 9%
 
 .. raw:: html
 

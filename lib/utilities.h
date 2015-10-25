@@ -38,18 +38,24 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
 #else
 typedef struct stat RmStat;
 #endif
+
+////////////////////////
+//  MATHS SHORTCUTS   //
+////////////////////////
+
+#define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
 
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
 static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
     return stat64(path, buf);
 #else
     return stat(path, buf);
@@ -57,7 +63,7 @@ static inline int rm_sys_stat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_STAT64
+#if HAVE_STAT64 && !RM_IS_APPLE
     return lstat64(path, buf);
 #else
     return lstat(path, buf);
@@ -65,7 +71,7 @@ static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 }
 
 static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
-#if defined(__APPLE__) && defined(__MACH__)
+#if RM_IS_APPLE
     return stat->st_mtimespec.tv_sec;
 #else
     return stat->st_mtim.tv_sec;
@@ -74,9 +80,9 @@ static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
 
 static inline int rm_sys_open(const char *path, int mode) {
 #if HAVE_STAT64
-# ifdef O_LARGEFILE
+#ifdef O_LARGEFILE
     mode |= O_LARGEFILE;
-# endif
+#endif
 #endif
 
     return open(path, mode, (S_IRUSR | S_IWUSR));
@@ -90,7 +96,12 @@ static inline void rm_sys_close(int fd) {
 
 static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
                                    RmOff offset) {
-#if RM_PLATFORM_32
+#if RM_IS_APPLE
+    if(lseek(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+    }
+    return readv(fd, iov, iovcnt);
+#elif RM_PLATFORM_32
     if(lseek64(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
     }
@@ -107,7 +118,7 @@ static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
 typedef struct RmUserList {
     GSequence *users;
     GSequence *groups;
-    GMutex mutex;
+    GMutex lock;
 } RmUserList;
 
 /**
@@ -185,6 +196,15 @@ char *rm_util_basename(const char *filename);
  */
 bool rm_util_path_is_hidden(const char *path);
 
+/**
+ * @brief Get the depth of a path
+ *
+ * @param path
+ *
+ * @return depth of path or 0.
+ */
+int rm_util_path_depth(const char *path);
+
 typedef gpointer (*RmNewFunc)(void);
 
 /**
@@ -200,6 +220,37 @@ typedef gpointer (*RmNewFunc)(void);
  * @return value, which may be default_func() if key does not exist.
  */
 GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key, RmNewFunc default_func);
+
+/**
+ * @brief Push all elements in `src` at the tail of `dst`
+ *
+ * @param dest The queue to append to.
+ * @param src The queue to append from. Will be empty afterwards.
+ */
+void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src);
+
+/**
+ * @brief Function prototype for remove-iterating over a GQueue.
+ *
+ * @param data current element
+ * @param user_data optional user_data
+ *
+ * @return True if the element should be removed.
+ */
+typedef gboolean (*RmQRFunc)(gpointer data, gpointer user_data);
+
+/**
+ * @brief Iterate over a GQueue and call `func` on each element.
+ *
+ * If func returns true, the element is removed from the queue.
+ *
+ * @param queue GQueue to iterate
+ * @param func Function that evaluates the removal of the item
+ * @param user_data optional user data
+ *
+ * @return Number of removed items.
+ */
+gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data);
 
 /**
  * @brief Return a pointer to the extension part of the file or NULL if none.
@@ -258,23 +309,6 @@ void rm_mounts_table_destroy(RmMountTable *self);
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
 
 /**
- * @brief Return name of device/disk.
- *
- * This operation has constant time.
- *
- * @param self the table to lookup from.
- * @param device the dev_t of a disk
- *
- * @return pointer to disk name.
- */
-char *rm_mounts_get_disk_name(RmMountTable *self, dev_t device);
-
-/**
- * @brief Same as above, but calls rm_sys_stat(2) on path for you.
- */
-bool rm_mounts_is_nonrotational_by_path(RmMountTable *self, const char *path);
-
-/**
  * @brief Get the disk behind the partition.
  *
  * @param self the table to lookup from.
@@ -318,7 +352,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_path(const char *path, RmOff file_offset, RmOff *file_offset_next);
+RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
+                              RmOff *file_offset_next);
 
 /**
  * @brief Test if two files have identical fiemaps.

@@ -23,13 +23,40 @@
  *
  */
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "file.h"
 #include "formats.h"
 
+/* A group of output files.
+ * These are only created when caching to the end of the run is requested.
+ * Otherwise, files are directly outputed and not stored in groups.
+ */
+typedef struct RmFmtGroup {
+    GQueue files;
+    int index;
+} RmFmtGroup;
+
+static RmFmtGroup *rm_fmt_group_new(void) {
+    RmFmtGroup *self = g_slice_new(RmFmtGroup);
+    g_queue_init(&self->files);
+    return self;
+}
+
+static void rm_fmt_group_destroy(RmFmtGroup *self) {
+    for(GList *iter = self->files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        rm_file_destroy(file);
+    }
+
+    g_queue_clear(&self->files);
+    g_slice_free(RmFmtGroup, self);
+}
+
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
-    g_assert(handler);
+    rm_assert_gentle(handler);
 
     g_free(handler->path);
     g_free(handler);
@@ -42,6 +69,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
 
     self->path_to_handler = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
 
+    /* Set of registered handler names */
+    self->handler_set = g_hash_table_new(g_str_hash, g_str_equal);
+
     self->handler_to_file =
         g_hash_table_new_full(NULL, NULL, (GDestroyNotify)rm_fmt_handler_free, NULL);
 
@@ -49,6 +79,7 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
                                          (GDestroyNotify)g_hash_table_unref);
 
     self->session = session;
+    g_queue_init(&self->groups);
     g_rec_mutex_init(&self->state_mtx);
 
     extern RmFmtHandler *PROGRESS_HANDLER;
@@ -94,7 +125,7 @@ int rm_fmt_len(RmFmtTable *self) {
 
 bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key) {
     RmFmtHandler *handler = g_hash_table_lookup(self->name_to_handler, formatter);
-    if(handler == NULL || handler->valid_keys == NULL) {
+    if(handler == NULL) {
         return false;
     }
 
@@ -112,6 +143,7 @@ void rm_fmt_clear(RmFmtTable *self) {
         return;
     }
 
+    g_hash_table_remove_all(self->handler_set);
     g_hash_table_remove_all(self->handler_to_file);
     g_hash_table_remove_all(self->path_to_handler);
     g_hash_table_remove_all(self->config);
@@ -188,13 +220,111 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     }
 
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
-
     g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
+    g_hash_table_add(self->handler_set, (char *)new_handler_copy->name);
 
     return true;
 }
 
+static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
+    RM_FMT_FOR_EACH_HANDLER(self) {
+        RM_FMT_CALLBACK(handler->elem, result);
+    }
+}
+
+static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    RmOff sa = fa->file_size * (ga->files.length - 1);
+    RmOff sb = fb->file_size * (gb->files.length - 1);
+
+    /* Better do not compare big unsigneds via a - b... */
+    if(sa < sb) {
+        return -1;
+    }
+
+    if(sa > sb) {
+        return +1;
+    }
+
+    return 0;
+}
+
+static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
+    const char *rank_order = self->session->cfg->rank_criteria;
+
+    RmFile *fa = ga->files.head->data;
+    RmFile *fb = gb->files.head->data;
+
+    if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
+       fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        return -1;
+    }
+
+    if(fb->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
+       fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        return +1;
+    }
+
+    for(int i = 0; rank_order[i]; ++i) {
+        gint64 r = 0;
+        switch(tolower(rank_order[i])) {
+        case 's':
+            r = rm_fmt_rank_size(ga, gb);
+            break;
+        case 'a': {
+            RM_DEFINE_BASENAME(fa)
+            RM_DEFINE_BASENAME(fb)
+            r = strcasecmp(fa_basename, fb_basename);
+        } break;
+        case 'm':
+            r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
+            break;
+        case 'p':
+            r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
+            break;
+        case 'n':
+            r = ((gint64)ga->files.length) - ((gint64)gb->files.length);
+            break;
+        case 'o':
+            r = ga->index - gb->index;
+            break;
+        }
+
+        if(r != 0) {
+            r = CLAMP(r, -1, +1);
+            return isupper(rank_order[i]) ? -r : r;
+        }
+    }
+
+    return 0;
+}
+
+void rm_fmt_flush(RmFmtTable *self) {
+    RmCfg *cfg = self->session->cfg;
+    if(!cfg->cache_file_structs) {
+        return;
+    }
+
+    if(*(cfg->rank_criteria)) {
+        g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
+    }
+
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        g_queue_foreach(&group->files, (GFunc)rm_fmt_write_impl, self);
+    }
+}
+
 void rm_fmt_close(RmFmtTable *self) {
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        rm_fmt_group_destroy(group);
+    }
+
+    g_queue_clear(&self->groups);
+
     RM_FMT_FOR_EACH_HANDLER(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
@@ -205,13 +335,27 @@ void rm_fmt_close(RmFmtTable *self) {
     g_hash_table_unref(self->handler_to_file);
     g_hash_table_unref(self->path_to_handler);
     g_hash_table_unref(self->config);
+    g_hash_table_unref(self->handler_set);
     g_rec_mutex_clear(&self->state_mtx);
     g_slice_free(RmFmtTable, self);
 }
 
-void rm_fmt_write(RmFile *result, RmFmtTable *self) {
-    RM_FMT_FOR_EACH_HANDLER(self) {
-        RM_FMT_CALLBACK(handler->elem, result);
+void rm_fmt_write(RmFile *result, RmFmtTable *self, gint64 twin_count) {
+    bool direct = !(self->session->cfg->cache_file_structs);
+
+    result->twin_count = twin_count;
+
+    if(direct) {
+        rm_fmt_write_impl(result, self);
+    } else {
+        if(result->is_original || self->groups.length == 0) {
+            g_queue_push_tail(&self->groups, rm_fmt_group_new());
+        }
+
+        RmFmtGroup *group = self->groups.tail->data;
+        group->index = self->groups.length - 1;
+
+        g_queue_push_tail(&group->files, result);
     }
 }
 
@@ -261,6 +405,21 @@ bool rm_fmt_is_a_output(RmFmtTable *self, const char *path) {
 
 void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter) {
     g_hash_table_iter_init(iter, self->path_to_handler);
+}
+
+bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {
+    GHashTableIter iter;
+    char *handler_name = NULL;
+
+    g_hash_table_iter_init(&iter, self->handler_set);
+
+    while(g_hash_table_iter_next(&iter, (gpointer *)&handler_name, NULL)) {
+        if(!g_strcmp0(handler_name, name)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {

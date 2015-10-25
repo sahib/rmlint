@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+import os
+
+
+Import('env')
+
+
+if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
+    py_install = env.Command(
+        'always.install',
+        ['setup.py'],
+        'cd gui && python3 setup.py install --prefix {} --record .files.txt'.format(
+            GetOption('prefix')
+        )
+    )
+    env.Alias('install', py_install)
+
+
+if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
+    def uninstall_python_module(**kwargs):
+        try:
+            with open('gui/.files.txt') as handle:
+                for path in handle:
+                    path = path.strip()
+                    try:
+                        os.remove(path)
+                    except OSError as err:
+                        print('Unable to delete', path, ':', err)
+        except OSError as err:
+            print('Could not open .files.txt: ', err)
+
+
+    env.Alias('uninstall',
+        env.Command(
+            'gui/.files.txt', '',
+            Action(uninstall_python_module , "Uninstalling recorded files...")
+        )
+    )

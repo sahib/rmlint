@@ -51,7 +51,7 @@ def test_invalid():
             assert False
 
     # Not a valid range:
-    trigger('--size -17')
+    trigger('--size \-\-17')
 
     # max < min
     trigger('--size 10-9')

@@ -54,6 +54,14 @@ Here's a list of readily prepared commands for known distributions:
 
 * **ArchLinux:**
 
+  There is an official package in ``[community]`` here_:
+
+  .. code-block:: bash
+
+    $ pacman -S rmlint
+
+  Alternatively you can use ``rmlint-git`` in the AUR: 
+
   .. code-block:: bash
 
     $ pacman -S git scons python-sphinx
@@ -69,6 +77,7 @@ Here's a list of readily prepared commands for known distributions:
 
   It is built from git master.
 
+.. _here: https://www.archlinux.org/packages/?name=rmlint
 .. _`PKGBUILD`: https://aur.archlinux.org/packages/rm/rmlint-git/PKGBUILD
 .. _`ArchLinux AUR`: https://aur.archlinux.org/packages/rmlint-git
 
@@ -77,7 +86,7 @@ Here's a list of readily prepared commands for known distributions:
   .. code-block:: bash
 
     $ apt-get install git scons python3-sphinx python3-nose gettext build-essential
-    $ apt-get installlibelf-dev libglib2.0-dev libblkid-dev libjson-glib libjson-glib-dev
+    $ apt-get installlibelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
 
 
 * **FreeBSD:**

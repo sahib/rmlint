@@ -33,42 +33,42 @@ def run_sphinx_binary(builder, **kwargs):
 
 
 def gzip_file(target, source, env):
+    source, dest = source[0].get_abspath(), target[0].get_abspath()
     try:
         subprocess.check_call('gzip -c {s} > {t}'.format(
-            s=source[0].get_abspath(),
-            t=target[0].get_abspath(),
+            s=source, t=dest
         ), shell=True)
     except Exception as err:
         print('Warning: could not gzip {s} to {t}: {e}'.format(
-            s=source[0].get_abspath(),
-            t=target[0].get_abspath(),
-            e=err
+            s=source, t=dest, e=err
         ))
 
+# Do not use partial(), but a real function.
+# Scons uses this to check if the previous action
+# differs from the current action.
+# Partial actions are always different.
+def run_sphinx_binary_man(**kwargs):
+    run_sphinx_binary('man', **kwargs)
 
-sphinx = env.AlwaysBuild(
-    env.Command(
-        '_build/man/rmlint.1', 'rmlint.1.rst',
-        Action(partial(run_sphinx_binary, 'man'), "Building manpage from rst...")
-    )
+
+sphinx = env.Command(
+    '_build/man/rmlint.1', 'rmlint.1.rst',
+    env.Action(run_sphinx_binary_man, "Building manpage from rst...")
 )
 
-manpage = env.AlwaysBuild(
-    env.Command(
-        'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
-    )
+manpage = env.Command(
+    'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
 )
+
+env.Default(sphinx)
+env.Default(manpage)
 
 env.Alias('man', env.Depends(manpage, sphinx))
 
 
 if 'install' in COMMAND_LINE_TARGETS:
-    manpage[0].build()
-    if os.access(str(manpage[0]), os.R_OK):
-        man_install = env.Install('$PREFIX/share/man/man1', [manpage])
-        env.Alias('install', [man_install])
-    else:
-        print('WARNING: No manpage will be installed!')
+    man_install = env.Install('$PREFIX/share/man/man1', [manpage])
+    target = env.Alias('install', [manpage, man_install])
 
 
 if 'uninstall' in COMMAND_LINE_TARGETS:

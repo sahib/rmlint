@@ -56,6 +56,7 @@ typedef struct RmCfg {
     gboolean limits_specified;
     gboolean filter_mtime;
     gboolean match_basename;
+    gboolean unmatched_basenames;
     gboolean match_with_extension;
     gboolean match_without_extension;
     gboolean merge_directories;
@@ -67,6 +68,8 @@ typedef struct RmCfg {
     gboolean build_fiemap;
     gboolean use_buffered_read;
     gboolean fake_fiemap;
+    gboolean progress_enabled;
+    gboolean list_mounts;
 
     int permissions;
 
@@ -84,21 +87,43 @@ typedef struct RmCfg {
 
     char **paths;
     char *is_prefd;
-    char *sort_criteria;
     char *iwd;
     char *joined_argv;
+
+    char sort_criteria[64];
+    char rank_criteria[64];
 
     RmTrie file_trie;
 
     RmOff minsize;
     RmOff maxsize;
     RmOff threads;
+    guint threads_per_disk;
     RmDigestType checksum_type;
+
+    /* number of bytes to allocate to reading buffer during shredding */
+    RmOff read_buffer_mem;
+
+    /* number of bytes to allocate to in-progress paranoid digests */
     RmOff paranoid_mem;
+
+    /* total number of bytes we are allowed to use (target only) */
+    RmOff total_mem;
+
+    /* number of bytes to read before going back to start of disk
+     * (too big a sweep risks metadata getting pushed out of ram)*/
+    RmOff sweep_size;
+    RmOff sweep_count;
 
     gboolean shred_always_wait;
     gboolean shred_never_wait;
     gboolean fake_pathindex_as_disk;
+    gboolean fake_abort;
+
+    /* If true, files are hold back to
+     * the end of the program run and printed then.
+     */
+    gboolean cache_file_structs;
 } RmCfg;
 
 /**

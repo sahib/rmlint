@@ -33,7 +33,7 @@ typedef struct RmSwapAttr {
 
 static RmSwapAttr *rm_swap_attr_create(sqlite3 *handle, int id, const char *name,
                                        GError **error) {
-    g_assert(name);
+    rm_assert_gentle(name);
 
     RmSwapAttr *self = g_malloc0(sizeof(RmSwapAttr));
     self->name = name;
@@ -67,8 +67,8 @@ static RmSwapAttr *rm_swap_attr_create(sqlite3 *handle, int id, const char *name
 }
 
 static void rm_swap_attr_destroy(RmSwapAttr *self, RmSwapTable *table) {
-    g_assert(self);
-    g_assert(table);
+    rm_assert_gentle(self);
+    rm_assert_gentle(table);
 
     for(int idx = 0; idx < N_STMTS; ++idx) {
         sqlite3_stmt *stmt = self->stmts[idx];
@@ -80,8 +80,8 @@ static void rm_swap_attr_destroy(RmSwapAttr *self, RmSwapTable *table) {
 
 static void rm_swap_table_clean_stmt(RmSwapTable *self, sqlite3_stmt *stmt,
                                      GError **error) {
-    g_assert(self);
-    g_assert(stmt);
+    rm_assert_gentle(self);
+    rm_assert_gentle(stmt);
 
     if(sqlite3_errcode(self->cache) != SQLITE_DONE) {
         SET_ERROR("stmt failed: %s", sqlite3_errmsg(self->cache));
@@ -147,7 +147,10 @@ RmSwapTable *rm_swap_table_open(gboolean in_memory, GError **error) {
     sqlite3_exec(handle, "PRAGMA cache_size = 8000;", 0, 0, 0);
     sqlite3_exec(handle, "PRAGMA synchronous = OFF;", 0, 0, 0);
     sqlite3_exec(handle, "PRAGMA journal_mode = MEMORY;", 0, 0, 0);
+
+#if !RM_IS_APPLE
     sqlite3_enable_shared_cache(TRUE);
+#endif
 
     size_t path_len = strlen(path) + 1;
     self = g_malloc(sizeof(RmSwapTable) + path_len);
@@ -163,7 +166,7 @@ cleanup:
 }
 
 void rm_swap_table_close(RmSwapTable *self, GError **error) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     g_mutex_lock(&self->mtx);
     {
@@ -186,7 +189,7 @@ void rm_swap_table_close(RmSwapTable *self, GError **error) {
 }
 
 int rm_swap_table_create_attr(RmSwapTable *self, const char *name, GError **error) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     RmSwapAttr *attribute = NULL;
     g_mutex_lock(&self->mtx);
@@ -201,7 +204,7 @@ int rm_swap_table_create_attr(RmSwapTable *self, const char *name, GError **erro
 }
 
 static void rm_swap_table_begin(RmSwapTable *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     if(sqlite3_exec(self->cache, "BEGIN IMMEDIATE;", 0, 0, 0) == SQLITE_OK) {
         self->transaction_running = TRUE;
@@ -209,7 +212,7 @@ static void rm_swap_table_begin(RmSwapTable *self) {
 }
 
 static void rm_swap_table_commit(RmSwapTable *self) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     if(sqlite3_exec(self->cache, "COMMIT;", 0, 0, 0) == SQLITE_OK) {
         self->transaction_running = FALSE;
@@ -218,7 +221,7 @@ static void rm_swap_table_commit(RmSwapTable *self) {
 
 size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,
                             size_t buf_size) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     size_t bytes_written = 0;
 
@@ -233,7 +236,7 @@ size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,
         sqlite3_stmt *stmt = attribute->stmts[STMT_SELECT_DATA];
 
         if(sqlite3_bind_int64(stmt, 1, id) != SQLITE_OK) {
-            g_assert_not_reached();
+            rm_assert_gentle_not_reached();
         }
 
         if(sqlite3_step(stmt) == SQLITE_ROW) {
@@ -251,7 +254,7 @@ size_t rm_swap_table_lookup(RmSwapTable *self, int attr, RmOff id, char *buf,
 }
 
 RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data, size_t data_len) {
-    g_assert(self);
+    rm_assert_gentle(self);
 
     RmOff id = 0;
 
@@ -266,7 +269,7 @@ RmOff rm_swap_table_insert(RmSwapTable *self, int attr, char *data, size_t data_
         sqlite3_stmt *stmt = attribute->stmts[STMT_INSERT_DATA];
 
         if(sqlite3_bind_text(stmt, 1, data, data_len, NULL) != SQLITE_OK) {
-            g_assert_not_reached();
+            rm_assert_gentle_not_reached();
         }
 
         if(sqlite3_step(stmt) == SQLITE_DONE) {

@@ -44,9 +44,6 @@ typedef enum RmFileState {
      */
     RM_FILE_STATE_IGNORE,
 
-    /* File hashed to end of (disk) fragment but not yet to target bytes hashed
-     */
-    RM_FILE_STATE_FRAGMENT,
 } RmFileState;
 
 /* types of lint */
@@ -100,11 +97,20 @@ typedef struct RmFile {
      * */
     time_t mtime;
 
+    /* Depth of the file, relative to the path it was found in.
+     */
+    short depth;
+
+    /* Depth of the path of this file.
+     */
+    guint8 path_depth;
+
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
      */
     ino_t inode;
     dev_t dev;
+    struct _RmMDSDevice *disk;
 
     /* True if the file is a symlink
      * shredder needs to know this, since the metadata might be about the
@@ -150,8 +156,11 @@ typedef struct RmFile {
     /* If true, the file will be request to be pre-cached on the next read */
     bool fadvise_requested : 1;
 
-    /* Set to true if rm_shred_devlist_factory is waiting for hash increment */
-    bool devlist_waiting : 1;
+    /* Set to true if rm_shred_process_file() for hash increment */
+    bool shredder_waiting : 1;
+
+    /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
+    bool is_on_subvol_fs : 1;
 
     /* If this file is the head of a hardlink cluster, the following structure
      * contains the other hardlinked RmFile's.  This is used to avoid
@@ -173,15 +182,10 @@ typedef struct RmFile {
      */
     RmOff file_size;
 
-    /* How many bytes were already hashed
-     * (lower or equal seek_offset)
-     */
-    RmOff hash_offset;
-
     /* How many bytes were already read.
-     * (lower or equal file_size)
-     */
-    RmOff seek_offset;
+    * (lower or equal file_size)
+    */
+    RmOff hash_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
      * fragmented */
@@ -192,11 +196,20 @@ typedef struct RmFile {
      */
     RmDigest *digest;
 
-    /* Disk fiemap / physical offset info.
-     * TODO: can we make do with less than 16 bytes here?
+    /* Those are never used at the same time.
+     * disk_offset is used during computation,
+     * twin_count during output.
      */
-    RmOff current_fragment_physical_offset;
-    RmOff next_fragment_logical_offset;
+    union {
+        /* Count of twins of this file.
+         * (i.e. length of group of this file)
+         */
+        gint64 twin_count;
+
+        /* Disk fiemap / physical offset at start of file (tests mapping subsequent
+         * file fragements did not deliver any significant additionl benefit) */
+        RmOff disk_offset;
+    };
 
     /* What kind of lint this file is.
      */
@@ -205,12 +218,11 @@ typedef struct RmFile {
     /* Link to the RmShredGroup that the file currently belongs to */
     struct RmShredGroup *shred_group;
 
-    /* Link to the RmShredDevice that the file is associated with */
-    struct RmShredDevice *device;
-
     /* Required for rm_file_equal for building initial match_table
      * and for RM_DEFINE_PATH and RM_DEFINE_BASENAME */
     const struct RmSession *session;
+
+    struct RmSignal *signal;
 } RmFile;
 
 /* Defines a path variable containing the file's path */
@@ -240,7 +252,8 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.                             \
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
-                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum);
+                    RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,
+                    short depth);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -252,6 +265,15 @@ void rm_file_destroy(RmFile *file);
  * @brief Convert RmLintType to a human readable short string.
  */
 const char *rm_file_lint_type_to_string(RmLintType type);
+
+/**
+ * @brief Convert a string to a RmLintType
+ *
+ * @param type a string description.
+ *
+ * @return a valid lint type or RM_LINT_TYPE_UNKNOWN
+ */
+RmLintType rm_file_string_to_lint_type(const char *type);
 
 /**
  * @brief Set a path to the file. Normally, you should never do this since the
@@ -270,5 +292,11 @@ void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *bu
  * tree and basename.
  */
 void rm_file_build_path(RmFile *file, char *buf);
+
+/**
+ * @brief Compare basenames of two files
+ * @retval true if basenames match.
+ */
+gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b);
 
 #endif /* end of include guard */

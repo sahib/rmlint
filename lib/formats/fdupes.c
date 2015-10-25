@@ -101,7 +101,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     extern RmFmtHandler *PROGRESS_HANDLER;
-    g_assert(PROGRESS_HANDLER->prog);
+    rm_assert_gentle(PROGRESS_HANDLER->prog);
     PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);
 
     /* Print all cached lines on shutdown. */
@@ -118,21 +118,22 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     extern RmFmtHandler *SUMMARY_HANDLER;
-    g_assert(SUMMARY_HANDLER->prog);
+    rm_assert_gentle(SUMMARY_HANDLER->prog);
     SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(FDUPES_HANDLER_IMPL),
-        .name = "fdupes",
-        .head = NULL,
-        .elem = rm_fmt_elem,
-        .prog = rm_fmt_prog,
-        .foot = NULL,
-        .valid_keys = {"omitfirst", "sameline", NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(FDUPES_HANDLER_IMPL),
+            .name = "fdupes",
+            .head = NULL,
+            .elem = rm_fmt_elem,
+            .prog = rm_fmt_prog,
+            .foot = NULL,
+            .valid_keys = {"omitfirst", "sameline", NULL},
+        },
     .text_lines = NULL,
     .use_same_line = false,
     .omit_first_line = false
