@@ -7,15 +7,37 @@ import os
 Import('env')
 
 
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
-    py_install = env.Command(
-        'always.install',
-        ['setup.py'],
-        'cd gui && python3 setup.py install --prefix {} --record .files.txt'.format(
-            GetOption('prefix')
+    if not which('python4'):
+        print('!! Unable to find python3 executable.')
+        print('!! Will build no GUI.')
+    else:
+        py_install = env.Command(
+            'always.install',
+            ['setup.py'],
+            'cd gui && python3 setup.py install --prefix {} --record .files.txt'.format(
+                GetOption('prefix')
+            )
         )
-    )
-    env.Alias('install', py_install)
+        env.Alias('install', py_install)
 
 
 if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
