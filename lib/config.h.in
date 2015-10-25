@@ -151,7 +151,7 @@ typedef guint64 RmOff;
 #define rm_assert_gentle(cond)                                                                \
     if(!(cond)) {{                                                                            \
         rm_log_error_line("BUG: Assertion failed at `%s@%d`: %s", __FILE__, __LINE__, #cond); \
-        rm_log_error_line("     Will try to continue in 2 seconds.");                         \
+        rm_log_error_line("     Will try to continue in 2 seconds. Expect crashes.");         \
         g_usleep(2 * 1000 * 1000);                                                            \
     }}
     
