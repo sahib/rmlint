@@ -78,6 +78,8 @@
 #include <json-glib/json-glib.h>
 #endif
 
+#define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
+
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
@@ -503,7 +505,7 @@ typedef struct RmPartitionInfo {
     dev_t disk;
 } RmPartitionInfo;
 
-#if HAVE_GIO_UNIX && HAVE_BLKID
+#if RM_MOUNTTABLE_IS_USABLE
 
 RmPartitionInfo *rm_part_info_new(char *name, char *fsname, dev_t disk) {
     RmPartitionInfo *self = g_new0(RmPartitionInfo, 1);
@@ -549,43 +551,6 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     }
 
     fclose(sys_fdes);
-#elif HAVE_SYSCTL && !RM_IS_APPLE
-    /* try with sysctl() */
-    int device_num = 0;
-    char cmd[32] = {0}, delete_method[32] = {0}, dev_copy[32] = {0};
-    size_t delete_method_len = sizeof(delete_method_len);
-    (void)dev;
-
-    memset(cmd, 0, sizeof(cmd));
-    memset(delete_method, 0, sizeof(delete_method));
-    strncpy(dev_copy, dev, sizeof(dev_copy));
-
-    for(int i = 0; dev_copy[i]; ++i) {
-        if(isdigit(dev_copy[i])) {
-            if(i > 0) {
-                dev_copy[i - 1] = 0;
-            }
-
-            device_num = g_ascii_strtoll(&dev_copy[i], NULL, 10);
-            break;
-        }
-    }
-
-    if(snprintf(cmd, sizeof(cmd), "kern.cam.%s.%d.delete_method", dev_copy, device_num) ==
-       -1) {
-        return -1;
-    }
-
-    if(sysctlbyname(cmd, delete_method, &delete_method_len, NULL, 0) != 0) {
-        rm_log_perror("sysctlbyname");
-    } else {
-        if(memcmp("NONE", delete_method, MIN(delete_method_len, 4)) == 0) {
-            is_rotational = 1;
-        } else {
-            is_rotational = 0;
-        }
-    }
-
 #else
     (void)dev;
 #endif
@@ -750,66 +715,9 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     return self;
 }
 
-#if HAVE_SYSCTL && !RM_IS_APPLE
-
-static GHashTable *DISK_TABLE = NULL;
-
-static void rm_mounts_freebsd_list_disks(void) {
-    char disks[1024];
-    size_t disks_len = sizeof(disks);
-    memset(disks, 0, sizeof(disks));
-
-    DISK_TABLE = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-
-    if(sysctlbyname("kern.disks", disks, &disks_len, NULL, 0) == 0) {
-        char **disk_vec = g_strsplit(disks, " ", -1);
-        for(int i = 0; disk_vec[i]; ++i) {
-            char *disk = g_strdup_printf("/dev/%s", disk_vec[i]);
-            RmStat dev_stat;
-
-            if(rm_sys_stat(disk, &dev_stat) != -1) {
-                g_hash_table_insert(DISK_TABLE, disk, GUINT_TO_POINTER(dev_stat.st_rdev));
-            } else {
-                rm_log_perror("stat on /dev");
-                g_free(disk);
-            }
-        }
-
-        g_strfreev(disk_vec);
-    } else {
-        rm_log_perror("sysctlbyname");
-    }
-}
-#endif
-
 int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk,
                                  _U size_t disk_size, _U dev_t *result) {
-#if HAVE_BLKID
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
-#elif HAVE_SYSCTL && !RM_IS_APPLE
-    if(DISK_TABLE == NULL) {
-        rm_mounts_freebsd_list_disks();
-    }
-
-    GHashTableIter iter;
-    g_hash_table_iter_init(&iter, DISK_TABLE);
-
-    gpointer key = NULL;
-    gpointer value = NULL;
-
-    while(g_hash_table_iter_next(&iter, &key, &value)) {
-        char *str_key = key;
-        if(g_str_has_prefix(str_key, entry->fsname)) {
-            strncpy(disk, strrchr(str_key, '/'), disk_size);
-            *result = (dev_t)GPOINTER_TO_UINT(value);
-            return 0;
-        }
-    }
-
-    return -1;
-#else
-    return -1;
-#endif
 }
 
 static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
@@ -928,12 +836,6 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
             is_rotational ? "yes" : "no");
     }
 
-#if HAVE_SYSCTL && !RM_IS_APPLE
-    if(DISK_TABLE) {
-        g_hash_table_unref(DISK_TABLE);
-    }
-#endif
-
     rm_mount_list_close(mnt_entries);
     return true;
 }
@@ -971,7 +873,7 @@ void rm_mounts_table_destroy(_U RmMountTable *self) {
     /* NO-OP */
 }
 
-#endif
+#endif /* RM_MOUNTTABLE_IS_USABLE */
 
 bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     if(self == NULL) {
@@ -1000,7 +902,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
         return 0;
     }
 
-#if HAVE_GIO_UNIX && HAVE_BLKID
+#if RM_MOUNTTABLE_IS_USABLE
 
     RmPartitionInfo *part =
         g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
