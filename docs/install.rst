@@ -120,7 +120,7 @@ binary:
    $ cd rmlint/
    $ scons config       # Look what features scons would compile
    $ scons DEBUG=1 -j4  # For releases you can omit DEBUG=1
-   $ sudo scons DEBUG=1 --prefix=/usr install
+   $ sudo scons DEBUG=1 -j4 --prefix=/usr install
 
 Done!
 
