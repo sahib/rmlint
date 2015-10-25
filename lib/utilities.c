@@ -1049,7 +1049,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
 #else
     (void) partition;
     (void) path;
-    return NULL;
+    return 0;
 #endif
 }
 
