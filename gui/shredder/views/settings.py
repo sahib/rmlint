@@ -221,7 +221,11 @@ class SettingsView(View):
         listbox = self.sections[section.lower()]
         if len(listbox):
             sep_row = Gtk.ListBoxRow()
-            sep_row.set_activatable(False)
+
+            # Needs gtk >= 3.14
+            if hasattr(sep_row, 'set_activatable'):
+                sep_row.set_activatable(False)
+
             sep_row.add(Gtk.Separator())
             listbox.insert(sep_row, -1)
 
