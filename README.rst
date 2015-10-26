@@ -9,7 +9,7 @@
 to remove it. 
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: https://rmlint.rtfd.org
+   :target: http://rmlint.rtfd.org
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
    :target: https://travis-ci.org/sahib/rmlint
@@ -69,11 +69,11 @@ DOCUMENTATION
 
 Detailed documentation is available on: 
 
-    https://rmlint.rtfd.org
+    http://rmlint.rtfd.org
 
 Most feature you'll ever need is covered in the Tutorial:
 
-    https://rmlint.rtfd.org/en/latest/tutorial.html
+    http://rmlint.rtfd.org/en/latest/tutorial.html
 
 An online version of the manpage is available at:
 

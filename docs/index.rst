@@ -52,7 +52,7 @@ to remove it. It is able to find:
     <center>
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: https://rmlint.rtfd.org
+   :target: http://rmlint.rtfd.org
    :width: 8%
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
