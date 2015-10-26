@@ -34,12 +34,14 @@ Build dependencies:
 
 Here's a list of readily prepared commands for known distributions:
 
-* **Fedora:**
+* **Fedora** :math:`\geq 21`:
 
   .. code-block:: bash
   
     $ yum -y install git scons python3-sphinx gettext json-glib-devel
     $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
+    # Optional dependencies for the GUI:
+    $ yum -y install pygobject3 gtk3 librsvg2 
 
   There are also pre-built packages on `Fedora Copr`_:
 
@@ -48,7 +50,7 @@ Here's a list of readily prepared commands for known distributions:
     $ dnf copr enable sahib/rmlint
     $ dnf install rmlint
 
-  Those packages are built from master snapshots and might be slightly outdated.
+  Those packages are built from master snapshots and might be outdated.
 
 .. _`Fedora Copr`: https://copr.fedoraproject.org/coprs/sahib/rmlint/
 
@@ -66,6 +68,8 @@ Here's a list of readily prepared commands for known distributions:
 
     $ pacman -S git scons python-sphinx
     $ pacman -S glib2 libutil-linux elfutils json-glib
+    # Optional dependencies for the GUI:
+    $ pacman -S gtk3 python-gobject librsvg
 
   There is also a `PKGBUILD`_ on the `ArchLinux AUR`_:
 
@@ -74,44 +78,46 @@ Here's a list of readily prepared commands for known distributions:
     $ # Use your favourite AUR Helper.
     $ yaourt -S rmlint-git
 
-
-  It is built from git master.
+  It is built from git ``master``, not from the ``develop`` branch.
 
 .. _here: https://www.archlinux.org/packages/?name=rmlint
 .. _`PKGBUILD`: https://aur.archlinux.org/packages/rm/rmlint-git/PKGBUILD
 .. _`ArchLinux AUR`: https://aur.archlinux.org/packages/rmlint-git
 
-* **Ubuntu:**
+* **Ubuntu** :math:`\geq 12.04`:
+
+  This most likely applies to most distributions that are derived from Ubuntu.
 
   .. code-block:: bash
 
     $ apt-get install git scons python3-sphinx python3-nose gettext build-essential
+    # Optional dependencies for more features:
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
+    # Optional dependencies for the GUI:
+    $ apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 
 
-
-* **FreeBSD:**
+* **FreeBSD** :math:`\geq 10.1`:
 
   .. code-block:: bash
 
     $ pkg install git scons py27-sphinx
     $ pkg install glib gettext libelf json-glib
 
-  Also ``rmlint`` is maintained as port:
-
-  .. code-block:: bash
-
-    $ cd /usr/ports/sysutils/rmlint && make install
+-----
 
 Send us a note if you want to see your distribution here.
 The commands above install the full dependencies, therefore
 some packages might be stripped if you do not need the feature
 they enable. Only hard requirement is ``glib``.
 
+Also be aware that the GUI needs at least :math:`gtk \geq 3.14` to work!
+
 Compilation
 -----------
 
 Compilation consists of getting the source and translating it into a usable
-binary:
+binary. We use the build system ``scons``. Note that the following instructions
+build the software from the potentially unstable ``develop`` branch: 
 
 .. code-block:: bash
 
@@ -126,3 +132,6 @@ Done!
 
 You should be now able to see the manpage with ``rmlint --help`` or ``man 1
 rmlint``.
+
+You can also only type the ``install`` command above. The buildsystem is clever
+enough to figure out which targets need to be built beforehand.

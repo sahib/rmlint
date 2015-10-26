@@ -3,7 +3,7 @@ Graphical user interface
 
 As of ``rmlint`` :math:`\geq 2.4.0` a GUI frontend called ``Shredder`` is
 shipped alongside of ``rmlint``. It is written in Python and uses no external 
-dependencies beside ``gtk+`` :math:`\geq` and ``PyGObject``.
+dependencies beside ``gtk+`` :math:`\geq 3.14` and ``PyGObject``.
 
 .. raw:: html
 
@@ -30,7 +30,7 @@ the GUI, except you pass ``--without-gui`` to it.
 Usage
 -----
 
-The gui can be started via ``rmlint --gui``.The application is divided into several
+The GUI can be started via ``rmlint --gui``.The application is divided into several
 views that guide you through the duplicate finding process.
 
 Developers
