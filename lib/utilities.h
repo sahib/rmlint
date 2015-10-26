@@ -317,7 +317,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device);
  *
  * @return the dev_t of the whole disk. (sda 8:0)
  */
-dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path);
+dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path);
 
 /**
  * @brief Same as above, but calls rm_sys_stat(2) on path for you.

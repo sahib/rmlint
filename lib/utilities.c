@@ -897,7 +897,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *path) {
+dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
     if(self == NULL) {
         return 0;
     }
@@ -905,13 +905,12 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
 #if RM_MOUNTTABLE_IS_USABLE
 
     RmPartitionInfo *part =
-        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(partition));
+        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dev));
     if(part) {
         return part->disk;
     } else {
         /* probably a btrfs subvolume which is not a mountpoint; walk up tree until we get
-         * to *
-         * a recognisable partition */
+         * to a recognisable partition */
         char *prev = g_strdup(path);
         while(TRUE) {
             char *temp = g_strdup(prev);
@@ -923,19 +922,21 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t partition, const char *pat
                 RmPartitionInfo *parent_part = g_hash_table_lookup(
                     self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
                 if(parent_part) {
-                    /* create new partition table entry */
+                    /* create new partition table entry for dev pointing to parent_part*/
                     rm_log_debug_line("Adding partition info for " GREEN "%s" RESET
-                                      " - looks like subvolume %s on disk " GREEN
+                                      " - looks like subvolume %s on volume " GREEN
                                       "%s" RESET,
                                       path, prev, parent_part->name);
                     part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
-                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(partition),
+                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(dev),
                                         part);
-                    if(g_hash_table_contains(self->reflinkfs_table,
-                                             GUINT_TO_POINTER(stat_buf.st_dev))) {
+                    /* if parent_part is in the reflinkfs_table, add dev as well */
+                    char *parent_type = g_hash_table_lookup(self->reflinkfs_table,
+                                             GUINT_TO_POINTER(stat_buf.st_dev));
+                    if (parent_type) {
                         g_hash_table_insert(self->reflinkfs_table,
-                                            GUINT_TO_POINTER(partition),
-                                            GUINT_TO_POINTER(1));
+                                            GUINT_TO_POINTER(dev),
+                                            parent_type);
                     }
                     g_free(prev);
                     g_free(parent_path);
