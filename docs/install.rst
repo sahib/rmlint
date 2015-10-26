@@ -86,7 +86,7 @@ Here's a list of readily prepared commands for known distributions:
   .. code-block:: bash
 
     $ apt-get install git scons python3-sphinx python3-nose gettext build-essential
-    $ apt-get installlibelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
+    $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
 
 
 * **FreeBSD:**
