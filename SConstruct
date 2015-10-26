@@ -209,24 +209,6 @@ def check_sys_block(context):
     return rc
 
 
-def check_sysctl(context):
-    rc = 1
-
-    if tests.CheckFunc(
-        context, 'sysctlbyname',
-        header=
-            '#include <sys/types.h>'
-            '#include <sys/sysctl.h>'
-    ):
-        rc = 0
-
-    conf.env['HAVE_SYSCTL'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
 def check_posix_fadvise(context):
     rc = 1
 
@@ -495,7 +477,6 @@ conf = Configure(env, custom_tests={
     'check_xattr': check_xattr,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
-    'check_sysctl': check_sysctl,
     'check_posix_fadvise': check_posix_fadvise,
     'check_sys_block': check_sys_block,
     'check_bigfiles': check_bigfiles,
@@ -595,7 +576,6 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
-conf.check_sysctl()
 conf.check_blkid()
 conf.check_sys_block()
 conf.check_libelf()

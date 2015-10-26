@@ -70,10 +70,6 @@
 #include <blkid.h>
 #endif
 
-#if HAVE_SYSCTL
-#include <sys/sysctl.h>
-#endif
-
 #if HAVE_JSON_GLIB
 #include <json-glib/json-glib.h>
 #endif
