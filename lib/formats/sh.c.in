@@ -77,6 +77,10 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         return false;
     }
 
+    if (!rm_mounts_can_reflink(self->session->mounts, file->dev, self->last_original->dev) ) {
+        return false;
+    }
+
     /* Needs to have at least kernel 4.2 */
     if(!rm_session_check_kernel_version(self->session, 4, 2)) {
         return false;
