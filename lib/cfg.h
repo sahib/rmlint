@@ -90,7 +90,7 @@ typedef struct RmCfg {
     char *iwd;
     char *joined_argv;
 
-    char sort_criteria[64];
+    char *sort_criteria;
     char rank_criteria[64];
 
     RmTrie file_trie;

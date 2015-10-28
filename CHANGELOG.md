@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.4.1 Myopic Micrathene Bugfixes] -- [unreleased]
+
+### Fixed
+
+- ``btrfs``:  Do not try to clone files on different subvolumes.
+- ``gui``: Tie down version for gobject-introspection.
+- ``freebsd``: Fix very bad performance due to mounttable and some compile
+  issues.
+
+### Added
+
+- ``-S`` now understands two new letters to match via regular expressions:
+
+    - ``r``: Select the path as original that matches the pattern given in ``<PATTERN>`` after this letter.
+    - ``x``: Same as ``r`` but match only basename.
+
+
 ## [2.4.0 Myopic Micrathene] -- 2015-10-25
 
 ### Fixed
@@ -184,8 +201,10 @@ The format follows [keepachangelog.com]. Please stick to it.
 Initial release of the rewrite.
 
 [unreleased]: https://github.com/sahib/rmlint/compare/master...develop
-[2.2.1 Dreary Dropbear Bugfixes]: https://github.com/sahib/rmlint/compare/master...develop
+[2.2.1 Dreary Dropbear Bugfixes]: https://github.com/sahib/rmlint/compare/v2.2.0..v2.2.1
 [2.2.0 Dreary Dropbear]: https://github.com/sahib/rmlint/releases/tag/v2.2.0
 [2.1.0 Malnourished Molly]: https://github.com/sahib/rmlint/releases/tag/v2.1.0
 [2.0.0 Personable Pidgeon]: https://github.com/sahib/rmlint/releases/tag/v2.0.0
+[2.3.0 Ominous Oscar]: https://github.com/sahib/rmlint/compare/v2.2.2..v2.4.0
+[2.4.0 Myopic Micrathene]: https://github.com/sahib/rmlint/releases/tag/v2.4.0
 [keepachangelog.com]: http://keepachangelog.com/

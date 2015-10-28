@@ -68,21 +68,10 @@ void rm_file_list_insert_queue(GQueue *files, const RmSession *session);
 void rm_file_tables_clear(const RmSession *session);
 
 /**
- * @brief Compare certain attributes (listed below) of files
- *        in order to find out which file is the original.
- *
- * Returns:
- */
-int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_t mtime_b,
-                                 const char *basename_a, const char *basename_b,
-                                 int path_index_a, int path_index_b, guint8 path_depth_a,
-                                 guint8 path_depth_b);
-
-/**
  * @brief Compare two files in order to find out which file is the
  * higher ranked (ie original).
  *
- * Returns:
+ * Returns: -1 if a > b, 0 if a == b and +1 else.
  */
 int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *session);
 
@@ -90,5 +79,11 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
  * @brief: Check if two files are equal in terms of size, and match_* options.
  */
 gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b);
+
+/**
+ * @brief: Compile all r<PATTERN> constructs in `sortcrit` to a GRegex
+ *         and store them into session->pattern_cache.
+ */
+char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error);
 
 #endif

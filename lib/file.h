@@ -80,6 +80,21 @@ typedef enum RmLintType {
 
 struct RmSession;
 
+typedef guint16 RmPatternBitmask;
+
+/* Get the number of usable fields in a RmPatternBitmask */
+#define RM_PATTERN_N_MAX (sizeof(RmPatternBitmask) * 8 / 2)
+
+/* Check if a field has been set already in the RmPatternBitmask */
+#define RM_PATTERN_IS_CACHED(mask, idx) (!!((*mask) & (1 << (idx + RM_PATTERN_N_MAX))))
+
+/* If the field was set, this will retrieve the previous result */
+#define RM_PATTERN_GET_CACHED(mask, idx) (!!((*mask) & (1 << idx)))
+
+/* Set a field and remember that it was set. */
+#define RM_PATTERN_SET_CACHED(mask, idx, match) \
+    ((*mask) |= ((!!match << idx) | (1 << (idx + RM_PATTERN_N_MAX))))
+
 /**
  * RmFile structure; used by pretty much all rmlint modules.
  */
@@ -223,6 +238,13 @@ typedef struct RmFile {
     const struct RmSession *session;
 
     struct RmSignal *signal;
+
+    /* Caching bitmasks to ensure each file is only matched once
+     * for every GRegex combination.
+     * See also preprocess.c for more explanation.
+     * */
+    RmPatternBitmask pattern_bitmask_path;
+    RmPatternBitmask pattern_bitmask_basename;
 } RmFile;
 
 /* Defines a path variable containing the file's path */
@@ -240,16 +262,21 @@ typedef struct RmFile {
 /* Defines <file>_basename.
  * Also defines <file>_path, but do not rely on it being filled!
  */
-#define RM_DEFINE_BASENAME(file)                                  \
+#define _RM_DEFINE_BASENAME(file, inherited)                      \
     char *file##_basename = NULL;                                 \
-    _RM_DEFINE_PATH(file, true);                                  \
+    _RM_DEFINE_PATH(file, inherited);                             \
     if(file->session->cfg->use_meta_cache) {                      \
         file##_basename = rm_util_basename((char *)&file##_path); \
     } else {                                                      \
         file##_basename = file->folder->basename;                 \
-    }                                                             \
-/**                                                               \
- * @brief Create a new RmFile handle.                             \
+    }
+
+#define RM_DEFINE_BASENAME(file) _RM_DEFINE_BASENAME(file, true)
+
+#define RM_DEFINE_BOTH(file, do_both) _RM_DEFINE_BASENAME(file, !(do_both))
+
+/**
+ * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,
