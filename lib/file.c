@@ -143,8 +143,5 @@ RmLintType rm_file_string_to_lint_type(const char *type) {
 }
 
 gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
-
-    return g_ascii_strcasecmp(file_a_basename, file_b_basename);
+    return g_ascii_strcasecmp(file_a->folder->basename, file_b->folder->basename);
 }

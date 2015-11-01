@@ -233,8 +233,7 @@ typedef struct RmFile {
     /* Link to the RmShredGroup that the file currently belongs to */
     struct RmShredGroup *shred_group;
 
-    /* Required for rm_file_equal for building initial match_table
-     * and for RM_DEFINE_PATH and RM_DEFINE_BASENAME */
+    /* Required for rm_file_equal and for RM_DEFINE_PATH */
     const struct RmSession *session;
 
     struct RmSignal *signal;
@@ -248,26 +247,14 @@ typedef struct RmFile {
 } RmFile;
 
 /* Defines a path variable containing the file's path */
-#define _RM_DEFINE_PATH(file, inherited)                                 \
-    char file##_path[PATH_MAX];                                          \
-    if(!inherited) {                                                     \
-        rm_file_build_path((RmFile *)file, file##_path);                 \
+#define RM_DEFINE_PATH_IF_NEEDED(file, needed)            \
+    char file##_path[PATH_MAX];                           \
+    if(needed) {                                          \
+        rm_file_build_path((RmFile *)file, file##_path);  \
     }
 
 /* Fill path always */
-#define RM_DEFINE_PATH(file) _RM_DEFINE_PATH(file, false)
-
-/* Defines <file>_basename.
- * Also defines <file>_path, but do not rely on it being filled!
- */
-#define _RM_DEFINE_BASENAME(file, inherited)                      \
-    char *file##_basename = NULL;                                 \
-    _RM_DEFINE_PATH(file, inherited);                             \
-    file##_basename = file->folder->basename;                     \
-
-#define RM_DEFINE_BASENAME(file) _RM_DEFINE_BASENAME(file, true)
-
-#define RM_DEFINE_BOTH(file, do_both) _RM_DEFINE_BASENAME(file, !(do_both))
+#define RM_DEFINE_PATH(file) RM_DEFINE_PATH_IF_NEEDED(file, true)
 
 /**
  * @brief Create a new RmFile handle.
@@ -303,8 +290,7 @@ RmLintType rm_file_string_to_lint_type(const char *type);
 void rm_file_set_path(RmFile *file, char *path);
 
 /**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder
- * tree and basename.
+ * @brief Internal helper function for RM_DEFINE_PATH using folder tree and basename.
  */
 void rm_file_build_path(RmFile *file, char *buf);
 

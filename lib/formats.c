@@ -280,11 +280,9 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
         case 's':
             r = rm_fmt_rank_size(ga, gb);
             break;
-        case 'a': {
-            RM_DEFINE_BASENAME(fa)
-            RM_DEFINE_BASENAME(fb)
-            r = strcasecmp(fa_basename, fb_basename);
-        } break;
+        case 'a':
+            r = strcasecmp(fa->folder->basename, fb->folder->basename);
+            break;
         case 'm':
             r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
             break;

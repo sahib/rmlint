@@ -34,11 +34,8 @@
 #include "shredder.h"
 
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
-
-    char *ext_a = rm_util_path_extension(file_a_basename);
-    char *ext_b = rm_util_path_extension(file_b_basename);
+    char *ext_a = rm_util_path_extension(file_a->folder->basename);
+    char *ext_b = rm_util_path_extension(file_b->folder->basename);
 
     if(ext_a && ext_b) {
         return g_ascii_strcasecmp(ext_a, ext_b);
@@ -48,21 +45,21 @@ static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_
 }
 
 static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
+    const char *basename_a = file_a->folder->basename;
+    const char *basename_b = file_b->folder->basename;
 
-    char *ext_a = rm_util_path_extension(file_a_basename);
-    char *ext_b = rm_util_path_extension(file_b_basename);
+    char *ext_a = rm_util_path_extension(basename_a);
+    char *ext_b = rm_util_path_extension(basename_b);
 
     /* Check length till extension, or full length if none present */
-    size_t a_len = (ext_a) ? (ext_a - file_a_basename) : (int)strlen(file_a_basename);
-    size_t b_len = (ext_b) ? (ext_b - file_b_basename) : (int)strlen(file_b_basename);
+    size_t a_len = (ext_a) ? (ext_a - basename_a) : (int)strlen(basename_a);
+    size_t b_len = (ext_b) ? (ext_b - basename_b) : (int)strlen(basename_a);
 
     if(a_len != b_len) {
         return a_len - b_len;
     }
 
-    return g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len);
+    return g_ascii_strncasecmp(basename_a, basename_b, a_len);
 }
 
 /* test if two files qualify for the same "group"; if not then rank them by
@@ -112,15 +109,8 @@ static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
  * also point to the real path
  */
 typedef struct RmPathDoubleKey {
-    /* parent_inode and basename are initialized lazily,
-     * since often, they are not needed.
-     */
-    bool parent_inode_set : 1;
-    bool basename_set : 1;
-
     /* stat(dirname(file->path)).st_ino */
     ino_t parent_inode;
-    char *basename;
 
     /* File the key points to */
     RmFile *file;
@@ -164,9 +154,6 @@ static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
 }
 
 static void rm_path_double_free(RmPathDoubleKey *key) {
-    if(key->basename != NULL) {
-        g_free(key->basename);
-    }
     g_free(key);
 }
 
@@ -364,9 +351,8 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     } else {
         /* Only fill in path if we have a pattern in sort_criteria */
         bool path_needed = (session->pattern_cache->len > 0);
-
-        RM_DEFINE_BOTH(a, path_needed);
-        RM_DEFINE_BOTH(b, path_needed);
+        RM_DEFINE_PATH_IF_NEEDED(a, path_needed);
+        RM_DEFINE_PATH_IF_NEEDED(b, path_needed);
 
         RmCfg *sets = session->cfg;
 
@@ -377,10 +363,10 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 cmp = (long)(a->mtime) - (long)(b->mtime);
                 break;
             case 'a':
-                cmp = g_ascii_strcasecmp(a_basename, b_basename);
+                cmp = g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
                 break;
             case 'l':
-                cmp = strlen(a_basename) - strlen(b_basename);
+                cmp = strlen(a->folder->basename) - strlen(b->folder->basename);
                 break;
             case 'd':
                 cmp = (short)a->depth - (short)b->depth;
@@ -391,8 +377,8 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
             case 'x': {
                 cmp = rm_pp_cmp_by_regex(
                     g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
-                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a_path,
-                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b_path);
+                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
+                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
                 regex_cursor++;
                 break;
             }
