@@ -69,6 +69,10 @@ static void rm_node_free(RmTrie *trie, RmNode *node) {
 static RmNode *rm_node_index(RmTrie *trie, RmNodeIndex *self, const char *basename, bool create) {
     RmNode *node = NULL;
 
+    if(self == NULL && create == false) {
+        return node;
+    }
+
     uint32_t hash = XXH32(basename, strlen(basename), 0);
     uint32_t index = hash % trie->bin_size;
     GSList *bin = self->bins[index], *iter = bin;
