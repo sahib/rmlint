@@ -79,7 +79,6 @@ bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
 void rm_session_init(RmSession *session, RmCfg *cfg) {
     memset(session, 0, sizeof(RmSession));
     session->timer = g_timer_new();
-    g_queue_init(&session->cache_list);
 
     session->cfg = cfg;
     session->tables = rm_file_tables_new(session);
@@ -122,11 +121,6 @@ void rm_session_clear(RmSession *session) {
         rm_tm_destroy(session->dir_merger);
     }
 
-    for(GList *iter = session->cache_list.head; iter; iter = iter->next) {
-        g_free((char *)iter->data);
-    }
-
-    g_queue_clear(&session->cache_list);
     g_free(cfg->joined_argv);
     g_free(cfg->is_prefd);
     g_free(cfg->iwd);

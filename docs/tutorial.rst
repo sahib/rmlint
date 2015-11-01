@@ -700,12 +700,12 @@ Miscellaneous options
 If you read so far, you know ``rmlint`` pretty well by now.
 Here's just a list of options that are nice to know, but not essential:
 
-- Consecutive runs of ``rmlint`` can be speed up by using ``--cache``.
+- Consecutive runs of ``rmlint`` can be speed up by using ``--xattr-read``.
 
   .. code-block:: python
 
-    $ rmlint large_dataset/ -O json:cache.json --write-unfinished
-    $ rmlint large_dataset/ -C cache.json
+    $ rmlint large_dataset/ --xattr-write --write-unfinished
+    $ rmlint large_dataset/ --xattr-read
 
   Here, the second run should (or *might*) run a lot faster.
   But be sure to read the caveats stated in the `manpage`_!

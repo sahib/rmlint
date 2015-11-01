@@ -390,25 +390,6 @@ Caching
     Read or write cached checksums from the extended file attributes.
     This feature can be used to speed up consecutive runs.
 
-    This is an slighter securer alternative to ``--cache``, but the same notes
-    as in ``--cache`` apply.
-
-    **NOTE:** Many tools do not support extended file attributes properly,
-    resulting in a loss of the information when copying the file or editing it.
-    Also, this is a linux specific feature that works not on all filesystems and 
-    only if you have write permissions to the file.
-
-:``-C --cache file.json``:
-
-    Read checksums from a *json* file. This *json* file is the same that is
-    outputted via ``-o json``, but you can also enrich the *json* with 
-    the checksums of sieved out files via ``--write-unfinished``.
-
-    Usage example: ::
-
-        $ rmlint large_cluster/ -O json:cache.json -U   # first run.
-        $ rmlint large_cluster/ -C cache.json           # second run.
-
     **CAUTION:** This is a potentially unsafe feature. The cache file might be
     changed accidentally, potentially causing ``rmlint`` to report false
     positives. As a security feature the `mtime` of each cached file is checked 
@@ -421,14 +402,22 @@ Caching
     feature is mostly intended for large datasets in order to prevent the
     re-hashing of large files. 
 
+    **NOTE:** Many tools do not support extended file attributes properly,
+    resulting in a loss of the information when copying the file or editing it.
+    Also, this is a linux specific feature that works not on all filesystems and 
+    only if you have write permissions to the file.
+
+    Usage example: ::
+
+        $ rmlint large_file_cluster/ -U --xattr-write   # first run.
+        $ rmlint large_file_cluster/ --xattr-read       # second run.
+
 :``-U --write-unfinished``: 
 
-    Include files in output that have not been hashed fully (i.e. files that
-    do not appear to have a duplicate). This is mainly useful in conjunction
-    with ``--cache``. When re-running rmlint on a large dataset this can greatly
+    Include files in output that have not been hashed fully (i.e. files that do
+    not appear to have a duplicate). This is mainly useful in conjunction with
+    ``--xattr-write/read``. When re-running rmlint on a large dataset this can greatly
     speed up a re-run in some cases.
-
-    This option also applies for ``--xattr-write``. 
 
 Rarely used, miscellaneous options
 ----------------------------------

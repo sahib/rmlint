@@ -218,9 +218,6 @@ def run_rmlint_pedantic(*args, **kwargs):
 
         # We cannot compare checksum in all cases.
         compare_checksum = not option.startswith('--algorithm=')
-        for arg in args:
-            if '--cache' in args or '-C' in arg:
-                compare_checksum = False
 
         if data_skip is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)

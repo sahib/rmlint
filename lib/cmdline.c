@@ -70,7 +70,7 @@ static void rm_cmd_show_version(void) {
                     {.name = "sha512",         .enabled = HAVE_SHA512},
                     {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
-                    {.name = "json-cache",     .enabled = HAVE_JSON_GLIB},
+                    {.name = "replay",         .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
@@ -937,17 +937,6 @@ static gboolean rm_cmd_parse_clamp_top(_U const char *option_name, const gchar *
     return (error && *error == NULL);
 }
 
-static gboolean rm_cmd_parse_cache(_U const char *option_name, const gchar *cache_path,
-                                   RmSession *session, GError **error) {
-    if(!g_file_test(cache_path, G_FILE_TEST_IS_REGULAR)) {
-        g_set_error(error, RM_ERROR_QUARK, 0, "There is no cache at `%s'", cache_path);
-        return false;
-    }
-
-    g_queue_push_tail(&session->cache_list, g_strdup(cache_path));
-    return true;
-}
-
 static gboolean rm_cmd_parse_progress(_U const char *option_name, _U const gchar *value,
                                       RmSession *session, _U GError **error) {
     rm_fmt_clear(session->formats);
@@ -1296,7 +1285,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
         {"replay"           , 'Y' , OPTIONAL , G_OPTION_ARG_CALLBACK , FUNC(replay)         , _("Re-output a json file")                , "path/to/rmlint.json"} ,
         {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
-        {"cache"            , 'C' , 0        , G_OPTION_ARG_CALLBACK , FUNC(cache)          , _("Add json cache file")                  , "PATH"}                ,
 
         /* Non-trvial switches */
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,

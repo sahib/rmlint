@@ -402,18 +402,4 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads);
  */
 bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
 
-/////////////////////////////////////
-//    JSON CACHE IMPLEMENTATION    //
-/////////////////////////////////////
-
-/**
- * @brief Read json_path and write (path:cksum) into cksum_table.
- *
- * @param file_trie to set read cksums in.
- * @param json_path path with .json file.
- *
- * @return 0 on success.
- */
-int rm_json_cache_read(RmTrie *file_trie, const char *json_path);
-
 #endif /* RM_UTILITIES_H_INCLUDE*/

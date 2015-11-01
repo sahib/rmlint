@@ -110,9 +110,6 @@ typedef struct RmSession {
     RmOff hash_seed1;
     RmOff hash_seed2;
 
-    /* list of pathes with caches */
-    GQueue cache_list;
-
     /* count used for determining the verbosity level */
     int verbosity_count;
 

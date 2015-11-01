@@ -146,7 +146,7 @@ Arguments
 :--without-json-glib:
 
     Do not link with ``libjson-glib``, which is needed to load json-cache files.
-    Without this library a warning is printed when using ``-C / --cache``.
+    Without this library a warning is printed when using ``--replay``.
 
 :--without-fiemap:
 

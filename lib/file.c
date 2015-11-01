@@ -103,7 +103,8 @@ void rm_file_destroy(RmFile *file) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
     }
 
-    /* --cache can write cksums in here */
+    // TODO: Make this more generic.
+    /* --xattr-read can write cksums in here */
     if(file->folder && file->folder->data) {
         g_free(file->folder->data);
     }

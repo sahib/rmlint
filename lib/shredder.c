@@ -344,7 +344,7 @@ typedef enum RmShredGroupStatus {
 #define NEEDS_NEW(group) (group->session->cfg->min_mtime)
 
 #define HAS_CACHE(session) \
-    (session->cfg->read_cksum_from_xattr || session->cache_list.length)
+    (session->cfg->read_cksum_from_xattr)
 
 #define NEEDS_SHADOW_HASH(cfg) \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
@@ -1161,12 +1161,6 @@ static gint rm_shred_group_preprocess(RmShredGroup *group) {
 static void rm_shred_preprocess_input(RmShredTag *main) {
     RmSession *session = main->session;
     guint removed = 0;
-
-    /* Read any cache files */
-    for(GList *iter = main->session->cache_list.head; iter; iter = iter->next) {
-        char *cache_path = iter->data;
-        rm_json_cache_read(&session->cfg->file_trie, cache_path);
-    }
 
     /* move files from node tables into initial RmShredGroups */
     rm_log_debug_line("preparing size groups for shredding (dupe finding)...");

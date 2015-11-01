@@ -46,12 +46,9 @@ filesystem is probably very good at caching.
 If you only want to see the difference to what changed since last time you can
 look into ``-n --newer-than-stamp / -N --newer-than``.
 
-Still there are some cases where re-running might take a long time, like running
-on network mounts. By default, ``rmlint`` writes a ``rmlint.json`` file along
-the ``rmlint.sh``. This can be used to speed up the next run by passing it to
-``--cache``. It should be noted that using the cache file for later runs is
-discouraged since false positives will get likely if the data is changed in
-between. Therefore there will never be an "auto-pickup" of the cache file.
+In some cases you might really need to re-run, but if that happens often, you
+might look into ``--xattr-write`` and ``--xattr-read`` which is capable 
+of writing finished checksums to extended attributes of each processed file.
 
 I have a very large number of files and I run out of memory and patience.
 -------------------------------------------------------------------------
