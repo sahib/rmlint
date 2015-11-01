@@ -27,17 +27,24 @@
 #define RM_PATHTRICIA_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <glib.h>
+
+
+typedef struct RmNodeIndex {
+    GSList **bins;
+} RmNodeIndex;
 
 typedef struct _RmNode {
     /* Element of the path */
     char *basename;
+    uint32_t hash;
 
     /* Parent node or NULL */
     struct _RmNode *parent;
 
     /* Array of children nodes */
-    GHashTable *children;
+    RmNodeIndex *index;
 
     /* data was set explicitly */
     char has_value : 1;
@@ -52,6 +59,8 @@ typedef struct _RmTrie {
 
     /* chunk storage for strings */
     GStringChunk *chunks;
+
+    int bin_size;
 
     /* size of the trie */
     size_t size;

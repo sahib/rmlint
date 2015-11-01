@@ -29,48 +29,98 @@
 #include <glib.h>
 
 #include "pathtricia.h"
+#include "checksums/xxhash/xxhash.h"
 #include "config.h"
+
 
 //////////////////////////
 //  RmPathNode Methods  //
 //////////////////////////
 
-static RmNode *rm_node_new(RmTrie *trie, const char *elem) {
+static RmNode *rm_node_new(RmTrie *trie, const char *basename) {
     RmNode *self = g_slice_alloc0(sizeof(RmNode));
 
-    if(elem != NULL) {
+    if(basename != NULL) {
         /* Note: We could use g_string_chunk_insert_const here.
          * That would keep a hash table with all strings internally though,
          * but would sort out storing duplicate path elements. In normal
          * setups this will not happen that much though I guess.
          */
-        self->basename = g_string_chunk_insert(trie->chunks, elem);
+        self->hash = XXH32(basename, strlen(basename), 0);
+        self->basename = g_string_chunk_insert(trie->chunks, basename);
     }
     return self;
 }
 
-static void rm_node_free(RmNode *node) {
-    if(node->children) {
-        g_hash_table_unref(node->children);
+static void rm_node_free(RmTrie *trie, RmNode *node) {
+    /* Remove the index structure */
+    if(node->index) {
+        for(int i = 0; i < trie->bin_size; ++i) {
+            g_slist_free(node->index->bins[i]);
+        }
+
+        g_slice_free(RmNodeIndex, node->index);
     }
+
     memset(node, 0, sizeof(RmNode));
     g_slice_free(RmNode, node);
 }
 
+static RmNode *rm_node_index(RmTrie *trie, RmNodeIndex *self, const char *basename, bool create) {
+    RmNode *node = NULL;
+
+    uint32_t hash = XXH32(basename, strlen(basename), 0);
+    uint32_t index = hash % trie->bin_size;
+    GSList *bin = self->bins[index], *iter = bin;
+
+    /* Node already there, fetch the right one */
+    for(iter = bin; iter; iter = iter->next) {
+        RmNode *bin_node = iter->data;
+
+        /* Quick check if it might be the one */
+        if(bin_node->hash != hash) {
+            continue;
+        }
+
+        int cmp_key = g_strcmp0(basename, bin_node->basename);
+        if(cmp_key == 0) {
+            node = iter->data;
+            break;
+        }
+
+        /* Too far, abort */
+        if(cmp_key > 0) {
+            break;
+        }
+    }
+
+    if(node == NULL && create) {
+        node = rm_node_new(trie, basename);
+
+        if(iter == NULL) {
+            /* This bin was unused until now. */
+            self->bins[index] = g_slist_prepend(self->bins[index], node);
+        } else {
+            /* Insert sorted into the bin */
+            GSList *tmp = iter->next;
+            iter->next = g_slist_alloc();
+            iter->next->data = node;
+            iter->next->next = tmp;
+        }
+    }
+
+    return node;
+}
+
 static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
-    if(parent->children == NULL) {
-        parent->children = g_hash_table_new(g_str_hash, g_str_equal);
+    if(parent->index == NULL) {
+        parent->index = g_slice_new0(RmNodeIndex);
+        parent->index->bins = g_slice_alloc0(sizeof(GSList *)  * trie->bin_size);
     }
 
-    RmNode *exists = g_hash_table_lookup(parent->children, elem);
-    if(exists == NULL) {
-        RmNode *node = rm_node_new(trie, elem);
-        node->parent = parent;
-        g_hash_table_insert(parent->children, node->basename, node);
-        return node;
-    }
-
-    return exists;
+    RmNode *node = rm_node_index(trie, parent->index, elem, true);
+    node->parent = parent;
+    return node;
 }
 
 ///////////////////////////
@@ -80,6 +130,9 @@ static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
 void rm_trie_init(RmTrie *self) {
     rm_assert_gentle(self);
     self->root = rm_node_new(self, NULL);
+    
+    /* 7 was a good mem/speed compromise for /usr */
+    self->bin_size = 7;
 
     /* Average path len is 93.633236.
      * I did ze science! :-)
@@ -159,13 +212,7 @@ RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
     RmNode *curr_node = self->root;
 
     while(curr_node && (path_elem = rm_path_iter_next(&iter))) {
-        if(curr_node->children == NULL) {
-            /* Can't go any further */
-            g_mutex_unlock(&self->lock);
-            return NULL;
-        }
-
-        curr_node = g_hash_table_lookup(curr_node->children, path_elem);
+        curr_node = rm_node_index(self, curr_node->index, path_elem, false);
     }
 
     g_mutex_unlock(&self->lock);
@@ -231,9 +278,6 @@ size_t rm_trie_size(RmTrie *self) {
 
 static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
                           RmTrieIterCallback callback, void *user_data, int level) {
-    GHashTableIter iter;
-    gpointer key, value;
-
     if(root == NULL) {
         root = self->root;
     }
@@ -244,11 +288,14 @@ static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_n
         }
     }
 
-    if(root->children != NULL) {
-        g_hash_table_iter_init(&iter, root->children);
-        while(g_hash_table_iter_next(&iter, &key, &value)) {
-            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data,
-                          level + 1);
+    if(root->index) {
+        for(int i = 0; i < self->bin_size; ++i) {
+            for(GSList *iter = root->index->bins[i]; iter; iter = iter->next) {
+                _rm_trie_iter(
+                        self, iter->data, pre_order,
+                        all_nodes, callback, user_data, level + 1
+                );
+            }
         }
     }
 
@@ -266,11 +313,11 @@ void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
     g_mutex_unlock(&self->lock);
 }
 
-static int rm_trie_destroy_callback(_U RmTrie *self,
+static int rm_trie_destroy_callback(RmTrie *self,
                                     RmNode *node,
                                     _U int level,
                                     _U void *user_data) {
-    rm_node_free(node);
+    rm_node_free(self, node);
     return 0;
 }
 
@@ -303,39 +350,45 @@ void rm_trie_print(RmTrie *self) {
     rm_trie_iter(self, NULL, true, true, rm_trie_print_callback, NULL);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    size_t bin_size = g_ascii_strtoll(argv[1], NULL, 10);
     RmTrie trie;
     rm_trie_init(&trie);
+    trie.bin_size = bin_size;
     GTimer *timer = g_timer_new();
 
     g_timer_start(timer);
     char buf[1024];
-    int i = 0;
 
+    g_printerr("  INDEX SIZE IN BYTES %d * 8 = %lu\n", bin_size, bin_size * sizeof(RmNodeIndex));
+
+    int elems = 0;
     while(fgets(buf, sizeof(buf), stdin)) {
         buf[strlen(buf) - 1] = 0;
-        rm_trie_insert(&trie, buf, GUINT_TO_POINTER(++i));
+        rm_trie_insert(&trie, buf, GUINT_TO_POINTER(++elems));
         memset(buf, 0, sizeof(buf));
     }
 
-    g_printerr("Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), i);
-    rm_trie_print(&trie);
+    g_printerr("  Took %2.5f to insert %d items\n", g_timer_elapsed(timer, NULL), elems);
+    // rm_trie_print(&trie);
     memset(buf, 0, sizeof(buf));
     rm_trie_build_path(&trie, rm_trie_search_node(&trie, "/usr/bin/rmlint"), buf,
                        sizeof(buf));
-    g_printerr("=> %s\n", buf);
+    // g_printerr("=> %s\n", buf);
 
     g_timer_start(timer);
     const int N = 10000000;
+    // const int N = 10000;
+    
     for(int x = 0; x < N; x++) {
         rm_trie_search(&trie, "/usr/bin/rmlint");
     }
-    g_printerr("Took %2.5f to search\n", g_timer_elapsed(timer, NULL));
+    g_printerr("  Took %2.5f to search\n", g_timer_elapsed(timer, NULL));
 
-    g_printerr("%u\n", GPOINTER_TO_UINT(rm_trie_search(&trie, "/usr/bin/rmlint")));
-    g_printerr("%u\n", GPOINTER_TO_UINT(rm_trie_search(&trie, "/a/b/c")));
-    rm_trie_destroy(&trie);
+    //g_printerr("%u\n", GPOINTER_TO_UINT(rm_trie_search(&trie, "/usr/bin/rmlint")));
+    //g_printerr("%u\n", GPOINTER_TO_UINT(rm_trie_search(&trie, "/a/b/c")));
     g_timer_destroy(timer);
+    rm_trie_destroy(&trie);
     return 0;
 }
 
