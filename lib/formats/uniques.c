@@ -45,14 +45,21 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
                         RmFile *file) {
     RmFmtHandlerUniques *self = (RmFmtHandlerUniques *)parent;
 
-    char line[512 + 32];
-    memset(line, 0, sizeof(line));
-
     if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
         /* we only not want to list unfinished files. */
         return;
     }
+    if(session->cfg->keep_all_tagged && !file->is_prefd) {
+        /* don't list 'untagged' files as unique */
+        return;
+    }
+    if(session->cfg->keep_all_untagged && file->is_prefd) {
+        /* don't list 'tagged' files as unique */
+        return;
+    }
 
+    char line[512 + 32];
+    memset(line, 0, sizeof(line));
     RM_DEFINE_PATH(file);
 
     g_snprintf(line, sizeof(line), "%s\n", file_path);
