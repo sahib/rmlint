@@ -74,11 +74,12 @@ static void rm_fmt_prog(RmSession *session,
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     rm_assert_gentle(PROGRESS_HANDLER->prog);
-    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);
+    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
 
     /* Print all cached lines on shutdown. */
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
         fprintf(out, "%sUNIQUE FILES:%s\n", MAYBE_GREEN(out, session), MAYBE_RESET(out, session));
+        //fprintf(out, "UNIQUE FILES:\n");
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
             if(line != NULL) {
@@ -89,10 +90,6 @@ static void rm_fmt_prog(RmSession *session,
         g_string_chunk_free(self->text_chunks);
         fprintf(out, "\n");
     }
-
-    extern RmFmtHandler *SUMMARY_HANDLER;
-    rm_assert_gentle(SUMMARY_HANDLER->prog);
-    SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);
 }
 
 static RmFmtHandlerUniques UNIQUES_HANDLER_IMPL = {

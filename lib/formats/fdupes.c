@@ -102,7 +102,7 @@ static void rm_fmt_prog(RmSession *session,
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     rm_assert_gentle(PROGRESS_HANDLER->prog);
-    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);
+    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, stderr, state);
 
     /* Print all cached lines on shutdown. */
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
