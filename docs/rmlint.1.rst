@@ -337,11 +337,25 @@ Original Detection Options
     - **p**: keep first named path            **P**: keep last named path
     - **d**: keep path with lowest depth      **D**: keep path with highest depth
     - **l**: keep path with shortest basename **L**: keep path with longest basename
+    - **r**: keep paths matching regex        **R**: keep path not matching regex
+    - **r**: keep paths matching regex        **R**: keep path not matching regex
+    - **x**: keep basenames matching regex    **X**: keep basenames not matching regex
 
     Alphabetical sort will only use the basename of the file and ignore it's case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
     
+    For more fine grained control, it is possible to give a regular expression
+    to sort by. This can be useful when you know a common fact that identifies
+    original paths (like a path component being ``src``). 
+
+    To use the regular expression you simply enclose it in the criteria string
+    by adding `<REGULAR_EXPRESSIOn>` after specifying `r` or `x`. Example: ``-S
+    'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files. 
+
+    Warning: When using **r** or **x**, try to make your regex to be as specific
+    as possible! Good practice includes adding a ``$`` anchor at the end of the regex.
+
     Tip: **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
 
 Caching

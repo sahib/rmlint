@@ -240,43 +240,145 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     g_slice_free(RmFileTables, tables);
 }
 
-/*  compare two files. return:
- *    - a negative integer file 'a' outranks 'b',
- *    - 0 if they are equal,
- *    - a positive integer if file 'b' outranks 'a'
- */
-int rm_pp_cmp_orig_criteria_impl(const RmSession *session, time_t mtime_a, time_t mtime_b,
-                                 const char *basename_a, const char *basename_b,
-                                 int path_index_a, int path_index_b, guint8 path_depth_a,
-                                 guint8 path_depth_b) {
-    RmCfg *sets = session->cfg;
+static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **error) {
+    if(*pattern != '<') {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Pattern has to start with `<`"));
+        return 0;
+    }
 
-    int sort_criteria_len = strlen(sets->sort_criteria);
-    for(int i = 0; i < sort_criteria_len; i++) {
-        long cmp = 0;
-        switch(tolower(sets->sort_criteria[i])) {
-        case 'm':
-            cmp = (long)(mtime_a) - (long)(mtime_b);
-            break;
-        case 'a':
-            cmp = g_ascii_strcasecmp(basename_a, basename_b);
-            break;
-        case 'l':
-            cmp = strlen(basename_a) - strlen(basename_b);
-            break;
-        case 'd':
-            cmp = (short)path_depth_a - (short)path_depth_b;
-            break;
-        case 'p':
-            cmp = (long)path_index_a - (long)path_index_b;
+    /* Balance of start and end markers */
+    int balance = 1;
+    char *iter = (char *)pattern;
+    char *last = iter;
+
+    while((iter = strpbrk(&iter[1], "<>"))) {
+        if(iter[-1] == '\\') {
+            /* escaped, skip */
             break;
         }
-        if(cmp) {
-            /* reverse order if uppercase option (M|A|P) */
-            cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
-            return cmp;
+
+        if(iter && *iter == '<') {
+            ++balance;
+        } else if(iter) {
+            --balance;
+            last = iter;
+        }
+
+        if(balance == 0) {
+            break;
         }
     }
+
+    if(balance != 0) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("`<` or `>` imbalance: %d"), balance);
+        return 0;
+    }
+
+    size_t src_len = (last - pattern - 1);
+
+    if(src_len == 0) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("empty pattern"));
+        return 0;
+    }
+
+    GString *part = g_string_new_len(&pattern[1], src_len);
+
+    rm_log_debug_line("Compiled pattern: %s\n", part->str);
+
+    /* Actually compile the pattern: */
+    *regex = g_regex_new(part->str, G_REGEX_RAW | G_REGEX_OPTIMIZE, 0, error);
+
+    g_string_free(part, TRUE);
+
+    /* Include <> in the result len */
+    return src_len + 2;
+}
+
+/* Compile all regexes inside a sortcriteria string.
+ * Every regex (enclosed in <>)  will be removed from the
+ * sortcriteria spec, so that the returned string will
+ * consist only of single letters.
+ */
+char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
+    /* Total of encountered patterns */
+    int pattern_count = 0;
+
+    /* Copy of the sortcriteria without pattern specs in <> */
+    size_t minified_cursor = 0;
+    char *minified_sortcrit = g_strdup(sortcrit);
+
+    for(size_t i = 0; sortcrit[i]; i++) {
+        /* Copy everything that is not a regex pattern */
+        minified_sortcrit[minified_cursor++] = sortcrit[i];
+        char curr_crit = tolower(sortcrit[i]);
+
+        /* Check if it's a non-regex sortcriteria */
+        if(!((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<')) {
+            continue;
+        }
+
+        GRegex *regex = NULL;
+
+        /* Jump over the regex pattern part */
+        i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
+
+        if(regex != NULL) {
+            if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
+                /* Append to already compiled patterns */
+                g_ptr_array_add(session->pattern_cache, regex);
+                pattern_count++;
+            } else if(pattern_count != -1) {
+                g_set_error(error, RM_ERROR_QUARK, 0,
+                            _("Cannot add more than %ld regex patterns."),
+                            RM_PATTERN_N_MAX);
+
+                /* Make sure to set the warning only once */
+                pattern_count = -1;
+                g_regex_unref(regex);
+            } else {
+                g_regex_unref(regex);
+            }
+        }
+    }
+
+    g_prefix_error(error, _("Error while parsing sortcriteria patterns: "));
+
+    minified_sortcrit[minified_cursor] = 0;
+    return minified_sortcrit;
+}
+
+static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
+                              const char *path_a, RmPatternBitmask *mask_b,
+                              const char *path_b) {
+    int result = 0;
+
+    if(RM_PATTERN_IS_CACHED(mask_a, idx)) {
+        /* Get the previous match result */
+        result = RM_PATTERN_GET_CACHED(mask_a, idx);
+    } else {
+        /* Match for the first time */
+        result = g_regex_match(regex, path_a, 0, NULL);
+        RM_PATTERN_SET_CACHED(mask_a, idx, result);
+    }
+
+    if(result) {
+        return -1;
+    }
+
+    if(RM_PATTERN_IS_CACHED(mask_b, idx)) {
+        /* Get the previous match result */
+        result = RM_PATTERN_GET_CACHED(mask_b, idx);
+    } else {
+        /* Match for the first time */
+        result = g_regex_match(regex, path_b, 0, NULL);
+        RM_PATTERN_SET_CACHED(mask_b, idx, result);
+    }
+
+    if(result) {
+        return +1;
+    }
+
+    /* Both match or none of the both match */
     return 0;
 }
 
@@ -295,11 +397,55 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     } else if(a->is_prefd != b->is_prefd) {
         return (b->is_prefd - a->is_prefd);
     } else {
-        RM_DEFINE_BASENAME(a);
-        RM_DEFINE_BASENAME(b);
-        return rm_pp_cmp_orig_criteria_impl(session, a->mtime, b->mtime, a_basename,
-                                            b_basename, a->path_index, b->path_index,
-                                            a->path_depth, b->path_depth);
+        /* Only fill in path if we have a pattern in sort_criteria */
+        bool path_needed = (session->pattern_cache->len > 0);
+
+        RM_DEFINE_BOTH(a, path_needed);
+        RM_DEFINE_BOTH(b, path_needed);
+
+        RmCfg *sets = session->cfg;
+
+        for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
+            long cmp = 0;
+            switch(tolower(sets->sort_criteria[i])) {
+            case 'm':
+                cmp = (long)(a->mtime) - (long)(b->mtime);
+                break;
+            case 'a':
+                cmp = g_ascii_strcasecmp(a_basename, b_basename);
+                break;
+            case 'l':
+                cmp = strlen(a_basename) - strlen(b_basename);
+                break;
+            case 'd':
+                cmp = (short)a->depth - (short)b->depth;
+                break;
+            case 'p':
+                cmp = (long)a->path_index - (long)b->path_index;
+                break;
+            case 'x': {
+                cmp = rm_pp_cmp_by_regex(
+                    g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
+                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a_path,
+                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b_path);
+                regex_cursor++;
+                break;
+            }
+            case 'r':
+                cmp = rm_pp_cmp_by_regex(
+                    g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
+                    (RmPatternBitmask *)&a->pattern_bitmask_path, a_path,
+                    (RmPatternBitmask *)&b->pattern_bitmask_path, b_path);
+                regex_cursor++;
+                break;
+            }
+            if(cmp) {
+                /* reverse order if uppercase option */
+                cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
+                return cmp;
+            }
+        }
+        return 0;
     }
 }
 

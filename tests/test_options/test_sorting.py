@@ -86,3 +86,54 @@ def test_sorting():
         assert len(data) == 6
 
         validate_order(data, combo)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_sort_by_regex():
+    create_file('xxx', 'aaaa')
+    create_file('xxx', 'aaab')
+    create_file('xxx', 'b')
+    create_file('xxx', 'c')
+    create_file('xxx', '1/c')
+    create_file('xxx', 'd')
+
+    head, *data, footer = run_rmlint("-S 'r<1/c>x<d$>a'")
+
+    paths = [p['path'] for p in data]
+
+    assert paths[0].endswith('1/c')
+    assert paths[1].endswith('d')
+    assert paths[2].endswith('aaaa')
+    assert paths[3].endswith('aaab')
+    assert paths[4].endswith('b')
+    assert paths[5].endswith('c')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_sort_by_regex_bad_input():
+    create_file('xxx', 'aaaa')
+    create_file('xxx', 'aaab')
+
+    # Should work:
+    run_rmlint("-S '{}'".format('r<.>' * 8))
+
+    # More than 8 is bad:
+    try:
+        run_rmlint("-S '{}'".format('r<.>' * 9))
+        assert False
+    except subprocess.CalledProcessError:
+        pass
+
+    # Empty patterns are sill also:
+    try:
+        run_rmlint("-S 'r<>'")
+        assert False
+    except subprocess.CalledProcessError:
+        pass
+
+    # A bad regex is bad too:
+    try:
+        run_rmlint("-S 'r<*>'")
+        assert False
+    except subprocess.CalledProcessError:
+        pass

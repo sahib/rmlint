@@ -1179,11 +1179,19 @@ static gboolean rm_cmd_parse_rankby(_U const char *option_name, const gchar *cri
                                     RmSession *session, GError **error) {
     RmCfg *cfg = session->cfg;
 
-    if(!rm_cmd_check_lettervec(option_name, criteria, "dlampDLAMP", error)) {
+    g_free(cfg->sort_criteria);
+
+    cfg->sort_criteria = rm_pp_compile_patterns(session, criteria, error);
+
+    if(error && *error != NULL) {
         return false;
     }
 
-    strncpy(cfg->sort_criteria, criteria, sizeof(cfg->sort_criteria));
+    if(!rm_cmd_check_lettervec(option_name, cfg->sort_criteria, "dlamprxDLAMPRX",
+                               error)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -1325,7 +1333,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     const GOptionEntry main_option_entries[] = {
         /* Option with required arguments */
         {"max-depth"        , 'd' , 0        , G_OPTION_ARG_INT      , &cfg->depth          , _("Specify max traversal depth")          , "N"}                   ,
-        {"rank-by"          , 'S' , 0        , G_OPTION_ARG_CALLBACK , FUNC(rankby)         , _("Select originals by given  criteria")  , "[dlampDLAMP]"}        ,
+        {"rank-by"          , 'S' , 0        , G_OPTION_ARG_CALLBACK , FUNC(rankby)         , _("Select originals by given  criteria")  , "[dlamprxDLAMPRX]"}    ,
         {"sort-by"          , 'y' , 0        , G_OPTION_ARG_CALLBACK , FUNC(sortby)         , _("Sort rmlint output by given criteria") , "[moansMOANS]"}        ,
         {"types"            , 'T' , 0        , G_OPTION_ARG_CALLBACK , FUNC(lint_types)     , _("Specify lint types")                   , "T"}                   ,
         {"size"             , 's' , 0        , G_OPTION_ARG_CALLBACK , FUNC(limit_sizes)    , _("Specify size limits")                  , "m-M"}                 ,
