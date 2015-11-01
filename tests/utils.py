@@ -184,7 +184,6 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--threads=1',
         '--shred-never-wait',
         '--shred-always-wait',
-        '--with-metadata-cache',
         '--no-mount-table'
     ]
 

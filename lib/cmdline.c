@@ -72,7 +72,6 @@ static void rm_cmd_show_version(void) {
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
                     {.name = "json-cache",     .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
-                    {.name = "metadata-cache", .enabled = HAVE_SQLITE3},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
     /* clang-format on */
@@ -389,46 +388,6 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
-static int rm_cmd_create_metadata_cache(RmSession *session) {
-    if(session->cfg->use_meta_cache == false) {
-        return false;
-    }
-
-    if(session->replay_files.length) {
-        rm_log_warning_line(_("--replay given; --with-metadata-cache will be ignored."));
-        session->cfg->use_meta_cache = false;
-        return EXIT_SUCCESS;
-    }
-
-    GError *error = NULL;
-    session->meta_cache = rm_swap_table_open(FALSE, &error);
-    session->cfg->use_meta_cache = !!(session->meta_cache);
-
-    if(error != NULL) {
-        rm_log_warning_line(_("Unable to open tmp cache: %s"), error->message);
-        g_error_free(error);
-        error = NULL;
-        return EXIT_FAILURE;
-    }
-
-    char *names[] = {"path", "dir", NULL};
-    int *attrs_ptrs[] = {&session->meta_cache_path_id, &session->meta_cache_dir_id, NULL};
-
-    for(int i = 0; attrs_ptrs[i] && names[i]; ++i) {
-        *attrs_ptrs[i] = rm_swap_table_create_attr(session->meta_cache, names[i], &error);
-
-        if(error != NULL) {
-            rm_log_warning_line(_("Unable to create cache attr `%s`: %s"), names[i],
-                                error->message);
-            g_error_free(error);
-            error = NULL;
-            return EXIT_FAILURE;
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
-
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
                             const char *path) {
     RmCfg *cfg = session->cfg;
@@ -448,14 +407,7 @@ static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
             abs_path = realpath(path, NULL);
         }
 
-        if(cfg->use_meta_cache) {
-            cfg->paths[index] = GUINT_TO_POINTER(
-                rm_swap_table_insert(session->meta_cache, session->meta_cache_dir_id,
-                                     abs_path, strlen(abs_path) + 1));
-            g_free(abs_path);
-        } else {
-            cfg->paths[index] = abs_path ? abs_path : g_strdup(path);
-        }
+        cfg->paths[index] = abs_path ? abs_path : g_strdup(path);
         cfg->paths[index + 1] = NULL;
         return TRUE;
     }
@@ -1415,8 +1367,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
         {"xattr-read"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr  , "Read cached checksums from file attributes"                  , NULL}   ,
         {"xattr-clear"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->clear_xattr_fields     , "Clear xattrs from all seen files"                            , NULL}   ,
-        {"with-metadata-cache"    , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_meta_cache         , "Swap certain metadata to disk to save RAM"                   , NULL}   ,
-        {"without-metadata-cache" , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->use_meta_cache         , "Store all metadata in RAM"                                   , NULL}   ,
         {"with-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->build_fiemap           , "Use fiemap(2) to optimize disk access patterns"              , NULL}   ,
         {"without-fiemap"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap           , "Do not use fiemap(2) in order to save memory"                , NULL}   ,
         {"shred-always-wait"      , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_always_wait      , "Always waits for file increment to finish hashing"           , NULL}   ,
@@ -1523,10 +1473,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
 
-    if(rm_cmd_create_metadata_cache(session) == EXIT_FAILURE) {
-        error =
-            g_error_new(RM_ERROR_QUARK, 0, _("cannot create metadata cache (see above)"));
-    } else if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
+    if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
             RM_ERROR_QUARK, 0,
             _("can't specify both --keep-all-tagged and --keep-all-untagged"));

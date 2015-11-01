@@ -132,26 +132,10 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
     return rm_node_hash(key->file);
 }
 
-static bool rm_path_have_same_parent(RmCfg *cfg, RmPathDoubleKey *key_a,
+static bool rm_path_have_same_parent(RmPathDoubleKey *key_a,
                                      RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
-
-    if(cfg->use_meta_cache) {
-        if(key_a->parent_inode_set && key_b->parent_inode_set) {
-            RM_DEFINE_PATH(file_a);
-            RM_DEFINE_PATH(file_b);
-
-            key_a->parent_inode = rm_util_parent_node(file_a_path);
-            key_a->parent_inode_set = TRUE;
-
-            key_b->parent_inode = rm_util_parent_node(file_b_path);
-            key_b->parent_inode_set = TRUE;
-        }
-
-        return key_a->parent_inode == key_b->parent_inode;
-    } else {
-        return file_a->folder->parent == file_b->folder->parent;
-    }
+    return file_a->folder->parent == file_b->folder->parent;
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
@@ -166,30 +150,11 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
     RmFile *file_a = key_a->file;
     RmFile *file_b = key_b->file;
 
-    if(!rm_path_have_same_parent(file_a->session->cfg, key_a, key_b)) {
+    if(!rm_path_have_same_parent(key_a, key_b)) {
         return FALSE;
     }
 
-    if(!file_a->session->cfg->use_meta_cache) {
-        return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
-    }
-
-    /* If using --with-metadata-cache, save the basename for later use
-     * so it doesn't trigger SELECTs very often.  Basenames are
-     * generally much shorter than the path, so that should be
-     * okay.
-     */
-    if(key_a->basename == NULL) {
-        RM_DEFINE_BASENAME(file_a);
-        key_a->basename = g_strdup(file_a_basename);
-    }
-
-    if(key_b->basename == NULL) {
-        RM_DEFINE_BASENAME(file_b);
-        key_b->basename = g_strdup(file_b_basename);
-    }
-
-    return g_strcmp0(key_a->basename, key_b->basename) == 0;
+    return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
 }
 
 static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
@@ -447,12 +412,6 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
         }
         return 0;
     }
-}
-
-void rm_file_list_insert_queue(GQueue *files, const RmSession *session) {
-    g_mutex_lock(&session->tables->lock);
-    { rm_util_queue_push_tail_queue(session->tables->all_files, files); }
-    g_mutex_unlock(&session->tables->lock);
 }
 
 void rm_file_list_insert_file(RmFile *file, const RmSession *session) {

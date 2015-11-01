@@ -464,28 +464,6 @@ Rarely used, miscellaneous options
     Enable or disable reading the file extents on rotational disk in order to
     optimize disk access patterns.
 
-:``--with-metadata-cache`` / ``--without-metadata-cache`` (**default**):
-
-    Swap certain file metadata attributes onto disk in order to save memory.
-    This can help to save memory for very big datasets (several million files)
-    where storing the paths alone can eat up several GB RAM.
-    Enabling swapping will cause slowdowns in exchange.
-
-    Sometimes the memory savings may be small since rmlint already compresses
-	paths but storing them in a special tree structure.
-
-    This feature may not play nice with some other options, causing heavy load
-    and long computations: 
-    
-    - The ``--match-*`` family of options.
-    - ``--cache`` might use more memory and takes longer.
-
-    Some of those restrictions might be removed in future ``rmlint`` versions.
-
-    The metadata cache will be stored in ``$XDG_CACHE_HOME/rmlint/$pid``. If the
-    cache cannot be created, ``rmlint`` warns you and falls back to normal
-    uncached mode.
-    
 FORMATTERS
 ==========
 

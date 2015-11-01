@@ -104,11 +104,7 @@ void rm_session_clear(RmSession *session) {
 
     /* Free mem */
     if(cfg->paths) {
-        if(cfg->use_meta_cache) {
-            g_free(cfg->paths);
-        } else {
-            g_strfreev(cfg->paths);
-        }
+        g_strfreev(cfg->paths);
     }
 
     g_free(cfg->sort_criteria);
@@ -130,18 +126,7 @@ void rm_session_clear(RmSession *session) {
         g_free((char *)iter->data);
     }
 
-    if(session->meta_cache) {
-        GError *error = NULL;
-        rm_swap_table_close(session->meta_cache, &error);
-
-        if(error != NULL) {
-            rm_log_error_line(_("Cannot close tmp cache: %s\n"), error->message);
-            g_error_free(error);
-        }
-    }
-
     g_queue_clear(&session->cache_list);
-
     g_free(cfg->joined_argv);
     g_free(cfg->is_prefd);
     g_free(cfg->iwd);

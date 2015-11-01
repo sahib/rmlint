@@ -64,27 +64,10 @@ The memory peak is usually shortly after it finished traversing all
 files. For example, 5 million files will result in a memory footprint of roughly
 1.0GB of memory in average. 
 
-If that's still not enough read on.
-
 *Some things to consider:*
 
-- Use ``--with-metadata-cache`` to swap paths to disk. When needed the path is
-  selected from disk instead of keeping them all in memory. This lowers the 
-  memory footprint per file by a few bytes. Sometimes the difference may be
-  very subtle since all paths in rmlint are stored by common prefix, i.e. for long
-  but mostly identically paths the point after the difference is stored.
-  
-  This option will most likely only make sense if you files with long basenames.
-  You might expect 10%-20% less memory as a rule of thumb.
 - Enable the progress bar with ``-g`` to keep track of how much data is left to
   scan.
-
-*Caveats:*
-
-- Some options like ``-D`` will not work well with ``--with-metadata-cache`` and
-  use a fair bit of memory themselves. This is by the way they're working. Avoid
-  them in this case. Also ``--cache`` might be not very memory efficient.
-- The CPU usage might go up quite a bit, resulting longer runs.
 
 *Also:*
 

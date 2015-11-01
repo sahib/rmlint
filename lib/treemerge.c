@@ -326,7 +326,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
 
     /* Need to set session first, since set_path expects that */
     file->session = merger->session;
-    rm_file_set_path(file, self->dirname, strlen(self->dirname));
+    rm_file_set_path(file, self->dirname);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
     file->digest = self->digest;
@@ -468,62 +468,6 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
 // TREE MERGER ALGORITHM //
 ///////////////////////////
 
-static void rm_tm_chunk_flush(RmTreeMerger *self, char **out_paths, int n_paths) {
-    rm_tm_count_files(&self->count_tree, out_paths, self->session);
-
-    if(self->session->cfg->use_meta_cache) {
-        for(int i = 0; i < n_paths; ++i) {
-            g_free(out_paths[i]);
-        }
-    }
-}
-
-static void rm_tm_chunk_paths(RmTreeMerger *self, char **paths) {
-    /* Count only up to 512 paths at the same time. High numbers like this can
-     * happen if find is piped inside rmlint via the special "-" file.
-     * Sadly, this would need to have all paths in memory at the same time.
-     * With session->cfg->use_meta_cache, there is only an ID in the path
-     * pointer.
-     * */
-
-    RmCfg *cfg = self->session->cfg;
-
-    const int N = 512;
-
-    int n_paths = 0;
-    char **out_paths = g_malloc0((N + 1) * sizeof(char *));
-
-    for(int i = 0; paths[i]; ++i) {
-        if(cfg->use_meta_cache) {
-            char buf[PATH_MAX];
-
-            rm_swap_table_lookup(self->session->meta_cache,
-                                 self->session->meta_cache_dir_id,
-                                 GPOINTER_TO_UINT(paths[i]), buf, sizeof(buf));
-
-            out_paths[n_paths] = g_strdup(buf);
-        } else {
-            out_paths[n_paths] = paths[i];
-        }
-
-        /* Terminate the vector by a guarding NULL */
-        out_paths[++n_paths] = NULL;
-
-        /* We reached the size of one chunk, flush and wrap around */
-        if(n_paths == N) {
-            rm_tm_chunk_flush(self, out_paths, n_paths);
-            n_paths = 0;
-        }
-    }
-
-    /* Flush the rest of it */
-    if(n_paths) {
-        rm_tm_chunk_flush(self, out_paths, n_paths);
-    }
-
-    g_free(out_paths);
-}
-
 RmTreeMerger *rm_tm_new(RmSession *session) {
     RmTreeMerger *self = g_slice_new(RmTreeMerger);
     self->session = session;
@@ -543,7 +487,7 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
 
-    rm_tm_chunk_paths(self, session->cfg->paths);
+    rm_tm_count_files(&self->count_tree, session->cfg->paths, session);
 
     return self;
 }

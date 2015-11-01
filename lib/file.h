@@ -250,9 +250,7 @@ typedef struct RmFile {
 /* Defines a path variable containing the file's path */
 #define _RM_DEFINE_PATH(file, inherited)                                 \
     char file##_path[PATH_MAX];                                          \
-    if(file->session->cfg->use_meta_cache) {                             \
-        rm_file_lookup_path(file->session, (RmFile *)file, file##_path); \
-    } else if(!inherited) {                                              \
+    if(!inherited) {                                                     \
         rm_file_build_path((RmFile *)file, file##_path);                 \
     }
 
@@ -265,11 +263,7 @@ typedef struct RmFile {
 #define _RM_DEFINE_BASENAME(file, inherited)                      \
     char *file##_basename = NULL;                                 \
     _RM_DEFINE_PATH(file, inherited);                             \
-    if(file->session->cfg->use_meta_cache) {                      \
-        file##_basename = rm_util_basename((char *)&file##_path); \
-    } else {                                                      \
-        file##_basename = file->folder->basename;                 \
-    }
+    file##_basename = file->folder->basename;                     \
 
 #define RM_DEFINE_BASENAME(file) _RM_DEFINE_BASENAME(file, true)
 
@@ -278,7 +272,7 @@ typedef struct RmFile {
 /**
  * @brief Create a new RmFile handle.
  */
-RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
+RmFile *rm_file_new(struct RmSession *session, const char *path,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,
                     short depth);
 
@@ -306,13 +300,7 @@ RmLintType rm_file_string_to_lint_type(const char *type);
  * @brief Set a path to the file. Normally, you should never do this since the
  * path is immutable.
  */
-void rm_file_set_path(RmFile *file, char *path, size_t path_len);
-
-/**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using
- * rm_swap_table_lookup.
- */
-void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf);
+void rm_file_set_path(RmFile *file, char *path);
 
 /**
  * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder

@@ -56,13 +56,6 @@ void rm_file_tables_destroy(RmFileTables *list);
 void rm_file_list_insert_file(RmFile *file, const RmSession *session);
 
 /**
- * @brief Moves a GQueue of files into RmFileTables->all_files.
- * @param files The files to insert; ownership is taken and *files is cleared.
- */
-
-void rm_file_list_insert_queue(GQueue *files, const RmSession *session);
-
-/**
  * @brief Clear potential leftover files when shredder was not used.
  */
 void rm_file_tables_clear(const RmSession *session);

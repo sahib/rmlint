@@ -31,9 +31,6 @@
 #include <stdbool.h>
 #include <glib.h>
 
-/* Needed for RmSwapTable */
-#include "swap-table.h"
-
 /* Needed for RmTreeMerger */
 #include "treemerge.h"
 
@@ -82,11 +79,6 @@ typedef struct RmSession {
 
     /* Cache of already compiled GRegex patterns */
     GPtrArray *pattern_cache;
-
-    /* Support for swapping path memory to disk */
-    RmSwapTable *meta_cache;
-    int meta_cache_path_id;
-    int meta_cache_dir_id;
 
     /* Counters for printing useful statistics */
     volatile gint total_files;
