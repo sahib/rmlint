@@ -671,7 +671,7 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
 static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        file->lint_type = RM_LINT_TYPE_UNFINISHED_CKSUM;
+        file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
         rm_fmt_write(file, self->session->formats, -1);
     }
 
@@ -882,7 +882,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;
             } else {
-                rm_shred_group_find_original(self->session, file_list);
+                rm_shred_group_find_original(self->session, file_list, RM_SHRED_GROUP_FINISHING);
                 rm_shred_forward_to_output(self->session, file_list);
             }
         }

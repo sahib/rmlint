@@ -333,7 +333,7 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
     case RM_LINT_TYPE_BADGID:
     case RM_LINT_TYPE_BADUGID:
         return cfg->find_badids;
-    case RM_LINT_TYPE_UNFINISHED_CKSUM:
+    case RM_LINT_TYPE_UNIQUE_FILE:
         return cfg->write_unfinished;
     case RM_LINT_TYPE_UNKNOWN:
     default:

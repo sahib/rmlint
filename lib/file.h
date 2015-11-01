@@ -57,7 +57,7 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
 
-    /* note: this needs to be last item in list */
+    /* note: this needs to be after all non-duplicate lint type item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE,
 
     /* Directories are no "normal" RmFiles, they are actual
@@ -75,7 +75,7 @@ typedef enum RmLintType {
      *
      * This is mainly useful for caching.
      */
-    RM_LINT_TYPE_UNFINISHED_CKSUM,
+    RM_LINT_TYPE_UNIQUE_FILE,
 } RmLintType;
 
 struct RmSession;

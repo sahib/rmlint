@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct RmFmtHandlerFdupes {
+typedef struct RmFmtHandlerUniques {
     /* must be first */
     RmFmtHandler parent;
 
@@ -39,44 +39,23 @@ typedef struct RmFmtHandlerFdupes {
     /* Pointers into text_chunks */
     GQueue *text_lines;
 
-    /* Do not print original (fdupes emulation) */
-    bool omit_first_line;
-
-    /* Do not print newlines between files */
-    bool use_same_line;
-} RmFmtHandlerFdupes;
+} RmFmtHandlerUniques;
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out,
                         RmFile *file) {
-    RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
+    RmFmtHandlerUniques *self = (RmFmtHandlerUniques *)parent;
 
     char line[512 + 32];
     memset(line, 0, sizeof(line));
 
-    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
-        /* we do not want to list unfinished files. */
+    if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
+        /* we only not want to list unfinished files. */
         return;
     }
 
     RM_DEFINE_PATH(file);
 
-    switch(file->lint_type) {
-    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
-    case RM_LINT_TYPE_DUPE_CANDIDATE:
-        if(self->omit_first_line && file->is_original) {
-            strcpy(line, "\n");
-        } else {
-            g_snprintf(line, sizeof(line), "%s%s%s%s%c", (file->is_original) ? "\n" : "",
-                       (file->is_original) ? MAYBE_GREEN(out, session) : "", file_path,
-                       (file->is_original) ? MAYBE_RESET(out, session) : "",
-                       (self->use_same_line) ? ' ' : '\n');
-        }
-        break;
-    default:
-        g_snprintf(line, sizeof(line), "%s%s%s%c", MAYBE_BLUE(out, session), file_path,
-                   MAYBE_RESET(out, session), (self->use_same_line) ? ' ' : '\n');
-        break;
-    }
+    g_snprintf(line, sizeof(line), "%s\n", file_path);
 
     if(self->text_chunks == NULL) {
         self->text_chunks = g_string_chunk_new(PATH_MAX / 2);
@@ -91,14 +70,7 @@ static void rm_fmt_prog(RmSession *session,
                         _U RmFmtHandler *parent,
                         FILE *out,
                         RmFmtProgressState state) {
-    RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
-
-    if(state == RM_PROGRESS_STATE_INIT) {
-        self->omit_first_line =
-            (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
-        self->use_same_line =
-            (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
-    }
+    RmFmtHandlerUniques *self = (RmFmtHandlerUniques *)parent;
 
     extern RmFmtHandler *PROGRESS_HANDLER;
     rm_assert_gentle(PROGRESS_HANDLER->prog);
@@ -106,6 +78,7 @@ static void rm_fmt_prog(RmSession *session,
 
     /* Print all cached lines on shutdown. */
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
+        fprintf(out, "%sUNIQUE FILES:%s\n", MAYBE_GREEN(out, session), MAYBE_RESET(out, session));
         for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
             char *line = iter->data;
             if(line != NULL) {
@@ -122,22 +95,20 @@ static void rm_fmt_prog(RmSession *session,
     SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);
 }
 
-static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
+static RmFmtHandlerUniques UNIQUES_HANDLER_IMPL = {
     /* Initialize parent */
     .parent =
         {
-            .size = sizeof(FDUPES_HANDLER_IMPL),
-            .name = "fdupes",
+            .size = sizeof(UNIQUES_HANDLER_IMPL),
+            .name = "uniques",
             .head = NULL,
             .elem = rm_fmt_elem,
             .prog = rm_fmt_prog,
             .foot = NULL,
-            .valid_keys = {"omitfirst", "sameline", NULL},
+            .valid_keys = {NULL},
         },
     .text_lines = NULL,
-    .use_same_line = false,
-    .omit_first_line = false
 
 };
 
-RmFmtHandler *FDUPES_HANDLER = (RmFmtHandler *)&FDUPES_HANDLER_IMPL;
+RmFmtHandler *UNIQUES_HANDLER = (RmFmtHandler *)&UNIQUES_HANDLER_IMPL;
