@@ -693,6 +693,10 @@ static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
     return first_b->mergeups - first_a->mergeups;
 }
 
+static int rm_tm_hidden_file(RmFile *file, _U gpointer user_data) {
+    return file->is_hidden;
+}
+
 static void rm_tm_extract(RmTreeMerger *self) {
     /* Iterate over all directories per hash (which are same therefore) */
     RmCfg *cfg = self->session->cfg;
@@ -809,15 +813,10 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        GList *next = NULL;
-        for(GList *iter = file_list->head; iter; iter = next) {
-            RmFile *file = iter->data;
-            next = iter->next;
-
+        if (self->session->cfg->partial_hidden) {
             /* with --partial-hidden we do not want to output */
-            if(self->session->cfg->partial_hidden && file->is_hidden) {
-                g_queue_delete_link(file_list, iter);
-            }
+            rm_util_queue_foreach_remove(file_list,
+                    (RmRFunc)rm_tm_hidden_file, NULL);
         }
 
         if(file_list->length >= 2) {

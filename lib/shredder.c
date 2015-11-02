@@ -1226,6 +1226,17 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     }
 }
 
+static gint rm_shred_remove_basename_matches(RmFile *file, RmFile *headfile) {
+    if (file==headfile) {
+        return 0;
+    }
+    if (rm_file_basenames_cmp(file, headfile) != 0) {
+        return 0;
+    }
+    rm_shred_discard_file(file, TRUE);
+    return 1;
+}
+
 /* iterate over group to find highest ranked; return it and tag it as original    */
 /* also in special cases (eg keep_all_tagged) there may be more than one original,
  * in which case tag them as well
@@ -1278,16 +1289,8 @@ void rm_shred_group_find_original(RmSession *session, GQueue *group) {
     }
     if(session->cfg->unmatched_basenames) {
         /* remove files which match headfile's basename */
-        GList *iter = group->head->next;
-        while(iter) {
-            RmFile *iter_file = iter->data;
-            GList *temp = iter;
-            iter = iter->next;
-            if(rm_file_basenames_cmp(iter_file, headfile) == 0) {
-                rm_shred_discard_file(iter_file, TRUE);
-                g_queue_delete_link(group, temp);
-            }
-        }
+        rm_util_queue_foreach_remove(group,
+                (RmRFunc)rm_shred_remove_basename_matches, group->head->data);
     }
 }
 
