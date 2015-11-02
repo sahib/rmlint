@@ -753,7 +753,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         /* check if already rejected */
         if(g_slist_find(a->paranoid->rejects, b) ||
            g_slist_find(b->paranoid->rejects, a)) {
-            // rm_log_error_line("Optimisation sufficiently optimised");
             return false;
         }
         /* all the "easy" ways failed... do manual check of all buffers */
