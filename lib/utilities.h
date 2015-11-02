@@ -230,14 +230,14 @@ GQueue *rm_hash_table_setdefault(GHashTable *table, gpointer key, RmNewFunc defa
 void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src);
 
 /**
- * @brief Function prototype for remove-iterating over a GQueue.
+ * @brief Function prototype for remove-iterating over a GQueue/GList/GSList.
  *
  * @param data current element
  * @param user_data optional user_data
  *
  * @return True if the element should be removed.
  */
-typedef gboolean (*RmQRFunc)(gpointer data, gpointer user_data);
+typedef gboolean (*RmRFunc)(gpointer data, gpointer user_data);
 
 /**
  * @brief Iterate over a GQueue and call `func` on each element.
@@ -250,7 +250,33 @@ typedef gboolean (*RmQRFunc)(gpointer data, gpointer user_data);
  *
  * @return Number of removed items.
  */
-gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data);
+gint rm_util_queue_foreach_remove(GQueue *queue, RmRFunc func, gpointer user_data);
+
+/**
+ * @brief Iterate over a GList and call `func` on each element.
+ *
+ * If func returns true, the element is removed from the GList.
+ *
+ * @param list pointer to GList to iterate
+ * @param func Function that evaluates the removal of the item
+ * @param user_data optional user data
+ *
+ * @return Number of removed items.
+ */
+gint rm_util_list_foreach_remove(GList **list, RmRFunc func, gpointer user_data);
+
+/**
+ * @brief Iterate over a GSList and call `func` on each element.
+ *
+ * If func returns true, the element is removed from the GSList.
+ *
+ * @param list pointer to GSList to iterate
+ * @param func Function that evaluates the removal of the item
+ * @param user_data optional user data
+ *
+ * @return Number of removed items.
+ */
+gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_data);
 
 /**
  * @brief Return a pointer to the extension part of the file or NULL if none.

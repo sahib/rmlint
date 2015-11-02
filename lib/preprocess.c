@@ -488,7 +488,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
 
         /* remove path doubles */
         session->total_filtered_files -=
-            rm_util_queue_foreach_remove(inode_cluster, (RmQRFunc)rm_pp_check_path_double,
+            rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
                                          session->tables->unique_paths_table);
         /* clear the hashtable ready for the next cluster */
         g_hash_table_remove_all(session->tables->unique_paths_table);
@@ -496,7 +496,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
 
     /* process and remove other lint */
     session->total_filtered_files -= rm_util_queue_foreach_remove(
-        inode_cluster, (RmQRFunc)rm_pp_handle_other_lint, (RmSession *)session);
+        inode_cluster, (RmRFunc)rm_pp_handle_other_lint, (RmSession *)session);
 
     if(inode_cluster->length > 1) {
         /* bundle or free the non-head files */
@@ -513,7 +513,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
          * the hardlinks depending on value of headfile->hardlinks.is_head.
          */
         session->total_filtered_files -= rm_util_queue_foreach_remove(
-            inode_cluster, (RmQRFunc)rm_pp_handle_hardlink, headfile);
+            inode_cluster, (RmRFunc)rm_pp_handle_hardlink, headfile);
     }
 
     /* update counters */

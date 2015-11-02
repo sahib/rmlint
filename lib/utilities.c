@@ -195,7 +195,7 @@ void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src) {
     src->head = src->tail = NULL;
 }
 
-gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data) {
+gint rm_util_queue_foreach_remove(GQueue *queue, RmRFunc func, gpointer user_data) {
     gint removed = 0;
 
     for(GList *iter = queue->head, *next = NULL; iter; iter = next) {
@@ -203,6 +203,48 @@ gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_da
         if(func(iter->data, user_data)) {
             g_queue_delete_link(queue, iter);
             ++removed;
+        }
+    }
+    return removed;
+}
+
+gint rm_util_list_foreach_remove(GList **list, RmRFunc func, gpointer user_data) {
+    gint removed = 0;
+
+    /* iterate over list */
+    for(GList *iter = *list, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if(func(iter->data, user_data)) {
+            /* delete iter from GList */
+            if(iter->prev) {
+                (iter->prev)->next = next;
+            } else {
+                *list = next;
+            }
+            g_list_free_1(iter);
+            ++removed;
+        }
+    }
+    return removed;
+}
+
+gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_data) {
+    gint removed = 0;
+
+    /* iterate over list, keeping track of previous and next entries */
+    for(GSList *prev = NULL, *iter = *list, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if(func(iter->data, user_data)) {
+            /* delete iter from GSList */
+            g_slist_free1(iter);
+            if(prev) {
+                prev->next = next;
+            } else {
+                *list = next;
+            }
+            ++removed;
+        } else {
+            prev = iter;
         }
     }
     return removed;
@@ -806,8 +848,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
 
 #if RM_MOUNTTABLE_IS_USABLE
 
-    RmPartitionInfo *part =
-        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dev));
+    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dev));
     if(part) {
         return part->disk;
     } else {
@@ -830,14 +871,12 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
                                       "%s" RESET,
                                       path, prev, parent_part->name);
                     part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
-                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(dev),
-                                        part);
+                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(dev), part);
                     /* if parent_part is in the reflinkfs_table, add dev as well */
-                    char *parent_type = g_hash_table_lookup(self->reflinkfs_table,
-                                             GUINT_TO_POINTER(stat_buf.st_dev));
-                    if (parent_type) {
-                        g_hash_table_insert(self->reflinkfs_table,
-                                            GUINT_TO_POINTER(dev),
+                    char *parent_type = g_hash_table_lookup(
+                        self->reflinkfs_table, GUINT_TO_POINTER(stat_buf.st_dev));
+                    if(parent_type) {
+                        g_hash_table_insert(self->reflinkfs_table, GUINT_TO_POINTER(dev),
                                             parent_type);
                     }
                     g_free(prev);
@@ -852,8 +891,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
         }
     }
 #else
-    (void) partition;
-    (void) path;
+    (void)partition;
+    (void)path;
     return 0;
 #endif
 }
