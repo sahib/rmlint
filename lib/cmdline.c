@@ -901,18 +901,6 @@ static gboolean rm_cmd_parse_limit_mem(_U const char *option_name, const gchar *
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
 }
 
-static gboolean rm_cmd_parse_paranoid_mem(_U const char *option_name,
-                                          const gchar *size_spec, RmSession *session,
-                                          GError **error) {
-    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->paranoid_mem));
-}
-
-static gboolean rm_cmd_parse_read_buffer_mem(_U const char *option_name,
-                                             const gchar *size_spec, RmSession *session,
-                                             GError **error) {
-    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buffer_mem));
-}
-
 static gboolean rm_cmd_parse_sweep_size(_U const char *option_name,
                                         const gchar *size_spec, RmSession *session,
                                         GError **error) {
@@ -1345,8 +1333,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"clamp-low"              , 'q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)              , "Limit lower reading barrier"                                 , "P"}    ,
         {"clamp-top"              , 'Q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)              , "Limit upper reading barrier"                                 , "P"}    ,
         {"limit-mem"              , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(limit_mem)              , "Specify max. memory usage target"                            , "S"}    ,
-        {"paranoid-mem"           , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(paranoid_mem)           , "Specify min. memory to use for in-progress paranoid hashing" , "S"}    ,
-        {"read-buffer"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(read_buffer_mem)        , "Specify min. memory to use for read buffer during hashing"   , "S"}    ,
         {"sweep-size"             , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_size)             , "Specify max. bytes per pass when scanning disks"             , "S"}    ,
         {"sweep-files"            , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,

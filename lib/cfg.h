@@ -100,12 +100,6 @@ typedef struct RmCfg {
     guint threads_per_disk;
     RmDigestType checksum_type;
 
-    /* number of bytes to allocate to reading buffer during shredding */
-    RmOff read_buffer_mem;
-
-    /* number of bytes to allocate to in-progress paranoid digests */
-    RmOff paranoid_mem;
-
     /* total number of bytes we are allowed to use (target only) */
     RmOff total_mem;
 
