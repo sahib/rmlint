@@ -301,21 +301,18 @@ RmOff rm_buffer_size(RmBufferPool *pool);
  * A buffer pool holds a number of same-sized RmBuffer structs
  * up to a maximum number of bytes.
  *
- * If the limit is hit, rm_buffer_pool_get() will block till
+ * If the limit is hit, rm_buffer_get() will block till
  * other buffers were released.
  *
  * @param buffer_size The size of each buffer.
- * @param max_mem Maxmimum number of bytes the pool may allocate.
- * @param max_kept_mem Maximum number of bytes the pool may cache.
+ * @param max_mem Maxmimum number of bytes the pool may allocate; 0 for no limit.
  *
  * @return A readily usable RmBufferPool.
  */
-RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem);
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem);
 
 /**
  * @brief Destroy a RmBufferPool.
- *
- * This will wait for the currently pending action to finish.
  *
  * This can only be safely called when no parallel access to the pool is done.
  */
@@ -326,14 +323,14 @@ void rm_buffer_pool_destroy(RmBufferPool *pool);
  *
  * This might be either a previsouly used one or initially allocate one.
  */
-RmBuffer *rm_buffer_pool_get(RmBufferPool *pool);
+RmBuffer *rm_buffer_get(RmBufferPool *pool);
 
 /**
  * @brief Release a previosuly retrieved buffer.
  *
  * It will be either cached or freed if over the limit.
  */
-void rm_buffer_pool_release(RmBuffer *buf);
+void rm_buffer_release(RmBuffer *buf);
 
 /**
  * @brief Send a new (pending) paranoid digest match `candidate` for `target`.

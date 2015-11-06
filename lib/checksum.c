@@ -51,7 +51,7 @@ RmOff rm_buffer_size(RmBufferPool *pool) {
     return pool->buffer_size;
 }
 
-RmBuffer *rm_buffer_new(RmBufferPool *pool) {
+static RmBuffer *rm_buffer_new(RmBufferPool *pool) {
     RmBuffer *self = g_slice_new0(RmBuffer);
     self->pool = pool;
     self->data = g_slice_alloc(pool->buffer_size);
@@ -63,41 +63,26 @@ static void rm_buffer_free(RmBuffer *buf) {
     g_slice_free(RmBuffer, buf);
 }
 
-RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem, gsize max_kept_mem) {
-    RmBufferPool *self = g_slice_new(RmBufferPool);
-    self->stack = NULL;
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
+    RmBufferPool *self = g_slice_new0(RmBufferPool);
     self->buffer_size = buffer_size;
-    self->avail_buffers = MAX(max_mem / buffer_size, 1);
-    self->min_kept_buffers = self->avail_buffers;
-    self->max_kept_buffers = MAX(max_kept_mem / buffer_size, 1);
-    self->kept_buffers = 0;
+    self->avail_buffers = max_mem ? MAX(max_mem / buffer_size, 1) : (gsize)-1;
 
-    rm_log_debug_line("rm_buffer_pool_init: allocated max %" G_GSIZE_FORMAT
-                      " buffers of %" G_GSIZE_FORMAT " bytes each",
-                      self->avail_buffers, self->buffer_size);
     g_cond_init(&self->change);
     g_mutex_init(&self->lock);
     return self;
 }
 
 void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    rm_log_debug_line("had %" G_GSIZE_FORMAT " unused read buffers",
-                      pool->min_kept_buffers);
 
-    /* Wait for all buffers to come back */
-    g_mutex_lock(&pool->lock);
-    {
-        /* Free 'em */
-        g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
-    }
-    g_mutex_unlock(&pool->lock);
+    g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
 
     g_mutex_clear(&pool->lock);
     g_cond_clear(&pool->change);
     g_slice_free(RmBufferPool, pool);
 }
 
-RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
+RmBuffer *rm_buffer_get(RmBufferPool *pool) {
     RmBuffer *buffer = NULL;
     g_mutex_lock(&pool->lock);
     {
@@ -119,9 +104,6 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
         }
         pool->avail_buffers--;
 
-        if(pool->avail_buffers < pool->min_kept_buffers) {
-            pool->min_kept_buffers = pool->avail_buffers;
-        }
     }
     g_mutex_unlock(&pool->lock);
 
@@ -129,41 +111,13 @@ RmBuffer *rm_buffer_pool_get(RmBufferPool *pool) {
     return buffer;
 }
 
-void rm_buffer_pool_release(RmBuffer *buf) {
+void rm_buffer_release(RmBuffer *buf) {
     RmBufferPool *pool = buf->pool;
     g_mutex_lock(&pool->lock);
     {
         pool->avail_buffers++;
         g_cond_signal(&pool->change);
         pool->stack = g_slist_prepend(pool->stack, buf);
-    }
-    g_mutex_unlock(&pool->lock);
-}
-
-/* make another buffer available if one is being kept (in paranoid digest) */
-static void rm_buffer_pool_signal_keeping(_U RmBuffer *buf) {
-    RmBufferPool *pool = buf->pool;
-
-    g_mutex_lock(&pool->lock);
-    {
-        pool->avail_buffers++;
-        pool->kept_buffers++;
-        g_cond_signal(&pool->change);
-    }
-    g_mutex_unlock(&pool->lock);
-}
-
-static void rm_buffer_pool_release_kept(RmBuffer *buf) {
-    RmBufferPool *pool = buf->pool;
-    g_mutex_lock(&pool->lock);
-    {
-        if(pool->kept_buffers > pool->max_kept_buffers) {
-            rm_buffer_free(buf);
-        } else {
-            pool->stack = g_slist_prepend(pool->stack, buf);
-        }
-        pool->kept_buffers--;
-        g_cond_signal(&pool->change);
     }
     g_mutex_unlock(&pool->lock);
 }
@@ -379,7 +333,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
 void rm_digest_release_buffers(RmDigest *digest) {
     if(digest->paranoid && digest->paranoid->buffers) {
         g_slist_free_full(digest->paranoid->buffers,
-                          (GDestroyNotify)rm_buffer_pool_release_kept);
+                          (GDestroyNotify)rm_buffer_free);
         digest->paranoid->buffers = NULL;
     }
 }
@@ -532,7 +486,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     RmDigest *digest = buffer->digest;
     if(digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
-        rm_buffer_pool_release(buffer);
+        rm_buffer_release(buffer);
     } else {
         RmParanoid *paranoid = digest->paranoid;
 
@@ -546,7 +500,6 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
         }
 
         digest->bytes += buffer->len;
-        rm_buffer_pool_signal_keeping(buffer);
 
         if(paranoid->shadow_hash) {
             rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);

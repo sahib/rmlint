@@ -1589,20 +1589,17 @@ void rm_shred_run(RmSession *session) {
     /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or
      * paranoid mem */
     RmOff mem_used = SHRED_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
+    RmOff read_buffer_mem = (gint64)cfg->total_mem - (gint64)mem_used;
 
     if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
-        tag.paranoid_mem_alloc =
-            MIN((gint64)cfg->paranoid_mem,
-                (gint64)cfg->total_mem - (gint64)mem_used - (gint64)cfg->read_buffer_mem);
+        tag.paranoid_mem_alloc = (gint64)cfg->total_mem - (gint64)mem_used;
         tag.paranoid_mem_alloc = MAX(0, tag.paranoid_mem_alloc);
         rm_log_debug_line("Paranoid Mem: %" LLU, tag.paranoid_mem_alloc);
-    } else {
-        cfg->read_buffer_mem =
-            MAX((gint64)cfg->read_buffer_mem, (gint64)cfg->total_mem - (gint64)mem_used);
-        tag.paranoid_mem_alloc = 0;
+        /* paranoid memory manager takes care of memory load; */
+        read_buffer_mem = 0;
     }
-    rm_log_debug_line("Read buffer Mem: %" LLU, cfg->read_buffer_mem);
+    rm_log_debug_line("Read buffer Mem: %" LLU, read_buffer_mem);
 
     /* Initialise hasher */
     /* Optimum buffer size based on /usr without dropping caches:
@@ -1623,8 +1620,7 @@ void rm_shred_run(RmSession *session) {
                                cfg->threads,
                                cfg->use_buffered_read,
                                SHRED_PAGE_SIZE * 4,
-                               cfg->read_buffer_mem,
-                               cfg->paranoid_mem,
+                               read_buffer_mem,
                                (RmHasherCallback)rm_shred_hash_callback,
                                &tag);
 
