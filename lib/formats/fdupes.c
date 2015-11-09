@@ -33,12 +33,6 @@ typedef struct RmFmtHandlerFdupes {
     /* must be first */
     RmFmtHandler parent;
 
-    /* Storage for all strings */
-    GStringChunk *text_chunks;
-
-    /* Pointers into text_chunks */
-    GQueue *text_lines;
-
     /* Do not print original (fdupes emulation) */
     bool omit_first_line;
 
@@ -50,13 +44,13 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
                         RmFile *file) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
-    char line[512 + 32];
-    memset(line, 0, sizeof(line));
-
-    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
+    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         /* we do not want to list unfinished files. */
         return;
     }
+
+    char line[512 + 32];
+    memset(line, 0, sizeof(line));
 
     RM_DEFINE_PATH(file);
 
@@ -78,13 +72,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
         break;
     }
 
-    if(self->text_chunks == NULL) {
-        self->text_chunks = g_string_chunk_new(PATH_MAX / 2);
-        self->text_lines = g_queue_new();
-    }
-
-    /* remember the line (use GStringChunk for effiecient storage) */
-    g_queue_push_tail(self->text_lines, g_string_chunk_insert(self->text_chunks, line));
+    fputs(line, out);
 }
 
 static void rm_fmt_prog(RmSession *session,
@@ -94,32 +82,16 @@ static void rm_fmt_prog(RmSession *session,
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
     if(state == RM_PROGRESS_STATE_INIT) {
+        session->cfg->cache_file_structs = true;
         self->omit_first_line =
             (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
         self->use_same_line =
             (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
     }
 
-    extern RmFmtHandler *PROGRESS_HANDLER;
-    rm_assert_gentle(PROGRESS_HANDLER->prog);
-    PROGRESS_HANDLER->prog(session, (RmFmtHandler *)PROGRESS_HANDLER, out, state);
-
-    /* Print all cached lines on shutdown. */
-    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->text_lines) {
-        for(GList *iter = self->text_lines->head; iter; iter = iter->next) {
-            char *line = iter->data;
-            if(line != NULL) {
-                fprintf(out, "%s", line);
-            }
-        }
-        g_queue_free(self->text_lines);
-        g_string_chunk_free(self->text_chunks);
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n");
     }
-
-    extern RmFmtHandler *SUMMARY_HANDLER;
-    rm_assert_gentle(SUMMARY_HANDLER->prog);
-    SUMMARY_HANDLER->prog(session, (RmFmtHandler *)SUMMARY_HANDLER, out, state);
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
@@ -134,7 +106,6 @@ static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {
             .foot = NULL,
             .valid_keys = {"omitfirst", "sameline", NULL},
         },
-    .text_lines = NULL,
     .use_same_line = false,
     .omit_first_line = false
 

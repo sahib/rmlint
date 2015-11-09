@@ -338,7 +338,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
-    if(file->lint_type == RM_LINT_TYPE_UNFINISHED_CKSUM) {
+    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         return;
     }
 
