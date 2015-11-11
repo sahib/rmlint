@@ -186,13 +186,7 @@ static void rm_mds_push_task_impl(RmMDSDevice *device, RmMDSTask *task) {
 static RmMDSTask *rm_mds_pop_task(RmMDSDevice *device) {
     RmMDSTask *task = NULL;
     g_mutex_lock(&device->lock);
-    {
-        if(device->sorted_tasks) {
-            task = device->sorted_tasks->data;
-            device->sorted_tasks =
-                g_slist_delete_link(device->sorted_tasks, device->sorted_tasks);
-        }
-    }
+    { task = rm_util_slist_pop(&device->sorted_tasks); }
     g_mutex_unlock(&device->lock);
     return task;
 }
