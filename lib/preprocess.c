@@ -566,7 +566,16 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
     return num_handled;
 }
 
-/* This does preprocessing including handling of "other lint" (non-dupes) */
+/* This does preprocessing including handling of "other lint" (non-dupes)
+ * After rm_preprocess(), all remaining duplicate candidates are in
+ * a jagged GSList of GSLists as follows:
+ * session->tables->size_groups->group1->file1a
+ *                                     ->file1b
+ *                                     ->file1c
+ *                             ->group2->file2a
+ *                                     ->file2b
+ *                                       etc
+ */
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     GQueue *all_files = tables->all_files;
