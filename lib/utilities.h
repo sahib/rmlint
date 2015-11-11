@@ -279,6 +279,16 @@ gint rm_util_list_foreach_remove(GList **list, RmRFunc func, gpointer user_data)
 gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_data);
 
 /**
+* @brief Pop the first element from a GSList
+*
+* @return pointer to the data associated with the popped element.
+*
+* Note this function returns null if the list is empty, or if the first item
+* has NULL as its data.
+*/
+gpointer rm_util_slist_pop(GSList **list);
+
+/**
  * @brief Return a pointer to the extension part of the file or NULL if none.
  *
  * @return: a pointer >= basename or NULL.

@@ -250,6 +250,16 @@ gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_dat
     return removed;
 }
 
+gpointer rm_util_slist_pop(GSList **list) {
+    gpointer result = NULL;
+    if (*list) {
+        result = (*list)->data;
+        *list = g_slist_delete_link(*list, *list);
+    }
+    return result;
+}
+
+
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
