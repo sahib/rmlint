@@ -126,7 +126,8 @@ static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = "",
                                    [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
                                    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
                                    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir",
-                                   [RM_LINT_TYPE_UNFINISHED_CKSUM] = "unfinished_cksum"};
+                                   [RM_LINT_TYPE_UNIQUE_FILE] = "unfinished_cksum"};
+/* TODO: rename 'unfinished_cksum; to 'unique_file' and update nosetests accordingly */
 
 const char *rm_file_lint_type_to_string(RmLintType type) {
     return LINT_TYPES[MIN(type, sizeof(LINT_TYPES) / sizeof(const char *))];

@@ -250,6 +250,12 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
     if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
         return;
     }
+    if (file->lint_type == RM_LINT_TYPE_UNIQUE_FILE && (!file->digest || !session->cfg->write_unfinished)) {
+        /* unique file with no partial checksum */
+        return;
+         /* TODO: add option to output all unique files */
+    }
+
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     rm_fmt_json_cksum(file, checksum_str, sizeof(checksum_str));
 
@@ -281,7 +287,7 @@ static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
 
         rm_fmt_json_key_unsafe(out, "path", file_path);
         rm_fmt_json_sep(self, out);
-        if(file->lint_type != RM_LINT_TYPE_UNFINISHED_CKSUM) {
+        if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
             rm_fmt_json_key_int(out, "size", file->file_size);
             rm_fmt_json_sep(self, out);
             if(file->twin_count >= 0) {
