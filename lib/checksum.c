@@ -41,6 +41,8 @@
 #include "checksums/cfarmhash.h"
 #include "checksums/xxhash/xxhash.h"
 
+#include "utilities.h"
+
 #define _RM_CHECKSUM_DEBUG 0
 
 ///////////////////////////////////////
@@ -87,12 +89,11 @@ RmBuffer *rm_buffer_get(RmBufferPool *pool) {
     g_mutex_lock(&pool->lock);
     {
         while(!buffer) {
-            if(pool->stack) {
-                buffer = pool->stack->data;
-                pool->stack = g_slist_delete_link(pool->stack, pool->stack);
-            } else if(pool->avail_buffers > 0) {
+            buffer = rm_util_slist_pop(&pool->stack);
+            if (!buffer && pool->avail_buffers > 0) {
                 buffer = rm_buffer_new(pool);
-            } else {
+            }
+            if (!buffer) {
                 if(!pool->mem_warned) {
                     rm_log_warning_line(
                         "read buffer limit reached - waiting for "
