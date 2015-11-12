@@ -465,7 +465,7 @@ static void rm_signal_done(RmSignal *signal) {
 
 /////////// RmShredGroup ////////////////
 
-/* allocate and initialise new RmShredGroup */
+/* allocate and initialise new RmShredGroup; uses file's digest type if available */
 static RmShredGroup *rm_shred_group_new(RmFile *file) {
     RmShredGroup *self = g_slice_new0(RmShredGroup);
 
@@ -473,9 +473,6 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
         self->digest_type = file->digest->type;
         self->digest = file->digest;
         file->digest = NULL;
-    } else {
-        /* initial groups have no checksum */
-        rm_assert_gentle(!file->shred_group);
     }
 
     self->parent = file->shred_group;
@@ -1156,16 +1153,13 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
             rm_shred_file_preprocess(group, file, main);
         }
 
-        if(group) {
-            /* check if group has external checksums for all files */
-            if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
-                group->has_only_ext_cksums = true;
-            }
-
-            /* remove group if it failed to launch (eg if only 1 file) */
-            removed += rm_shred_group_preprocess(group);
+        /* check if group has external checksums for all files */
+        if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
+            group->has_only_ext_cksums = true;
         }
 
+        /* remove group if it failed to launch (eg if only 1 file) */
+        removed += rm_shred_group_preprocess(group);
     }
     rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
                       g_timer_elapsed(session->timer, NULL), removed,
