@@ -310,9 +310,10 @@ Here's the list of currently available formatters and their config options:
     - *remove*: Remove the file using ``rm -rf``. (``-r`` for duplicate dirs).
       Never fails.
     - *usercmd*: Use the provided user defined command (``-c
-      sh:cmd=something``). Never fails.
+      sh:cmd='*user command*'``).  Use "$1" within '*user command*' to refer to
+      the duplicate file and (optionally) "$2" to refer to the original.
 
-    **Example:**
+    **Example (predefined config):**
 
     .. code-block:: bash
 
@@ -324,13 +325,14 @@ Here's the list of currently available formatters and their config options:
       Keeping: /home/user/test/b/one
       Symlinking to original: /home/user/test/b/file
 
+    **Example (custom command):**
 
-    A safe user command example that just composes some string out of the
-    original and duplicate path:
+    The following example uses the trash-put command from the
+    `trash-cli <https://github.com/andreafrancia/trash-cli>`_ utility to move duplicate files to trash:
 
     .. code-block:: bash
 
-      $ rmlint -o sh -c sh:cmd='echo "Contents of " "$1" " match " "$2"'
+      $ rmlint -o sh -c sh:cmd='echo "Trashing $1" && trash-put "$1"'
 
 
 :py:
