@@ -256,6 +256,9 @@ typedef struct RmFile {
 /* Fill path always */
 #define RM_DEFINE_PATH(file) RM_DEFINE_PATH_IF_NEEDED(file, true)
 
+#define RM_IS_BUNDLED_HARDLINK(file) \
+    (file->hardlinks.hardlink_head && !file->hardlinks.is_head)
+
 /**
  * @brief Create a new RmFile handle.
  */

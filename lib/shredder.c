@@ -326,9 +326,6 @@ typedef struct RmShredTag {
 
 } RmShredTag;
 
-#define IS_BUNDLED_HARDLINK(file) \
-    (file->hardlinks.hardlink_head && !file->hardlinks.is_head)
-
 #define NEEDS_PREF(group) \
     (group->session->cfg->must_match_tagged || group->session->cfg->keep_all_untagged)
 #define NEEDS_NPREF(group) \
@@ -710,7 +707,7 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
     const RmSession *session = file->session;
     RmShredTag *tag = session->shredder;
     /* update device counters (unless this file was a bundled hardlink) */
-    if(!IS_BUNDLED_HARDLINK(file)) {
+    if(!RM_IS_BUNDLED_HARDLINK(file)) {
         rm_assert_gentle(file->disk);
         rm_mds_device_ref(file->disk, -1);
         file->disk = NULL;
@@ -1298,7 +1295,7 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
          * hardlinks does not free any space they should not be counted unless
          * all of them would be removed.
          */
-        if(!IS_BUNDLED_HARDLINK(file)) {
+        if(!RM_IS_BUNDLED_HARDLINK(file)) {
             session->total_lint_size += file->file_size;
         }
     }
