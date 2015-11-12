@@ -101,7 +101,7 @@ static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
             /* Printable, but needs to be escaped */
             text[0] = '\\';
             text[1] = *curr;
-        } else if((*curr > 0 && *curr < 0x1f) || *curr >= 0x7f) {
+        } else if((*curr > 0 && *curr < 0x1f) || *curr == 0x7f) {
             /* Something unprintable */
             switch(*curr) {
             case '\b':
