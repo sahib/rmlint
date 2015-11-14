@@ -198,3 +198,22 @@ def test_sorting():
         assert len(data) == 7
 
         validate_order(data, combo)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_unicode_fuckup():
+    names = '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
+
+    create_file('xxx', names[0])
+    create_file('xxx', names[1])
+    create_file('xxx', names[2])
+
+    replay_path = '/tmp/replay.json'
+
+    head, *data, footer = run_rmlint('-o json:{p}'.format(p=replay_path))
+    assert len(data) == 3
+    assert set([os.path.basename(e['path']) for e in data]) == set(names)
+
+    head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
+    assert len(data) == 3
+    assert set([os.path.basename(e['path']) for e in data]) == set(names)

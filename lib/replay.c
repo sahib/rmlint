@@ -395,7 +395,10 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
         session->dup_group_counter += file->is_original;
         if(!file->is_original) {
             session->dup_counter += 1;
-            session->total_lint_size += file->file_size;
+
+            if(!RM_IS_BUNDLED_HARDLINK(file)) {
+                session->total_lint_size += file->file_size;
+            }
         }
     } else {
         session->other_lint_cnt += 1;
