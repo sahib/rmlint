@@ -82,9 +82,8 @@ Before saying that the paranoid mode of ``rmlint`` is a memory hog, it should be
 noted (since this can't be seen on those plots) that the memory consumption
 scales very well. Partly because ``rmlint`` saves all paths in a Trie_, making
 it usable for :math:`\geq` `5M files`_. Also it is able to control the amount of
-memory it uses in the paranoid mode (``--max-paranoid-mem``). Due to the high
-amount of internal data structures it however has a rather large base memory
-footprint.
+memory it uses (``--limit-mem``). Due to the high amount of internal data
+structures it however has a rather large base memory footprint.
 
 ``dupd`` uses direct file comparison for groups of two and three files and hash
 functions for the rest. It seems to have a rather high memory footprint in any
