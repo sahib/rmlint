@@ -618,7 +618,7 @@ void rm_preprocess(RmSession *session) {
             g_hash_table_steal_all(node_table);
             if(tables->size_groups->data == NULL) {
                 /* zero size group after handling other lint; remove it */
-                rm_util_slist_pop(&tables->size_groups);
+                tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
             }
             current_size_file = file;
         }
