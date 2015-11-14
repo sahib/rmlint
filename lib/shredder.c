@@ -1070,16 +1070,24 @@ static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShre
 /* Called for each file; find appropriate RmShredGroup (ie files with same size) and
  * push the file to it.
  * */
-static void rm_shred_file_preprocess(RmShredGroup *group, RmFile *file,
-                                     RmShredTag *main) {
+static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
+
     /* initial population of RmShredDevice's and first level RmShredGroup's */
-    RmSession *session = main->session;
+    RmSession *session = (RmSession*)file->session;
+    RmShredTag *shredder = session->shredder;
+    RmCfg *cfg = session->cfg;
 
     rm_assert_gentle(file);
     rm_assert_gentle(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
     rm_assert_gentle(file->file_size > 0);
 
-    file->is_new_or_has_new = (file->mtime >= session->cfg->min_mtime);
+    if(!(*group)) {
+        /* create RmShredGroup using first file in size group as template*/
+        *group = rm_shred_group_new(file);
+        (*group)->digest_type = cfg->checksum_type;
+    }
+
+    file->is_new_or_has_new = (file->mtime >= cfg->min_mtime);
 
     /* if file has hardlinks then set file->hardlinks.has_[non_]prefd*/
     if(file->hardlinks.is_head) {
@@ -1087,7 +1095,7 @@ static void rm_shred_file_preprocess(RmShredGroup *group, RmFile *file,
             RmFile *link = iter->data;
             file->hardlinks.has_non_prefd |= !(link->is_prefd);
             file->hardlinks.has_prefd |= link->is_prefd;
-            file->is_new_or_has_new |= (link->mtime >= session->cfg->min_mtime);
+            file->is_new_or_has_new |= (link->mtime >= cfg->min_mtime);
         }
     }
 
@@ -1096,38 +1104,42 @@ static void rm_shred_file_preprocess(RmShredGroup *group, RmFile *file,
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
     file->disk = rm_mds_device_get(
         session->mds, file_path,
-        (session->cfg->fake_pathindex_as_disk) ? file->path_index + 1 : file->dev);
+        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : file->dev);
     rm_mds_device_ref(file->disk, 1);
-    rm_shred_adjust_counters(main, 1, (gint64)file->file_size - file->hash_offset);
+    rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
 
-    rm_shred_group_push_file(group, file, true);
+    rm_shred_group_push_file(*group, file, true);
 
-    if(main->session->cfg->read_cksum_from_xattr) {
-        char *ext_cksum = rm_xattr_read_hash(main->session, file);
+    if(cfg->read_cksum_from_xattr) {
+        char *ext_cksum = rm_xattr_read_hash(session, file);
         if(ext_cksum != NULL) {
             file->folder->data = ext_cksum;
         }
     }
 
     if(HAS_CACHE(session)) {
-        if(rm_trie_search(&session->cfg->file_trie, file_path)) {
-            group->num_ext_cksums += 1;
+        if(rm_trie_search(&cfg->file_trie, file_path)) {
+            (*group)->num_ext_cksums += 1;
             file->has_ext_cksum = 1;
         }
     }
 }
 
-/* Called for each group after all initial files have been pushed to groups.
- * If the group failed to launch, then free it and its files
- * */
-static gint rm_shred_group_preprocess(RmShredGroup *group) {
+static void rm_shred_process_group(GSList *files, RmShredTag *main) {
+    /* push files to shred group */
+    RmShredGroup *group = NULL;
+    g_slist_foreach(files, (GFunc)rm_shred_file_preprocess, &group);
+    g_slist_free(files);
+
+    /* check if group has external checksums for all files */
+    if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
+        group->has_only_ext_cksums = true;
+    }
+
     rm_assert_gentle(group);
+    /* remove group if it failed to launch (eg if only 1 file) */
     if(group->status == RM_SHRED_GROUP_DORMANT) {
-        gint num_files = group->num_files;
         rm_shred_group_finalise(group);
-        return num_files;
-    } else {
-        return 0;
     }
 }
 
@@ -1138,29 +1150,9 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     /* move files from node tables into initial RmShredGroups */
     rm_log_debug_line("preparing size groups for shredding (dupe finding)...");
     RmFileTables *tables = session->tables;
-    while(tables->size_groups) {
-        GSList *files = rm_util_slist_pop(&tables->size_groups, NULL);
-
-        /* push files to shred group */
-        RmShredGroup *group = NULL;
-        while(files) {
-            RmFile *file = rm_util_slist_pop(&files, NULL);
-            if(!group) {
-                /* create RmShredGroup using first file in size group as template*/
-                group = rm_shred_group_new(file);
-                group->digest_type = session->cfg->checksum_type;
-            }
-            rm_shred_file_preprocess(group, file, main);
-        }
-
-        /* check if group has external checksums for all files */
-        if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
-            group->has_only_ext_cksums = true;
-        }
-
-        /* remove group if it failed to launch (eg if only 1 file) */
-        removed += rm_shred_group_preprocess(group);
-    }
+    g_slist_foreach(tables->size_groups, (GFunc)rm_shred_process_group, main);
+    g_slist_free(tables->size_groups);
+    tables->size_groups = NULL;
     rm_log_debug_line("...done at time %.3f; removed %u of %" LLU,
                       g_timer_elapsed(session->timer, NULL), removed,
                       session->total_filtered_files);
