@@ -1139,12 +1139,12 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     rm_log_debug_line("preparing size groups for shredding (dupe finding)...");
     RmFileTables *tables = session->tables;
     while(tables->size_groups) {
-        GSList *files = rm_util_slist_pop(&tables->size_groups);
+        GSList *files = rm_util_slist_pop(&tables->size_groups, NULL);
 
         /* push files to shred group */
         RmShredGroup *group = NULL;
         while(files) {
-            RmFile *file = rm_util_slist_pop(&files);
+            RmFile *file = rm_util_slist_pop(&files, NULL);
             if(!group) {
                 /* create RmShredGroup using first file in size group as template*/
                 group = rm_shred_group_new(file);
@@ -1570,7 +1570,7 @@ void rm_shred_run(RmSession *session) {
     /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or
      * paranoid mem */
     RmOff mem_used = SHRED_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
-    RmOff read_buffer_mem = (gint64)cfg->total_mem - (gint64)mem_used;
+    RmOff read_buffer_mem = MAX ( 1024*1024, (gint64)cfg->total_mem - (gint64)mem_used );
 
     if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */

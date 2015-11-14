@@ -89,7 +89,7 @@ RmBuffer *rm_buffer_get(RmBufferPool *pool) {
     g_mutex_lock(&pool->lock);
     {
         while(!buffer) {
-            buffer = rm_util_slist_pop(&pool->stack);
+            buffer = rm_util_slist_pop(&pool->stack, NULL);
             if (!buffer && pool->avail_buffers > 0) {
                 buffer = rm_buffer_new(pool);
             }

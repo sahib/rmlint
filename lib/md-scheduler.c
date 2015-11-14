@@ -180,17 +180,6 @@ static void rm_mds_push_task_impl(RmMDSDevice *device, RmMDSTask *task) {
     g_mutex_unlock(&device->lock);
 }
 
-/** @brief Mutex-protected task popper
- **/
-
-static RmMDSTask *rm_mds_pop_task(RmMDSDevice *device) {
-    RmMDSTask *task = NULL;
-    g_mutex_lock(&device->lock);
-    { task = rm_util_slist_pop(&device->sorted_tasks); }
-    g_mutex_unlock(&device->lock);
-    return task;
-}
-
 /** @brief GCompareDataFunc wrapper for mds->prioritiser
  **/
 static gint rm_mds_compare(const RmMDSTask *a, const RmMDSTask *b,
@@ -234,7 +223,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 
     /* process tasks from device->sorted_tasks */
     RmMDSTask *task = NULL;
-    while(processed < mds->pass_quota && (task = rm_mds_pop_task(device))) {
+    while(processed < mds->pass_quota && (task = rm_util_slist_pop(&device->sorted_tasks, &device->lock))) {
         if(mds->func(task->task_data, mds->user_data)) {
             /* task succeeded; update counters */
             ++processed;

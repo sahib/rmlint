@@ -250,11 +250,17 @@ gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_dat
     return removed;
 }
 
-gpointer rm_util_slist_pop(GSList **list) {
+gpointer rm_util_slist_pop(GSList **list, GMutex *lock) {
     gpointer result = NULL;
+    if (lock) {
+        g_mutex_lock(lock);
+    }
     if (*list) {
         result = (*list)->data;
         *list = g_slist_delete_link(*list, *list);
+    }
+    if (lock) {
+        g_mutex_unlock(lock);
     }
     return result;
 }

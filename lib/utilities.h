@@ -286,7 +286,7 @@ gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_dat
 * Note this function returns null if the list is empty, or if the first item
 * has NULL as its data.
 */
-gpointer rm_util_slist_pop(GSList **list);
+gpointer rm_util_slist_pop(GSList **list, GMutex *lock);
 
 /**
  * @brief Return a pointer to the extension part of the file or NULL if none.
