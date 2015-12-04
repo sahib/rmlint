@@ -32,7 +32,6 @@ Finds…
 
 - …Duplicate Files and duplicate directories.
 - …Nonstripped binaries (i.e. binaries with debug symbols)
-- …Paranoia mode for those who do not trust hashsums.
 - …Broken symbolic links.
 - …Empty files and directories.
 - …Files with broken user or/and group ID.
@@ -40,18 +39,15 @@ Finds…
 **Differences to other duplicate finders:**
 
 - Extremely fast (no exaggeration, we promise!).
+- Paranoia mode for those who do not trust hashsums.
 - Many output formats.
 - No interactivity.
 - Search for files only newer than a certain ``mtime``. 
 - ...
 
-Due to some of it's performance optimizations, it currently only runs on Linux
-32 and 64 bit. Porting to BSD and Darwin (Mac OSX) architectures is possible
-though, but needs some volunteers to test. Patches welcome!
-
-It has been compiled and run successfully on FreeBSD, although 
-it cannot use ``fiemap`` and ``mounttables`` as performance optimizations there. 
-Patches to make this run better over there are welcome too.
+It runs and compiles under most Unices, including Linux, FreeBSD and Darwin.
+The main target is Linux though, some optimisations might not be available
+elsewhere.
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/screenshot.png
    :align: center
@@ -71,7 +67,7 @@ Detailed documentation is available on:
 
     http://rmlint.rtfd.org
 
-Most feature you'll ever need is covered in the Tutorial:
+Most features you'll ever need are covered in the tutorial:
 
     http://rmlint.rtfd.org/en/latest/tutorial.html
 
@@ -86,8 +82,9 @@ BUGS
 
 If you found bugs, having trouble running `rmlint` or want to suggest new
 features please `read this <http://rmlint.readthedocs.org/en/latest/developers.html>`_.
-Also read the **BUGS** section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.html>`_ 
-to find out how to provide nice debug information.
+
+Also read the `BUGS <http://rmlint.readthedocs.org/en/latest/rmlint.1.html#bugs>` section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.html>`_ 
+to find out how to provide good debug information.
 
 AUTHORS
 -------
@@ -95,8 +92,8 @@ AUTHORS
 Here's a list of developers to blame:
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2015
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2015
+*Christopher Pahl*                   https://github.com/sahib      2010-2016
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2016
 ===================================  ============================= ===========================================
 
 There are some other people that helped us of course.
@@ -115,7 +112,8 @@ DONATIONS
 ---------
 
 If you think `rmlint` saved you some serious time [*]_ and/or space, you might
-consider a donation. You can donate either via Flattr, PayPal or you buy us a
+consider a donation. 
+You can donate either via Flattr, PayPal or you buy us a
 beer if we ever meet. `See here for details <http://rmlint.readthedocs.org/en/latest/index.html#donations>`_. 
 
 .. [*] If it freed you from your beloved data: *Sorry.* [*]_
