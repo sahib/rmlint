@@ -83,7 +83,7 @@ BUGS
 If you found bugs, having trouble running `rmlint` or want to suggest new
 features please `read this <http://rmlint.readthedocs.org/en/latest/developers.html>`_.
 
-Also read the `BUGS <http://rmlint.readthedocs.org/en/latest/rmlint.1.html#bugs>_` section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.html>`_
+Also read the `BUGS <http://rmlint.readthedocs.org/en/latest/rmlint.1.html#bugs>`_ section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.html>`_
 to find out how to provide good debug information.
 
 AUTHORS
