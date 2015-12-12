@@ -103,7 +103,6 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
                         gboolean use_buffered_read,
                         gsize buf_size,
                         guint64 cache_quota_bytes,
-                        guint64 target_kept_bytes,
                         RmHasherCallback joiner,
                         gpointer session_user_data);
 

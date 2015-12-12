@@ -57,7 +57,7 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
 
-    /* note: this needs to be last item in list */
+    /* note: this needs to be after all non-duplicate lint type item in list */
     RM_LINT_TYPE_DUPE_CANDIDATE,
 
     /* Directories are no "normal" RmFiles, they are actual
@@ -75,7 +75,7 @@ typedef enum RmLintType {
      *
      * This is mainly useful for caching.
      */
-    RM_LINT_TYPE_UNFINISHED_CKSUM,
+    RM_LINT_TYPE_UNIQUE_FILE,
 } RmLintType;
 
 struct RmSession;
@@ -233,8 +233,7 @@ typedef struct RmFile {
     /* Link to the RmShredGroup that the file currently belongs to */
     struct RmShredGroup *shred_group;
 
-    /* Required for rm_file_equal for building initial match_table
-     * and for RM_DEFINE_PATH and RM_DEFINE_BASENAME */
+    /* Required for rm_file_equal and for RM_DEFINE_PATH */
     const struct RmSession *session;
 
     struct RmSignal *signal;
@@ -248,37 +247,22 @@ typedef struct RmFile {
 } RmFile;
 
 /* Defines a path variable containing the file's path */
-#define _RM_DEFINE_PATH(file, inherited)                                 \
-    char file##_path[PATH_MAX];                                          \
-    if(file->session->cfg->use_meta_cache) {                             \
-        rm_file_lookup_path(file->session, (RmFile *)file, file##_path); \
-    } else if(!inherited) {                                              \
-        rm_file_build_path((RmFile *)file, file##_path);                 \
+#define RM_DEFINE_PATH_IF_NEEDED(file, needed)            \
+    char file##_path[PATH_MAX];                           \
+    if(needed) {                                          \
+        rm_file_build_path((RmFile *)file, file##_path);  \
     }
 
 /* Fill path always */
-#define RM_DEFINE_PATH(file) _RM_DEFINE_PATH(file, false)
+#define RM_DEFINE_PATH(file) RM_DEFINE_PATH_IF_NEEDED(file, true)
 
-/* Defines <file>_basename.
- * Also defines <file>_path, but do not rely on it being filled!
- */
-#define _RM_DEFINE_BASENAME(file, inherited)                      \
-    char *file##_basename = NULL;                                 \
-    _RM_DEFINE_PATH(file, inherited);                             \
-    if(file->session->cfg->use_meta_cache) {                      \
-        file##_basename = rm_util_basename((char *)&file##_path); \
-    } else {                                                      \
-        file##_basename = file->folder->basename;                 \
-    }
-
-#define RM_DEFINE_BASENAME(file) _RM_DEFINE_BASENAME(file, true)
-
-#define RM_DEFINE_BOTH(file, do_both) _RM_DEFINE_BASENAME(file, !(do_both))
+#define RM_IS_BUNDLED_HARDLINK(file) \
+    (file->hardlinks.hardlink_head && !file->hardlinks.is_head)
 
 /**
  * @brief Create a new RmFile handle.
  */
-RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
+RmFile *rm_file_new(struct RmSession *session, const char *path,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned pnum,
                     short depth);
 
@@ -306,17 +290,10 @@ RmLintType rm_file_string_to_lint_type(const char *type);
  * @brief Set a path to the file. Normally, you should never do this since the
  * path is immutable.
  */
-void rm_file_set_path(RmFile *file, char *path, size_t path_len);
+void rm_file_set_path(RmFile *file, char *path);
 
 /**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using
- * rm_swap_table_lookup.
- */
-void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf);
-
-/**
- * @brief Internal helper function for RM_DEFINE_PATH and RM_DEFINE_BASENAME using folder
- * tree and basename.
+ * @brief Internal helper function for RM_DEFINE_PATH using folder tree and basename.
  */
 void rm_file_build_path(RmFile *file, char *buf);
 

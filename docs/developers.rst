@@ -146,7 +146,7 @@ Arguments
 :--without-json-glib:
 
     Do not link with ``libjson-glib``, which is needed to load json-cache files.
-    Without this library a warning is printed when using ``-C / --cache``.
+    Without this library a warning is printed when using ``--replay``.
 
 :--without-fiemap:
 
@@ -276,4 +276,4 @@ Insane ones
   (find matches using hashes then confirm via bytewise comparison).  Each file is
   read once only.  This achieves bytewise comparison in O(N) time, even if there are
   large clusters of same-size files.  The downside is that it is somewhat memory-intensive
-  (can be configured by ``--max-paranoid-mem`` option).
+  (can be configured by ``--limit-mem`` option).

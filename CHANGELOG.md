@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.4.1 Myopic Micrathene Bugfixes] -- [unreleased]
+## [2.5.0 Penetrating Pineapple] -- [unreleased]
+
+### Changed
+
+- Removed ``--with-metadata-cache`` and ``--cache`` since both introduced lots
+  of code without giving many benefits. In total about 1000 lines of code were
+  removed in this process.
+
+## [2.4.1 Myopic Micrathene Bugfixes] -- 2015-11-01
 
 ### Fixed
 
@@ -207,4 +215,5 @@ Initial release of the rewrite.
 [2.0.0 Personable Pidgeon]: https://github.com/sahib/rmlint/releases/tag/v2.0.0
 [2.3.0 Ominous Oscar]: https://github.com/sahib/rmlint/compare/v2.2.2..v2.4.0
 [2.4.0 Myopic Micrathene]: https://github.com/sahib/rmlint/releases/tag/v2.4.0
+[2.4.1 Myopic Micrathene Bugfixes]: https://github.com/sahib/rmlint/releases/tag/v2.4.1
 [keepachangelog.com]: http://keepachangelog.com/

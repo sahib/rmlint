@@ -103,7 +103,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
         rm_hasher_task_free(task);
-        rm_buffer_pool_release(buffer);
+        rm_buffer_release(buffer);
 
         g_mutex_lock(&hasher->lock);
         {
@@ -133,7 +133,7 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
 
 static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {
     /* Fake an IO operation on the symlink.  */
-    RmBuffer *buf = rm_buffer_pool_get(hasher->mem_pool);
+    RmBuffer *buf = rm_buffer_get(hasher->mem_pool);
     buf->len = 256;
     memset(buf->data, 0, buf->len);
 
@@ -187,7 +187,7 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
         goto finish;
     }
 
-    RmBuffer *buffer = rm_buffer_pool_get(hasher->mem_pool);
+    RmBuffer *buffer = rm_buffer_get(hasher->mem_pool);
 
     while((bytes_read =
                fread(buffer->data, 1, MIN(bytes_to_read, hasher->buf_size), fd)) > 0) {
@@ -200,9 +200,9 @@ static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
         rm_util_thread_pool_push(hashpipe, buffer);
 
         total_bytes_read += bytes_read;
-        buffer = rm_buffer_pool_get(hasher->mem_pool);
+        buffer = rm_buffer_get(hasher->mem_pool);
     }
-    rm_buffer_pool_release(buffer);
+    rm_buffer_release(buffer);
 
     if(ferror(fd) != 0) {
         rm_log_perror("fread(3) failed");
@@ -271,7 +271,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
     memset(readvec, 0, sizeof(readvec));
     for(int i = 0; i < N_BUFFERS; ++i) {
         /* buffer is one contignous memory block */
-        buffers[i] = rm_buffer_pool_get(hasher->mem_pool);
+        buffers[i] = rm_buffer_get(hasher->mem_pool);
         readvec[i].iov_base = buffers[i]->data;
         readvec[i].iov_len = hasher->buf_size;
     }
@@ -298,7 +298,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             rm_util_thread_pool_push(hashpipe, buffer);
 
             /* Allocate a new buffer - hasher will release the old buffer */
-            buffers[i] = rm_buffer_pool_get(hasher->mem_pool);
+            buffers[i] = rm_buffer_get(hasher->mem_pool);
             readvec[i].iov_base = buffers[i]->data;
             readvec[i].iov_len = hasher->buf_size;
         }
@@ -314,7 +314,7 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
 
     /* Release the rest of the buffers */
     for(int i = 0; i < N_BUFFERS; ++i) {
-        rm_buffer_pool_release(buffers[i]);
+        rm_buffer_release(buffers[i]);
     }
     g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);
 
@@ -352,7 +352,6 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
                         gboolean use_buffered_read,
                         gsize buf_size,
                         guint64 cache_quota_bytes,
-                        guint64 target_kept_bytes,
                         RmHasherCallback joiner,
                         gpointer session_user_data) {
     RmHasher *self = g_slice_new0(RmHasher);
@@ -376,7 +375,7 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     g_cond_init(&self->cond);
 
     /* Create buffer mem pool */
-    self->mem_pool = rm_buffer_pool_init(buf_size, cache_quota_bytes, target_kept_bytes);
+    self->mem_pool = rm_buffer_pool_init(buf_size, cache_quota_bytes);
 
     /* Create a pool of hashing thread "pools" - each "pool" can only have
      * one thread because hashing must be done in order */
@@ -464,7 +463,7 @@ RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
     /* get a dummy buffer to use to signal the hasher thread that this increment is
      * finished */
     RmHasher *hasher = task->hasher;
-    RmBuffer *finisher = rm_buffer_pool_get(task->hasher->mem_pool);
+    RmBuffer *finisher = rm_buffer_get(task->hasher->mem_pool);
     finisher->digest = task->digest;
     finisher->len = 0;
     finisher->user_data = task;

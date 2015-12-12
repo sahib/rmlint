@@ -79,7 +79,6 @@ bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
 void rm_session_init(RmSession *session, RmCfg *cfg) {
     memset(session, 0, sizeof(RmSession));
     session->timer = g_timer_new();
-    g_queue_init(&session->cache_list);
 
     session->cfg = cfg;
     session->tables = rm_file_tables_new(session);
@@ -104,11 +103,7 @@ void rm_session_clear(RmSession *session) {
 
     /* Free mem */
     if(cfg->paths) {
-        if(cfg->use_meta_cache) {
-            g_free(cfg->paths);
-        } else {
-            g_strfreev(cfg->paths);
-        }
+        g_strfreev(cfg->paths);
     }
 
     g_free(cfg->sort_criteria);
@@ -125,22 +120,6 @@ void rm_session_clear(RmSession *session) {
     if(session->dir_merger) {
         rm_tm_destroy(session->dir_merger);
     }
-
-    for(GList *iter = session->cache_list.head; iter; iter = iter->next) {
-        g_free((char *)iter->data);
-    }
-
-    if(session->meta_cache) {
-        GError *error = NULL;
-        rm_swap_table_close(session->meta_cache, &error);
-
-        if(error != NULL) {
-            rm_log_error_line(_("Cannot close tmp cache: %s\n"), error->message);
-            g_error_free(error);
-        }
-    }
-
-    g_queue_clear(&session->cache_list);
 
     g_free(cfg->joined_argv);
     g_free(cfg->is_prefd);

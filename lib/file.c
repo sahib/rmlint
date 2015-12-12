@@ -25,14 +25,13 @@
 #include "file.h"
 #include "utilities.h"
 #include "session.h"
-#include "swap-table.h"
 
 #include <string.h>
 #include <unistd.h>
 #include <sys/file.h>
 #include <string.h>
 
-RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len,
+RmFile *rm_file_new(struct RmSession *session, const char *path,
                     RmStat *statp, RmLintType type, bool is_ppath, unsigned path_index,
                     short depth) {
     RmCfg *cfg = session->cfg;
@@ -61,7 +60,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
-    rm_file_set_path(self, (char *)path, path_len);
+    rm_file_set_path(self, (char *)path);
 
     self->depth = depth;
     self->path_depth = rm_util_path_depth(path);
@@ -89,24 +88,8 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, size_t path_len
     return self;
 }
 
-void rm_file_set_path(RmFile *file, char *path, size_t path_len) {
-    if(file->session->cfg->use_meta_cache == false) {
-        file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
-    } else {
-        file->path_id = rm_swap_table_insert(file->session->meta_cache,
-                                             file->session->meta_cache_path_id,
-                                             (char *)path, path_len + 1);
-    }
-}
-
-void rm_file_lookup_path(const struct RmSession *session, RmFile *file, char *buf) {
-    rm_assert_gentle(file);
-
-    RmOff id = file->path_id;
-
-    memset(buf, 0, PATH_MAX);
-    rm_swap_table_lookup(session->meta_cache, session->meta_cache_path_id, id, buf,
-                         PATH_MAX);
+void rm_file_set_path(RmFile *file, char *path) {
+    file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
 }
 
 void rm_file_build_path(RmFile *file, char *buf) {
@@ -120,7 +103,8 @@ void rm_file_destroy(RmFile *file) {
         g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
     }
 
-    /* --cache can write cksums in here */
+    // TODO: Make this more generic.
+    /* --xattr-read can write cksums in here */
     if(file->folder && file->folder->data) {
         g_free(file->folder->data);
     }
@@ -142,7 +126,8 @@ static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = "",
                                    [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
                                    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
                                    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir",
-                                   [RM_LINT_TYPE_UNFINISHED_CKSUM] = "unfinished_cksum"};
+                                   [RM_LINT_TYPE_UNIQUE_FILE] = "unfinished_cksum"};
+/* TODO: rename 'unfinished_cksum; to 'unique_file' and update nosetests accordingly */
 
 const char *rm_file_lint_type_to_string(RmLintType type) {
     return LINT_TYPES[MIN(type, sizeof(LINT_TYPES) / sizeof(const char *))];
@@ -160,8 +145,5 @@ RmLintType rm_file_string_to_lint_type(const char *type) {
 }
 
 gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
-
-    return g_ascii_strcasecmp(file_a_basename, file_b_basename);
+    return g_ascii_strcasecmp(file_a->folder->basename, file_b->folder->basename);
 }

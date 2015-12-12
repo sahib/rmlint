@@ -80,8 +80,8 @@ class Application(Gtk.Application):
         self.settings = self.win = None
 
         # Check compile time features of rmlint that we need later.
-        if not have_feature('json-cache'):
-            LOGGER.error('No support for +json-cache in rmlint binary.')
+        if not have_feature('replay'):
+            LOGGER.error('No support for +replay in rmlint binary.')
             LOGGER.error('Please recompile with --with-json-glib…')
             LOGGER.error('…and `json-glib-1.0` installed on your system.')
             sys.exit(-1)

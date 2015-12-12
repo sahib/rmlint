@@ -191,7 +191,7 @@ void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src) {
     src->head = src->tail = NULL;
 }
 
-gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_data) {
+gint rm_util_queue_foreach_remove(GQueue *queue, RmRFunc func, gpointer user_data) {
     gint removed = 0;
 
     for(GList *iter = queue->head, *next = NULL; iter; iter = next) {
@@ -203,6 +203,64 @@ gint rm_util_queue_foreach_remove(GQueue *queue, RmQRFunc func, gpointer user_da
     }
     return removed;
 }
+
+gint rm_util_list_foreach_remove(GList **list, RmRFunc func, gpointer user_data) {
+    gint removed = 0;
+
+    /* iterate over list */
+    for(GList *iter = *list, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if(func(iter->data, user_data)) {
+            /* delete iter from GList */
+            if(iter->prev) {
+                (iter->prev)->next = next;
+            } else {
+                *list = next;
+            }
+            g_list_free_1(iter);
+            ++removed;
+        }
+    }
+    return removed;
+}
+
+gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_data) {
+    gint removed = 0;
+
+    /* iterate over list, keeping track of previous and next entries */
+    for(GSList *prev = NULL, *iter = *list, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if(func(iter->data, user_data)) {
+            /* delete iter from GSList */
+            g_slist_free1(iter);
+            if(prev) {
+                prev->next = next;
+            } else {
+                *list = next;
+            }
+            ++removed;
+        } else {
+            prev = iter;
+        }
+    }
+    return removed;
+}
+
+gpointer rm_util_slist_pop(GSList **list, GMutex *lock) {
+    gpointer result = NULL;
+    if (lock) {
+        g_mutex_lock(lock);
+    }
+    if (*list) {
+        result = (*list)->data;
+        *list = g_slist_delete_link(*list, *list);
+    }
+    if (lock) {
+        g_mutex_unlock(lock);
+    }
+    return result;
+}
+
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
@@ -386,104 +444,6 @@ void rm_userlist_destroy(RmUserList *self) {
     g_sequence_free(self->groups);
     g_mutex_clear(&self->lock);
     g_free(self);
-}
-
-/////////////////////////////////////
-//    JSON CACHE IMPLEMENTATION    //
-/////////////////////////////////////
-
-#if HAVE_JSON_GLIB
-
-void rm_json_cache_parse_entry(_U JsonArray *array, _U guint index,
-                               JsonNode *element_node, RmTrie *file_trie) {
-    if(JSON_NODE_TYPE(element_node) != JSON_NODE_OBJECT) {
-        return;
-    }
-
-    JsonObject *object = json_node_get_object(element_node);
-    JsonNode *mtime_node = json_object_get_member(object, "mtime");
-    JsonNode *path_node = json_object_get_member(object, "path");
-    JsonNode *cksum_node = json_object_get_member(object, "checksum");
-    JsonNode *type_node = json_object_get_member(object, "type");
-
-    if(mtime_node && path_node && cksum_node && type_node) {
-        RmStat stat_buf;
-        const char *path = json_node_get_string(path_node);
-        const char *cksum = json_node_get_string(cksum_node);
-        const char *type = json_node_get_string(type_node);
-
-        if(g_strcmp0(type, "duplicate_file") && g_strcmp0(type, "unfinished_cksum")) {
-            /* some other file that has a checksum for weird reasons.
-             * This is here to prevent errors like reporting files with
-             * empty checksums as duplicates.
-             * */
-            return;
-        }
-
-        if(rm_sys_stat(path, &stat_buf) == -1) {
-            /* file does not appear to exist */
-            return;
-        }
-
-        if(json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(&stat_buf)) {
-            /* file is newer than stored checksum */
-            return;
-        }
-
-        char *cksum_copy = g_strdup(cksum);
-        if(!rm_trie_set_value(file_trie, path, cksum_copy)) {
-            g_free(cksum_copy);
-        }
-        rm_log_debug_line("* Adding cache entry %s (%s)", path, cksum);
-    }
-}
-
-#endif
-
-int rm_json_cache_read(RmTrie *file_trie, const char *json_path) {
-#if !HAVE_JSON_GLIB
-    (void)file_trie;
-    (void)json_path;
-
-    rm_log_info_line(_("caching is not supported due to missing json-glib library."));
-    return EXIT_FAILURE;
-#else
-    rm_assert_gentle(file_trie);
-    rm_assert_gentle(json_path);
-
-    int result = EXIT_FAILURE;
-    GError *error = NULL;
-    size_t keys_in_table = rm_trie_size(file_trie);
-    JsonParser *parser = json_parser_new();
-
-    rm_log_info_line(_("Loading json-cache `%s'"), json_path);
-
-    if(!json_parser_load_from_file(parser, json_path, &error)) {
-        rm_log_warning_line(_("FAILED: %s\n"), error->message);
-        g_error_free(error);
-        goto failure;
-    }
-
-    JsonNode *root = json_parser_get_root(parser);
-    if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {
-        rm_log_warning_line(_("No valid json cache (no array in /)"));
-        goto failure;
-    }
-
-    /* Iterate over all objects in it */
-    json_array_foreach_element(json_node_get_array(root),
-                               (JsonArrayForeach)rm_json_cache_parse_entry,
-                               file_trie);
-
-    /* check if some entries were added */
-    result = (keys_in_table >= rm_trie_size(file_trie));
-
-failure:
-    if(parser) {
-        g_object_unref(parser);
-    }
-    return result;
-#endif
 }
 
 /////////////////////////////////////
@@ -900,8 +860,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
 
 #if RM_MOUNTTABLE_IS_USABLE
 
-    RmPartitionInfo *part =
-        g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dev));
+    RmPartitionInfo *part = g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dev));
     if(part) {
         return part->disk;
     } else {
@@ -924,14 +883,12 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
                                       "%s" RESET,
                                       path, prev, parent_part->name);
                     part = rm_part_info_new(prev, parent_part->fsname, parent_part->disk);
-                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(dev),
-                                        part);
+                    g_hash_table_insert(self->part_table, GINT_TO_POINTER(dev), part);
                     /* if parent_part is in the reflinkfs_table, add dev as well */
-                    char *parent_type = g_hash_table_lookup(self->reflinkfs_table,
-                                             GUINT_TO_POINTER(stat_buf.st_dev));
-                    if (parent_type) {
-                        g_hash_table_insert(self->reflinkfs_table,
-                                            GUINT_TO_POINTER(dev),
+                    char *parent_type = g_hash_table_lookup(
+                        self->reflinkfs_table, GUINT_TO_POINTER(stat_buf.st_dev));
+                    if(parent_type) {
+                        g_hash_table_insert(self->reflinkfs_table, GUINT_TO_POINTER(dev),
                                             parent_type);
                     }
                     g_free(prev);
@@ -946,8 +903,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
         }
     }
 #else
-    (void) partition;
-    (void) path;
+    (void)partition;
+    (void)path;
     return 0;
 #endif
 }

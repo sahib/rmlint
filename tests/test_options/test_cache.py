@@ -44,21 +44,6 @@ def check(data, write_cache):
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_cache():
-    create_files()
-
-    for write_cache in True, False:
-        cache_path = os.path.join(TESTDIR_NAME, 'cache.json')
-
-        if write_cache:
-            head, *data, footer = run_rmlint('-U -D -S pa -o json:{c}'.format(c=cache_path))
-        else:
-            head, *data, footer = run_rmlint('-D -S pa -C {c}'.format(c=cache_path))
-
-        check(data, write_cache)
-
-
-@with_setup(usual_setup_func, usual_teardown_func)
 def test_xattr():
     create_files()
 
@@ -72,23 +57,3 @@ def test_xattr():
             check(data, write_cache)
 
         head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
-
-
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_cache_file():
-    create_files()
-
-    # Valid json, but pointless cache.
-    create_file('{"blurb": 1}', 'badcache')
-
-    def run_cache(name, should_work):
-        try:
-            run_rmlint('-D -S pa -C {c}'.format(c=name))
-        except subprocess.CalledProcessError:
-            assert not should_work
-        else:
-            assert should_work
-
-    run_cache(os.path.join(TESTDIR_NAME, 'badcache'), True)
-    run_cache('/bin/bash', True)
-    run_cache('/nope', False)

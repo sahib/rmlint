@@ -34,11 +34,8 @@
 #include "shredder.h"
 
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
-
-    char *ext_a = rm_util_path_extension(file_a_basename);
-    char *ext_b = rm_util_path_extension(file_b_basename);
+    char *ext_a = rm_util_path_extension(file_a->folder->basename);
+    char *ext_b = rm_util_path_extension(file_b->folder->basename);
 
     if(ext_a && ext_b) {
         return g_ascii_strcasecmp(ext_a, ext_b);
@@ -48,21 +45,21 @@ static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_
 }
 
 static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *file_b) {
-    RM_DEFINE_BASENAME(file_a);
-    RM_DEFINE_BASENAME(file_b);
+    const char *basename_a = file_a->folder->basename;
+    const char *basename_b = file_b->folder->basename;
 
-    char *ext_a = rm_util_path_extension(file_a_basename);
-    char *ext_b = rm_util_path_extension(file_b_basename);
+    char *ext_a = rm_util_path_extension(basename_a);
+    char *ext_b = rm_util_path_extension(basename_b);
 
     /* Check length till extension, or full length if none present */
-    size_t a_len = (ext_a) ? (ext_a - file_a_basename) : (int)strlen(file_a_basename);
-    size_t b_len = (ext_b) ? (ext_b - file_b_basename) : (int)strlen(file_b_basename);
+    size_t a_len = (ext_a) ? (ext_a - basename_a) : (int)strlen(basename_a);
+    size_t b_len = (ext_b) ? (ext_b - basename_b) : (int)strlen(basename_a);
 
     if(a_len != b_len) {
         return a_len - b_len;
     }
 
-    return g_ascii_strncasecmp(file_a_basename, file_b_basename, a_len);
+    return g_ascii_strncasecmp(basename_a, basename_b, a_len);
 }
 
 /* test if two files qualify for the same "group"; if not then rank them by
@@ -112,15 +109,8 @@ static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
  * also point to the real path
  */
 typedef struct RmPathDoubleKey {
-    /* parent_inode and basename are initialized lazily,
-     * since often, they are not needed.
-     */
-    bool parent_inode_set : 1;
-    bool basename_set : 1;
-
     /* stat(dirname(file->path)).st_ino */
     ino_t parent_inode;
-    char *basename;
 
     /* File the key points to */
     RmFile *file;
@@ -132,26 +122,10 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
     return rm_node_hash(key->file);
 }
 
-static bool rm_path_have_same_parent(RmCfg *cfg, RmPathDoubleKey *key_a,
+static bool rm_path_have_same_parent(RmPathDoubleKey *key_a,
                                      RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
-
-    if(cfg->use_meta_cache) {
-        if(key_a->parent_inode_set && key_b->parent_inode_set) {
-            RM_DEFINE_PATH(file_a);
-            RM_DEFINE_PATH(file_b);
-
-            key_a->parent_inode = rm_util_parent_node(file_a_path);
-            key_a->parent_inode_set = TRUE;
-
-            key_b->parent_inode = rm_util_parent_node(file_b_path);
-            key_b->parent_inode_set = TRUE;
-        }
-
-        return key_a->parent_inode == key_b->parent_inode;
-    } else {
-        return file_a->folder->parent == file_b->folder->parent;
-    }
+    return file_a->folder->parent == file_b->folder->parent;
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
@@ -166,30 +140,11 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
     RmFile *file_a = key_a->file;
     RmFile *file_b = key_b->file;
 
-    if(!rm_path_have_same_parent(file_a->session->cfg, key_a, key_b)) {
+    if(!rm_path_have_same_parent(key_a, key_b)) {
         return FALSE;
     }
 
-    if(!file_a->session->cfg->use_meta_cache) {
-        return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
-    }
-
-    /* If using --with-metadata-cache, save the basename for later use
-     * so it doesn't trigger SELECTs very often.  Basenames are
-     * generally much shorter than the path, so that should be
-     * okay.
-     */
-    if(key_a->basename == NULL) {
-        RM_DEFINE_BASENAME(file_a);
-        key_a->basename = g_strdup(file_a_basename);
-    }
-
-    if(key_b->basename == NULL) {
-        RM_DEFINE_BASENAME(file_b);
-        key_b->basename = g_strdup(file_b_basename);
-    }
-
-    return g_strcmp0(key_a->basename, key_b->basename) == 0;
+    return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
 }
 
 static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
@@ -199,9 +154,6 @@ static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
 }
 
 static void rm_path_double_free(RmPathDoubleKey *key) {
-    if(key->basename != NULL) {
-        g_free(key->basename);
-    }
     g_free(key);
 }
 
@@ -399,9 +351,8 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     } else {
         /* Only fill in path if we have a pattern in sort_criteria */
         bool path_needed = (session->pattern_cache->len > 0);
-
-        RM_DEFINE_BOTH(a, path_needed);
-        RM_DEFINE_BOTH(b, path_needed);
+        RM_DEFINE_PATH_IF_NEEDED(a, path_needed);
+        RM_DEFINE_PATH_IF_NEEDED(b, path_needed);
 
         RmCfg *sets = session->cfg;
 
@@ -412,10 +363,10 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 cmp = (long)(a->mtime) - (long)(b->mtime);
                 break;
             case 'a':
-                cmp = g_ascii_strcasecmp(a_basename, b_basename);
+                cmp = g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
                 break;
             case 'l':
-                cmp = strlen(a_basename) - strlen(b_basename);
+                cmp = strlen(a->folder->basename) - strlen(b->folder->basename);
                 break;
             case 'd':
                 cmp = (short)a->depth - (short)b->depth;
@@ -426,8 +377,8 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
             case 'x': {
                 cmp = rm_pp_cmp_by_regex(
                     g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
-                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a_path,
-                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b_path);
+                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
+                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
                 regex_cursor++;
                 break;
             }
@@ -447,12 +398,6 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
         }
         return 0;
     }
-}
-
-void rm_file_list_insert_queue(GQueue *files, const RmSession *session) {
-    g_mutex_lock(&session->tables->lock);
-    { rm_util_queue_push_tail_queue(session->tables->all_files, files); }
-    g_mutex_unlock(&session->tables->lock);
 }
 
 void rm_file_list_insert_file(RmFile *file, const RmSession *session) {
@@ -543,7 +488,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
 
         /* remove path doubles */
         session->total_filtered_files -=
-            rm_util_queue_foreach_remove(inode_cluster, (RmQRFunc)rm_pp_check_path_double,
+            rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
                                          session->tables->unique_paths_table);
         /* clear the hashtable ready for the next cluster */
         g_hash_table_remove_all(session->tables->unique_paths_table);
@@ -551,7 +496,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
 
     /* process and remove other lint */
     session->total_filtered_files -= rm_util_queue_foreach_remove(
-        inode_cluster, (RmQRFunc)rm_pp_handle_other_lint, (RmSession *)session);
+        inode_cluster, (RmRFunc)rm_pp_handle_other_lint, (RmSession *)session);
 
     if(inode_cluster->length > 1) {
         /* bundle or free the non-head files */
@@ -568,7 +513,7 @@ static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_clust
          * the hardlinks depending on value of headfile->hardlinks.is_head.
          */
         session->total_filtered_files -= rm_util_queue_foreach_remove(
-            inode_cluster, (RmQRFunc)rm_pp_handle_hardlink, headfile);
+            inode_cluster, (RmRFunc)rm_pp_handle_hardlink, headfile);
     }
 
     /* update counters */
@@ -621,7 +566,16 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
     return num_handled;
 }
 
-/* This does preprocessing including handling of "other lint" (non-dupes) */
+/* This does preprocessing including handling of "other lint" (non-dupes)
+ * After rm_preprocess(), all remaining duplicate candidates are in
+ * a jagged GSList of GSLists as follows:
+ * session->tables->size_groups->group1->file1a
+ *                                     ->file1b
+ *                                     ->file1c
+ *                             ->group2->file2a
+ *                                     ->file2b
+ *                                       etc
+ */
 void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     GQueue *all_files = tables->all_files;
@@ -663,8 +617,8 @@ void rm_preprocess(RmSession *session) {
             /* free up the node table for the next group */
             g_hash_table_steal_all(node_table);
             if(tables->size_groups->data == NULL) {
-                tables->size_groups =
-                    g_slist_delete_link(tables->size_groups, tables->size_groups);
+                /* zero size group after handling other lint; remove it */
+                tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
             }
             current_size_file = file;
         }

@@ -46,16 +46,9 @@
 ///////////////////////////////////////////
 
 /* Defines a path variable containing the buffer's path */
-#define RM_BUFFER_DEFINE_PATH(session, buff)                                      \
-    char *buff##_path = NULL;                                                     \
-    char buff##_buf[PATH_MAX];                                                    \
-    if(session->cfg->use_meta_cache) {                                            \
-        rm_swap_table_lookup(session->meta_cache, session->meta_cache_dir_id,     \
-                             GPOINTER_TO_UINT(buff->path), buff##_buf, PATH_MAX); \
-        buff##_path = buff##_buf;                                                 \
-    } else {                                                                      \
-        buff##_path = buff->path;                                                 \
-    }
+#define RM_BUFFER_DEFINE_PATH(session, buff)                                 \
+    char *buff##_path = NULL;                                                \
+    buff##_path = buff->path;                                                \
 
 typedef struct RmTravBuffer {
     RmStat stat_buf;   /* rm_sys_stat(2) information about the directory */
@@ -123,7 +116,7 @@ static void rm_traverse_session_free(RmTravSession *trav_session) {
 //////////////////////
 
 static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
-                             GQueue *file_queue, char *path, size_t path_len,
+                             char *path,
                              bool is_prefd, unsigned long path_index,
                              RmLintType file_type, bool is_symlink, bool is_hidden,
                              bool is_on_subvol_fs, short depth) {
@@ -173,7 +166,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
         }
     }
 
-    RmFile *file = rm_file_new(session, path, path_len, statp, file_type, is_prefd,
+    RmFile *file = rm_file_new(session, path, statp, file_type, is_prefd,
                                path_index, depth);
 
     if(file != NULL) {
@@ -181,11 +174,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
         file->is_hidden = is_hidden;
         file->is_on_subvol_fs = is_on_subvol_fs;
 
-        if(file_queue != NULL) {
-            g_queue_push_tail(file_queue, file);
-        } else {
-            rm_file_list_insert_file(file, session);
-        }
+        rm_file_list_insert_file(file, session);
 
         g_atomic_int_add(&trav_session->session->total_files, 1);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
@@ -209,11 +198,11 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
 }
 
 /* Macro for rm_traverse_directory() for easy file adding */
-#define _ADD_FILE(lint_type, is_symlink, stat_buf)                                  \
-    rm_traverse_file(                                                               \
-        trav_session, (RmStat *)stat_buf, &file_queue, p->fts_path, p->fts_pathlen, \
-        is_prefd, path_index, lint_type, is_symlink,                                \
-        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),       \
+#define _ADD_FILE(lint_type, is_symlink, stat_buf)                            \
+    rm_traverse_file(                                                         \
+        trav_session, (RmStat *)stat_buf, p->fts_path,                        \
+        is_prefd, path_index, lint_type, is_symlink,                          \
+        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1), \
         is_on_subvol_fs, p->fts_level);
 
 #if RM_PLATFORM_32 && HAVE_STAT64
@@ -297,12 +286,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
 
-    /* rm_traverse_file add the finished file (if any) to this queue.  They are
-     * added to the preprocessing module in batch so there isn't many jumping
-     * between BEGIN; INSERT[...]; COMMIT and SELECT with --with-metadata-cache.
-     */
-    GQueue file_queue = G_QUEUE_INIT;
-
     while(!rm_session_was_aborted(trav_session->session) &&
           (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
@@ -385,8 +368,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     /* normal stat failed but 64-bit stat worked
                      * -> must be a big file on 32 bit.
                      */
-                    rm_traverse_file(trav_session, &stat_buf, &file_queue, p->fts_path,
-                                     p->fts_pathlen, is_prefd, path_index,
+                    rm_traverse_file(trav_session, &stat_buf, p->fts_path,
+                                     is_prefd, path_index,
                                      RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
@@ -468,11 +451,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     fts_close(ftsp);
 
-    /* Pass the files to the preprocessing machinery. We collect the files first
-     * in order to make -with-metadata-cache work: Without, too many
-     * insert/selects would crossfire.
-     */
-    rm_file_list_insert_queue(&file_queue, session);
+    // rm_file_list_insert_queue(, session);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
 done:
@@ -514,8 +493,8 @@ void rm_traverse_tree(RmSession *session) {
                 is_hidden = rm_util_path_is_hidden(buffer_path);
             }
 
-            rm_traverse_file(trav_session, &buffer->stat_buf, NULL, buffer_path,
-                             strlen(buffer_path), is_prefd, idx, RM_LINT_TYPE_UNKNOWN,
+            rm_traverse_file(trav_session, &buffer->stat_buf, buffer_path,
+                             is_prefd, idx, RM_LINT_TYPE_UNKNOWN,
                              false, is_hidden, FALSE, 0);
 
             rm_trav_buffer_free(buffer);

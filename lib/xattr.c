@@ -170,7 +170,7 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
     int timestamp_bytes = 0;
     double actual_time_sec = difftime(file->mtime, 0);
 
-    if(0 || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
+    if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
        rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str)) ||

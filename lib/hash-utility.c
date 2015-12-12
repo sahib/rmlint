@@ -207,7 +207,6 @@ int rm_hasher_main(int argc, const char **argv) {
                                      FALSE,
                                      4096,
                                      1024 * 1024 * buffer_mbytes,
-                                     0,
                                      (RmHasherCallback)rm_hasher_callback,
                                      &tag);
 
