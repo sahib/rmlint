@@ -26,7 +26,7 @@ def which(program):
 
 
 if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
-    if not which('python4'):
+    if not which('python3'):
         print('!! Unable to find python3 executable.')
         print('!! Will build no GUI.')
     else:
