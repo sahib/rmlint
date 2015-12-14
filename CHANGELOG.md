@@ -6,11 +6,25 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.5.0 Penetrating Pineapple] -- [unreleased]
 
+## [2.4.2 Myopic Micrathene Bugfixes] -- 2015-12-14
+
+### Fixed
+
+- Fix bad size stats using ``--replay`` with hardlinks.
+- Fix unicode emission of ``json`` formatter.
+- Fix broken ``gui/SConscript`` (was looking for python4...)
+
+### Added
+
+- Add ``unique`` formatter to print unique files. (See https://github.com/sahib/rmlint/issues/161)
+
 ### Changed
 
 - Removed ``--with-metadata-cache`` and ``--cache`` since both introduced lots
   of code without giving many benefits. In total about 1000 lines of code were
   removed in this process.
+- For limiting memory usage there is just ``--limit-mem`` now.
+
 
 ## [2.4.1 Myopic Micrathene Bugfixes] -- 2015-11-01
 
