@@ -903,7 +903,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
         }
     }
 #else
-    (void)partition;
+    (void)dev;
     (void)path;
     return 0;
 #endif
