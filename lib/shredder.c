@@ -381,7 +381,7 @@ typedef struct RmShredGroup {
     /* true if all files in the group have an external checksum */
     bool has_only_ext_cksums : 1;
 
-    /* incremented for each file in the group that obtained it's checksum from ext.
+    /* incremented for each file in the group that obtained its checksum from ext.
      * If all files came from there we do not even need to hash the group.
      */
     gulong num_ext_cksums;

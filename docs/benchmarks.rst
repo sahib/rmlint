@@ -51,7 +51,7 @@ filesystem. The amount of available memory was *8GB*.
 
 It should be noted that the first run is the most important run. At least for a
 rather large amount of data (here 211 GB), it is unlikely that the file system
-has all relevant files in it's cache. You can see this with the second run of
+has all relevant files in its cache. You can see this with the second run of
 ``baseline.py`` - when reading all files the cache won't be useful at such large
 file quantities. The other tools read only a partial set of files and can thus
 benefit from caching on the second run. However ``rmlint`` (and also ``dupd``)
@@ -63,7 +63,7 @@ byte-by-byte comparison) to be mostly equally fast as the vanilla ``rmlint``.
    :width: 75%
    :align: center
 
-``rmlint`` has the highest CPU footprint here, mostly due to it's multithreaded
+``rmlint`` has the highest CPU footprint here, mostly due to its multithreaded
 nature. Higher CPU usage is not a bad thing since it might indicate that the program
 spends more time hashing files instead of switching between hashing and reading.
 ``dupd`` seems to be pretty efficient here, especially on re-runs.

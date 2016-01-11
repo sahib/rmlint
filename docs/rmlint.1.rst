@@ -79,7 +79,7 @@ General Options
 
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
-    Configure the way ``rmlint`` outputs it's results. A ``spec`` is in the
+    Configure the way ``rmlint`` outputs its results. A ``spec`` is in the
 	form ``format:file`` or just ``format``.  A file might either be an arbitrary
 	path or ``stdout`` or ``stderr``.  If file is omitted, ``stdout`` is assumed.
 
@@ -154,7 +154,7 @@ General Options
     Makes rmlint use a special mode where all found duplicates are collected and
     checked if whole directory trees are duplicates. Use with caution: You
     always should make sure that the investigated directory is not modified
-    during ``rmlint``'s or it's removal scripts run. 
+    during ``rmlint``'s or its removal scripts run. 
 
     Output is deferred until all duplicates were found.
     Duplicate directories are printed first, followed by any remaining duplicate files.
@@ -191,10 +191,10 @@ General Options
 
     Start the optional graphical frontend to ``rmlint`` called ``Shredder``.
 
-    This will only work when ``Shredder`` and it's dependencies were installed.
+    This will only work when ``Shredder`` and its dependencies were installed.
     See also: http://rmlint.readthedocs.org/en/latest/gui.html
 
-    The gui has it's own set of options, see ``--gui --help`` for a list.  These
+    The gui has its own set of options, see ``--gui --help`` for a list.  These
 	should be placed at the end, ie ``rmlint --gui [options]``
 
 :``--hash``:
@@ -341,7 +341,7 @@ Original Detection Options
     - **r**: keep paths matching regex        **R**: keep path not matching regex
     - **x**: keep basenames matching regex    **X**: keep basenames not matching regex
 
-    Alphabetical sort will only use the basename of the file and ignore it's case.
+    Alphabetical sort will only use the basename of the file and ignore its case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
     

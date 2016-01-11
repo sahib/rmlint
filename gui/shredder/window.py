@@ -171,7 +171,7 @@ class HeaderBar(Gtk.HeaderBar):
         self.set_subtitle(shredder.APP_DESCRIPTION)
 
         # This is a hack to get a small annoying bug under control:
-        # If adding buttons to the headerbar, it's size will increase
+        # If adding buttons to the headerbar, its size will increase
         # This sometimes lead to small drawing errors and jumpy interface.
         # This fix is not very clever but works at least.
         self.set_size_request(-1, 46)

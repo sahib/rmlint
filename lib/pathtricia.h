@@ -97,7 +97,7 @@ void *rm_trie_search(RmTrie *self, const char *path);
 
 /**
  * rm_trie_set_value:
- * Search a node in the trie and set it's value.
+ * Search a node in the trie and set its value.
  * If node does not exist, no value is set and false is returned..
  */
 bool rm_trie_set_value(RmTrie *self, const char *path, void *data);

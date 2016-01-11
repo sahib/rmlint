@@ -50,7 +50,7 @@ def have_feature(feature):
 
 
 def _create_action(name, callback=None):
-    """Create a named GAction with a callback for it's activation"""
+    """Create a named GAction with a callback for its activation"""
     action = Gio.SimpleAction.new(name, None)
     if callback is not None:
         action.connect('activate', callback)

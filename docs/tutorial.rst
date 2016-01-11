@@ -35,7 +35,7 @@ Let's just dive in into some examples:
 This simply scans your current working directory for lint and reports them in
 your terminal. Note that **nothing will be removed** (even if it prints ``rm``).
 
-Despite it's name, ``rmlint`` just finds suspicious files, but never modifies the
+Despite its name, ``rmlint`` just finds suspicious files, but never modifies the
 filesystem itself [*]_.  Instead it gives you detailed reports in different
 formats to get rid of them yourself. These reports are called *outputs*.  By
 default a shellscript will be written to ``rmlint.sh`` that contains readily
@@ -253,7 +253,7 @@ Here's the list of currently available formatters and their config options:
 
     The header contains information about the proram invocation, while the footer
     contains statistics about the program-run. Every data element has a type which
-    identifies it's lint type (you can lookup all types here_).
+    identifies its lint type (you can lookup all types here_).
 
     **Config values:**
 
@@ -427,9 +427,9 @@ Paranoia mode
 
 Let's face it, why should you trust ``rmlint``?
 
-Technically it only computes a hash of your file which might, by it's nature,
+Technically it only computes a hash of your file which might, by its nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
-function (i.e. one that distributes it's hash values perfectly even over all
+function (i.e. one that distributes its hash values perfectly even over all
 possible values), the probablilty of having a hash-collision is
 :math:`\frac{1}{2^{160}}` for the default 160-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.

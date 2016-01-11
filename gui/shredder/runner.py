@@ -232,7 +232,7 @@ class Runner(GObject.Object):
         self.was_replayed = False
 
     def on_process_termination(self, process, result):
-        """Called once GSuprocess sees it's child die."""
+        """Called once GSuprocess sees its child die."""
         # We dont emit process-finished yet here.
         # We still might get some items from the stream.
         # Call process-finished once we hit EOF.

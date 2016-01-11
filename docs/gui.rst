@@ -18,7 +18,7 @@ dependencies beside ``gtk+`` :math:`\geq 3.14` and ``PyGObject``.
 .. warning::
 
     The user interface is still in development. Use at your own risk!
-    There is a safety net though: Every file will be re-checked before it's
+    There is a safety net though: Every file will be re-checked before its
     deletion.  
 
 Installation
@@ -132,7 +132,7 @@ should always be responsive and never just *do work in the background*.
 Internal
 ~~~~~~~~
 
-``Shredder`` works by forking off ``rmlint`` and reading it's json output in
+``Shredder`` works by forking off ``rmlint`` and reading its json output in
 parallel. The script generation works by calling ``rmlint --replay`` on the
 generated ``json`` file, since this is the only sane way to filter the results
 of all formats properly.

@@ -9,7 +9,7 @@ DONE:
 - Fix: Merge widgets.py, utils.py, cellrenderers.py into one combined file. -- done
 - Fix: Make main view sortable. -- done
 - Design: Add a chart when clicking on a single file that shows 
-  only the file and it's twins. -- done
+  only the file and its twins. -- done
 - Design: Add context menu to treeview. -- done
 - Fix: font size in chart for large charts. Provide a sane minimum radius. --
   done (thinner inner circle)
