@@ -28,7 +28,7 @@ to remove it. It is able to find:
 
    + Extremely fast.
    + Flexible and easy commandline options.
-   + Choice of several hashes for hash-based deplicate detection
+   + Choice of several hashes for hash-based duplicate detection
    + Option for exact byte-by-byte comparison (only slightly slower).
    + Numerous output options.
    + Option to store time of last run; next time will only scan new files.

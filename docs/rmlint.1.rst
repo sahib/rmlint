@@ -183,7 +183,7 @@ General Options
     * `o`: Sort by natural found order (might be different on each run).
     * `n`: Sort by number of files in the group.
 
-    The letter may also be written uppercase (similiar to ``-S /
+    The letter may also be written uppercase (similar to ``-S /
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
     back all results to the end of the run before sorting and printing. 
 
@@ -350,7 +350,7 @@ Original Detection Options
     original paths (like a path component being ``src``). 
 
     To use the regular expression you simply enclose it in the criteria string
-    by adding `<REGULAR_EXPRESSIOn>` after specifying `r` or `x`. Example: ``-S
+    by adding `<REGULAR_EXPRESSION>` after specifying `r` or `x`. Example: ``-S
     'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files. 
 
     Warning: When using **r** or **x**, try to make your regex to be as specific

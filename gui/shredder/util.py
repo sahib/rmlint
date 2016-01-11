@@ -277,7 +277,7 @@ class View(Gtk.Grid):
         self.progressbar_revealer.set_reveal_child(False)
 
     def show_infobar(self, message, message_type=Gtk.MessageType.INFO):
-        """Show an inforbar with a text message in it.
+        """Show an infobar with a text message in it.
 
         Note: Latest gtk version color the infobar always blue.
               This is slightly retarted and basically makes

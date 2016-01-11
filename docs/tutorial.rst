@@ -136,7 +136,7 @@ Limit files by their modification time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is a useful feature if you want to investigate only files newer than
-a certain date or if you want to progessively update the results, i.e. when you
+a certain date or if you want to progressively update the results, i.e. when you
 run ``rmlint`` in a script that watches a directory for duplicates.
 
 The manual way is using ``-N`` (``--newer-than=<timestamp>``):
@@ -251,7 +251,7 @@ Here's the list of currently available formatters and their config options:
     everything between are data-dictionaries. This format was chosen to allow
     application to parse the output in realtime while ``rmlint`` is still running.
 
-    The header contains information about the proram invocation, while the footer
+    The header contains information about the program invocation, while the footer
     contains statistics about the program-run. Every data element has a type which
     identifies its lint type (you can lookup all types here_).
 
@@ -430,7 +430,7 @@ Let's face it, why should you trust ``rmlint``?
 Technically it only computes a hash of your file which might, by its nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
 function (i.e. one that distributes its hash values perfectly even over all
-possible values), the probablilty of having a hash-collision is
+possible values), the probability of having a hash-collision is
 :math:`\frac{1}{2^{160}}` for the default 160-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.
 Due to the "birthday paradox", collision starts to become a real risk if you have

@@ -2,7 +2,7 @@ Testsuite
 ---------
 
 ``rmlint`` has a not yet complete but quite powerful testsuite. It is not
-complete yet (and probably never will), but it's already a valueable boost of
+complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
 The tests are based on ``nosetest`` and are written in ``python>=3.0``.
@@ -75,7 +75,7 @@ Structure
     ├── test_formatters   # Tests for output formatters (like sh or json)
     ├── test_options      # Tests for normal options like --merge-directories etc.
     ├── test_types        # Tests for all lint types rmlint can find
-    └── utils.py          # Common utilities shared amon tests.
+    └── utils.py          # Common utilities shared among tests.
 
 Templates
 ~~~~~~~~~

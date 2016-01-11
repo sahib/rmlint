@@ -123,7 +123,7 @@ Design
 ~~~~~~
 
 The design loosely follows the Gnome Human Interface Guidelines. [*]_
-Beside the appeareance, this means that the program should be easy and intuitive
+Beside the appearance, this means that the program should be easy and intuitive
 to use. Suggested actions should be clear to recognize and the application
 should always be responsive and never just *do work in the background*.
 
