@@ -67,7 +67,7 @@ class Column:
 
     @staticmethod
     def make_row(md_map):
-        """Convert a rmlint json dict to a tree row"""
+        """Convert an rmlint json dict to a tree row"""
         is_original = md_map.get('is_original', False)
         if md_map.get('type', '').startswith('duplicate_'):
             if is_original:
@@ -168,7 +168,7 @@ class PathNode:
         return os.path.join(*reversed([n.name for n in self.up()]))
 
     def build_iter_path(self):
-        """Recursively build a iter path suitable for GtkTreePath"""
+        """Recursively build an iter path suitable for GtkTreePath"""
         return list(reversed([n.idx for n in self.up()]))
 
     def neighbor(self, offset):

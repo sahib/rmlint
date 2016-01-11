@@ -26,7 +26,7 @@ set.
 .. _`paths that contain a ','`: https://github.com/jvirkki/dupd/blob/master/src/scan.c#L83
 
 Here are some statistics on the datasets ``/usr`` and ``/mnt/music``. ``/usr``
-is on a ``btrfs`` filesystem that is located on a SSD with many small files,
+is on a ``btrfs`` filesystem that is located on an SSD with many small files,
 while ``/mnt/music`` is located on a rotational disk with ``ext4`` as
 filesystem. The amount of available memory was *8GB*.
 

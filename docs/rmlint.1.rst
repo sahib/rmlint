@@ -364,7 +364,7 @@ Caching
 :``--replay [path.json]``:
 
     Read an existing json file and re-output it. This is very useful if you want
-    to reformat, refilter or resort the output you got from an previous run.
+    to reformat, refilter or resort the output you got from a previous run.
     Usage is simple: Just pass ``--replay`` on the second run, with other
     changed to the new formatters or filters. You can also merge several previous
     runs by using ``--replay`` more than once, in this case it will merge all files

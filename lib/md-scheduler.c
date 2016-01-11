@@ -156,7 +156,7 @@ static RmMDSDevice *rm_mds_device_new(RmMDS *mds, const dev_t disk) {
     return self;
 }
 
-/** @brief  Free mem allocated to a RmMDSDevice
+/** @brief  Free mem allocated to an RmMDSDevice
  **/
 static void rm_mds_device_free(RmMDSDevice *self) {
     g_mutex_clear(&self->lock);
@@ -252,7 +252,7 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
     }
 }
 
-/** @brief Push a RmMDSDevice to the threadpool
+/** @brief Push an RmMDSDevice to the threadpool
  **/
 void rm_mds_device_start(RmMDSDevice *device, RmMDS *mds) {
     rm_assert_gentle(device->threads == 0);

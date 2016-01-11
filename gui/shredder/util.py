@@ -437,7 +437,7 @@ def pretty_seconds(second_diff):
 
 
 def pretty_date(time=False):
-    """Get a datetime object or a int() Epoch timestamp and return a
+    """Get a datetime object or an int() Epoch timestamp and return a
     pretty string like 'an hour ago', 'Yesterday', '3 months ago',
     'just now', etc
     """
@@ -460,7 +460,7 @@ def pretty_date(time=False):
 
 
 class CellRendererModifiedTime(Gtk.CellRendererText):
-    """Display a mtime (unix timestamp) as readable difference to now"""
+    """Display an mtime (unix timestamp) as readable difference to now"""
     mtime = GObject.Property(type=int, default=0)
 
     def __init__(self, **kwargs):
@@ -618,7 +618,7 @@ class ChoiceRow(Gtk.ListBoxRow):
         self.add(box)
 
     def set_show_checkmark(self, state):
-        """Choose a icon based on the current `state`"""
+        """Choose an icon based on the current `state`"""
         self.symbol.set_visible(state or self.is_default)
 
         checkmark_table = {

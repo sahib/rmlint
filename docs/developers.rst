@@ -265,7 +265,7 @@ Insane ones
 - Use ``fiemap ioctl(2)`` to analyze the harddisk layout of each file, so each
   block can read it in *perfect* order on a rotational device.
 - Check the device ID of each file to see if it on a rotational (normal hard
-  disks) or on a non-rotational device (like a SSD). On the latter the fiemap
+  disks) or on a non-rotational device (like an SSD). On the latter the fiemap
   optimisation is bypassed.
 - Use a common buffer pool for IO buffers and recycle used buffers to reduce
   memory allocation overheads.

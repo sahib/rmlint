@@ -178,7 +178,7 @@ class HeaderBar(Gtk.HeaderBar):
 
 
 def _create_item(name, action, icon, variant=None):
-    """Create a GMenuItem from a action, optionally with an icon"""
+    """Create a GMenuItem from an action, optionally with an icon"""
     if variant is not None:
         name = '{n} ({v})'.format(n=name, v=str(variant))
 

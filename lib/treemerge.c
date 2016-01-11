@@ -343,7 +343,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
 }
 
 static RmFile *rm_directory_as_new_file(RmTreeMerger *merger, const RmDirectory *self) {
-    /* Masquerades a RmDirectory as RmFile for purpose of output */
+    /* Masquerades an RmDirectory as RmFile for purpose of output */
     RmFile *file = g_malloc0(sizeof(RmFile));
     rm_directory_to_file(merger, self, file);
     return file;

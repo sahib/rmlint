@@ -861,7 +861,7 @@ static void rm_shred_group_make_orphan(RmShredGroup *self) {
 }
 
 /* returns the number of actual files (including bundled
- * hardlinks) associated with a RmFile */
+ * hardlinks) associated with an RmFile */
 
 static gint rm_shred_num_files(RmFile *file) {
     if(file->hardlinks.is_head) {

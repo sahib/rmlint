@@ -477,7 +477,7 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
  * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
  * If there are no files left after this then return TRUE so that the
  * cluster can be deleted from the node_table hash table.
- * NOTE: we rely on rm_file_list_insert to select a RM_LINT_TYPE_DUPE_CANDIDATE as head
+ * NOTE: we rely on rm_file_list_insert to select an RM_LINT_TYPE_DUPE_CANDIDATE as head
  * file (unless ALL the files are "other lint"). */
 static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_cluster,
                                             RmSession *session) {

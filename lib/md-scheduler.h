@@ -137,7 +137,7 @@ typedef gint (*RmMDSSortFunc)(const RmMDSTask *task_a, const RmMDSTask *task_b);
 RmMDS *rm_mds_new(const gint max_threads, RmMountTable *mount_table, bool fake_disk);
 
 /**
- * @brief Configure or reconfigure a MDS scheduler
+ * @brief Configure or reconfigure an MDS scheduler
  *
  * @param func The callback function called for each task
  * @param user_data Pointer to user data associated with the scheduler
@@ -187,7 +187,7 @@ RmMDSDevice *rm_mds_device_get(RmMDS *mds, const char *path, dev_t dev);
 gboolean rm_mds_device_is_rotational(RmMDSDevice *device);
 
 /**
- * @brief increase or decrease MDS reference count for a RmMDSDevice
+ * @brief increase or decrease MDS reference count for an RmMDSDevice
  *
  * @param device Pointer to the RmMDSDevice
  * @param ref_count The amount to increase/decrease reference count
@@ -196,7 +196,7 @@ gboolean rm_mds_device_is_rotational(RmMDSDevice *device);
 gint rm_mds_device_ref(RmMDSDevice *device, const gint ref_count);
 
 /**
- * @brief Push a new task to a RmMDS scheduler, based on file/folder path.
+ * @brief Push a new task to an RmMDS scheduler, based on file/folder path.
  *
  * The scheduler will look up the path's dev and disk.  If these are already known, it
  * is more efficient to use rm_mds_push_dev().
