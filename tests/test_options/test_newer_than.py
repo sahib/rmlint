@@ -36,7 +36,7 @@ def test_simple():
     head, *data, footer = run_rmlint_once('-S a -N ' + str(time.time()))
     assert len(data) == 3
 
-    # Fake a wait of two seconds a try a ISO8601.
+    # Fake a wait of two seconds a try an ISO8601.
     # Should return all 3 files, since c is newer and pulls in a + b.
     for offset, expect in [(1, 3), (8, 0)]:
         iso_time = time.strftime(

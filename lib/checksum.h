@@ -136,7 +136,7 @@ typedef struct RmBuffer {
     /* checksum the data belongs to */
     struct RmDigest *digest;
 
-    /* len of the data actualy filled */
+    /* len of the data actually filled */
     guint32 len;
 
     /* user utility data field */
@@ -321,12 +321,12 @@ void rm_buffer_pool_destroy(RmBufferPool *pool);
 /**
  * @brief Retrieve a RmBuffer.
  *
- * This might be either a previsouly used one or initially allocate one.
+ * This might be either a previously used one or initially allocate one.
  */
 RmBuffer *rm_buffer_get(RmBufferPool *pool);
 
 /**
- * @brief Release a previosuly retrieved buffer.
+ * @brief Release a previously retrieved buffer.
  *
  * It will be either cached or freed if over the limit.
  */

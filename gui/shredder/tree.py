@@ -67,7 +67,7 @@ class Column:
 
     @staticmethod
     def make_row(md_map):
-        """Convert a rmlint json dict to a tree row"""
+        """Convert an rmlint json dict to a tree row"""
         is_original = md_map.get('is_original', False)
         if md_map.get('type', '').startswith('duplicate_'):
             if is_original:
@@ -118,7 +118,7 @@ class PathNode:
         self.depth = (parent.depth + 1) if parent else 0
 
     def __getitem__(self, idx):
-        """Get a column value by it's column index.
+        """Get a column value by its column index.
 
         Some values might get freshly constructed on this call.
         """
@@ -168,7 +168,7 @@ class PathNode:
         return os.path.join(*reversed([n.name for n in self.up()]))
 
     def build_iter_path(self):
-        """Recursively build a iter path suitable for GtkTreePath"""
+        """Recursively build an iter path suitable for GtkTreePath"""
         return list(reversed([n.idx for n in self.up()]))
 
     def neighbor(self, offset):
@@ -268,7 +268,7 @@ class PathTrie(GObject.Object):
             yield from self.iterate(child)
 
     def lookup_node_id(self, node_id):
-        """Lookup a node by it's id."""
+        """Lookup a node by its id."""
         return self.nodes.get(node_id)
 
     def update_node(self, node, column_id, value):
@@ -307,7 +307,7 @@ class PathTrie(GObject.Object):
         return new_nodes
 
     def find(self, path):
-        """Find a PathNode in the trie by it's path"""
+        """Find a PathNode in the trie by its path"""
         curr = self.root
         for name in (comp for comp in path.split('/') if comp):
             curr = curr.children.get(name)
@@ -486,7 +486,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
             self._mtime_cache.add(id(row))
 
     def _add_and_signal(self, path, row):
-        """Actually add the path and it's metadata here.
+        """Actually add the path and its metadata here.
         Also signal the GtkTreeView to update if necessary.
         """
         parents = self.trie.insert(path, row)

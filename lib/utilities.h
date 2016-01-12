@@ -166,7 +166,7 @@ char *rm_util_get_groupname(void);
 char *rm_util_strsub(const char *string, const char *subs, const char *with);
 
 /**
- * @brief Check if a file has a invalid gid/uid or both.
+ * @brief Check if a file has an invalid gid/uid or both.
  *
  * @return the appropiate RmLintType for the file
  */
@@ -401,7 +401,7 @@ bool rm_offsets_match(char *path1, char *path2);
 //////////////////////////////
 
 /**
- * @brief Parse a ISO8601 timestamp to a unix timestamp.
+ * @brief Parse an ISO8601 timestamp to a unix timestamp.
  */
 time_t rm_iso8601_parse(const char *string);
 

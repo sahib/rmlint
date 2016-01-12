@@ -12,7 +12,7 @@ so we gonna explain them to you here.
     In a group of *duplicate* files, one file is said to
     be the original file. It might not, strictly speaking,
     be the original from which the copies where created,
-    but is an convenient terminology for selecting which
+    but is a convenient terminology for selecting which
     files to keep and which to delete.
 
 :*Duplicate*:
@@ -35,7 +35,7 @@ Let's just dive in into some examples:
 This simply scans your current working directory for lint and reports them in
 your terminal. Note that **nothing will be removed** (even if it prints ``rm``).
 
-Despite it's name, ``rmlint`` just finds suspicious files, but never modifies the
+Despite its name, ``rmlint`` just finds suspicious files, but never modifies the
 filesystem itself [*]_.  Instead it gives you detailed reports in different
 formats to get rid of them yourself. These reports are called *outputs*.  By
 default a shellscript will be written to ``rmlint.sh`` that contains readily
@@ -135,8 +135,8 @@ Examples:
 Limit files by their modification time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This is an useful feature if you want to investigate only files newer than
-a certain date or if you want to progessively update the results, i.e. when you
+This is a useful feature if you want to investigate only files newer than
+a certain date or if you want to progressively update the results, i.e. when you
 run ``rmlint`` in a script that watches a directory for duplicates.
 
 The manual way is using ``-N`` (``--newer-than=<timestamp>``):
@@ -149,7 +149,7 @@ The manual way is using ``-N`` (``--newer-than=<timestamp>``):
    # Find all files newer than file.png
    $ rmlint -N $(stat --print %Y file.png)
 
-   # Alternatively use a ISO8601 formatted Timestamp
+   # Alternatively use an ISO8601 formatted Timestamp
    $ rmlint -N 2014-09-08T00:12:32+0200
 
 If you are periodically checking the same directory tree for duplicates,
@@ -238,7 +238,7 @@ Here you would get this output printed on ``stderr``:
 
 You probably noticed the colon in the commandline above. Everything before it is
 the name of the output-format, everything behind is the path where the output
-should land. Instead of an path you can also use ``stdout`` and ``stderr``, as
+should land. Instead of a path you can also use ``stdout`` and ``stderr``, as
 we did above or just omit the colon which will print everything to ``stdout``.
 
 Some formatters can be customised using the ``-c`` (``--config``) command.
@@ -251,9 +251,9 @@ Here's the list of currently available formatters and their config options:
     everything between are data-dictionaries. This format was chosen to allow
     application to parse the output in realtime while ``rmlint`` is still running.
 
-    The header contains information about the proram invocation, while the footer
+    The header contains information about the program invocation, while the footer
     contains statistics about the program-run. Every data element has a type which
-    identifies it's lint type (you can lookup all types here_).
+    identifies its lint type (you can lookup all types here_).
 
     **Config values:**
 
@@ -427,10 +427,10 @@ Paranoia mode
 
 Let's face it, why should you trust ``rmlint``?
 
-Technically it only computes a hash of your file which might, by it's nature,
+Technically it only computes a hash of your file which might, by its nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
-function (i.e. one that distributes it's hash values perfectly even over all
-possible values), the probablilty of having a hash-collision is
+function (i.e. one that distributes its hash values perfectly even over all
+possible values), the probability of having a hash-collision is
 :math:`\frac{1}{2^{160}}` for the default 160-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.
 Due to the "birthday paradox", collision starts to become a real risk if you have
@@ -536,7 +536,7 @@ there is the ``-k`` (``--keep-all-tagged``) option.  A slightly more esoteric op
 is ``-m`` (``--must-match-tagged``), which only looks for duplicates where there is
 an original in a tagged path.
 
-Here's a real world example using these features:  You have an portable backup drive with some
+Here's a real world example using these features:  You have a portable backup drive with some
 old backups on it.  You have just backed up your home folder to a new backup drive.  You
 want to reformat the old backup drive and use it for something else.  But first you want
 to check that there is nothing on the old drive that you don't have somewhere else.  The
@@ -729,7 +729,7 @@ Here's just a list of options that are nice to know, but not essential:
 - If something ever goes wrong, it might help to increase the verbosity with
   ``-v`` (up to ``-vvv``).
 - Usually the commandline output is colored, but you can disable it explicitly
-  with ``-w`` (``--with-color``). If *stdout* or *stderr* is not an terminal
+  with ``-w`` (``--with-color``). If *stdout* or *stderr* is not a terminal
   anyways, ``rmlint`` will disable colors itself.
 - You can limit the traversal depth with ``-d`` (``--max-depth``):
 

@@ -51,7 +51,7 @@ struct RmSession;
 RmTreeMerger *rm_tm_new(struct RmSession *session);
 
 /**
- * @brief Add a RmFile to the pool of (to be) investigated files.
+ * @brief Add an RmFile to the pool of (to be) investigated files.
  */
 void rm_tm_feed(RmTreeMerger *self, RmFile *file);
 

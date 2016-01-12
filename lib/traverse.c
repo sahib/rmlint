@@ -156,7 +156,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
                    false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
                 } else {
-                    /* A file in a evil fs. Ignore. */
+                    /* A file in an evil fs. Ignore. */
                     trav_session->session->ignored_files++;
                     return;
                 }

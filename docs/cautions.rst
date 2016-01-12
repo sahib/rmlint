@@ -68,7 +68,7 @@ kernel 4.2 or higher, is to reflink the duplicate to the original.  You can do t
 
 .. code-block:: bash
 
-   $ cp --reflink=always original duplicate   # deletes dupicate and replaces it with reflink copy of original
+   $ cp --reflink=always original duplicate   # deletes duplicate and replaces it with reflink copy of original
    $ rmlint --btrfs-clone original duplicate  # does and in-place clone
 
 If you pass ``-c sh:link`` to ``rmlint``, it will even check for you if your
@@ -333,7 +333,7 @@ of potential duplicates.  This avoids the need to read the whole file if the fil
 so this can give a major speedup in some cases.  However, in the case of hard disk drives, constantly reading small
 increments from several files at the same time causes the hard drive head to have to jump around ("seek thrash").
 
-Here are some speed test results showing relative speed for scanning my ``/usr`` folder (on SSD) and a HDD copy of same.
+Here are some speed test results showing relative speed for scanning my ``/usr`` folder (on SSD) and an HDD copy of same.
 The speed ratio gives an indication of how effectively the search algorithm manages disk seek overheads:
 
 +----------------+----------------+---------------------+---------+
@@ -368,6 +368,6 @@ Memory Usage Robustness
 
 When scanning very large filesystems, duplicate finders may have to hold a large amount of information in
 memory at the same time.  Once this information exceeds the computers' RAM, performance will suffer
-signficantly.  ``dupd`` handles this quite nicely by storing a lot of the data in a sqlite database file,
+significantly.  ``dupd`` handles this quite nicely by storing a lot of the data in a sqlite database file,
 although this may have a slight performance penalty due to disk read/write time to the database file.
 ``rmlint`` uses a path tree structure to reduce the memory required to store all traversed paths.

@@ -192,7 +192,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Added
 
 - ``--with-metadata-cache`` makes ``rmlint`` less memory hungry by storing
-  it's paths in a sqlite3 database and selecting them when needed.
+  its paths in a sqlite3 database and selecting them when needed.
 - ``--without-fiemap`` disables the ``fiemap`` optimization when focus is on
   memory footprint.
 - ``--perms`` can check if a file should be readable/writable or executable.

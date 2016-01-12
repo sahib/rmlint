@@ -178,7 +178,7 @@ Notable targets
 
 :docs:
 
-    Build the onlice html docs (which you are reading now).
+    Build the online html docs (which you are reading now).
 
 :test:
 
@@ -219,10 +219,10 @@ Sourcecode layout
 Hashfunctions
 -------------
 
-Here is a short comparasion of the existing hashfunctions_ in ``rmlint`` (linear_ scale).
+Here is a short comparison of the existing hashfunctions_ in ``rmlint`` (linear_ scale).
 For reference: Those plots were rendered with these_ sources - which are very ugly, sorry.
 
-If you want to add new hashfunctions, you should have some arguments why it is valueable and possibly
+If you want to add new hashfunctions, you should have some arguments why it is valuable and possibly
 even benchmark it with the above scripts to see if it's really that much faster.
 
 Also keep in mind that most of the time the hashfunction is not the bottleneck.
@@ -265,7 +265,7 @@ Insane ones
 - Use ``fiemap ioctl(2)`` to analyze the harddisk layout of each file, so each
   block can read it in *perfect* order on a rotational device.
 - Check the device ID of each file to see if it on a rotational (normal hard
-  disks) or on a non-rotational device (like a SSD). On the latter the fiemap
+  disks) or on a non-rotational device (like an SSD). On the latter the fiemap
   optimisation is bypassed.
 - Use a common buffer pool for IO buffers and recycle used buffers to reduce
   memory allocation overheads.

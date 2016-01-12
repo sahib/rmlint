@@ -79,7 +79,7 @@ General Options
 
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout*):
 
-    Configure the way ``rmlint`` outputs it's results. A ``spec`` is in the
+    Configure the way ``rmlint`` outputs its results. A ``spec`` is in the
 	form ``format:file`` or just ``format``.  A file might either be an arbitrary
 	path or ``stdout`` or ``stderr``.  If file is omitted, ``stdout`` is assumed.
 
@@ -154,7 +154,7 @@ General Options
     Makes rmlint use a special mode where all found duplicates are collected and
     checked if whole directory trees are duplicates. Use with caution: You
     always should make sure that the investigated directory is not modified
-    during ``rmlint``'s or it's removal scripts run. 
+    during ``rmlint``'s or its removal scripts run. 
 
     Output is deferred until all duplicates were found.
     Duplicate directories are printed first, followed by any remaining duplicate files.
@@ -183,7 +183,7 @@ General Options
     * `o`: Sort by natural found order (might be different on each run).
     * `n`: Sort by number of files in the group.
 
-    The letter may also be written uppercase (similiar to ``-S /
+    The letter may also be written uppercase (similar to ``-S /
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
     back all results to the end of the run before sorting and printing. 
 
@@ -191,10 +191,10 @@ General Options
 
     Start the optional graphical frontend to ``rmlint`` called ``Shredder``.
 
-    This will only work when ``Shredder`` and it's dependencies were installed.
+    This will only work when ``Shredder`` and its dependencies were installed.
     See also: http://rmlint.readthedocs.org/en/latest/gui.html
 
-    The gui has it's own set of options, see ``--gui --help`` for a list.  These
+    The gui has its own set of options, see ``--gui --help`` for a list.  These
 	should be placed at the end, ie ``rmlint --gui [options]``
 
 :``--hash``:
@@ -341,7 +341,7 @@ Original Detection Options
     - **r**: keep paths matching regex        **R**: keep path not matching regex
     - **x**: keep basenames matching regex    **X**: keep basenames not matching regex
 
-    Alphabetical sort will only use the basename of the file and ignore it's case.
+    Alphabetical sort will only use the basename of the file and ignore its case.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
     
@@ -350,7 +350,7 @@ Original Detection Options
     original paths (like a path component being ``src``). 
 
     To use the regular expression you simply enclose it in the criteria string
-    by adding `<REGULAR_EXPRESSIOn>` after specifying `r` or `x`. Example: ``-S
+    by adding `<REGULAR_EXPRESSION>` after specifying `r` or `x`. Example: ``-S
     'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files. 
 
     Warning: When using **r** or **x**, try to make your regex to be as specific
@@ -364,7 +364,7 @@ Caching
 :``--replay [path.json]``:
 
     Read an existing json file and re-output it. This is very useful if you want
-    to reformat, refilter or resort the output you got from an previous run.
+    to reformat, refilter or resort the output you got from a previous run.
     Usage is simple: Just pass ``--replay`` on the second run, with other
     changed to the new formatters or filters. You can also merge several previous
     runs by using ``--replay`` more than once, in this case it will merge all files

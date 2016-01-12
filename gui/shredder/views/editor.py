@@ -431,7 +431,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
 
 class OverlaySaveButton(Gtk.Overlay):
-    """Button box that contains two buttons in a overlay.
+    """Button box that contains two buttons in an overlay.
     The overlay is shown on top of the script editor.
     Buttons are: A unlock button for asking for root permissions
     and a save button to save the script somewhere.

@@ -2,12 +2,12 @@ Testsuite
 ---------
 
 ``rmlint`` has a not yet complete but quite powerful testsuite. It is not
-complete yet (and probably never will), but it's already an valueable boost of
+complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
 The tests are based on ``nosetest`` and are written in ``python>=3.0``.
 Every testcase just runs the (previously built) ``rmlint`` binary a
-and parses it's json output. So they are technically blackbox-tests.
+and parses its json output. So they are technically blackbox-tests.
 
 On every commit, those tests are additionally run on `TravisCI`_.
 
@@ -23,7 +23,7 @@ variables which are:
   sometimes ``tmpfs`` might therefore slow down your computer. By default
   ``/tmp`` will be used.
 - ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
-- ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger an
+- ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger a
   backtrace.
 - ``RM_TS_PEDANTIC``: Run each test several times with different optimization options
   and check for errors between the runs. *(slow)*.
@@ -75,7 +75,7 @@ Structure
     ├── test_formatters   # Tests for output formatters (like sh or json)
     ├── test_options      # Tests for normal options like --merge-directories etc.
     ├── test_types        # Tests for all lint types rmlint can find
-    └── utils.py          # Common utilities shared amon tests.
+    └── utils.py          # Common utilities shared among tests.
 
 Templates
 ~~~~~~~~~
