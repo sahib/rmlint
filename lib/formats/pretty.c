@@ -84,14 +84,14 @@ typedef struct RmFmtHandlerPretty {
     int elems_written;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(_U RmSession *session, RmFmtHandler *parent, _U FILE *out) {
+static void rm_fmt_head(_UNUSED RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
     self->user = rm_util_get_username();
     self->group = rm_util_get_groupname();
 }
 
-static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
+static void rm_fmt_elem(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
@@ -146,7 +146,7 @@ static void rm_fmt_elem(_U RmSession *session, RmFmtHandler *parent, FILE *out,
     g_free(esc_path);
 }
 
-static void rm_fmt_prog(_U RmSession *session, RmFmtHandler *parent, FILE *out,
+static void rm_fmt_prog(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 

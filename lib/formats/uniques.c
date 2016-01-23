@@ -34,7 +34,7 @@ typedef struct RmFmtHandlerUniques {
     RmFmtHandler parent;
 } RmFmtHandlerUniques;
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out,
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSED FILE *out,
                         RmFile *file) {
     if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
         /* we only not want to list unfinished files. */

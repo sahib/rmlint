@@ -166,7 +166,7 @@ static void rm_fmt_json_sep(RmFmtHandlerJSON *self, FILE *out) {
 //  ACTUAL CALLBACKS   //
 /////////////////////////
 
-static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out) {
     fprintf(out, "[\n");
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
@@ -204,7 +204,7 @@ static void rm_fmt_head(RmSession *session, _U RmFmtHandler *parent, FILE *out) 
     }
 }
 
-static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
     if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
@@ -245,7 +245,7 @@ static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
     rm_digest_hexstring(file->digest, checksum_str);
 }
 
-static void rm_fmt_elem(RmSession *session, _U RmFmtHandler *parent, FILE *out,
+static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
     if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
         return;

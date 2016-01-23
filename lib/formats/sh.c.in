@@ -63,7 +63,7 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
 typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
 
 
-static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, char *path, char *orig_path) {
     if(self->user_cmd == NULL || !self->allow_user_cmd) {
         return false;
     }
@@ -129,7 +129,7 @@ static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, R
     return true;
 }
 
-static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, char *path, char *orig_path) {
     if(!self->allow_hardlink) {
         return false;
     }
@@ -142,7 +142,7 @@ static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, 
     return true;
 }
 
-static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, char *path, char *orig_path) {
     if(!self->allow_remove) {
         return false;
     }
@@ -336,7 +336,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
     g_free(path);
 }
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         return;
@@ -379,7 +379,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
     g_free(path);
 }
 
-static void rm_fmt_foot(_U RmSession *session, RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
     g_byte_array_free(self->order, true);
 

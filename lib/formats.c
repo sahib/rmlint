@@ -430,7 +430,7 @@ bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {
     return false;
 }
 
-bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
+bool rm_fmt_is_stream(_UNUSED RmFmtTable *self, RmFmtHandler *handler) {
     if(0 || handler->path == NULL || strcmp(handler->path, "stdout") == 0 ||
        strcmp(handler->path, "stderr") == 0 || strcmp(handler->path, "stdin") == 0) {
         return true;

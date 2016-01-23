@@ -157,7 +157,7 @@ static void rm_path_double_free(RmPathDoubleKey *key) {
     g_free(key);
 }
 
-RmFileTables *rm_file_tables_new(_U const RmSession *session) {
+RmFileTables *rm_file_tables_new(_UNUSED const RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->all_files = g_queue_new();
@@ -479,7 +479,7 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
  * cluster can be deleted from the node_table hash table.
  * NOTE: we rely on rm_file_list_insert to select an RM_LINT_TYPE_DUPE_CANDIDATE as head
  * file (unless ALL the files are "other lint"). */
-static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_cluster,
+static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_cluster,
                                             RmSession *session) {
     RmCfg *cfg = session->cfg;
 

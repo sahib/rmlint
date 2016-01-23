@@ -36,8 +36,8 @@ typedef struct RmFmtHandlerTimestamp {
 } RmFmtHandlerSummary;
 
 static void rm_fmt_prog(RmSession *session,
-                        _U RmFmtHandler *parent,
-                        _U FILE *out,
+                        _UNUSED RmFmtHandler *parent,
+                        _UNUSED FILE *out,
                         RmFmtProgressState state) {
     if(state != RM_PROGRESS_STATE_INIT) {
         return;

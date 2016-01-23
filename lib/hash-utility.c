@@ -45,7 +45,7 @@ typedef struct RmHasherSession {
     gboolean print_multihash;
 } RmHasherSession;
 
-static gboolean rm_hasher_parse_type(_U const char *option_name,
+static gboolean rm_hasher_parse_type(_UNUSED const char *option_name,
                                      const gchar *value,
                                      RmHasherSession *session,
                                      GError **error) {
@@ -75,7 +75,7 @@ static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) 
     g_print("%s  %s\n", checksum_str, path);
 }
 
-static int rm_hasher_callback(_U RmHasher *hasher,
+static int rm_hasher_callback(_UNUSED RmHasher *hasher,
                               RmDigest *digest,
                               RmHasherSession *session,
                               gpointer index_ptr) {

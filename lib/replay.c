@@ -240,7 +240,7 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
             (cfg->maxsize == (RmOff)-1 || file->file_size <= cfg->maxsize));
 }
 
-static bool rm_parrot_check_hidden(RmCfg *cfg, _U RmFile *file, const char *file_path) {
+static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file, const char *file_path) {
     if(!cfg->ignore_hidden) {
         return true;
     }
@@ -253,7 +253,7 @@ static bool rm_parrot_check_hidden(RmCfg *cfg, _U RmFile *file, const char *file
     return true;
 }
 
-static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file,
+static bool rm_parrot_check_permissions(RmCfg *cfg, _UNUSED RmFile *file,
                                         const char *file_path) {
     if(!cfg->permissions) {
         return true;
@@ -267,7 +267,7 @@ static bool rm_parrot_check_permissions(RmCfg *cfg, _U RmFile *file,
     return true;
 }
 
-static bool rm_parrot_check_crossdev(RmParrot *polly, _U RmFile *file) {
+static bool rm_parrot_check_crossdev(RmParrot *polly, _UNUSED RmFile *file) {
     if(polly->session->cfg->crossdev) {
         return true;
     }
@@ -542,16 +542,16 @@ void rm_parrot_cage_close(RmParrotCage *cage) {
 
 #else
 
-bool rm_parrot_cage_load(_U RmParrotCage *cage, _U const char *json_path) {
+bool rm_parrot_cage_load(_UNUSED RmParrotCage *cage, _UNUSED const char *json_path) {
     return false;
 }
 
-void rm_parrot_cage_open(_U RmParrotCage *cage, _U RmSession *session) {
+void rm_parrot_cage_open(_UNUSED RmParrotCage *cage, _UNUSED RmSession *session) {
     rm_log_error_line(_("json-glib is needed for using --replay."));
     rm_log_error_line(_("Please recompile `rmlint` with it installed."));
 }
 
-void rm_parrot_cage_close(_U RmParrotCage *cage) {
+void rm_parrot_cage_close(_UNUSED RmParrotCage *cage) {
 }
 
 #endif
