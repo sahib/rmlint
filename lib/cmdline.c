@@ -596,7 +596,7 @@ static char rm_cmd_find_lint_types_sep(const char *lint_string) {
         lint_string++;
     }
 
-    while(isalpha(*lint_string)) {
+    while(isalpha((unsigned char)*lint_string)) {
         lint_string++;
     }
 

@@ -853,7 +853,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
+dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev, _UNUSED const char *path) {
     if(self == NULL) {
         return 0;
     }
