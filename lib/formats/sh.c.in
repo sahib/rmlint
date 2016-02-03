@@ -60,19 +60,19 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "fi                                             \n"
     ;
 
-typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path);
+typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped);
 
 
-static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _U RmFile *file, _U char *dupe_path, _U char *orig_path, char *dupe_escaped, char *orig_escaped) {
     if(self->user_cmd == NULL || !self->allow_user_cmd) {
         return false;
     }
 
-    *out = g_strdup_printf("user_command '%s' '%s'", path, orig_path);
+    *out = g_strdup_printf("user_command '%s' '%s'", dupe_escaped, orig_escaped);
     return true;
 }
 
-static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped) {
     if(!self->allow_clone || self->session->mounts == NULL) {
         return false;
     }
@@ -86,16 +86,16 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         return false;
     }
 
-    bool offsets_match = rm_offsets_match(path, orig_path);
+    bool offsets_match = rm_offsets_match(dupe_path, orig_path);
     char *reflink_type = g_hash_table_lookup(
             self->session->mounts->reflinkfs_table,
             GUINT_TO_POINTER(file->dev)
     );
 
     if (offsets_match) {
-        *out = g_strdup_printf("skip_reflink '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
     } else if(!g_strcmp0("btrfs", reflink_type)) {
-        *out = g_strdup_printf("clone '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
         return false;
     }
@@ -103,7 +103,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     return true;
 }
 
-static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped) {
     if(!self->allow_reflink || self->session->mounts == NULL) {
         return false;
     }
@@ -112,42 +112,42 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
         return false;
     }
 
-    if (rm_offsets_match(path, orig_path)) {
-        *out = g_strdup_printf("skip_reflink '%s' '%s'", path, orig_path);
+    if (rm_offsets_match(dupe_path, orig_path)) {
+        *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
-        *out = g_strdup_printf("cp_reflink '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("cp_reflink '%s' '%s'", dupe_escaped, orig_escaped);
     }
     return true;
 }
 
-static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, _U char *dupe_path, _U char *orig_path, char *dupe_escaped, char *orig_escaped) {
     if(!self->allow_symlink || self->last_original->dev != file->dev) {
         return false;
     }
 
-    *out = g_strdup_printf("cp_symlink '%s' '%s'", path, orig_path);
+    *out = g_strdup_printf("cp_symlink '%s' '%s'", dupe_escaped, orig_escaped);
     return true;
 }
 
-static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _U RmFile *file, _U char *dupe_path, _U char *orig_path, char *dupe_escaped, char *orig_escaped) {
     if(!self->allow_hardlink) {
         return false;
     }
 
     if (self->last_original && file->hardlinks.hardlink_head == self->last_original) {
-        *out = g_strdup_printf("skip_hardlink '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("skip_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
-        *out = g_strdup_printf("cp_hardlink '%s' '%s'", path, orig_path);
+        *out = g_strdup_printf("cp_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
     }
     return true;
 }
 
-static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, char *path, char *orig_path) {
+static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U RmFile *file, _U char *dupe_path, _U char *orig_path, char *dupe_escaped, char *orig_escaped) {
     if(!self->allow_remove) {
         return false;
     }
 
-    *out = g_strdup_printf("remove_cmd '%s' '%s'", path, orig_path);
+    *out = g_strdup_printf("remove_cmd '%s' '%s'", dupe_escaped, orig_escaped);
     return true;
 }
 
@@ -288,7 +288,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
 
     RM_DEFINE_PATH(file);
 
-    char *path = rm_fmt_sh_escape_path(file_path);
+    char *file_escaped = rm_fmt_sh_escape_path(file_path);
     char *prefix = NULL;
     const char *comment = NULL;
 
@@ -299,14 +299,14 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
             comment = "# original";
         }
 
-        prefix = g_strdup_printf("echo 'Keeping: ' '%s'", path);
+        prefix = g_strdup_printf("echo 'Keeping: ' '%s'", file_escaped);
         self->last_original = file;
     } else if(self->last_original) {
 
         RmFile *last_original = self->last_original;
         RM_DEFINE_PATH(last_original);
 
-        char *orig_path = rm_fmt_sh_escape_path(last_original_path);
+        char *orig_escaped = rm_fmt_sh_escape_path(last_original_path);
         if(is_dir) {
             comment = "# duplicate directory";
         } else {
@@ -320,12 +320,12 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
                 continue;
             }
 
-            if(func(self, &prefix, file, path, orig_path) && prefix) {
+            if(func(self, &prefix, file, file_path, last_original_path, file_escaped, orig_escaped) && prefix) {
                 break;
             }
         }
 
-        g_free(orig_path);
+        g_free(orig_escaped);
     }
 
     if(prefix != NULL) {
@@ -333,7 +333,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
         g_free(prefix);
     }
 
-    g_free(path);
+    g_free(file_escaped);
 }
 
 static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out, RmFile *file) {
