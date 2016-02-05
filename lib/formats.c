@@ -279,7 +279,7 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
 
     for(int i = 0; rank_order[i]; ++i) {
         gint64 r = 0;
-        switch(tolower(rank_order[i])) {
+        switch(tolower((unsigned char)rank_order[i])) {
         case 's':
             r = rm_fmt_rank_size(ga, gb);
             break;
@@ -302,7 +302,7 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
 
         if(r != 0) {
             r = CLAMP(r, -1, +1);
-            return isupper(rank_order[i]) ? -r : r;
+            return isupper((unsigned char)rank_order[i]) ? -r : r;
         }
     }
 
@@ -430,7 +430,7 @@ bool rm_fmt_has_formatter(RmFmtTable *self, const char *name) {
     return false;
 }
 
-bool rm_fmt_is_stream(_U RmFmtTable *self, RmFmtHandler *handler) {
+bool rm_fmt_is_stream(_UNUSED RmFmtTable *self, RmFmtHandler *handler) {
     if(0 || handler->path == NULL || strcmp(handler->path, "stdout") == 0 ||
        strcmp(handler->path, "stderr") == 0 || strcmp(handler->path, "stdin") == 0) {
         return true;

@@ -266,10 +266,10 @@ void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
     g_mutex_unlock(&self->lock);
 }
 
-static int rm_trie_destroy_callback(_U RmTrie *self,
+static int rm_trie_destroy_callback(_UNUSED RmTrie *self,
                                     RmNode *node,
-                                    _U int level,
-                                    _U void *user_data) {
+                                    _UNUSED int level,
+                                    _UNUSED void *user_data) {
     rm_node_free(node);
     return 0;
 }
@@ -284,10 +284,10 @@ void rm_trie_destroy(RmTrie *self) {
 
 #include <stdio.h>
 
-static int rm_trie_print_callback(_U RmTrie *self,
+static int rm_trie_print_callback(_UNUSED RmTrie *self,
                                   RmNode *node,
                                   int level,
-                                  _U void *user_data) {
+                                  _UNUSED void *user_data) {
     for(int i = 0; i < level; ++i) {
         g_printerr("    ");
     }

@@ -107,7 +107,7 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_U RmTrie *self, RmNode *node, _U int level,
+int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level,
                              void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
@@ -492,7 +492,7 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     return self;
 }
 
-int rm_tm_destroy_iter(_U RmTrie *self, RmNode *node, _U int level, _U RmTreeMerger *tm) {
+int rm_tm_destroy_iter(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, _UNUSED RmTreeMerger *tm) {
     RmDirectory *directory = node->data;
     rm_directory_free(directory);
     return 0;
@@ -627,12 +627,12 @@ static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *direc
 }
 
 static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db,
-                            _U RmTreeMerger *self) {
+                            _UNUSED RmTreeMerger *self) {
     return da->depth - db->depth;
 }
 
 static int rm_tm_sort_paths_reverse(const RmDirectory *da, const RmDirectory *db,
-                                    _U RmTreeMerger *self) {
+                                    _UNUSED RmTreeMerger *self) {
     return -rm_tm_sort_paths(da, db, self);
 }
 
@@ -676,8 +676,8 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     }
 }
 
-static int rm_tm_iter_unfinished_files(_U RmTrie *trie, RmNode *node, _U int level,
-                                       _U void *user_data) {
+static int rm_tm_iter_unfinished_files(_UNUSED RmTrie *trie, RmNode *node, _UNUSED int level,
+                                       _UNUSED void *user_data) {
     RmTreeMerger *self = user_data;
     rm_tm_forward_unresolved(self, node->data);
     return 0;
@@ -693,7 +693,7 @@ static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
     return first_b->mergeups - first_a->mergeups;
 }
 
-static int rm_tm_hidden_file(RmFile *file, _U gpointer user_data) {
+static int rm_tm_hidden_file(RmFile *file, _UNUSED gpointer user_data) {
     return file->is_hidden;
 }
 

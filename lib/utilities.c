@@ -281,7 +281,7 @@ int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
 }
 
 /* Method to test if a file is non stripped binary. Uses libelf*/
-bool rm_util_is_nonstripped(_U const char *path, _U RmStat *statp) {
+bool rm_util_is_nonstripped(_UNUSED const char *path, _UNUSED RmStat *statp) {
     bool is_ns = false;
 
 #if HAVE_LIBELF
@@ -379,7 +379,7 @@ void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {
 //   UID/GID VALIDITY CHECKING     //
 /////////////////////////////////////
 
-static int rm_userlist_cmp_ids(gconstpointer a, gconstpointer b, _U gpointer ud) {
+static int rm_userlist_cmp_ids(gconstpointer a, gconstpointer b, _UNUSED gpointer ud) {
     return GPOINTER_TO_UINT(a) - GPOINTER_TO_UINT(b);
 }
 
@@ -671,8 +671,8 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     return self;
 }
 
-int rm_mounts_devno_to_wholedisk(_U RmMountEntry *entry, _U dev_t rdev, _U char *disk,
-                                 _U size_t disk_size, _U dev_t *result) {
+int rm_mounts_devno_to_wholedisk(_UNUSED RmMountEntry *entry, _UNUSED dev_t rdev, _UNUSED char *disk,
+                                 _UNUSED size_t disk_size, _UNUSED dev_t *result) {
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
 }
 
@@ -821,11 +821,11 @@ void rm_mounts_table_destroy(RmMountTable *self) {
 
 #else /* probably FreeBSD */
 
-RmMountTable *rm_mounts_table_new(_U bool force_fiemap) {
+RmMountTable *rm_mounts_table_new(_UNUSED bool force_fiemap) {
     return NULL;
 }
 
-void rm_mounts_table_destroy(_U RmMountTable *self) {
+void rm_mounts_table_destroy(_UNUSED RmMountTable *self) {
     /* NO-OP */
 }
 
@@ -853,7 +853,7 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-dev_t rm_mounts_get_disk_id(RmMountTable *self, dev_t dev, const char *path) {
+dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev, _UNUSED const char *path) {
     if(self == NULL) {
         return 0;
     }
@@ -1101,12 +1101,12 @@ bool rm_offsets_match(char *path1, char *path2) {
 
 #else /* Probably FreeBSD */
 
-RmOff rm_offset_get_from_fd(_U int fd, _U RmOff file_offset, _U RmOff *file_offset_next) {
+RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset, _UNUSED RmOff *file_offset_next) {
     return 0;
 }
 
-RmOff rm_offset_get_from_path(_U const char *path, _U RmOff file_offset,
-                              _U RmOff *file_offset_next) {
+RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offset,
+                              _UNUSED RmOff *file_offset_next) {
     return 0;
 }
 

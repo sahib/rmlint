@@ -68,8 +68,7 @@
         rm_log_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
     }}                                                                                   \
 
-
-#define _U G_GNUC_UNUSED
+#define _UNUSED G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
 #define LLI G_GINT64_FORMAT
 
@@ -78,6 +77,8 @@
 #define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
 
 #define RM_IS_APPLE (defined(__APPLE__) && defined(__MACH__))
+
+#define RM_IS_CYGWIN (defined(__CYGWIN__))
 
 #include <glib.h>
 

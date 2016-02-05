@@ -40,7 +40,7 @@ typedef struct RmFmtHandlerFdupes {
     bool use_same_line;
 } RmFmtHandlerFdupes;
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE *out,
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSED FILE *out,
                         RmFile *file) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
@@ -76,7 +76,7 @@ static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, _U FILE 
 }
 
 static void rm_fmt_prog(RmSession *session,
-                        _U RmFmtHandler *parent,
+                        _UNUSED RmFmtHandler *parent,
                         FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;

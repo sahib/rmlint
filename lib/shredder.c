@@ -1027,7 +1027,7 @@ static RmFile *rm_shred_sift(RmFile *file) {
 
 /* Hasher callback when file increment hashing is completed.
  * */
-static void rm_shred_hash_callback(_U RmHasher *hasher, RmDigest *digest, RmShredTag *tag,
+static void rm_shred_hash_callback(_UNUSED RmHasher *hasher, RmDigest *digest, RmShredTag *tag,
                                    RmFile *file) {
     if(!file->digest) {
         file->digest = digest;

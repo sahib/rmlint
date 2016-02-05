@@ -49,7 +49,7 @@ static char *remove_color_escapes(char *message) {
     return message;
 }
 
-static void logging_callback(_U const gchar *log_domain,
+static void logging_callback(_UNUSED const gchar *log_domain,
                              GLogLevelFlags log_level,
                              const gchar *message,
                              gpointer user_data) {

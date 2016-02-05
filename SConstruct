@@ -5,6 +5,7 @@ import os
 import sys
 import glob
 import subprocess
+import platform
 
 import SCons.Conftest as tests
 
@@ -299,6 +300,22 @@ def check_linux_limits(context):
     context.Result(rc)
     return rc
 
+def check_cygwin(context):
+    rc = 0
+
+    context.Message('Checking for cygwin environment...')
+    try:
+        uname = platform.uname()
+        context.Message('/'.join(uname))
+        rc = (uname[0].upper().startswith("CYGWIN"))
+    except subprocess.CalledProcessError:
+        rc = 0  # Oops.
+        context.Message("platform.uname() failed")
+
+    conf.env['IS_CYGWIN'] = rc
+    context.Result(rc)
+    return rc
+
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -470,7 +487,8 @@ conf = Configure(env, custom_tests={
     'check_gettext': check_gettext,
     'check_linux_limits': check_linux_limits,
     'check_btrfs_h': check_btrfs_h,
-    'check_uname': check_uname
+    'check_uname': check_uname,
+    'check_cygwin': check_cygwin
 })
 
 if not conf.CheckCC():
@@ -531,9 +549,18 @@ else:
     c_standard = ['-std=c99', '-fms-extensions']
 
 conf.env.Append(CCFLAGS=c_standard)
+
 conf.env.Append(CCFLAGS=[
-    '-pipe', '-fPIC', '-D_GNU_SOURCE'
+    '-pipe', '-D_GNU_SOURCE'
 ])
+
+# Support cygwin:
+conf.check_cygwin()
+if conf.env['IS_CYGWIN']:
+    conf.env.Append(CCFLAGS=['-U__STRICT_ANSI__'])
+else:
+    conf.env.Append(CCFLAGS=['-fPIC'])
+
 
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])

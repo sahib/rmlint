@@ -157,7 +157,7 @@ static void rm_path_double_free(RmPathDoubleKey *key) {
     g_free(key);
 }
 
-RmFileTables *rm_file_tables_new(_U const RmSession *session) {
+RmFileTables *rm_file_tables_new(_UNUSED const RmSession *session) {
     RmFileTables *tables = g_slice_new0(RmFileTables);
 
     tables->all_files = g_queue_new();
@@ -262,7 +262,7 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
     for(size_t i = 0; sortcrit[i]; i++) {
         /* Copy everything that is not a regex pattern */
         minified_sortcrit[minified_cursor++] = sortcrit[i];
-        char curr_crit = tolower(sortcrit[i]);
+        char curr_crit = tolower((unsigned char)sortcrit[i]);
 
         /* Check if it's a non-regex sortcriteria */
         if(!((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<')) {
@@ -358,7 +358,7 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
 
         for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
             long cmp = 0;
-            switch(tolower(sets->sort_criteria[i])) {
+            switch(tolower((unsigned char)sets->sort_criteria[i])) {
             case 'm':
                 cmp = (long)(a->mtime) - (long)(b->mtime);
                 break;
@@ -392,7 +392,7 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
             }
             if(cmp) {
                 /* reverse order if uppercase option */
-                cmp = cmp * (isupper(sets->sort_criteria[i]) ? -1 : +1);
+                cmp = cmp * (isupper((unsigned char)sets->sort_criteria[i]) ? -1 : +1);
                 return cmp;
             }
         }
@@ -479,7 +479,7 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
  * cluster can be deleted from the node_table hash table.
  * NOTE: we rely on rm_file_list_insert to select an RM_LINT_TYPE_DUPE_CANDIDATE as head
  * file (unless ALL the files are "other lint"). */
-static gboolean rm_pp_handle_inode_clusters(_U gpointer key, GQueue *inode_cluster,
+static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_cluster,
                                             RmSession *session) {
     RmCfg *cfg = session->cfg;
 

@@ -40,7 +40,7 @@ typedef struct RmFmtHandlerCSV {
     RmFmtHandler parent;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *out) {
+static void rm_fmt_head(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out) {
     if(rm_fmt_get_config_value(session->formats, "csv", "no_header")) {
         return;
     }
@@ -49,7 +49,7 @@ static void rm_fmt_head(_U RmSession *session, _U RmFmtHandler *parent, FILE *ou
             "checksum");
 }
 
-static void rm_fmt_elem(_U RmSession *session, _U RmFmtHandler *parent, FILE *out,
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
     if (file->lint_type == RM_LINT_TYPE_UNIQUE_FILE && (!file->digest || !session->cfg->write_unfinished)) {
         /* unique file with no partial checksum */

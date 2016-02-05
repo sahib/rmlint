@@ -67,7 +67,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     JSON_HANDLER->head(session, (RmFmtHandler *)self, self->json_out);
 }
 
-static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, _U FILE *out) {
+static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
     if(self->json_out == NULL) {
         return;
@@ -83,7 +83,7 @@ static void rm_fmt_foot(RmSession *session, RmFmtHandler *parent, _U FILE *out) 
 static void rm_fmt_elem(
     RmSession *session,
     RmFmtHandler *parent,
-    _U FILE *out, RmFile *file
+    _UNUSED FILE *out, RmFile *file
 ) {
     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
     if(self->json_out == NULL) {

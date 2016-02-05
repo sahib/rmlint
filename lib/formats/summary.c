@@ -41,8 +41,8 @@ typedef struct RmFmtHandlerSummary {
     fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
 
 static void rm_fmt_prog(RmSession *session,
-                        _U RmFmtHandler *parent,
-                        _U FILE *out,
+                        _UNUSED RmFmtHandler *parent,
+                        _UNUSED FILE *out,
                         RmFmtProgressState state) {
     if(state != RM_PROGRESS_STATE_SUMMARY) {
         return;

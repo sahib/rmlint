@@ -337,8 +337,8 @@ static void rm_hasher_hashpipe_free(GThreadPool *hashpipe) {
 
 /* local joiner if user provides no joiner to rm_hasher_new() */
 static RmHasherCallback *rm_hasher_joiner(RmHasher *hasher, RmDigest *digest,
-                                          _U gpointer session_user_data,
-                                          _U gpointer task_user_data) {
+                                          _UNUSED gpointer session_user_data,
+                                          _UNUSED gpointer task_user_data) {
     g_async_queue_push(hasher->return_queue, digest);
     return 0;
 }
