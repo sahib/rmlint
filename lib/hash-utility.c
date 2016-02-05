@@ -38,6 +38,7 @@ typedef struct RmHasherSession {
     gint path_index;
     GMutex lock;
     RmDigest **completed_digests_buffer;
+    bool *read_succesful;
 
     /* Options */
     RmDigestType digest_type;
@@ -86,14 +87,18 @@ static int rm_hasher_callback(_U RmHasher *hasher,
         if(session->print_in_order && digest) {
             /* add digest in buffer array */
             session->completed_digests_buffer[index] = digest;
+
             /* check if the next due digest has been completed; if yes then print
              * it (and possibly any following digests) */
             while(session->completed_digests_buffer[session->path_index]) {
+
                 if(session->paths[session->path_index]) {
-                    rm_hasher_print(
-                        session->completed_digests_buffer[session->path_index],
-                        session->paths[session->path_index],
-                        session->print_multihash);
+                    if(session->read_succesful[session->path_index]) {
+                        rm_hasher_print(
+                            session->completed_digests_buffer[session->path_index],
+                            session->paths[session->path_index],
+                            session->print_multihash);
+                    }
                     rm_digest_free(
                         session->completed_digests_buffer[session->path_index]);
                 }
@@ -101,7 +106,9 @@ static int rm_hasher_callback(_U RmHasher *hasher,
                 session->path_index++;
             }
         } else if(digest) {
-            rm_hasher_print(digest, session->paths[index], session->print_multihash);
+            if(session->read_succesful[session->path_index]) {
+                rm_hasher_print(digest, session->paths[index], session->print_multihash);
+            }
         }
     }
     g_mutex_unlock(&session->lock);
@@ -193,10 +200,12 @@ int rm_hasher_main(int argc, const char **argv) {
 
     ////////// Implementation //////
 
+    int buf_size = (g_strv_length(tag.paths) + 1) * sizeof(RmDigest *);
+    tag.read_succesful = g_slice_alloc0(buf_size);
+    
     if(tag.print_in_order) {
         /* allocate buffer to collect results */
-        tag.completed_digests_buffer =
-            g_slice_alloc0((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *));
+        tag.completed_digests_buffer = g_slice_alloc0(buf_size);
         tag.path_index = 0;
     }
 
@@ -222,7 +231,9 @@ int rm_hasher_main(int argc, const char **argv) {
             rm_log_warning_line(_("Directories are not supported: %s"), tag.paths[i]);
         } else if(S_ISREG(stat_buf.st_mode)) {
             RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
-            rm_hasher_task_hash(task, tag.paths[i], 0, 0, FALSE);
+            tag.read_succesful[i] = 
+                rm_hasher_task_hash(task, tag.paths[i], 0, stat_buf.st_size, FALSE);
+
             rm_hasher_task_finish(task);
             continue;
         } else {
@@ -239,9 +250,9 @@ int rm_hasher_main(int argc, const char **argv) {
     rm_hasher_free(hasher, TRUE);
 
     /* tidy up */
+    g_slice_free1(buf_size, tag.read_succesful);
     if(tag.print_in_order) {
-        g_slice_free1((g_strv_length(tag.paths) + 1) * sizeof(RmDigest *),
-                      tag.completed_digests_buffer);
+        g_slice_free1(buf_size, tag.completed_digests_buffer);
     }
 
     g_strfreev(tag.paths);
