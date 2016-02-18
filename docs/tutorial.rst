@@ -545,7 +545,7 @@ old drive is mounted at /media/portable.
 .. code-block:: bash
 
    # Find all files on /media/portable that can be safely deleted:
-   $ rmlint --keep-all-tagged --keep-all-tagged /media/portable // ~
+   $ rmlint --keep-all-tagged --must-match-tagged /media/portable // ~
    # check the shellscript looks ok:
    $ less ./rmlint.sh # or use gedit or any other viewer/editor
    # run the shellscript to delete the redundant backups
