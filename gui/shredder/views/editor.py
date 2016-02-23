@@ -610,9 +610,13 @@ class EditorView(View):
         self.search_entry.connect(
             'search-changed', self.on_search_changed
         )
-        self.search_entry.connect(
-            'next-match', self.on_search_changed
-        )
+
+        try:
+            self.search_entry.connect(
+                'next-match', self.on_search_changed
+            )
+        except TypeError:
+            LOGGER.warning('Old gtk version; skipping through matches will not work.')
 
     def set_correct_icon(self):
         """Set the correct icon of icon_stack (either warning, skull or info)"""
