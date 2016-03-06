@@ -494,9 +494,9 @@ FORMATTERS
 
     Default is ``remove``.
   
-  * *link*: Shortcut for ``-c sh:clone,reflink,hardlink,symlink``.
-  * *hardlink*: Shortcut for ``-c sh:hardlink,symlink``.
-  * *symlink*: Shortcut for ``-c sh:symlink``.
+  * *link*: Shortcut for ``-c sh:handler=clone,reflink,hardlink,symlink``.
+  * *hardlink*: Shortcut for ``-c sh:handler=hardlink,symlink``.
+  * *symlink*: Shortcut for ``-c sh:handler=symlink``.
 
 * ``json``: Print a JSON-formatted dump of all found reports.
   Outputs all finds as a json document. The document is a list of dictionaries, 
@@ -613,7 +613,7 @@ This is a collection of common usecases and other tricks:
 
 * Inject user-defined command into shell script output:
 
-  ``$ ./rmlint -o sh -c sh:cmd='echo "original:" "$2" "is the same as" "$1"'``  
+  ``$ rmlint -o sh -c sh:cmd='echo "original:" "$2" "is the same as" "$1"'``  
 
 * Use *data* as master directory. Find **only** duplicates in *backup* that are
   also in *data*. Do not delete any files in *data*:
