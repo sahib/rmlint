@@ -121,7 +121,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
 }
 
 static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
-    if(!self->allow_symlink || self->last_original->dev != file->dev) {
+    if(!self->allow_symlink) {
         return false;
     }
 
@@ -130,7 +130,7 @@ static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, R
 }
 
 static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
-    if(!self->allow_hardlink) {
+    if(!self->allow_hardlink || self->last_original->dev != file->dev) {
         return false;
     }
 
