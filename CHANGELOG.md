@@ -6,6 +6,19 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.5.0 Penetrating Pineapple] -- [unreleased]
 
+## [2.4.3 Myopic Micrathene Bugfixes] -- 2016-03-11
+
+### Fixed
+
+- Fix symbolic link emitting in sh script (sometimes files were omitted from rmlint.sh)
+- Fix compile stop on BSD systems in utilities.c (thanks f99aq8ove)
+- Fix some compiler warnings and typos.
+
+### Added
+
+- Add basic spanish translation.
+- Add basic compile support on cygwin.
+
 ## [2.4.2 Myopic Micrathene Bugfixes] -- 2015-12-14
 
 ### Fixed
