@@ -137,7 +137,7 @@ msgstr "Früher Abbruch, vermutlich wurde nicht alles gefunden.\n"
 msgid ""
 "Note: Please use the saved script below for removal, not the above output."
 msgstr ""
-"Beachte: Bitte benutzte das Skript unten zum Löschen, nicht die Ausgabe."
+"Beachte: Bitte benutze das Skript unten zum Löschen, nicht die Ausgabe."
 
 #: lib/formats/summary.c:87
 #, c-format
