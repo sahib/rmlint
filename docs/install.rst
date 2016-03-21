@@ -87,6 +87,8 @@ Here's a list of readily prepared commands for known distributions:
 * **Ubuntu** :math:`\geq 12.04`:
 
   This most likely applies to most distributions that are derived from Ubuntu.
+  Note that the ``GUI`` depends on ``GTK+ >= 3.12``! 
+  Ubuntu 14.04 LTS and earlier `still ships`_  with ``3.10``.
 
   .. code-block:: bash
 
@@ -94,7 +96,9 @@ Here's a list of readily prepared commands for known distributions:
     # Optional dependencies for more features:
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
     # Optional dependencies for the GUI:
-    $ apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 
+    $ apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 python-cairo gir1.2-polkit-1.0 gir1.2-gtksource-3.0 
+
+.. _`still ships`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
 
 * **FreeBSD** :math:`\geq 10.1`:
 
@@ -105,12 +109,13 @@ Here's a list of readily prepared commands for known distributions:
 
 -----
 
-Send us a note if you want to see your distribution here.
+Send us a note if you want to see your distribution here or the instructions
+need an update.
 The commands above install the full dependencies, therefore
 some packages might be stripped if you do not need the feature
-they enable. Only hard requirement is ``glib``.
+they enable. Only hard requirement for the commandline is ``glib``.
 
-Also be aware that the GUI needs at least :math:`gtk \geq 3.14` to work!
+Also be aware that the GUI needs at least :math:`gtk \geq 3.12` to work!
 
 Compilation
 -----------
@@ -125,8 +130,9 @@ build the software from the potentially unstable ``develop`` branch:
    $ git clone -b develop https://github.com/sahib/rmlint.git 
    $ cd rmlint/
    $ scons config       # Look what features scons would compile
-   $ scons DEBUG=1 -j4  # For releases you can omit DEBUG=1
-   $ sudo scons DEBUG=1 -j4 --prefix=/usr install
+   $ scons DEBUG=1 -j4  # Optional, build locally. 
+   # Install (and build if necessary). For releases you can omit DEBUG=1
+   $ sudo scons DEBUG=1 -j4 --prefix=/usr install 
 
 Done!
 
@@ -135,3 +141,15 @@ rmlint``.
 
 You can also only type the ``install`` command above. The buildsystem is clever
 enough to figure out which targets need to be built beforehand.
+
+Troubleshooting
+---------------
+
+On some distributions (especially Debian derived) ``rmlint --gui`` might fail
+with ``/usr/bin/python3: No module named shredder`` (or similar). This is due 
+some incompatible changes on Debian's side.
+
+See `this thread`_ for a workaround using ``PYTHONPATH``.
+
+
+.. _`this thread`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
