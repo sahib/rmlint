@@ -133,9 +133,6 @@ typedef struct RmSession {
 
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];
-
-    /* Open fd to the current directory (only valid during cmdline parsing) */
-    int current_dir_fd;
 } RmSession;
 
 /**

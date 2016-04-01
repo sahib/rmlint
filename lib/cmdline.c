@@ -391,18 +391,15 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
                             const char *path) {
     RmCfg *cfg = session->cfg;
+    int rc = 0;
 
-    /* Open the current working directory as fd */
-    if(session->current_dir_fd <= 0) {
-        session->current_dir_fd = rm_sys_open(cfg->iwd, R_OK);
-        if(session->current_dir_fd < 0) {
-            rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), cfg->iwd,
-                                strerror(errno));
-            return FALSE;
-        }
-    }
+#if HAVE_FACCESSAT
+    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
+#else
+    rc = access(path, R_OK);
+#endif
 
-    if(faccessat(session->current_dir_fd, path, R_OK, AT_EACCESS) != 0) {
+    if(rc != 0) {
         rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
                             strerror(errno));
         return FALSE;
@@ -1213,10 +1210,6 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
         rm_cmd_add_path(session, is_prefd, path_index, cfg->iwd);
     } else if(path_index == 0 && not_all_paths_read) {
         return false;
-    }
-
-    if(session->current_dir_fd > 0) {
-        rm_sys_close(session->current_dir_fd);
     }
 
     return true;
