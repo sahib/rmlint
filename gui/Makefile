@@ -2,7 +2,7 @@ resources:
 	@glib-compile-resources shredder/resources/shredder.gresource.xml --sourcedir shredder/resources
 
 schema:
-	@mkdir ~/.glib-schemas -p
+	@mkdir -p ~/.glib-schemas
 	@cp shredder/resources/org.gnome.Shredder.gschema.xml ~/.glib-schemas
 	@glib-compile-schemas ~/.glib-schemas
 
