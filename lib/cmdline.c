@@ -391,7 +391,15 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
 static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
                             const char *path) {
     RmCfg *cfg = session->cfg;
-    if(faccessat(AT_FDCWD, path, R_OK, AT_EACCESS) != 0) {
+    int rc = 0;
+
+#if HAVE_FACCESSAT
+    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
+#else
+    rc = access(path, R_OK);
+#endif
+
+    if(rc != 0) {
         rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
                             strerror(errno));
         return FALSE;

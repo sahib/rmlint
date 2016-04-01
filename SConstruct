@@ -226,6 +226,29 @@ def check_posix_fadvise(context):
     return rc
 
 
+def check_faccessat(context):
+    # Seems to be missing in Mac OSX <= 10.9
+    rc = 1
+
+    if tests.CheckDeclaration(
+        context, 'faccessat',
+        includes='#include <unistd.h>'
+    ):
+        rc = 0
+
+    if rc == 1 and tests.CheckDeclaration(
+        context, 'AT_FDCWD',
+        includes='#include <fcntl.h>'
+    ):
+        rc = 0
+
+    conf.env['HAVE_FACCESSAT'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_xattr(context):
     rc = 1
 
@@ -481,6 +504,7 @@ conf = Configure(env, custom_tests={
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_posix_fadvise': check_posix_fadvise,
+    'check_faccessat': check_faccessat,
     'check_sys_block': check_sys_block,
     'check_bigfiles': check_bigfiles,
     'check_c11': check_c11,
@@ -598,6 +622,7 @@ conf.check_sha512()
 conf.check_gettext()
 conf.check_linux_limits()
 conf.check_posix_fadvise()
+conf.check_faccessat()
 conf.check_btrfs_h()
 conf.check_uname()
 
