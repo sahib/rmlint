@@ -1,3 +1,5 @@
 .scon*
 -.o
 docs/rmlint.1
+.rmlint.json
+rmlint.json

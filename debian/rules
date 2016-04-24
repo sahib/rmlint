@@ -23,6 +23,10 @@ override_dh_auto_clean:
 override_dh_auto_build:
 	scons
 
+override_dh_auto_test:
+	# Ignore result of the test suite for now
+	-scons test
+
 override_dh_installman:
 	gunzip docs/rmlint.1.gz
 	dh_installman
