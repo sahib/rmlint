@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# encoding: utf-8
 def teardown():
     from .utils import usual_teardown_func
 

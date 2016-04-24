@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# encoding: utf-8
 from nose.plugins.attrib import attr
 from nose import with_setup
 from tests.utils import *
