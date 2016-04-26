@@ -595,7 +595,7 @@ void rm_preprocess(RmSession *session) {
     RmFile *current_size_file = file;
     guint removed = 0;
     GHashTable *node_table = tables->node_table;
-    while(file && !rm_session_was_aborted(session)) {
+    while(file && !rm_session_was_aborted()) {
         /* group files into inode clusters */
         GQueue *inode_cluster =
             rm_hash_table_setdefault(node_table, file, (RmNewFunc)g_queue_new);

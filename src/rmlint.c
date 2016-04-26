@@ -44,8 +44,9 @@ static char *remove_color_escapes(char *message) {
         }
     }
 
-    if(dst)
+    if(dst) {
         *dst = 0;
+    }
     return message;
 }
 
@@ -62,28 +63,20 @@ static void logging_callback(_UNUSED const gchar *log_domain,
     }
 }
 
-/* Global variables, signal handlers cannot be passed userdata */
-static volatile int CTRLC_COUNTER = 0;
-static volatile RmSession *SESSION_POINTER = NULL;
-
 static void signal_handler(int signum) {
     switch(signum) {
     case SIGINT:
-        if(CTRLC_COUNTER++ == 0) {
-            rm_session_abort((RmSession *)SESSION_POINTER);
-            rm_log_warning_line(_("Received Interrupt, stopping..."));
-        } else {
-            rm_log_warning_line(_("Received second Interrupt, stopping hard."));
-            rm_session_clear((RmSession *)SESSION_POINTER);
-            exit(EXIT_FAILURE);
-        }
+        rm_session_abort();
         break;
     case SIGSEGV:
+        /* logging messages might have unexpected effects in a signal handler,
+         * but that's probably the least thing we have to worry about in case of 
+         * a segmentation fault.
+         */
         rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
                           g_strsignal(signum));
         rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
     default:
-        exit(EXIT_FAILURE);
         break;
     }
 }
@@ -118,9 +111,6 @@ int main(int argc, const char **argv) {
     g_log_set_default_handler(logging_callback, &session);
 
     i18n_init();
-
-    /* Register signals */
-    SESSION_POINTER = &session;
 
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);

@@ -55,7 +55,7 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(rm_session_was_aborted(session)) {
+    if(rm_session_was_aborted()) {
         /* Clear the whole terminal line.
          * Progressbar might leave some junk.
          */

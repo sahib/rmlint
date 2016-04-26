@@ -722,7 +722,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             continue;
         }
 
-        if(rm_session_was_aborted(self->session)) {
+        if(rm_session_was_aborted()) {
             break;
         }
 
@@ -874,7 +874,7 @@ void rm_tm_finish(RmTreeMerger *self) {
 #endif
     }
 
-    if(!rm_session_was_aborted(self->session)) {
+    if(!rm_session_was_aborted()) {
         /* Recursively call self to march on */
         rm_tm_extract(self);
     }

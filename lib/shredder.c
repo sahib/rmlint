@@ -683,7 +683,7 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
     /* fake interrupt option for debugging/testing: */
     if(tag->after_preprocess && session->cfg->fake_abort &&
        session->shred_bytes_remaining * 10 < session->shred_bytes_total * 9) {
-        rm_session_abort(session);
+        rm_session_abort();
         /* prevent multiple aborts */
         session->shred_bytes_total = 0;
     }
@@ -1431,8 +1431,8 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
 
-    if(rm_session_was_aborted(session) || file->shred_group->has_only_ext_cksums) {
-        if(rm_session_was_aborted(session)) {
+    if(rm_session_was_aborted() || file->shred_group->has_only_ext_cksums) {
+        if(rm_session_was_aborted()) {
             file->status = RM_FILE_STATE_IGNORE;
         }
 

@@ -133,10 +133,32 @@ void rm_session_clear(RmSession *session) {
     rm_trie_destroy(&cfg->file_trie);
 }
 
-void rm_session_abort(RmSession *session) {
-    g_atomic_int_set(&session->aborted, 1);
+volatile int SESSION_ABORTED;
+
+void rm_session_abort(void) {
+    g_atomic_int_add(&SESSION_ABORTED, 1);
 }
 
-bool rm_session_was_aborted(RmSession *session) {
-    return g_atomic_int_get(&session->aborted);
+static gpointer rm_session_print_first_abort_warn(_UNUSED gpointer data) {
+    rm_log_warning("\r");
+    rm_log_warning_line(_("Received Interrupt, stopping..."));
+    return NULL;
+}
+
+bool rm_session_was_aborted() {
+    gint rc = g_atomic_int_get(&SESSION_ABORTED);
+
+    static GOnce print_once = G_ONCE_INIT;
+
+    switch(rc) {
+        case 1: 
+            g_once (&print_once, rm_session_print_first_abort_warn, NULL);
+            break;
+        case 2:
+            rm_log_warning_line(_("Received second Interrupt, stopping hard."));
+            exit(EXIT_FAILURE);
+            break;
+    }
+
+    return rc;
 }

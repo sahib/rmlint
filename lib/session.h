@@ -146,21 +146,21 @@ void rm_session_init(RmSession *session, RmCfg *cfg);
 void rm_session_clear(RmSession *session);
 
 /**
- * @brief Set the abort flag of RmSession.
+ * @brief Set the global abort flag.
  *
  * This flag is checked periodically on strategic points,
  * leading to an early but planned exit.
  *
  * Threadsafe.
  */
-void rm_session_abort(RmSession *session);
+void rm_session_abort(void);
 
 /**
  * @brief Check if rmlint was aborted early.
  *
  * Threadsafe.
  */
-bool rm_session_was_aborted(RmSession *session);
+bool rm_session_was_aborted(void);
 
 /**
  * @brief Check the kernel version of the Linux kernel.

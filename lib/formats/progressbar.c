@@ -329,11 +329,11 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN || rm_session_was_aborted(session)) {
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN || rm_session_was_aborted()) {
         fprintf(out, "\e[?25h"); /* show the cursor */
         fflush(out);
 
-        if(rm_session_was_aborted(session)) {
+        if(rm_session_was_aborted()) {
             return;
         }
     }

@@ -212,7 +212,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
     } else {
         rm_fmt_json_open(self, out);
         {
-            rm_fmt_json_key_bool(out, "aborted", rm_session_was_aborted(session));
+            rm_fmt_json_key_bool(out, "aborted", rm_session_was_aborted());
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "progress", 100); /* Footer is always last. */
             rm_fmt_json_sep(self, out);

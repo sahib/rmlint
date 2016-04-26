@@ -286,7 +286,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
 
-    while(!rm_session_was_aborted(trav_session->session) &&
+    while(!rm_session_was_aborted() &&
           (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if(cfg->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
@@ -442,7 +442,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         }
     }
 
-    if(errno != 0 && !rm_session_was_aborted(session)) {
+    if(errno != 0 && !rm_session_was_aborted()) {
         rm_log_error_line(_("'%s': fts_read failed on %s"), g_strerror(errno),
                           ftsp->fts_path);
     }
@@ -475,7 +475,7 @@ void rm_traverse_tree(RmSession *session) {
                      session->cfg->threads_per_disk,
                      NULL);
 
-    for(RmOff idx = 0; cfg->paths[idx] != NULL && !rm_session_was_aborted(session);
+    for(RmOff idx = 0; cfg->paths[idx] != NULL && !rm_session_was_aborted();
         ++idx) {
         char *path = cfg->paths[idx];
         bool is_prefd = cfg->is_prefd[idx];
