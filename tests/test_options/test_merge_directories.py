@@ -282,7 +282,7 @@ def test_keepall_tagged():
     ))
 
     assert len(data) == 4
-    assert footer['total_files'] == 8
+    assert footer['total_files'] == 4
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
 
@@ -312,7 +312,7 @@ def test_keepall_untagged():
     ))
 
     assert len(data) == 4
-    assert footer['total_files'] == 8
+    assert footer['total_files'] == 4
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
 
