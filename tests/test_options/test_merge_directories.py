@@ -276,27 +276,29 @@ def test_keepall_tagged():
     create_file('test', 'dups/folder/subfolder/file')
     create_file('test', 'dups/samefolder/subfolder/file')
 
-    head, *data, footer = run_rmlint('-D -S a -k -m {d} // {o}'.format(
-        d=os.path.join(TESTDIR_NAME, 'dups'),
-        o=os.path.join(TESTDIR_NAME, 'origs')
-    ))
+    for untagged_path in [os.path.join(TESTDIR_NAME, 'origs'), TESTDIR_NAME]:
+        for options in ['-D -S a -k -m {d} // {o}', '-D -S a -k {d} // {o}']:
+            head, *data, footer = run_rmlint(options.format(
+                d=untagged_path,
+                o=os.path.join(TESTDIR_NAME, 'origs')
+            ))
 
-    assert len(data) == 4
-    assert footer['total_files'] == 4
-    assert footer['duplicates'] == 2
-    assert footer['duplicate_sets'] == 1
+            assert len(data) == 4
+            assert footer['total_files'] == 4
+            assert footer['duplicates'] == 2
+            assert footer['duplicate_sets'] == 1
 
-    assert data[0]['path'].endswith('origs')
-    assert data[0]['is_original']
+            assert data[0]['path'].endswith('origs')
+            assert data[0]['is_original']
 
-    assert data[1]['path'].endswith('dups')
-    assert not data[1]['is_original']
+            assert data[1]['path'].endswith('dups')
+            assert not data[1]['is_original']
 
-    assert data[2]['path'].endswith('origs/folder')
-    assert data[2]['is_original']
+            assert data[2]['path'].endswith('origs/folder')
+            assert data[2]['is_original']
 
-    assert data[3]['path'].endswith('origs/samefolder')
-    assert data[3]['is_original']
+            assert data[3]['path'].endswith('origs/samefolder')
+            assert data[3]['is_original']
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -306,24 +308,26 @@ def test_keepall_untagged():
     create_file('test', 'dups/folder/subfolder/file')
     create_file('test', 'dups/samefolder/subfolder/file')
 
-    head, *data, footer = run_rmlint('-D -S a -K -m {d} // {o}'.format(
-        d=os.path.join(TESTDIR_NAME, 'dups'),
-        o=os.path.join(TESTDIR_NAME, 'origs')
-    ))
+    for untagged_path in [os.path.join(TESTDIR_NAME, 'origs'), TESTDIR_NAME]:
+        for options in ['-D -S a -K -M {d} // {o}', '-D -S a -K {d} // {o}']:
+            head, *data, footer = run_rmlint(options.format(
+                d=untagged_path,
+                o=os.path.join(TESTDIR_NAME, 'origs')
+            ))
 
-    assert len(data) == 4
-    assert footer['total_files'] == 4
-    assert footer['duplicates'] == 2
-    assert footer['duplicate_sets'] == 1
+            assert len(data) == 4
+            assert footer['total_files'] == 4
+            assert footer['duplicates'] == 2
+            assert footer['duplicate_sets'] == 1
 
-    assert data[0]['path'].endswith('dups')
-    assert data[0]['is_original']
+            assert data[0]['path'].endswith('dups')
+            assert data[0]['is_original']
 
-    assert data[1]['path'].endswith('origs')
-    assert not data[1]['is_original']
+            assert data[1]['path'].endswith('origs')
+            assert not data[1]['is_original']
 
-    assert data[2]['path'].endswith('dups/folder')
-    assert data[2]['is_original']
+            assert data[2]['path'].endswith('dups/folder')
+            assert data[2]['is_original']
 
-    assert data[3]['path'].endswith('dups/samefolder')
-    assert data[3]['is_original']
+            assert data[3]['path'].endswith('dups/samefolder')
+            assert data[3]['is_original']
