@@ -37,8 +37,8 @@ from shredder.runner import Script
 LOGGER = logging.getLogger('editor')
 
 
-REMOVED_LABEL = '''<big>{s}</big><small> removed</small>
-<small>{t}</small> <b><big>{p}</big></b>
+REMOVED_LABEL = '''<big>{s}</big><small> {n} removed</small>
+<small>Currently {t}</small> <b><big>{p}</big></b>
 '''
 
 
@@ -212,7 +212,12 @@ class RunningLabel(Gtk.Label):
             Gtk.STYLE_CLASS_DIM_LABEL
         )
         self.set_justify(Gtk.Justification.CENTER)
+        self._is_dry_run = False
         self.reset()
+
+    def set_is_dry_run(self, is_it):
+        """If it is a dry run, don't scare the user"""
+        self._is_dry_run = is_it
 
     def push(self, prefix, path):
         """Push a new path to the label, removing the old one."""
@@ -226,9 +231,10 @@ class RunningLabel(Gtk.Label):
             pass
 
         text = REMOVED_LABEL.format(
-            t=prefix,
+            t=prefix.lower(),
             s=size_to_human_readable(self._size_sum),
-            p=GLib.markup_escape_text(path)
+            p=GLib.markup_escape_text(path),
+            n="<b>would be</b>" if self._is_dry_run else ""
         )
         self.set_markup(text)
 
@@ -704,6 +710,7 @@ Or you can replay the output later with:
 
         LOGGER.info('Running script.')
         self.run_label.reset()
+        self.run_label.set_is_dry_run(self.run_button.dry_run)
         self.script.run(dry_run=self.run_button.dry_run)
 
     def on_view_enter(self):

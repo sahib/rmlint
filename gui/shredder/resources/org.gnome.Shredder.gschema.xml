@@ -59,7 +59,7 @@
             <range min="0" max="512"/>
             <default>512</default>
             <summary>Traversal depth</summary>
-            <description>»0« is only the current directory's files</description>
+            <description>»1« is only the current directory's files</description>
         </key>
         <key name="traverse-cross-mounts" type="b">
             <default>true</default>
