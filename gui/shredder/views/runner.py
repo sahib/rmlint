@@ -24,6 +24,7 @@ from shredder.runner import Runner
 
 
 LOGGER = logging.getLogger('runview')
+RENDER_CHOICES = ['All', 'Selected', 'Filtered']
 
 
 class ResultActionBar(Gtk.ActionBar):
@@ -67,7 +68,7 @@ class ResultActionBar(Gtk.ActionBar):
         )
 
         self.script_type_btn = MultipleChoiceButton(
-            ['All', 'Filtered', 'Selected'], 'All', 'All'
+            RENDER_CHOICES, 'All', 'All'
         )
         self.script_type_btn.set_relief(Gtk.ReliefStyle.NORMAL)
 
@@ -76,6 +77,13 @@ class ResultActionBar(Gtk.ActionBar):
 
         self.pack_end(right_box)
         self.set_sensitive(False)
+
+    def set_choice(self, choice):
+        """Set the current choice. Might be one of RENDER_CHOICES"""
+        if choice not in RENDER_CHOICES:
+            raise ValueError("Bad choice for button: " + choice)
+
+        self.script_type_btn.set_selected_choice(choice)
 
     def on_generate_script(self, _):
         """Called when the left side of the compound button was clicked."""
@@ -134,6 +142,7 @@ class RunnerView(View):
         self.is_running = False
 
         self._script_generated = False
+        self._is_filtered = False
 
         self.model = PathTreeModel([])
 
@@ -267,6 +276,13 @@ class RunnerView(View):
         """Called once the user entered a new query."""
         text = entry.get_text()
 
+        if text != "":
+            self._is_filtered, choice = True, "Filtered"
+        else:
+            self._is_filtered, choice = False, "All"
+
+        self.actionbar.set_choice(choice)
+
         sub_model = self.model.filter_model(text)
         if sub_model is not self.treeview.get_model():
             self.chart_stack.render(sub_model.trie.root)
@@ -340,8 +356,15 @@ class RunnerView(View):
     def on_selection_changed(self, _):
         """Called when the user clicks a specific row."""
         node = self.treeview.get_selected_node()
+
+        # Nothing selected:
         if node is None:
+            # "Filtered" trumps "All"
+            if not self._is_filtered:
+                self.actionbar.set_choice("All")
             return
+
+        self.actionbar.set_choice("Selected")
 
         if not node.children:
             # It is a single file.
