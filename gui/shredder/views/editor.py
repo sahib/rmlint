@@ -20,8 +20,13 @@ import logging
 from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Pango
-from gi.repository import Polkit
 from gi.repository import GObject
+
+try:
+    from gi.repository import Polkit
+    Polkit = None
+except ImportError:
+    Polkit = None
 
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
@@ -457,15 +462,16 @@ class OverlaySaveButton(Gtk.Overlay):
             'clicked', lambda _: self.emit('unlock-clicked')
         )
 
-        try:
-            perm = Polkit.Permission.new_sync(
-                'org.freedesktop.accounts.user-administration',
-                Polkit.UnixProcess.new_for_owner(os.getpid(), 0, -1),
-                None
-            )
-            self._lock_button.set_permission(perm)
-        except GLib.Error as err:
-            LOGGER.warning('Unable to get polkit permissions: ' + str(err))
+        if Polkit is not None:
+            try:
+                perm = Polkit.Permission.new_sync(
+                    'org.freedesktop.accounts.user-administration',
+                    Polkit.UnixProcess.new_for_owner(os.getpid(), 0, -1),
+                    None
+                )
+                self._lock_button.set_permission(perm)
+            except GLib.Error as err:
+                LOGGER.warning('Unable to get polkit permissions: ' + str(err))
 
 
         self._save_button = IconButton(
@@ -477,7 +483,10 @@ class OverlaySaveButton(Gtk.Overlay):
             'clicked', lambda _: self.emit('save-clicked')
         )
 
-        self._box.pack_start(self._lock_button, False, True, 0)
+        # Note: we're not showing the lock button yet,
+        #       since we did not yet a policy for it.
+        #
+        # self._box.pack_start(self._lock_button, False, True, 0)
         self._box.pack_start(self._save_button, False, True, 0)
         self._box.set_hexpand(False)
         self._box.set_vexpand(False)
