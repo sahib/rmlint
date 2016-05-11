@@ -116,9 +116,56 @@ static void rm_cmd_show_manpage(void) {
     exit(0);
 }
 
+/*
+* Debian and Ubuntu based distributions fuck up setuptools
+* by expecting packages to be installed to dist-packages and not site-packages
+* like expected by setuptools. This breaks a lot of packages with the reasoning
+* to reduce conflicts between system and user packages:
+* 
+*    https://stackoverflow.com/questions/9387928/whats-the-difference-between-dist-packages-and-site-packages
+* 
+* We try to work around this by manually installing dist-packages to the
+* sys.path by first calling a small bootstrap script.
+*/
+static const char RM_PY_BOOTSTRAP[] = ""
+"# This is a bootstrap script for the rmlint-gui.                              \n"
+"# See the src/rmlint.c in rmlint's source for more info.                      \n"
+"import sys                                                                    \n"
+"                                                                              \n"
+"# Also default to dist-packages on debian(-based):                            \n"
+"paths = [p for p in sys.path if 'site-package' in p]                          \n"
+"sys.path.extend([d.replace('site-packages', 'dist-packages') for d in paths]) \n"
+"                                                                              \n"
+"# Run shredder by importing the main:                                         \n"
+"try:                                                                          \n"
+"    import shredder                                                           \n"
+"    shredder.run_gui()                                                        \n"
+"except ImportError as err:                                                    \n"
+"    print('oh', err)                                                          \n"
+;
+
+
 static void rm_cmd_start_gui(int argc, const char **argv) {
     const char *commands[] = {"python3", "python", NULL};
     const char **command = &commands[0];
+
+    GError *error = NULL;
+    gchar *bootstrap_path = NULL;
+    int bootstrap_fd = g_file_open_tmp(".shredder-bootstrap.py.XXXXXX", &bootstrap_path, &error);
+
+    if(bootstrap_fd < 0) {
+        rm_log_warning("Could not bootstrap gui: Unable to create tempfile: %s", error->message);
+        g_error_free(error);
+        return;
+    }
+
+    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, sizeof(RM_PY_BOOTSTRAP)) < 0) {
+        rm_log_warning_line(
+            "Could not bootstrap gui: Unable to write to tempfile: %s",
+            g_strerror(errno)
+        );
+        return;
+    }
 
     while(*command) {
         const char *all_argv[512];
@@ -126,8 +173,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         memset(all_argv, 0, sizeof(all_argv));
 
         *argp++ = *command;
-        *argp++ = "-m";
-        *argp++ = "shredder";
+        *argp++ = bootstrap_path;
 
         for(size_t i = 0; i < (size_t)argc && i < sizeof(all_argv) / 2; i++) {
             *argp++ = argv[i];
@@ -147,6 +193,15 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
 
         /* Try next command... */
         command++;
+    }
+
+    close(bootstrap_fd);
+
+    if(g_remove(bootstrap_path) < 0) {
+        rm_log_warning_line(
+            "Could not delete bootstrap script: %s",
+            g_strerror(errno)
+        );
     }
 }
 
