@@ -24,7 +24,6 @@ from gi.repository import GObject
 
 try:
     from gi.repository import Polkit
-    Polkit = None
 except ImportError:
     Polkit = None
 
