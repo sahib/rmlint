@@ -647,6 +647,7 @@ class EditorView(View):
 
     def set_info_review_text(self):
         """Set the normal 'Review the script' text."""
+        self.state_btn.show_all()
         self.info_label.set_markup('''
 
 
@@ -678,6 +679,14 @@ It can be executed via <span font_family="monospace">./rmlint.sh</span>
 Or you can replay the output later with:
     <span font_family="monospace">rmlint --replay /path/to/file.json</span>
 ''')
+        self.state_label.set_markup('''
+
+
+<small><b>Note:</b> You can select the filetype in the header.</small>
+
+''')
+        self.state_btn.hide()
+
 
     def _switch_back(self):
         """Switch back from delete-view to script view"""
