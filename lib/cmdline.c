@@ -130,18 +130,25 @@ static void rm_cmd_show_manpage(void) {
 static const char RM_PY_BOOTSTRAP[] = ""
 "# This is a bootstrap script for the rmlint-gui.                              \n"
 "# See the src/rmlint.c in rmlint's source for more info.                      \n"
-"import sys                                                                    \n"
+"import sys, os                                                                \n"
 "                                                                              \n"
 "# Also default to dist-packages on debian(-based):                            \n"
 "paths = [p for p in sys.path if 'site-package' in p]                          \n"
 "sys.path.extend([d.replace('site-packages', 'dist-packages') for d in paths]) \n"
+"                                                                              \n"
+"# Cleanup self:                                                               \n"
+"try:                                                                          \n"
+"    os.remove(sys.argv[0])                                                    \n"
+"except:                                                                       \n"
+"    print('Note: Could not remove bootstrap script at ', sys.argv[0])         \n"
 "                                                                              \n"
 "# Run shredder by importing the main:                                         \n"
 "try:                                                                          \n"
 "    import shredder                                                           \n"
 "    shredder.run_gui()                                                        \n"
 "except ImportError as err:                                                    \n"
-"    print('oh', err)                                                          \n"
+"    print('Failed to load shredder:', err)                                    \n"
+"    print('This might be due to a corrupted install; try reinstalling.')      \n"
 ;
 
 
@@ -166,6 +173,8 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         );
         return;
     }
+
+    close(bootstrap_fd);
 
     while(*command) {
         const char *all_argv[512];
@@ -193,15 +202,6 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
 
         /* Try next command... */
         command++;
-    }
-
-    close(bootstrap_fd);
-
-    if(g_remove(bootstrap_path) < 0) {
-        rm_log_warning_line(
-            "Could not delete bootstrap script: %s",
-            g_strerror(errno)
-        );
     }
 }
 
