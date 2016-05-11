@@ -41,7 +41,6 @@ REMOVED_LABEL = '''<big>{s}</big><small> {n} removed</small>
 <small>Currently {t}</small> <b><big>{p}</big></b>
 '''
 
-
 #############################
 # Try to load GtkSourceView #
 #############################
@@ -171,15 +170,9 @@ def _create_finished_screen(callback):
 
     # Lies make the user feel comfortable:
     label = Gtk.Label(
-        use_markup=True,
-        label='''<span font="65">✔</span>
-
+        use_markup=True, label='''<span font="65">✔</span>
 
 <big><b>All went well!</b></big>
-
-
-
-
 ''',
         justify=Gtk.Justification.CENTER
     )
@@ -244,26 +237,15 @@ class RunningLabel(Gtk.Label):
         self.push('', '')
 
 
-class RunButton(Gtk.Box):
+class RunButton(IconButton):
     """Customized run button that can change color."""
     dry_run = GObject.Property(type=bool, default=True)
 
-    def __init__(self, icon, label):
-        Gtk.Box.__init__(self)
-        self.get_style_context().add_class(
-            Gtk.STYLE_CLASS_LINKED
-        )
+    def __init__(self, icon, label, state_btn):
+        IconButton.__init__(self, icon, label)
+        self.state = state_btn
+        self.state.connect('notify::active', self._toggle_dry_run)
 
-        self.button = IconButton(icon, label)
-        self.state = Gtk.ToggleButton()
-        self.state.add(
-            Gtk.Label(use_markup=True, label='<small>Dry run?</small>')
-        )
-
-        self.state.connect('toggled', self._toggle_dry_run)
-
-        self.pack_start(self.button, True, True, 0)
-        self.pack_start(self.state, False, False, 0)
         self.bind_property(
             'dry_run', self.state, 'active',
             GObject.BindingFlags.BIDIRECTIONAL |
@@ -274,29 +256,27 @@ class RunButton(Gtk.Box):
         self._toggle_dry_run(self.state)
 
     def set_sensitive(self, mode):
-        btn_ctx = self.button.get_style_context()
-        dry_ctx = self.state.get_style_context()
+        btn_ctx = self.get_style_context()
 
         if mode:
             btn_ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-            dry_ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
         else:
             btn_ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-            dry_ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
 
-        self.button.set_sensitive(mode)
+        IconButton.set_sensitive(self, mode)
         self.state.set_sensitive(mode)
 
-    def _toggle_dry_run(self, btn):
+    def _toggle_dry_run(self, *_):
         """Change the color and severeness of the button."""
-        for widget in [self.button, self.state]:
-            ctx = widget.get_style_context()
-            if not btn.get_active():
-                ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
-                ctx.add_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
-            else:
-                ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
-                ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+        ctx = self.get_style_context()
+        if not self.state.get_state():
+            ctx.remove_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            ctx.add_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
+            self.set_markup("Go delete some files!")
+        else:
+            ctx.remove_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
+            ctx.add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            self.set_markup("Run in dry mode")
 
 
 def _create_icon_stack():
@@ -522,7 +502,13 @@ class EditorView(View):
         self.info_label.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL
         )
-        self.set_info_review_text()
+        self.state_label = Gtk.Label(
+            use_markup=True,
+            justify=Gtk.Justification.CENTER
+        )
+        self.state_label.get_style_context().add_class(
+            Gtk.STYLE_CLASS_DIM_LABEL
+        )
 
         self.icon_stack = _create_icon_stack()
 
@@ -585,14 +571,22 @@ class EditorView(View):
         left_pane.pack_start(self.left_stack, True, True, 0)
         left_pane.pack_start(separator, False, False, 0)
 
+        self.state_btn = Gtk.Switch()
+        self.state_btn.set_hexpand(False)
+        self.state_btn.set_halign(Gtk.Align.CENTER)
         self.run_button = RunButton(
-            'user-trash-symbolic', 'Run Script'
+            'user-trash-symbolic', 'Run Script!', self.state_btn
         )
-        self.run_button.button.connect('clicked', self.on_run_script_clicked)
+
+        self.run_button.connect('clicked', self.on_run_script_clicked)
         self.run_button.set_halign(Gtk.Align.CENTER)
-        self.run_button.connect(
-            'notify::dry-run', lambda *_: self.set_correct_icon()
-        )
+        self.set_info_review_text()
+
+        def on_dry_run_changed(*_):
+            self.set_correct_icon()
+            self.set_info_review_text()
+
+        self.run_button.connect('notify::dry-run', on_dry_run_changed)
 
         control_grid.attach(self.info_label, 0, 0, 1, 1)
         control_grid.attach_next_to(
@@ -600,6 +594,12 @@ class EditorView(View):
         )
         control_grid.attach_next_to(
             self.icon_stack, self.info_label, Gtk.PositionType.TOP, 1, 1
+        )
+        control_grid.attach_next_to(
+            self.state_label, self.run_button, Gtk.PositionType.BOTTOM, 1, 1
+        )
+        control_grid.attach_next_to(
+            self.state_btn, self.state_label, Gtk.PositionType.BOTTOM, 1, 1
         )
         control_grid.set_border_width(15)
 
@@ -649,9 +649,25 @@ class EditorView(View):
         """Set the normal 'Review the script' text."""
         self.info_label.set_markup('''
 
+
 <big><b>Review the script on the left!</b></big>
 When done, click the `Run Script` button below.
 \n\n''')
+
+        if self.run_button.dry_run:
+            self.state_label.set_markup('''
+
+<small><i>
+I will currently only do a </i><b>dry run</b>.<i>
+Please toggle the switch below to actually delete files:</i></small>
+            ''')
+        else:
+            self.state_label.set_markup('''
+
+<small><i>
+Will run in </i><b>destructive mode and will delete files!</b><i>
+Please toggle the switch below to go back to dry run:</i></small>
+            ''')
 
     def set_info_help_text(self):
         """Be a bit more helpful on the help dialog."""
