@@ -78,7 +78,9 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, 
             'G_DEBUG': 'gc-friendly',
             'G_SLICE': 'always-malloc'
         }
-        cmd = [which('valgrind'), '--show-possibly-lost=no', '-q']
+        cmd = [which('valgrind'), '--error-exitcode=1', '-q']
+        if get_env_flag('RM_TS_CHECK_LEAKS'):
+            cmd.extend( ['--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite'] )
     elif get_env_flag('RM_TS_USE_GDB'):
         env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
     else:
