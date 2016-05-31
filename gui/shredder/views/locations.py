@@ -318,6 +318,9 @@ class LocationView(View):
 
         # Mounted volumes:
         for mount in self.volume_monitor.get_mounts():
+            if mount.get_root().get_path() is None:
+                continue
+
             info = mount.get_root().query_filesystem_info(
                 ','.join([
                     Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE,
