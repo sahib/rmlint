@@ -139,6 +139,8 @@ Done!
 You should be now able to see the manpage with ``rmlint --help`` or ``man 1
 rmlint``.
 
+Uninstall with ``sudo scons uninstall`` and clean with ``scons -c``.
+
 You can also only type the ``install`` command above. The buildsystem is clever
 enough to figure out which targets need to be built beforehand.
 
