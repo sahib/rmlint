@@ -235,8 +235,8 @@ class SettingsView(View):
         listbox.insert(row, -1)
 
         self.metadata[section.lower()][key_name] = {
-            'summary': summary.lower() or '',
-            'description': desc.lower() or '',
+            'summary': '' if summary is None else summary.lower(),
+            'description': '' if desc is None else desc.lower(),
             'widget': row
         }
 
