@@ -104,7 +104,7 @@ Here's a list of readily prepared commands for known distributions:
 
   .. code-block:: bash
 
-    $ pkg install git scons py27-sphinx
+    $ pkg install git scons py27-sphinx pkgconf
     $ pkg install glib gettext libelf json-glib
 
 -----
