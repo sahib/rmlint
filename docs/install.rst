@@ -32,16 +32,16 @@ Build dependencies:
 * **sphinx** (manpage/documentation generation)
 * **gettext** (support for localization)
 
-Here's a list of readily prepared commands for known distributions:
+Here's a list of readily prepared commands for known operating systems:
 
 * **Fedora** :math:`\geq 21`:
 
   .. code-block:: bash
-  
+
     $ yum -y install git scons python3-sphinx gettext json-glib-devel
     $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
     # Optional dependencies for the GUI:
-    $ yum -y install pygobject3 gtk3 librsvg2 
+    $ yum -y install pygobject3 gtk3 librsvg2
 
   There are also pre-built packages on `Fedora Copr`_:
 
@@ -99,6 +99,28 @@ Here's a list of readily prepared commands for known distributions:
     $ apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 python-cairo gir1.2-polkit-1.0 gir1.2-gtksource-3.0 
 
 .. _`still ships`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
+
+* **macOS**
+
+  ``rmlint`` can be installed via `homebrew`_:
+
+  Prerequisite: If homebrew has not already been installed on the system, execute:
+
+  .. code-block:: bash
+
+      $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)".
+
+  With homebrew installed, execute:
+
+  .. code-block:: bash
+
+      $ brew install rmlint
+
+
+  See also this `homebrew issue`_ for more information on the homebrew formula.
+
+.. _homebrew: http://brew.sh
+.. _homebrew issue: https://github.com/sahib/rmlint/issues/175#issuecomment-253186769
 
 * **FreeBSD** :math:`\geq 10.1`:
 
