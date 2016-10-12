@@ -117,10 +117,10 @@ Here's a list of readily prepared commands for known operating systems:
       $ brew install rmlint
 
 
-  See also this `homebrew issue`_ for more information on the homebrew formula.
+  See also this `issue`_ for more information on the homebrew formula.
 
 .. _homebrew: http://brew.sh
-.. _homebrew issue: https://github.com/sahib/rmlint/issues/175#issuecomment-253186769
+.. _issue: https://github.com/sahib/rmlint/issues/175#issuecomment-253186769
 
 * **FreeBSD** :math:`\geq 10.1`:
 
