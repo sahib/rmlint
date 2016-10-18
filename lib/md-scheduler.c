@@ -81,7 +81,7 @@ struct _RmMDS {
     gpointer user_data;
 };
 
-typedef struct _RmMDSDevice {
+struct _RmMDSDevice {
     /* Structure containing data associated with one Device worker thread */
 
     /* The RmMDS session parent */
@@ -113,7 +113,7 @@ typedef struct _RmMDSDevice {
     /* is disk rotational? */
     gboolean is_rotational;
 
-} RmMDSDevice;
+};
 
 //////////////////////////////////////////////
 //  Internal Structure Init's & Destroyers  //
