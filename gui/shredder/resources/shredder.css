@@ -64,7 +64,8 @@
 @define-color script_editor rgb(220, 220, 220);
 
 #ShredderScriptEditor {
-    font: monospaced 9;
+    font-family: "Monospaced";
+    font-size: 9pt;
 }
 
 #ShredderLocationEntry {

@@ -107,7 +107,11 @@ class Application(Gtk.Application):
         css_data = Gio.resources_lookup_data(
             '/org/gnome/shredder/shredder.css', 0
         )
-        load_css_from_data(css_data.get_data())
+
+        try:
+            load_css_from_data(css_data.get_data())
+        except Exception as err:
+            LOGGER.warning("Failed to load css data: " + str(err))
 
         # Init the config system
         self.settings = Gio.Settings.new('org.gnome.Shredder')
