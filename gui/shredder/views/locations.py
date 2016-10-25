@@ -168,7 +168,13 @@ class LocationEntry(Gtk.ListBoxRow):
             level_label.set_vexpand(False)
 
             used, total = fill_level
-            percent = int(used / total * 100)
+
+            # Watch for zero division:
+            if total > 0:
+                percent = int(used / total * 100)
+            else:
+                percent = 100
+
             level_label.set_markup(
                 '<small>{f} / {t} - {p}%</small>'.format(
                     f=size_to_human_readable(used),
