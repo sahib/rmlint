@@ -30,7 +30,8 @@ try:
     html_theme = 'bootstrap'
     html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 except ImportError:
-    print('Cannot import sphinx_bootstrap_theme; falling back to `nature`.')
+    print('Cannot import `sphinx_bootstrap_theme`; falling back to `nature`.')
+    print('^ This is no error, will cause only slightly different html output.')
     html_theme = 'nature'
 
 # -- General configuration -----------------------------------------------------

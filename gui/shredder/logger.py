@@ -64,7 +64,8 @@ def create_logger(name=None, path=None, verbosity=logging.DEBUG):
                 )
 
     except ImportError:
-        print('Could not import colorlog')
+        print('Could not import colorlog. This is not an error.')
+        print('You just will not have colors in the logging output...')
         col_formatter = formatter
     else:
         col_formatter = SymbolFormatter(
