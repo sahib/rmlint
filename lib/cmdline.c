@@ -121,9 +121,9 @@ static void rm_cmd_show_manpage(void) {
 * by expecting packages to be installed to dist-packages and not site-packages
 * like expected by setuptools. This breaks a lot of packages with the reasoning
 * to reduce conflicts between system and user packages:
-* 
+*
 *    https://stackoverflow.com/questions/9387928/whats-the-difference-between-dist-packages-and-site-packages
-* 
+*
 * We try to work around this by manually installing dist-packages to the
 * sys.path by first calling a small bootstrap script.
 */
@@ -232,10 +232,10 @@ static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
 }
 
 static void rm_cmd_btrfs_clone_usage(void) {
-    rm_log_error(_("Usage: rmlint --btrfs-clone source dest\n"));
+    rm_log_error(_("Usage: rmlint --btrfs-clone [-r] source dest\n"));
 }
 
-static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
+static void rm_cmd_btrfs_clone(const char *source, const char *dest, const gboolean read_only) {
 #if HAVE_BTRFS_H
     struct {
         struct btrfs_ioctl_same_args args;
@@ -249,9 +249,11 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
         return;
     }
 
-    extent_same.info.fd = rm_sys_open(dest, O_RDWR);
+    extent_same.info.fd = rm_sys_open(dest, read_only ? O_RDONLY : O_RDWR);
     if(extent_same.info.fd < 0) {
-        rm_log_error_line(_("btrfs clone: failed to open dest file."));
+        rm_log_error_line(_("btrfs clone: error %i: failed to open dest file.%s"),
+                errno,
+                read_only ? "" : _("\n\t(if target is a read-only snapshot then -r option is required)"));
         rm_sys_close(source_fd);
         return;
     }
@@ -288,10 +290,9 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
         ret = errno;
         rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"), ret,
                           strerror(ret));
-    } else if(extent_same.info.status == -22) {
+    } else if(extent_same.info.status == -22 && read_only && getuid()) {
         rm_log_error_line(
-            _("BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel "
-              "> 4.2"));
+            _("Need to run as root user to clone to a read-only snapshot"));
     } else if(extent_same.info.status < 0) {
         rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
                           extent_same.info.status, dest);
@@ -308,17 +309,22 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest) {
 }
 
 static int rm_cmd_maybe_btrfs_clone(RmSession *session, int argc, const char **argv) {
-    if(g_strcmp0("--btrfs-clone", argv[1]) == 0) {
-        if(argc != 4) {
-            rm_cmd_btrfs_clone_usage();
-            return EXIT_FAILURE;
-        } else if(!rm_session_check_kernel_version(session, 4, 2)) {
+    if(argc > 0 && g_strcmp0("--btrfs-clone", argv[1]) == 0) {
+        /* treat as a btrfs clone subcommand... */
+        if(!rm_session_check_kernel_version(session, 4, 2)) {
             rm_log_warning_line("This needs at least linux >= 4.2.");
-            return EXIT_FAILURE;
+        } else if(argc ==5 && g_strcmp0("-r", argv[2]) == 0) {
+            /* -r option for deduping read-only snapshots */
+            /* TODO: add check for root user permissions */
+            rm_cmd_btrfs_clone(argv[3], argv[4], TRUE);
+        } else if(argc == 4) {
+            rm_cmd_btrfs_clone(argv[2], argv[3], FALSE);
         } else {
-            rm_cmd_btrfs_clone(argv[2], argv[3]);
-            return EXIT_FAILURE;
+            /* malformed command */
+            rm_cmd_btrfs_clone_usage();
         }
+        /* return EXIT_FAILURE to indicate not to go ahead with main rmlint call */
+        return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
