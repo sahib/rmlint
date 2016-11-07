@@ -12,6 +12,9 @@ DO_DRY_RUN=
 # Set to true on -p
 DO_PARANOID_CHECK=
 
+# Set to true on -r
+DO_CLONE_READONLY=
+
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
@@ -136,7 +139,11 @@ clone() {
     # clone $1 from $2's data
     echo 'Cloning to: ' "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        rmlint --btrfs-clone "$2" "$1"
+        if [ -n "$DO_CLONE_READONLY" ]; then
+            sudo rmlint --btrfs-clone -r "$2" "$1"
+        else
+            rmlint --btrfs-clone "$2" "$1"
+        fi
     fi
 }
 
@@ -198,6 +205,7 @@ OPTIONS:
   -d   Do not ask before running.
   -x   Keep rmlint.sh; do not autodelete it.
   -p   Recheck that files are still identical before removing duplicates.
+  -r   Allow btrfs-clone to clone to read-only snapshots (requires sudo)
   -n   Do not perform any modifications, just print what would be done.
 EOF
 }
@@ -205,7 +213,7 @@ EOF
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxnp" OPTION
+while getopts "dhxnrp" OPTION
 do
   case $OPTION in
      h)
@@ -220,6 +228,10 @@ do
        ;;
      n)
        DO_DRY_RUN=true
+       ;;
+     r)
+       DO_CLONE_READONLY=true
+       echo DO_CLONE_READONLY=true
        ;;
      p)
        DO_PARANOID_CHECK=true
