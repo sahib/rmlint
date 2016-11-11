@@ -173,6 +173,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp,
         file->is_symlink = is_symlink;
         file->is_hidden = is_hidden;
         file->is_on_subvol_fs = is_on_subvol_fs;
+		file->link_count = statp->st_nlink;
 
         rm_file_list_insert_file(file, session);
 

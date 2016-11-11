@@ -116,6 +116,10 @@ typedef struct RmFile {
      */
     short depth;
 
+	/* Link count (number of hardlinks + 1) of the file as told by stat()
+	 */
+	short link_count;
+
     /* Depth of the path of this file.
      */
     guint8 path_depth;
