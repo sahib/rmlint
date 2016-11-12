@@ -302,9 +302,9 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest, const gbool
         rm_log_info_line(_("Files don't match - not cloned"));
     }
 #else
-
     (void)source;
     (void)dest;
+    (void)read_only;
     rm_log_error_line(_("rmlint was not compiled with btrfs support."))
 
 #endif

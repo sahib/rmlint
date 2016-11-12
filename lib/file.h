@@ -114,16 +114,16 @@ typedef struct RmFile {
 
     /* Depth of the file, relative to the path it was found in.
      */
-    short depth;
+    gint16 depth;
 
-	/* Link count (number of hardlinks + 1) of the file as told by stat()
-	 */
-	short link_count;
+    /* Link count (number of hardlinks + 1) of the file as told by stat()
+     */
+    gint16 link_count;
 
     /* Hardlinks to this file *outside* of the paths that rmlint traversed.
      * This is used for the outlyer sortcriteria (O).
      * */
-    short outter_link_count;
+    gint16 outter_link_count;
 
     /* Depth of the path of this file.
      */
