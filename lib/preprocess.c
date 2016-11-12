@@ -275,8 +275,13 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
         char curr_crit = tolower((unsigned char)sortcrit[i]);
 
         /* Check if it's a non-regex sortcriteria */
-        if(!((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<')) {
+        if(!(curr_crit == 'r' || curr_crit == 'x')) {
             continue;
+        }
+
+        if (sortcrit[i + 1] != '<') {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("no pattern given in <> after 'r' or 'x'"));
+            break;
         }
 
         GRegex *regex = NULL;
