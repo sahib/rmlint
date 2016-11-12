@@ -84,6 +84,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path,
     self->is_original = false;
     self->is_symlink = false;
     self->path_index = path_index;
+    self->outter_link_count = -1;
 
     return self;
 }

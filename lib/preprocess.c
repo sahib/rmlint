@@ -381,9 +381,12 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
             case 'd':
                 cmp = (short)a->depth - (short)b->depth;
                 break;
-			case 'h':
-				cmp = (long)a->link_count - (long)b->link_count;
-				break;
+            case 'h':
+                cmp = (long)a->link_count - (long)b->link_count;
+                break;
+            case 'o':
+                cmp = (guint64)a->outter_link_count - (guint64)b->outter_link_count;
+                break;
             case 'p':
                 cmp = (long)a->path_index - (long)b->path_index;
                 break;

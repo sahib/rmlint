@@ -120,6 +120,11 @@ typedef struct RmFile {
 	 */
 	short link_count;
 
+    /* Hardlinks to this file *outside* of the paths that rmlint traversed.
+     * This is used for the outlyer sortcriteria (O).
+     * */
+    short outter_link_count;
+
     /* Depth of the path of this file.
      */
     guint8 path_depth;
