@@ -89,6 +89,22 @@ def test_sorting():
 
         validate_order(data, combo)
 
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_sort_by_outlyer():
+    create_file('xxx', 'a/foo')
+    create_file('xxx', 'b/foo')
+
+    create_link('a/foo', 'b/foo-from-a')
+    create_link('b/foo', 'b/foo-copy-1')
+    create_link('b/foo', 'b/foo-copy-2')
+
+    head, *data, footer = run_rmlint(
+        "-S O {t}/b".format(t=TESTDIR_NAME), use_default_dir=False
+    )
+    assert data[0]['path'].endswith('b/foo-from-a')
+
+    head, *data, footer = run_rmlint('-S OHa')
+    assert data[0]['path'].endswith('b/foo')
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sort_by_regex():
