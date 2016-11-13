@@ -106,6 +106,53 @@ def test_sort_by_outlyer():
     head, *data, footer = run_rmlint('-S OHa')
     assert data[0]['path'].endswith('b/foo')
 
+
+# See this issue for more information.
+# https://github.com/sahib/rmlint/issues/196
+#
+# Testsetup by "Awerick"
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_sort_by_outlyer_hardcore():
+    for suffix in 'ABCD':
+        create_file('xxx', 'inside/foo' + suffix)
+
+    create_dirs('outside')
+
+    # fooA:
+    for i in range(2, 6):
+        create_link('inside/fooA', 'inside/fooA_link_' + str(i))
+
+    # fooB:
+    for i in range(2, 5):
+        create_link('inside/fooB', 'inside/fooB_link_' + str(i))
+    create_link('inside/fooB', 'outside/fooB_link_5')
+
+    # fooC:
+    create_link('inside/fooC', 'inside/fooC_link_2')
+    create_link('inside/fooC', 'outside/fooC_link_3')
+    create_link('inside/fooC', 'outside/fooC_link_4')
+
+    # fooD:
+    create_link('inside/fooD', 'outside/fooD_link_2')
+    create_link('inside/fooD', 'outside/fooD_link_3')
+
+    def run_inside_job(crit):
+        head, *data, footer = run_rmlint(
+            "-S {c} {t}/inside".format(
+                c=crit,
+                t=TESTDIR_NAME,
+            ), use_default_dir=False
+        )
+
+        return data[0]['path']
+
+    assert run_inside_job('Ha').endswith('inside/fooA')
+    assert run_inside_job('HOa').endswith('inside/fooB')
+    assert run_inside_job('OHa').endswith('inside/fooC')
+    assert run_inside_job('OA').endswith('inside/fooD')
+
+
+
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sort_by_regex():
     create_file('xxx', 'aaaa')
