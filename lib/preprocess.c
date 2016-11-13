@@ -127,7 +127,11 @@ static ino_t rm_path_parent_inode(RmFile *file) {
     rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent, parent_path, PATH_MAX);
     RmStat stat_buf;
     int retval = rm_sys_stat(parent_path, &stat_buf);
-    rm_assert_gentle(retval != -1);
+    if (retval == -1) {
+        rm_log_error_line("Failed to get parent path: stat failed: %s", g_strerror(errno));
+        return 0;
+    }
+
     return stat_buf.st_ino;
 }
 
