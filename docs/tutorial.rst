@@ -500,20 +500,54 @@ backup files, ie **a.txt.bak** comes after **a.txt**.
 
 Here's a table of letters you can supply to the ``-S`` option:
 
-===== ================================ ===== =================================
-**m** keep lowest mtime (oldest)       **M** keep highest mtime (newest)
-**a** keep first alphabetically        **A** keep last alphabetically
-**p** keep first named path            **P** keep last named path
-**d** keep path with lowest depth      **D** keep path with highest depth
-**l** keep path with shortest basename **L** keep path with longest basename
-===== ================================ ===== =================================
+===== ========================================================================================== ===== =================================
+**m** keep lowest mtime (oldest)                                                                 **M** keep highest mtime (newest)
+**a** keep first alphabetically                                                                  **A** keep last alphabetically
+**p** keep first named path                                                                      **P** keep last named path
+**d** keep path with lowest depth                                                                **D** keep path with highest depth
+**l** keep path with shortest basename                                                           **L** keep path with longest basename
+**r** keep paths matching regex                                                                  **R** keep path not matching regex
+**x** keep basenames matching regex                                                              **X** keep basenames not matching regex
+**h** keep file with lowest hardlink count                                                       **H** keep file with highest hardlink count
+**o** keep file with lowest number of hardlinks outside of the paths traversed by ``rmlint``.    **O** keep file with highest number of hardlinks outside of the paths traversed by ``rmlint``.
+===== ========================================================================================== ===== =================================
 
-The default setting is ``-S pm``.
-Multiple sort criteria can be specified, eg ``-S mpa`` will sort first by
-mtime, then (if tied), based on which path you specified first in the
-rmlint command, then finally based on alphabetical order of file name.
-Note that "original directory" criteria (see below) take precedence over
-any ``-S`` options.
+The default setting is ``-S pOHma``. Multiple sort criteria can be specified,
+eg ``-S mpa`` will sort first by mtime, then (if tied), based on which path you
+specified first in the rmlint command, then finally based on alphabetical order
+of file name. Note that "original directory" criteria (see below) take
+precedence over any ``-S`` options.
+
+Alphabetical sort will only use the basename of the file and ignore its case.
+One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
+**Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+
+For more fine grained control, it is possible to give a regular expression
+to sort by. This can be useful when you know a common fact that identifies
+original paths (like a path component being ``src`` or a certain file ending).
+
+To use the regular expression you simply enclose it in the criteria string
+by adding `<REGULAR_EXPRESSION>` after specifying `r` or `x`. Example: ``-S
+'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files.
+
+Warning: When using **r** or **x**, try to make your regex to be as specific
+as possible! Good practice includes adding a ``$`` anchor at the end of the regex.
+
+**Tips:**
+
+- **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
+- **a** can be used as last criteria to assert a defined order.
+- **o/O** and **h/H** are only useful if there any hardlinks in the traversed path.
+- **o/O** minimises/maximises the number of hardlinks *outside* the traversed paths.
+  **h/H** in contrast only takes the number of hardlinks *inside* of the traversed paths.
+  When hardlinking files, one would like to link to the original file with the highest outer
+  link count (**O**) in order to maximise the space cleanup. If there are no outside hardlinks,
+  one should link to the highest link count (**H**) in order to maximise the total hardlink count
+  to save disk space. This does not only apply to hardlinking files (``-c sh:hardlinks``),
+  but also to removing files (which might be hardlinks) and other handlers.
+- **pOHma** is the default since **p** ensures that first given paths rank as originals,
+  **OH** ensures that hardlinks are handled well, **m** ensures that the oldest file is the
+  original and **a** simply ensures a defined ordering if no other criteria applies.
 
 Flagging original directories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

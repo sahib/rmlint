@@ -98,7 +98,6 @@ typedef guint16 RmPatternBitmask;
 /**
  * RmFile structure; used by pretty much all rmlint modules.
  */
-
 typedef struct RmFile {
     /* file path lookup ID (if using swap table)
         * */

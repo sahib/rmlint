@@ -328,7 +328,7 @@ Original Detection Options
     Only look for duplicates of which at least one is in one of the tagged paths.
     (Paths that were named after **//**).
 
-:``-S --rank-by=criteria`` (**default\:** *pm*):
+:``-S --rank-by=criteria`` (**default\:** *pOHma*):
 
     Sort the files in a group of duplicates into originals and duplicates by
     one or more criteria. Each criteria is defined by a single letter (except
@@ -341,7 +341,6 @@ Original Detection Options
     - **p**: keep first named path                **P**: keep last named path
     - **d**: keep path with lowest depth          **D**: keep path with highest depth
     - **l**: keep path with shortest basename     **L**: keep path with longest basename
-    - **r**: keep paths matching regex            **R**: keep path not matching regex
     - **r**: keep paths matching regex            **R**: keep path not matching regex
     - **x**: keep basenames matching regex        **X**: keep basenames not matching regex
     - **h**: keep file with lowest hardlink count **H**: keep file with highest hardlink count
@@ -367,8 +366,17 @@ Original Detection Options
 
     - **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
     - **a** can be used as last criteria to assert a defined order.
-    - **OHa** can be used in combination with ``-c sh:hardlinks`` in order to
-      link to the file with most hardlinks, resulting in the biggest space cleanup.
+    - **o/O** and **h/H** are only useful if there any hardlinks in the traversed path.
+    - **o/O** minimises/maximises the number of hardlinks *outside* the traversed paths.
+      **h/H** in contrast only takes the number of hardlinks *inside* of the traversed paths.
+      When hardlinking files, one would like to link to the original file with the highest outer
+      link count (**O**) in order to maximise the space cleanup. If there are no outside hardlinks,
+      one should link to the highest link count (**H**) in order to maximise the total hardlink count
+      to save disk space. This does not only apply to hardlinking files (``-c sh:hardlinks``),
+      but also to removing files (which might be hardlinks) and other handlers.
+    - **pOHma** is the default since **p** ensures that first given paths rank as originals,
+      **OH** ensures that hardlinks are handled well, **m** ensures that the oldest file is the
+      original and **a** simply ensures a defined ordering if no other criteria applies.
 
 Caching
 -------
@@ -496,7 +504,9 @@ FORMATTERS
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
       it.
     * ``hardlink``: Replace the duplicate file with a hardlink to the original
-      file. Fails if both files are not on the same partition.
+      file. The resulting files will have  the same inode number. Fails if both files are not on the same partition.
+      You can use ``ls -i`` to show the inode number of a file and ``find -samefile <path>`` to find
+      all hardlinks for a certain file.
     * ``symlink``: Tries to replace the duplicate file with a symbolic link to
       the original. Never fails.
     * ``remove``: Remove the file using ``rm -rf``. (``-r`` for duplicate dirs).
@@ -646,7 +656,10 @@ PROBLEMS
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in a
    different file.  If you use the rmlint-generated shell script to delete the duplicates,
    you can run it with the ``-p`` option to do a full re-check of the duplicate against
-   the original before it deletes the file.
+   the original before it deletes the file. When using ``-c sh:hardlink`` or ``-c sh:symlink``
+   care should be taken that a modification of one file will now result in a modification of
+   all files. This is not the case for ``-c sh:reflink`` or ``-c sh:clone``. Use ``-c sh:link``
+   to minimise this risk.
 
 SEE ALSO
 ========
