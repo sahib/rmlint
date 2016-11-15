@@ -302,9 +302,9 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest, const gbool
         rm_log_info_line(_("Files don't match - not cloned"));
     }
 #else
-
     (void)source;
     (void)dest;
+    (void)read_only;
     rm_log_error_line(_("rmlint was not compiled with btrfs support."))
 
 #endif
@@ -1188,7 +1188,7 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name, const gchar
         return false;
     }
 
-    if(!rm_cmd_check_lettervec(option_name, cfg->sort_criteria, "dlamprxhDLAMPRXH",
+    if(!rm_cmd_check_lettervec(option_name, cfg->sort_criteria, "dlamprxhoDLAMPRXHO",
                                error)) {
         return false;
     }

@@ -98,7 +98,6 @@ typedef guint16 RmPatternBitmask;
 /**
  * RmFile structure; used by pretty much all rmlint modules.
  */
-
 typedef struct RmFile {
     /* file path lookup ID (if using swap table)
         * */
@@ -114,11 +113,17 @@ typedef struct RmFile {
 
     /* Depth of the file, relative to the path it was found in.
      */
-    short depth;
+    gint16 depth;
 
-	/* Link count (number of hardlinks + 1) of the file as told by stat()
-	 */
-	short link_count;
+    /* Link count (number of hardlinks + 1) of the file as told by stat()
+     * This is used for the 'hH'-sortcriteria.
+     */
+    gint16 link_count;
+
+    /* Hardlinks to this file *outside* of the paths that rmlint traversed.
+     * This is used for the 'oO'-sortcriteria.
+     * */
+    gint16 outer_link_count;
 
     /* Depth of the path of this file.
      */

@@ -77,9 +77,15 @@
 #define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)
 #define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
 
-#define RM_IS_APPLE (defined(__APPLE__) && defined(__MACH__))
+#ifdef __APPLE__
+# ifdef __MACH__
+#  define RM_IS_APPLE 1
+# endif
+#endif
 
-#define RM_IS_CYGWIN (defined(__CYGWIN__))
+#ifdef __CYGWIN__
+# define RM_IS_CYGWIN 1
+#endif
 
 #include <glib.h>
 

@@ -127,7 +127,11 @@ static ino_t rm_path_parent_inode(RmFile *file) {
     rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent, parent_path, PATH_MAX);
     RmStat stat_buf;
     int retval = rm_sys_stat(parent_path, &stat_buf);
-    rm_assert_gentle(retval != -1);
+    if (retval == -1) {
+        rm_log_error_line("Failed to get parent path: stat failed: %s", g_strerror(errno));
+        return 0;
+    }
+
     return stat_buf.st_ino;
 }
 
@@ -275,8 +279,13 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
         char curr_crit = tolower((unsigned char)sortcrit[i]);
 
         /* Check if it's a non-regex sortcriteria */
-        if(!((curr_crit == 'r' || curr_crit == 'x') && sortcrit[i + 1] == '<')) {
+        if(!(curr_crit == 'r' || curr_crit == 'x')) {
             continue;
+        }
+
+        if (sortcrit[i + 1] != '<') {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("no pattern given in <> after 'r' or 'x'"));
+            break;
         }
 
         GRegex *regex = NULL;
@@ -367,10 +376,10 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
         RmCfg *sets = session->cfg;
 
         for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
-            long cmp = 0;
+            gint64 cmp = 0;
             switch(tolower((unsigned char)sets->sort_criteria[i])) {
             case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
+                cmp = (gint64)(a->mtime) - (gint64)(b->mtime);
                 break;
             case 'a':
                 cmp = g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
@@ -379,13 +388,16 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 cmp = strlen(a->folder->basename) - strlen(b->folder->basename);
                 break;
             case 'd':
-                cmp = (short)a->depth - (short)b->depth;
+                cmp = (gint64)a->depth - (gint64)b->depth;
                 break;
-			case 'h':
-				cmp = (long)a->link_count - (long)b->link_count;
-				break;
+            case 'h':
+                cmp = (gint64)a->link_count - (gint64)b->link_count;
+                break;
+            case 'o':
+                cmp = (gint64)a->outer_link_count - (gint64)b->outer_link_count;
+                break;
             case 'p':
-                cmp = (long)a->path_index - (long)b->path_index;
+                cmp = (gint64)a->path_index - (gint64)b->path_index;
                 break;
             case 'x': {
                 cmp = rm_pp_cmp_by_regex(

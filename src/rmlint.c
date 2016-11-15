@@ -68,6 +68,8 @@ static void signal_handler(int signum) {
     case SIGINT:
         rm_session_abort();
         break;
+    case SIGFPE:
+    case SIGABRT:
     case SIGSEGV:
         /* logging messages might have unexpected effects in a signal handler,
          * but that's probably the least thing we have to worry about in case of 
@@ -76,6 +78,7 @@ static void signal_handler(int signum) {
         rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
                           g_strsignal(signum));
         rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
+        exit(1);
     default:
         break;
     }
