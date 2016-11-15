@@ -19,6 +19,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 override_dh_auto_clean:
 	scons -c
+	rm -f config.log
 
 override_dh_auto_build:
 	scons
