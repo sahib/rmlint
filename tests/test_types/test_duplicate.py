@@ -67,3 +67,33 @@ def test_one_byte_file_positive():
     head, *data, footer = run_rmlint('-S a')
 
     assert len(data) == 2
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_two_hardlinks():
+    create_file('xxx', 'a')
+    create_link('a', 'b')
+    head, *data, footer = run_rmlint('-S a')
+
+    assert len(data) == 2
+    assert footer['total_lint_size'] == 0
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_two_external_hardlinks():
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+    create_dirs('sub')
+    create_link('a', 'sub/a')
+    create_link('a', 'sub/b')
+    head, *data, footer = run_rmlint('-S a')
+
+    assert len(data) == 4
+    assert footer['total_lint_size'] == 3
+
+    head, *data, footer = run_rmlint(
+        "{t}/sub".format(t=TESTDIR_NAME),
+        use_default_dir=False
+    )
+
+    # No effective lint: Removing any link will not save any disk space.
+    assert len(data) == 2
+    assert footer['total_lint_size'] == 0
