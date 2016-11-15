@@ -13,6 +13,7 @@
 -fPIC
 -g
 -D_GNU_SOURCE 
+-DHAVE_STAT64=0
 -I/usr/include/gtk-3.0
 -I/usr/include/at-spi2-atk/2.0
 -I/usr/include/gtk-3.0

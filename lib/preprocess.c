@@ -376,10 +376,10 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
         RmCfg *sets = session->cfg;
 
         for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
-            long cmp = 0;
+            gint64 cmp = 0;
             switch(tolower((unsigned char)sets->sort_criteria[i])) {
             case 'm':
-                cmp = (long)(a->mtime) - (long)(b->mtime);
+                cmp = (gint64)(a->mtime) - (gint64)(b->mtime);
                 break;
             case 'a':
                 cmp = g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
@@ -388,16 +388,16 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 cmp = strlen(a->folder->basename) - strlen(b->folder->basename);
                 break;
             case 'd':
-                cmp = (short)a->depth - (short)b->depth;
+                cmp = (gint64)a->depth - (gint64)b->depth;
                 break;
             case 'h':
-                cmp = (long)a->link_count - (long)b->link_count;
+                cmp = (gint64)a->link_count - (gint64)b->link_count;
                 break;
             case 'o':
-                cmp = (guint64)a->outter_link_count - (guint64)b->outter_link_count;
+                cmp = (gint64)a->outer_link_count - (gint64)b->outer_link_count;
                 break;
             case 'p':
-                cmp = (long)a->path_index - (long)b->path_index;
+                cmp = (gint64)a->path_index - (gint64)b->path_index;
                 break;
             case 'x': {
                 cmp = rm_pp_cmp_by_regex(

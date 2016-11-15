@@ -1210,18 +1210,18 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files, RmShredGrou
              * unbundle the cluster and append it to the queue
              */
             GQueue *hardlinks = file->hardlinks.files;
-            file->outter_link_count = file->link_count - (hardlinks->length + 1);
+            file->outer_link_count = file->link_count - (hardlinks->length + 1);
 
             for(GList *link = hardlinks->head; link; link = link->next) {
                 RmFile *bundled_file = link->data;
-                bundled_file->outter_link_count = file->outter_link_count;
+                bundled_file->outer_link_count = file->outer_link_count;
                 g_queue_push_tail(files, bundled_file);
             }
 
             g_queue_free(hardlinks);
             file->hardlinks.files = NULL;
-        } else if(file->outter_link_count < 0) {
-            file->outter_link_count = file->link_count - 1;
+        } else if(file->outer_link_count < 0) {
+            file->outer_link_count = file->link_count - 1;
         }
 
         if (status == RM_SHRED_GROUP_FINISHING) {
