@@ -111,6 +111,8 @@ static void rm_cmd_show_manpage(void) {
 
     if(!found_manpage) {
         rm_log_warning_line(_("You seem to have no manpage for rmlint."));
+        rm_log_warning_line(_("Please run rmlint --help to show the regular help."));
+        rm_log_warning_line(_("Alternatively, visit https://rmlint.rtfd.org for the online documentation"));
     }
 
     exit(0);
