@@ -1291,7 +1291,7 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
          * hardlinks does not free any space they should not be counted unless
          * all of them would be removed.
          */
-        if(!RM_IS_BUNDLED_HARDLINK(file)) {
+        if(!RM_IS_BUNDLED_HARDLINK(file) && file->outer_link_count == 0) {
             session->total_lint_size += file->file_size;
         }
     }
