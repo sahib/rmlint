@@ -328,7 +328,7 @@ Original Detection Options
     Only look for duplicates of which at least one is in one of the tagged paths.
     (Paths that were named after **//**).
 
-:``-S --rank-by=criteria`` (**default\:** *pOHma*):
+:``-S --rank-by=criteria`` (**default\:** *pOma*):
 
     Sort the files in a group of duplicates into originals and duplicates by
     one or more criteria. Each criteria is defined by a single letter (except
@@ -367,14 +367,14 @@ Original Detection Options
     - **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
     - **a** can be used as last criteria to assert a defined order.
     - **o/O** and **h/H** are only useful if there any hardlinks in the traversed path.
-    - **o/O** minimises/maximises the number of hardlinks *outside* the traversed paths.
-      **h/H** in contrast only takes the number of hardlinks *inside* of the traversed paths.
-      When hardlinking files, one would like to link to the original file with the highest outer
-      link count (**O**) in order to maximise the space cleanup. If there are no outside hardlinks,
-      one should link to the highest link count (**H**) in order to maximise the total hardlink count
-      to save disk space. This does not only apply to hardlinking files (``-c sh:hardlinks``),
-      but also to removing files (which might be hardlinks) and other handlers.
-    - **pOHma** is the default since **p** ensures that first given paths rank as originals,
+    - **o/O** takes the number of hardlinks outside the traversed paths (and
+      thereby minimizes/maximizes the overall number of hardlinks). **h/H** in
+      contrast only takes the number of hardlinks *inside* of the traversed
+      paths. When hardlinking files, one would like to link to the original
+      file with the highest outer link count (**O**) in order to maximise the
+      space cleanup. **H** does not maximise the space cleanup, it just selects
+      the file with the highest total hardlink count. You usually want to specify **O**.
+    - **pOma** is the default since **p** ensures that first given paths rank as originals,
       **OH** ensures that hardlinks are handled well, **m** ensures that the oldest file is the
       original and **a** simply ensures a defined ordering if no other criteria applies.
 

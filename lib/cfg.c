@@ -54,7 +54,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->list_mounts = true;
 
     /* Misc options */
-    cfg->sort_criteria = g_strdup("pOHma");
+    cfg->sort_criteria = g_strdup("pOma");
 
     cfg->checksum_type = RM_DEFAULT_DIGEST;
     cfg->with_color = true;
