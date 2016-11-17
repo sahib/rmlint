@@ -55,6 +55,7 @@ typedef struct RmCfg {
     gboolean find_hardlinked_dupes;
     gboolean limits_specified;
     gboolean filter_mtime;
+    gboolean consider_mtime;
     gboolean match_basename;
     gboolean unmatched_basenames;
     gboolean match_with_extension;

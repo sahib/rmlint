@@ -76,6 +76,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->use_absolute_end_offset = false;
     cfg->skip_start_offset = 0;
     cfg->skip_end_offset = 0;
+    cfg->consider_mtime = false;
 
     rm_trie_init(&cfg->file_trie);
 }

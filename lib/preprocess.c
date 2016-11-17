@@ -84,6 +84,10 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
                      : 0;
     }
 
+    if(result == 0 && cfg->consider_mtime) {
+        result = (gint64)file_a->mtime - (gint64)file_b->mtime;
+    }
+
     return result;
 }
 
@@ -93,6 +97,7 @@ gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
     if(result != 0) {
         return result;
     }
+
     return rm_pp_cmp_orig_criteria(file_a, file_b, session);
 }
 
