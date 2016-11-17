@@ -468,10 +468,13 @@ Rarely used, miscellaneous options
     Also it might be useful for approximate comparison where it suffices when
     the file is the same in the middle part.
 
-:``-z --consider-mtime`` / ``-Z --ignore-mtime`` (**default**):
+:``-z --mtime-window=T`` (**default\:** *-1*)
 
     Only consider those files as duplicates that have the same content and
-    the same modification time (mtime).
+    the same modification time (mtime) within a certain window of *T* seconds.
+    If *T* is 0, both files need to have the same mtime. For *T=1* they may
+    differ one second and so on. If the window is negative, the mtime of
+    duplicates will not be considered.
 
 :``--with-fiemap`` (**default**) / ``--without-fiemap``:
 

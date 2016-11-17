@@ -84,8 +84,13 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
                      : 0;
     }
 
-    if(result == 0 && cfg->consider_mtime) {
-        result = (gint64)file_a->mtime - (gint64)file_b->mtime;
+    if(result == 0 && cfg->mtime_window >= 0) {
+        gint64 diff = (gint64)file_a->mtime - (gint64)file_b->mtime;
+        if(ABS(diff) <= cfg->mtime_window) {
+            result = 0;
+        } else {
+            result = diff;
+        }
     }
 
     return result;
