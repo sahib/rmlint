@@ -468,6 +468,11 @@ Rarely used, miscellaneous options
     Also it might be useful for approximate comparison where it suffices when
     the file is the same in the middle part.
 
+:``-z --consider-mtime`` / ``-Z --ignore-mtime`` (**default**):
+
+    Only consider those files as duplicates that have the same content and
+    the same modification time (mtime).
+
 :``--with-fiemap`` (**default**) / ``--without-fiemap``:
 
     Enable or disable reading the file extents on rotational disk in order to
