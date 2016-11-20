@@ -84,26 +84,45 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
                      : 0;
     }
 
-    if(result == 0 && cfg->mtime_window >= 0) {
-        gint64 diff = (gint64)file_a->mtime - (gint64)file_b->mtime;
-        if(ABS(diff) <= cfg->mtime_window) {
-            result = 0;
-        } else {
-            result = diff;
-        }
-    }
-
     return result;
 }
 
-gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
+static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
                       const RmSession *session) {
     gint result = rm_file_cmp(file_a, file_b);
     if(result != 0) {
         return result;
     }
 
+    if(session->cfg->mtime_window >= 0) {
+        return (gint64)file_a->mtime - (gint64)file_b->mtime;
+    }
+
     return rm_pp_cmp_orig_criteria(file_a, file_b, session);
+}
+
+static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
+                       const RmSession *session) {
+    gint result = rm_file_cmp(file_a, file_b);
+    if(result != 0) {
+        return result;
+    }
+
+    /* If --mtime-window is specified, we need to check if the mtime is inside
+     * the window. The file list was sorted by rm_file_cmp_full by taking the
+     * diff of mtimes, therefore we have to define the split criteria
+     * differently.
+     */
+    if(session->cfg->mtime_window >= 0) {
+        gint64 diff = (gint64)file_a->mtime - (gint64)file_b->mtime;
+        if(ABS(diff) <= session->cfg->mtime_window) {
+            return 0;
+        }
+
+        return diff;
+    }
+
+    return 0;
 }
 
 static guint rm_node_hash(const RmFile *file) {
@@ -639,7 +658,7 @@ void rm_preprocess(RmSession *session) {
 
         /* get next file and check if it is part of the same group */
         file = g_queue_pop_head(all_files);
-        if(!file || rm_file_cmp(file, current_size_file) != 0) {
+        if(!file || rm_file_cmp_split(file, current_size_file, session) != 0) {
             /* process completed group (all same size & other criteria)*/
             /* remove path doubles and handle "other" lint */
 
@@ -655,8 +674,9 @@ void rm_preprocess(RmSession *session) {
                 /* zero size group after handling other lint; remove it */
                 tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
             }
-            current_size_file = file;
         }
+
+        current_size_file = file;
     }
 
     session->other_lint_cnt += rm_pp_handler_other_lint(session);
