@@ -85,7 +85,7 @@ typedef struct RmDirectory {
     RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
 
     struct {
-        time_t dir_mtime; /* Directory Metadata: Modification Time */
+        gdouble dir_mtime; /* Directory Metadata: Modification Time */
         ino_t dir_inode;  /* Directory Metadata: Inode             */
         dev_t dir_dev;    /* Directory Metadata: Device ID         */
     } metadata;
@@ -275,7 +275,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
     if(rm_sys_stat(self->dirname, &dir_stat) == -1) {
         rm_log_perror("stat(2) failed during sort");
     } else {
-        self->metadata.dir_mtime = dir_stat.st_mtime;
+        self->metadata.dir_mtime = rm_sys_stat_mtime_float(&dir_stat);
         self->metadata.dir_inode = dir_stat.st_ino;
         self->metadata.dir_dev = dir_stat.st_dev;
     }

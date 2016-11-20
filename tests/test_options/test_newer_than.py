@@ -46,8 +46,7 @@ def test_simple():
             time.gmtime(now + offset)
         )
 
-        # -VVV to ignore the is-newer-than-now warning.
-        head, *data, footer = run_rmlint_once('-VVV -S a -N ' + iso_time)
+        head, *data, footer = run_rmlint_once('-S a -N ' + iso_time)
         assert len(data) == expect
 
 

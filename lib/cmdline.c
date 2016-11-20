@@ -784,13 +784,13 @@ static bool rm_cmd_timestamp_is_plain(const char *stamp) {
 
 static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name, const gchar *string,
                                        RmSession *session, GError **error) {
-    time_t result = 0;
+    gdouble result = 0;
     bool plain = rm_cmd_timestamp_is_plain(string);
     session->cfg->filter_mtime = false;
 
     if(plain) {
-        /* A simple integer is expected, just parse it as time_t */
-        result = strtoll(string, NULL, 10);
+        /* timespec might include sub-second fraction */
+        result = strtod(string, NULL);
     } else {
         /* Parse ISO8601 timestamps like 2006-02-03T16:45:09.000Z */
         result = rm_iso8601_parse(string);
@@ -800,11 +800,11 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name, const gc
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
-            rm_log_debug_line("timestamp %s understood as %lu", time_buf, result);
+			rm_log_debug_line("timestamp %s understood as %f", time_buf, result);
         }
     }
 
-    if(result <= 0) {
+    if(FLOAT_IS_ZERO(result) || result < 0) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Unable to parse time spec \"%s\""),
                     string);
         return false;
@@ -814,7 +814,7 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name, const gc
     session->cfg->filter_mtime = true;
 
     time_t now = time(NULL);
-    if(result > now) {
+    if((time_t)result > now) {
         /* Not critical, maybe there are some uses for this,
          * but print at least a small warning as indication.
          * */
@@ -827,7 +827,7 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name, const gc
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
             rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]",
-                                string, time_buf, result, now);
+                                string, time_buf, (time_t)result, now);
         }
     }
 
@@ -1369,7 +1369,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"perms"                    , 'z'  , OPTIONAL  , G_OPTION_ARG_CALLBACK  , FUNC(permissions)              , _("Only use files with certain permissions")                              , "[RWX]+"} ,
         {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
-        {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_INT64     , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
+        {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,

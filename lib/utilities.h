@@ -50,6 +50,12 @@ typedef struct stat RmStat;
 
 #define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
 
+// This is not a good general method for comparing floats.
+// Currently only used to compare different mtimes, where
+// the time might not be very exact or meaningful anyways.
+// See also: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition
+#define FLOAT_IS_ZERO(X) (fabs(X) < 0.00000001)
+
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
@@ -70,11 +76,12 @@ static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 #endif
 }
 
-static inline int rm_sys_stat_mtime_seconds(RmStat *stat) {
+static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
-    return stat->st_mtimespec.tv_sec;
+    return (gdouble)stat->st_mtimespec.tv_sec + stat->st_mtimespec.tv_nsec / 1000000000.0;
 #else
-    return stat->st_mtim.tv_sec;
+    // TODO: check with scons
+    return (gdouble)stat->st_mtim.tv_sec + stat->st_mtim.tv_nsec / 1000000000.0;
 #endif
 }
 
@@ -403,7 +410,7 @@ bool rm_offsets_match(char *path1, char *path2);
 /**
  * @brief Parse an ISO8601 timestamp to a unix timestamp.
  */
-time_t rm_iso8601_parse(const char *string);
+gdouble rm_iso8601_parse(const char *string);
 
 /**
  * @brief convert a unix timestamp as iso8601 timestamp string.

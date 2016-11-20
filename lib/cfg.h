@@ -72,8 +72,8 @@ typedef struct RmCfg {
 
     int permissions;
 
-    time_t min_mtime;
-    gint64 mtime_window;
+    gdouble min_mtime;
+    gdouble mtime_window;
     gint depth;
     gint verbosity;
 

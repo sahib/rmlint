@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "preprocess.h"
 #include "utilities.h"
@@ -95,7 +96,13 @@ static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
     }
 
     if(session->cfg->mtime_window >= 0) {
-        return (gint64)file_a->mtime - (gint64)file_b->mtime;
+        gdouble diff = file_a->mtime - file_b->mtime;
+        if(FLOAT_IS_ZERO(diff)) {
+            return 0;
+        }
+
+        /* Save to cast to an gint */
+        return diff;
     }
 
     return rm_pp_cmp_orig_criteria(file_a, file_b, session);
@@ -114,8 +121,8 @@ static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
      * differently.
      */
     if(session->cfg->mtime_window >= 0) {
-        gint64 diff = (gint64)file_a->mtime - (gint64)file_b->mtime;
-        if(ABS(diff) <= session->cfg->mtime_window) {
+        gdouble diff = file_a->mtime - file_b->mtime;
+        if(fabs(diff) <= session->cfg->mtime_window) {
             return 0;
         }
 
@@ -407,9 +414,15 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
         for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
             gint64 cmp = 0;
             switch(tolower((unsigned char)sets->sort_criteria[i])) {
-            case 'm':
-                cmp = (gint64)(a->mtime) - (gint64)(b->mtime);
+            case 'm': {
+                gdouble diff = a->mtime - b->mtime;
+                if(FLOAT_IS_ZERO(diff)) {
+                    cmp = 0;
+                }
+
+                cmp = diff;
                 break;
+            }
             case 'a':
                 cmp = g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
                 break;

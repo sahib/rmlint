@@ -1149,14 +1149,14 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //    TIMESTAMP HELPERS     //
 //////////////////////////////
 
-time_t rm_iso8601_parse(const char *string) {
+gdouble rm_iso8601_parse(const char *string) {
     GTimeVal time_result;
     if(!g_time_val_from_iso8601(string, &time_result)) {
         rm_log_perror("Converting time failed");
         return 0;
     }
 
-    return time_result.tv_sec;
+    return time_result.tv_sec + time_result.tv_usec / (gdouble)(G_USEC_PER_SEC);
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {

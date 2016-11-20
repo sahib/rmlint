@@ -167,7 +167,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
     if(mtime_node &&
-       json_node_get_int(mtime_node) < rm_sys_stat_mtime_seconds(stat_info)) {
+       json_node_get_double(mtime_node) < rm_sys_stat_mtime_float(stat_info)) {
         rm_log_warning_line(_("modification time of `%s` changed. Ignoring."), path);
         return NULL;
     }

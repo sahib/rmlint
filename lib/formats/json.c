@@ -29,6 +29,7 @@
 #include "../checksums/spooky-c.h"
 
 #include <glib.h>
+#include <locale.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -80,6 +81,15 @@ static void rm_fmt_json_key_bool(FILE *out, const char *key, bool value) {
 
 static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
     fprintf(out, "\"%s\": %" LLU "", key, value);
+}
+
+static void rm_fmt_json_key_float(FILE *out, const char *key, gdouble value) {
+    // Make sure that the floating point number gets printed with a '.',
+    // not with a comma as usual in e.g. the german language.
+    char *prev_locale = setlocale(LC_NUMERIC, NULL);
+    setlocale(LC_NUMERIC, "C");
+    fprintf(out, "\"%s\": %f", key, value);
+    setlocale(LC_NUMERIC, prev_locale);
 }
 
 static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
@@ -321,7 +331,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
                 }
             }
         }
-        rm_fmt_json_key_int(out, "mtime", file->mtime);
+        rm_fmt_json_key_float(out, "mtime", file->mtime);
     }
     rm_fmt_json_close(self, out);
 }

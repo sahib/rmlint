@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "file.h"
 #include "formats.h"
@@ -286,8 +287,14 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
         case 'a':
             r = strcasecmp(fa->folder->basename, fb->folder->basename);
             break;
-        case 'm':
-            r = ((gint64)fa->mtime) - ((gint64)fb->mtime);
+        case 'm': {
+                gdouble diff = fa->mtime - fb->mtime;
+                if(FLOAT_IS_ZERO(diff)) {
+                    return 0;
+                }
+
+                r = diff;
+            }
             break;
         case 'p':
             r = ((gint64)fa->path_index) - ((gint64)fb->path_index);

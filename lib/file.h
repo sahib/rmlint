@@ -109,7 +109,7 @@ typedef struct RmFile {
 
     /* File modification date/time
      * */
-    time_t mtime;
+    gdouble mtime;
 
     /* Depth of the file, relative to the path it was found in.
      */
