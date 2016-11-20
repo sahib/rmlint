@@ -29,7 +29,6 @@
 #include "../checksums/spooky-c.h"
 
 #include <glib.h>
-#include <locale.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -86,10 +85,8 @@ static void rm_fmt_json_key_int(FILE *out, const char *key, RmOff value) {
 static void rm_fmt_json_key_float(FILE *out, const char *key, gdouble value) {
     // Make sure that the floating point number gets printed with a '.',
     // not with a comma as usual in e.g. the german language.
-    char *prev_locale = setlocale(LC_NUMERIC, NULL);
-    setlocale(LC_NUMERIC, "C");
-    fprintf(out, "\"%s\": %f", key, value);
-    setlocale(LC_NUMERIC, prev_locale);
+    gchar buf[G_ASCII_DTOSTR_BUF_SIZE];
+    fprintf(out, "\"%s\": %s", key, g_ascii_dtostr(buf, sizeof(buf) - 1, value));
 }
 
 static bool rm_fmt_json_fix(const char *string, char *fixed, size_t fixed_len) {
