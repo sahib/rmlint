@@ -1326,8 +1326,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
               HIDDEN = G_OPTION_FLAG_HIDDEN, OPTIONAL = G_OPTION_FLAG_OPTIONAL_ARG;
 
     /* Free/Used Options:
-       Used: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxXyYz |
-       Free:                  jJ                               Z|
+       Used: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ|
+       Free:                  jJ                                |
     */
 
     /* clang-format off */
@@ -1369,7 +1369,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"perms"                    , 'z'  , OPTIONAL  , G_OPTION_ARG_CALLBACK  , FUNC(permissions)              , _("Only use files with certain permissions")                              , "[RWX]+"} ,
         {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
-        {"mtime-window"             , 'z'  , 0         , G_OPTION_ARG_INT64     , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
+        {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_INT64     , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
