@@ -80,7 +80,6 @@ static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
     return (gdouble)stat->st_mtimespec.tv_sec + stat->st_mtimespec.tv_nsec / 1000000000.0;
 #else
-    // TODO: check with scons
     return (gdouble)stat->st_mtim.tv_sec + stat->st_mtim.tv_nsec / 1000000000.0;
 #endif
 }
