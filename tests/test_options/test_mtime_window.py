@@ -66,3 +66,9 @@ def test_consider_mtime_subsecond():
 
     head, *data, footer = run_rmlint('--mtime-window=2.0')
     assert len(data) == 2
+
+    set_mtime('a', '2004-02-29  16:21:42.00')
+    set_mtime('b', '2004-02-29  16:21:42.99')
+
+    head, *data, footer = run_rmlint('--mtime-window=0')
+    assert len(data) == 0

@@ -101,8 +101,7 @@ static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
             return 0;
         }
 
-        /* Save to cast to an gint */
-        return diff;
+        return (diff < 0) ? -1 : +1;
     }
 
     return rm_pp_cmp_orig_criteria(file_a, file_b, session);
@@ -122,11 +121,12 @@ static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
      */
     if(session->cfg->mtime_window >= 0) {
         gdouble diff = file_a->mtime - file_b->mtime;
-        if(fabs(diff) <= session->cfg->mtime_window) {
+        if(FLOAT_IS_ZERO(diff - session->cfg->mtime_window) || fabs(diff) < session->cfg->mtime_window) {
             return 0;
         }
 
-        return diff;
+        /* Split the group. */
+        return (diff < 0) ? -1 : +1;
     }
 
     return 0;
