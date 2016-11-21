@@ -473,8 +473,15 @@ Rarely used, miscellaneous options
     Only consider those files as duplicates that have the same content and
     the same modification time (mtime) within a certain window of *T* seconds.
     If *T* is 0, both files need to have the same mtime. For *T=1* they may
-    differ one second and so on. If the window is negative, the mtime of
+    differ one second and so on. If the window size is negative, the mtime of
     duplicates will not be considered.
+
+    However, with three (or more) files, the mtime difference between two
+    duplicates can be bigger than the mtime window *T*, i.e. several files may
+    be chained together by the window. Example: If *T* is 1, the four files
+    fooA (mtime: 00:00:00), fooB (00:00:01), fooC (00:00:02), fooD (00:00:03)
+    would all belong to the same duplicate group, although the mtime of fooA
+    and fooD differs by 3 seconds.
 
 :``--with-fiemap`` (**default**) / ``--without-fiemap``:
 
