@@ -375,7 +375,7 @@ Original Detection Options
       space cleanup. **H** does not maximise the space cleanup, it just selects
       the file with the highest total hardlink count. You usually want to specify **O**.
     - **pOma** is the default since **p** ensures that first given paths rank as originals,
-      **OH** ensures that hardlinks are handled well, **m** ensures that the oldest file is the
+      **O** ensures that hardlinks are handled well, **m** ensures that the oldest file is the
       original and **a** simply ensures a defined ordering if no other criteria applies.
 
 Caching
@@ -468,7 +468,7 @@ Rarely used, miscellaneous options
     Also it might be useful for approximate comparison where it suffices when
     the file is the same in the middle part.
 
-:``-z --mtime-window=T`` (**default\:** *-1*)
+:``-Z --mtime-window=T`` (**default\:** *-1*)
 
     Only consider those files as duplicates that have the same content and
     the same modification time (mtime) within a certain window of *T* seconds.
