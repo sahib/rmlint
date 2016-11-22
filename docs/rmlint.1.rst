@@ -474,7 +474,7 @@ Rarely used, miscellaneous options
     the same modification time (mtime) within a certain window of *T* seconds.
     If *T* is 0, both files need to have the same mtime. For *T=1* they may
     differ one second and so on. If the window size is negative, the mtime of
-    duplicates will not be considered.
+    duplicates will not be considered. *T* may be a floating point number.
 
     However, with three (or more) files, the mtime difference between two
     duplicates can be bigger than the mtime window *T*, i.e. several files may
