@@ -34,6 +34,7 @@
 
 /* External libraries */
 #include <string.h>
+#include <math.h>
 #include <glib.h>
 #include <glib/gstdio.h>
 
@@ -166,10 +167,15 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
-    if(mtime_node &&
-       json_node_get_double(mtime_node) < rm_sys_stat_mtime_float(stat_info)) {
-        rm_log_warning_line(_("modification time of `%s` changed. Ignoring."), path);
-        return NULL;
+    if(mtime_node) {
+        gdouble stat_mtime = rm_sys_stat_mtime_float(stat_info);
+        gdouble json_mtime = json_node_get_double(mtime_node);
+
+        /* Allow them a rather large span to deviate to account for inaccuracies */
+        if(fabs(stat_mtime - json_mtime) > 0.05) {
+            rm_log_warning_line(_("modification time of `%s` changed. Ignoring."), path);
+            return NULL;
+        }
     }
 
     /* Fill up the RmFile */
