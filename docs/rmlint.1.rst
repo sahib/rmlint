@@ -381,19 +381,27 @@ Original Detection Options
 Caching
 -------
 
-:``--replay [path.json]``:
+:``--replay``:
 
-    Read an existing json file and re-output it. This is very useful if you want
-    to reformat, refilter or resort the output you got from a previous run.
-    Usage is simple: Just pass ``--replay`` on the second run, with other
-    changed to the new formatters or filters. You can also merge several previous
-    runs by using ``--replay`` more than once, in this case it will merge all files
-    given and output them as one big run.
+    Read an existing json file and re-output it. This is very useful if you
+    want to reformat, refilter or resort the output you got from a previous
+    run. Usage is simple: Just pass ``--replay`` on the second run, with other
+    changed to the new formatters or filters. Pass the ``.json`` files of the
+    previous runs additionally to the paths you ran ``rmlint`` on. You can also
+    merge several previous runs by specifying more than one ``.json`` file, in
+    this case it will merge all files given and output them as one big run.
 
-    If you want to view only the duplicates of certain subdirectories, just pass
-    them on the commandline as usual.
+    If you want to view only the duplicates of certain subdirectories, just
+    pass them on the commandline as usual.
 
-    If ``path.json`` is not given then `./rmlint.json` is used as default.
+    The usage of ``//`` has the same effect as in a normal run. It can be used
+    to prefer one ``.json`` file over another. However note that running
+    ``rmlint`` in ``--replay`` mode includes no real disk traversal, i.e. only
+    duplicates from previous runs are printed. Therefore specifying new paths
+    will simply have no effect. As a security measure, ``--replay`` will ignore
+    files whose mtime changed in the meantime (i.e. mtime in the ``.json`` file
+    differes from the current one). These files might have been modified and
+    are silently ignored.
 
     By design, some options will not have any effect. Those are:
 

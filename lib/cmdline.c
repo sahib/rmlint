@@ -800,7 +800,7 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name, const gc
             char time_buf[256];
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
-			rm_log_debug_line("timestamp %s understood as %f", time_buf, result);
+            rm_log_debug_line("timestamp %s understood as %f", time_buf, result);
         }
     }
 
@@ -1540,21 +1540,21 @@ static int rm_cmd_replay_main(RmSession *session) {
     RmParrotCage cage;
     rm_parrot_cage_open(&cage, session);
 
-	bool one_valid_json = false;
-	RmCfg *cfg = session->cfg;
+    bool one_valid_json = false;
+    RmCfg *cfg = session->cfg;
 
-	int json_file_count = 0, total_count = 0;
+    int json_file_count = 0, total_count = 0;
     for(int i = 0; cfg->paths[i]; i++) {
         json_file_count += !!g_str_has_suffix(cfg->paths[i], ".json");
-		total_count++;
-	}
+        total_count++;
+    }
 
-	/* If the commandline only consisted of json files,
-	 * we assume `pwd` as path to check.
-	 */
-	if(json_file_count == total_count) {
-		rm_cmd_add_path(session, false, total_count, cfg->iwd);
-	}
+    /* If the commandline only consisted of json files,
+     * we assume `pwd` as path to check.
+     */
+    if(json_file_count == total_count) {
+        rm_cmd_add_path(session, false, total_count, cfg->iwd);
+    }
 
     for(int i = 0; cfg->paths[i]; i++) {
         char *json_file = cfg->paths[i];
@@ -1562,31 +1562,33 @@ static int rm_cmd_replay_main(RmSession *session) {
             continue;
         }
 
-		one_valid_json = true;
+        /*  remember if this path was prefd */
+        bool is_prefd = cfg->is_prefd[i];
 
-		bool is_prefd = cfg->is_prefd[i];
-		/* Remove the file from the actual paths to scan. */
+        /* Remove the file from the actual paths to scan. */
         for(int j = i; cfg->paths[j]; j++) {
             cfg->paths[j] = cfg->paths[j + 1];
-			if(cfg->paths[j + 1]) {
-				cfg->is_prefd[j] = cfg->is_prefd[j + 1];
-			}
+            if(cfg->paths[j + 1]) {
+                cfg->is_prefd[j] = cfg->is_prefd[j + 1];
+            }
         }
 
-		if(!rm_parrot_cage_load(&cage, json_file, is_prefd)) {
-			rm_log_warning_line("Loading %s failed.", json_file);
-		}
+        if(!rm_parrot_cage_load(&cage, json_file, is_prefd)) {
+            rm_log_warning_line("Loading %s failed.", json_file);
+        } else {
+            one_valid_json = true;
+        }
 
-		g_free(json_file);
+        g_free(json_file);
 
-		/* Next element is now at current pos; adjust. */
-		i--;
+        /* Next element is now at current pos; adjust. */
+        i--;
     }
 
-	if(!one_valid_json) {
-		rm_log_error_line(_("No valid .json files given, aborting."));
-		return EXIT_FAILURE;
-	}
+    if(!one_valid_json) {
+        rm_log_error_line(_("No valid .json files given, aborting."));
+        return EXIT_FAILURE;
+    }
 
     rm_parrot_cage_close(&cage);
     rm_fmt_flush(session->formats);
