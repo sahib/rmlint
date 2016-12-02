@@ -1014,7 +1014,7 @@ static void rm_cmd_set_default_outputs(RmSession *session) {
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
 
-    if(session->replay_files.length) {
+    if(session->do_replay) {
         rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
         rm_fmt_add(session->formats, "json", "rmlint.replay.json");
     } else {
@@ -1196,19 +1196,10 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name, const gchar
     return true;
 }
 
-static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name, const gchar *json_path,
-                                    RmSession *session, GError **error) {
-    if(json_path == NULL) {
-        json_path = "rmlint.json";
-    }
+static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name, _UNUSED const gchar *x,
+                                    RmSession *session, _UNUSED GError **error) {
 
-    if(g_access(json_path, R_OK) == -1) {
-        g_set_error(error, RM_ERROR_QUARK, 0, "--replay: `%s`: %s", json_path,
-                    g_strerror(errno));
-        return false;
-    }
-
-    g_queue_push_tail(&session->replay_files, g_strdup(json_path));
+    session->do_replay = true;
     session->cfg->cache_file_structs = true;
     return true;
 }
@@ -1343,13 +1334,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"add-output"       , 'O' , 0        , G_OPTION_ARG_CALLBACK , FUNC(large_output)   , _("Add output (add to defaults)")         , "FMT[:PATH]"}          ,
         {"newer-than-stamp" , 'n' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp_file) , _("Newer than stamp file")                , "PATH"}                ,
         {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
-        {"replay"           , 'Y' , OPTIONAL , G_OPTION_ARG_CALLBACK , FUNC(replay)         , _("Re-output a json file")                , "path/to/rmlint.json"} ,
         {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
 
         /* Non-trvial switches */
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
         {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
         {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
+        {"replay"   , 'Y' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(replay)   , _("Re-output a json file")                , "path/to/rmlint.json"} ,
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
@@ -1549,9 +1540,53 @@ static int rm_cmd_replay_main(RmSession *session) {
     RmParrotCage cage;
     rm_parrot_cage_open(&cage, session);
 
-    for(GList *iter = session->replay_files.head; iter; iter = iter->next) {
-        rm_parrot_cage_load(&cage, iter->data);
+	bool one_valid_json = false;
+	RmCfg *cfg = session->cfg;
+
+	int json_file_count = 0, total_count = 0;
+    for(int i = 0; cfg->paths[i]; i++) {
+        json_file_count += !!g_str_has_suffix(cfg->paths[i], ".json");
+		total_count++;
+	}
+
+	/* If the commandline only consisted of json files,
+	 * we assume `pwd` as path to check.
+	 */
+	if(json_file_count == total_count) {
+		rm_cmd_add_path(session, false, total_count, cfg->iwd);
+	}
+
+    for(int i = 0; cfg->paths[i]; i++) {
+        char *json_file = cfg->paths[i];
+        if(!g_str_has_suffix(json_file, ".json")) {
+            continue;
+        }
+
+		one_valid_json = true;
+
+		bool is_prefd = cfg->is_prefd[i];
+		/* Remove the file from the actual paths to scan. */
+        for(int j = i; cfg->paths[j]; j++) {
+            cfg->paths[j] = cfg->paths[j + 1];
+			if(cfg->paths[j + 1]) {
+				cfg->is_prefd[j] = cfg->is_prefd[j + 1];
+			}
+        }
+
+		if(!rm_parrot_cage_load(&cage, json_file, is_prefd)) {
+			rm_log_warning_line("Loading %s failed.", json_file);
+		}
+
+		g_free(json_file);
+
+		/* Next element is now at current pos; adjust. */
+		i--;
     }
+
+	if(!one_valid_json) {
+		rm_log_error_line(_("No valid .json files given, aborting."));
+		return EXIT_FAILURE;
+	}
 
     rm_parrot_cage_close(&cage);
     rm_fmt_flush(session->formats);
@@ -1567,7 +1602,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
 
-    if(session->replay_files.length) {
+    if(session->do_replay) {
         return rm_cmd_replay_main(session);
     }
 

@@ -61,7 +61,7 @@ void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session);
  *
  * @return true on (partial) success.
  */
-bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path);
+bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_prefd);
 
 /**
  * @brief Close the cage, frees resources, but does not do rm_fmt_flush().

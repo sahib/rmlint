@@ -129,7 +129,7 @@ typedef struct RmSession {
     bool traverse_finished;
 
     /* List of path to json files that should be re-outputted. */
-    GQueue replay_files;
+    bool do_replay;
 
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];

@@ -84,6 +84,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
     session->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
+    session->do_replay = false;
 
     session->verbosity_count = 2;
     session->paranoia_count = 0;
@@ -93,7 +94,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->offsets_read = 0;
     session->offset_fragments = 0;
     session->offset_fails = 0;
-    g_queue_init(&session->replay_files);
 
     rm_session_read_kernel_version(session);
 }
@@ -125,11 +125,6 @@ void rm_session_clear(RmSession *session) {
     g_free(cfg->is_prefd);
     g_free(cfg->iwd);
 
-    for(GList *iter = session->replay_files.head; iter; iter = iter->next) {
-        g_free(iter->data);
-    }
-
-    g_queue_clear(&session->replay_files);
     rm_trie_destroy(&cfg->file_trie);
 }
 

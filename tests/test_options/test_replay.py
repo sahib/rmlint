@@ -219,3 +219,71 @@ def test_replay_unicode_fuckup():
     head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
     assert len(data) == 3
     assert set([os.path.basename(e['path']) for e in data]) == set(names)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_tagged_order():
+    create_file('xxx', 'a/1')
+    create_file('xxx', 'a/2')
+    create_file('xxx', 'b/1')
+    create_file('xxx', 'b/2')
+
+    replay_path_a = '/tmp/replay-a.json'
+    replay_path_b = '/tmp/replay-b.json'
+
+    # Create replay-a.json
+    head, *data, footer = run_rmlint(
+        '-S a {r} -o json:{p}'.format(r=TESTDIR_NAME + '/a', p=replay_path_a),
+        use_default_dir=False
+    )
+
+    assert len(data) == 2
+    assert data[0]['path'].endswith('a/1')
+    assert data[1]['path'].endswith('a/2')
+
+    # Create replay-b.json
+    head, *data, footer = run_rmlint(
+        '{r} -o json:{p}'.format(r=TESTDIR_NAME + '/b', p=replay_path_b),
+        use_default_dir=False
+    )
+
+    assert len(data) == 2
+    assert data[0]['path'].endswith('b/1')
+    assert data[1]['path'].endswith('b/2')
+
+    # Check if b.json is preferred over a.json
+    head, *data, footer = run_rmlint(
+        '-S a --replay {a} // {b}'.format(a=replay_path_a, b=replay_path_b)
+    )
+    assert len(data) == 4
+    assert [p['is_original'] for p in data] == [True, False, False, False]
+
+    assert data[0]['path'].endswith('b/1')
+    assert data[1]['path'].endswith('b/2')
+    assert data[2]['path'].endswith('a/1')
+    assert data[3]['path'].endswith('a/2')
+
+    # Check if a.json is preferred over b.json
+    head, *data, footer = run_rmlint(
+        '-S a --replay {b} // {a}'.format(a=replay_path_a, b=replay_path_b)
+    )
+
+    assert len(data) == 4
+    assert [p['is_original'] for p in data] == [True, False, False, False]
+
+    assert data[0]['path'].endswith('a/1')
+    assert data[1]['path'].endswith('a/2')
+    assert data[2]['path'].endswith('b/1')
+    assert data[3]['path'].endswith('b/2')
+
+    head, *data, footer = run_rmlint(
+        '-S a --replay {a} // {b} -k'.format(a=replay_path_a, b=replay_path_b)
+    )
+
+    assert len(data) == 4
+    assert [p['is_original'] for p in data] == [True, True, False, False]
+
+    assert data[0]['path'].endswith('b/1')
+    assert data[1]['path'].endswith('b/2')
+    assert data[2]['path'].endswith('a/1')
+    assert data[3]['path'].endswith('a/2')

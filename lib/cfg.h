@@ -85,6 +85,7 @@ typedef struct RmCfg {
     RmOff skip_start_offset;
     RmOff skip_end_offset;
 
+    /* all paths we should traverse (NULL terminated vector) */
     char **paths;
     char *is_prefd;
     char *iwd;
