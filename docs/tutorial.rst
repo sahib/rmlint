@@ -694,8 +694,14 @@ There's also a preset of it to save you some typing: ``-T minimaldirs``.
 Replaying results
 -----------------
 
-Often it is useful to just re-output the results you got from ``rmlint``. That's
-kind of annoying for large datasets, especially when you have big files.
+Often it is useful to just re-output the results you got from ``rmlint``.
+That's kind of annoying for large datasets, especially when you have big files.
+For this, ``rmlint`` features a special mode, where it re-outputs the result of
+previous runs. By default, ``rmlint`` will spit out a ``.json`` file (ususally
+called ``rmlint.json``). When ``--replay`` is given, you can pass one or more
+of those ``.json`` files to the commandline as they would be normal
+directories. ``rmlint`` will then merge and re-output then. Note however, that
+no filesystem input/output is done.
 
 The usage of the ``--replay`` feature is best understood by example:
 

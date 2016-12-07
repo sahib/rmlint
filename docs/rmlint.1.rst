@@ -383,13 +383,18 @@ Caching
 
 :``--replay``:
 
-    Read an existing json file and re-output it. This is very useful if you
-    want to reformat, refilter or resort the output you got from a previous
-    run. Usage is simple: Just pass ``--replay`` on the second run, with other
-    changed to the new formatters or filters. Pass the ``.json`` files of the
-    previous runs additionally to the paths you ran ``rmlint`` on. You can also
-    merge several previous runs by specifying more than one ``.json`` file, in
-    this case it will merge all files given and output them as one big run.
+    Read an existing json file and re-output it. When ``--replay`` is given,
+    ``rmlint`` does **no input/output on the filesystem**, even if you pass
+    additional paths. The paths you pass will be used for filtering the
+    ``--replay`` output.
+
+    This is very useful if you want to reformat, refilter or resort the output
+    you got from a previous run. Usage is simple: Just pass ``--replay`` on the
+    second run, with other changed to the new formatters or filters. Pass the
+    ``.json`` files of the previous runs additionally to the paths you ran
+    ``rmlint`` on. You can also merge several previous runs by specifying more
+    than one ``.json`` file, in this case it will merge all files given and
+    output them as one big run.
 
     If you want to view only the duplicates of certain subdirectories, just
     pass them on the commandline as usual.
@@ -412,6 +417,9 @@ Caching
     - `--hardlinked`
     - `--write-unfinished`
     - ... and all other caching options below.
+
+    *NOTE:* In ``--replay`` mode, a new ``.json`` file will be written to
+    ``rmlint.replay.json`` in order to avoid overwriting ``rmlint.json``.
 
 :``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
 
@@ -622,6 +630,11 @@ This is a collection of common usecases and other tricks:
   ``$ rmlint large_dir/ # First run; writes rmlint.json``
 
   ``$ rmlint --replay rmlint.json large_dir -S MaD``
+
+* Merge together previous runs, but prefer the originals to be from ``b.json`` and
+  make sure that no files are deleted from ``b.json``:
+
+  ``$ rmlint --replay a.json // b.json -k``
 
 * Search only for duplicates and duplicate directories
 
