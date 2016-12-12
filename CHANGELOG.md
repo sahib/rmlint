@@ -6,6 +6,42 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.5.0 Penetrating Pineapple] -- [unreleased]
 
+## [2.4.5 Myopic Micrathene Bugfixes] -- 2016-12-12
+
+### Fixed
+
+* Make ``--replay`` truly merge different sets of duplicates.
+* Call ``exit(1)`` when getting a fatal signal (somehow was missing)
+* ``scons test`` now executes only the sane part of the testsuite.
+* Be more friendly when no manpage was found (and show --help)
+* Handle readonly btrfs subvolumes well.
+  See also: https://github.com/sahib/rmlint/issues/195
+* Various build errors fixed for old/rare systems.
+* Various fixes in the gui, mostly related to old GTK versions.
+
+### Added
+
+* New option ``--mtime-window``: Only consider files as duplicates that
+  share a mtime in a certain time-window.
+  See also: https://github.com/sahib/rmlint/issues/197
+* New sortcriteria ``O`` (maximize outside hardlinks) and ``H`` (maximize total hardlinks)
+  See also: https://github.com/sahib/rmlint/issues/196
+* Proper installation instructions for macOS.
+
+### Changed
+
+* Re-Design ``--replay`` to accept ``//`` like the normal commandline does.
+* New default sortcriteria is ``pOMa`` to maximize the chance of deleting
+  the most bytes from the storage.
+
+## [2.4.4 Myopic Micrathene Bugfixes] -- 2016-04-01
+
+### Fixed
+
+* Makefile related compile troubles on BSD for the GUI>
+* Check for accessat and ATR_FDCWD explicitly and try to work around them when missing.
+* Clearup installation instructions
+
 ## [2.4.3 Myopic Micrathene Bugfixes] -- 2016-03-11
 
 ### Fixed
