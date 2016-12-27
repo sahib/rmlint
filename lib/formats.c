@@ -48,11 +48,28 @@ static RmFmtGroup *rm_fmt_group_new(void) {
 
 static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
     RmCfg *cfg = self->session->cfg;
-    
+
     /* Special case: treemerge.c has to manage memory itself,
      *               since it omits some files or may even print them twice.
      */
-    if(cfg->merge_directories == false) {
+    bool needs_free = true;
+    if(cfg->merge_directories) {
+        needs_free = false;
+    }
+
+    /* Unique files are not fed to treemerge.c,
+     * therefore we need to free them here.
+     * Can't free them earlier, since '-o uniques' still need
+     * to output them if requested.
+     * */
+    if(needs_free == false && group->files.length == 1) {
+        RmFile *file = (RmFile *)group->files.head->data;
+        if(file && file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
+            needs_free = true;
+        }
+    }
+
+    if(needs_free) {
         for(GList *iter = group->files.head; iter; iter = iter->next) {
             RmFile *file = iter->data;
             rm_file_destroy(file);
