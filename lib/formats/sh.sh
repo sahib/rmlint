@@ -19,51 +19,56 @@ DO_CLONE_READONLY=
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
 
+COL_RED='\e[0;31m'
+COL_BLUE='\e[1;34m'
+COL_GREEN='\e[0;32m'
+COL_YELLOW='\e[0;33m'
+COL_RESET='\e[0m'
 
 handle_emptyfile() {
-    echo 'Deleting empty file:' "$1"
+    echo $COL_GREEN 'Deleting empty file:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
     fi
 }
 
 handle_emptydir() {
-    echo 'Deleting empty directory:' "$1"
+    echo $COL_GREEN 'Deleting empty directory:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rmdir "$1"
     fi
 }
 
 handle_bad_symlink() {
-    echo 'Deleting symlink pointing nowhere:' "$1"
+    echo $COL_GREEN 'Deleting symlink pointing nowhere:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
     fi
 }
 
 handle_unstripped_binary() {
-    echo 'Stripping debug symbols of:' "$1"
+    echo $COL_GREEN 'Stripping debug symbols of:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         strip -s "$1"
     fi
 }
 
 handle_bad_user_id() {
-    echo 'chown' "$USER" "$1"
+    echo $COL_GREEN 'chown' "$USER" $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         chown "$USER" "$1"
     fi
 }
 
 handle_bad_group_id() {
-    echo 'chgrp' "$GROUP" "$1"
+    echo $COL_GREEN 'chgrp' "$GROUP" $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         chgrp "$GROUP" "$1"
     fi
 }
 
 handle_bad_user_and_group_id() {
-    echo 'chown' "$USER:$GROUP" "$1"
+    echo $COL_GREEN 'chown' "$USER:$GROUP" $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         chown "$USER:$GROUP" "$1"
     fi
@@ -75,18 +80,18 @@ handle_bad_user_and_group_id() {
 
 original_check() {
     if [ ! -e "$2" ]; then
-        echo "^^^^^^ Error: original has disappeared - cancelling....."
+        echo $COL_RED "^^^^^^ Error: original has disappeared - cancelling....." $COL_RESET
         return 1
     fi
 
     if [ ! -e "$1" ]; then
-        echo "^^^^^^ Error: duplicate has disappeared - cancelling....."
+        echo $COL_RED "^^^^^^ Error: duplicate has disappeared - cancelling....." $COL_RESET
         return 1
     fi
 
     # Check they are not the exact same file (hardlinks allowed):
     if [ "$1" = "$2" ]; then
-        echo "^^^^^^ Error: original and duplicate point to the *same* path - cancelling....."
+        echo $COL_RED "^^^^^^ Error: original and duplicate point to the *same* path - cancelling....." $COL_RESET
         return 1
     fi
 
@@ -97,14 +102,14 @@ original_check() {
         if cmp -s "$1" "$2"; then
             return 0
         else
-            echo "^^^^^^ Error: files no longer identical - cancelling....."
+            echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
             return 1
         fi
     fi
 }
 
 cp_hardlink() {
-    echo 'Hardlinking to original:' "$1"
+    echo $COL_YELLOW 'Hardlinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             cp --remove-destination --archive --link "$2" "$1"
@@ -113,7 +118,7 @@ cp_hardlink() {
 }
 
 cp_symlink() {
-    echo 'Symlinking to original:' "$1"
+    echo $COL_YELLOW 'Symlinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
@@ -125,7 +130,7 @@ cp_symlink() {
 
 cp_reflink() {
     # reflink $1 to $2's data, preserving $1's  mtime
-    echo 'Reflinking to original:' "$1"
+    echo $COL_YELLOW 'Reflinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
@@ -137,7 +142,7 @@ cp_reflink() {
 
 clone() {
     # clone $1 from $2's data
-    echo 'Cloning to: ' "$1"
+    echo $COL_YELLOW 'Cloning to: ' "$1" $COL_RESET
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
             sudo rmlint --btrfs-clone -r "$2" "$1"
@@ -148,11 +153,11 @@ clone() {
 }
 
 skip_hardlink() {
-    echo 'Leaving as-is (already hardlinked to original):' "$1"
+    echo $COL_BLUE 'Leaving as-is (already hardlinked to original):' $COL_RESET "$1"
 }
 
 skip_reflink() {
-    echo 'Leaving as-is (already reflinked to original):' "$1"
+    echo $COL_BLUE 'Leaving as-is (already reflinked to original):' $COL_RESET "$1"
 }
 
 user_command() {
@@ -161,12 +166,16 @@ user_command() {
 }
 
 remove_cmd() {
-    echo 'Deleting:' "$1"
+    echo $COL_YELLOW 'Deleting:' $COL_RESET "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             rm -rf "$1"
         fi
     fi
+}
+
+original_cmd() {
+    echo $COL_GREEN 'Keeping: ' $COL_RESET "$1"
 }
 
 ##################
@@ -190,7 +199,7 @@ EOF
     if [ -z "$eof_check" ]
     then
         # Count Ctrl-D and Enter as aborted too.
-        echo "Aborted on behalf of the user."
+        echo $COL_RED "Aborted on behalf of the user." $COL_RESET
         exit 1;
     fi
 }
@@ -231,7 +240,6 @@ do
        ;;
      r)
        DO_CLONE_READONLY=true
-       echo DO_CLONE_READONLY=true
        ;;
      p)
        DO_PARANOID_CHECK=true

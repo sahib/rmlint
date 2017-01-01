@@ -299,7 +299,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
             comment = "# original";
         }
 
-        prefix = g_strdup_printf("echo 'Keeping: ' '%s'", file_escaped);
+        prefix = g_strdup_printf("original_cmd '%s'", file_escaped);
         self->last_original = file;
     } else if(self->last_original) {
 
