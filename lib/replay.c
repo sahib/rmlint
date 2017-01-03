@@ -66,9 +66,9 @@ typedef struct RmParrot {
     /* Set of diskids in cfg->paths */
     GHashTable *disk_ids;
 
-	/* true if the .json file came after a //
-	 * on the commandline. */
-	bool is_prefd;
+    /* true if the .json file came after a //
+     * on the commandline. */
+    bool is_prefd;
 } RmParrot;
 
 static void rm_parrot_close(RmParrot *polly) {
@@ -87,7 +87,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path,
     polly->parser = json_parser_new();
     polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
-	polly->is_prefd = is_prefd;
+    polly->is_prefd = is_prefd;
 
     for(int idx = 0; session->cfg->paths[idx]; ++idx) {
         RmStat stat_buf;
@@ -454,7 +454,7 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
             file->is_original = false;
         }
 
-		RM_DEFINE_PATH(file);
+        RM_DEFINE_PATH(file);
 
         rm_parrot_update_stats(cage, file);
         rm_fmt_write(file, cage->session->formats, group->length);
@@ -530,9 +530,9 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
         g_queue_push_tail(group, file);
     }
 
-	if(last_digest != NULL) {
-		rm_digest_free(last_digest);
-	}
+    if(last_digest != NULL) {
+        rm_digest_free(last_digest);
+    }
 
     rm_parrot_cage_push_group(cage, &group, true);
     rm_parrot_close(polly);
@@ -545,38 +545,38 @@ void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session) {
 }
 
 static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
-	GHashTable *digest_to_group = g_hash_table_new(
-			(GHashFunc)rm_digest_hash,
-			(GEqualFunc)rm_digest_equal
-		);
+    GHashTable *digest_to_group = g_hash_table_new(
+            (GHashFunc)rm_digest_hash,
+            (GEqualFunc)rm_digest_equal
+        );
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
-		RmFile *head_file = group->head->data;
-		GQueue *existing_group = g_hash_table_lookup(
-				digest_to_group,
-				head_file->digest
-			);
+        RmFile *head_file = group->head->data;
+        GQueue *existing_group = g_hash_table_lookup(
+                digest_to_group,
+                head_file->digest
+            );
 
-		if(existing_group != NULL) {
-			// Merge the two groups and get rid of the old one.
-			rm_util_queue_push_tail_queue(existing_group, group);
-			g_queue_free(group);
-			GList *old_iter = iter;
-			iter = iter->prev;
-			g_queue_delete_link(cage->groups, old_iter);
-			continue;
-		}
+        if(existing_group != NULL) {
+            // Merge the two groups and get rid of the old one.
+            rm_util_queue_push_tail_queue(existing_group, group);
+            g_queue_free(group);
+            GList *old_iter = iter;
+            iter = iter->prev;
+            g_queue_delete_link(cage->groups, old_iter);
+            continue;
+        }
 
-		// No such group, but remember it.
-		g_hash_table_insert(digest_to_group, head_file->digest, group);
-	}
+        // No such group, but remember it.
+        g_hash_table_insert(digest_to_group, head_file->digest, group);
+    }
 
-	g_hash_table_unref(digest_to_group);
+    g_hash_table_unref(digest_to_group);
 }
 
 void rm_parrot_cage_close(RmParrotCage *cage) {
-	rm_parrot_merge_identical_groups(cage);
+    rm_parrot_merge_identical_groups(cage);
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
