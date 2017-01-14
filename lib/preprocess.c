@@ -336,8 +336,8 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
                 pattern_count++;
             } else if(pattern_count != -1) {
                 g_set_error(error, RM_ERROR_QUARK, 0,
-                            _("Cannot add more than %ld regex patterns."),
-                            RM_PATTERN_N_MAX);
+                            _("Cannot add more than %lu regex patterns."),
+                            (unsigned long) RM_PATTERN_N_MAX);
 
                 /* Make sure to set the warning only once */
                 pattern_count = -1;
