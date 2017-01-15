@@ -332,7 +332,7 @@ Original Detection Options
 
     Sort the files in a group of duplicates into originals and duplicates by
     one or more criteria. Each criteria is defined by a single letter (except
-    **r** and **x**). Mutliple criterias may be given as string, where the
+    **r** and **x**). Multiple criteria may be given as string, where the
     first criteria is the most important. If one criteria cannot decide between
     original and duplicate the next one is tried.
 

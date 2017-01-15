@@ -1364,7 +1364,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
             rm_log_debug_line("%s=%s was read from cache.", hexstring, file_path);
         } else {
             rm_log_warning_line(
-                "Unable to read external checksum from interal cache for %s", file_path);
+                "Unable to read external checksum from internal cache for %s", file_path);
             file->has_ext_cksum = 0;
             group->has_only_ext_cksums = 0;
         }

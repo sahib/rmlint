@@ -7,3 +7,4 @@ TryExec=rmlint
 Exec=rmlint --gui
 Icon=shredder
 Categories=System;
+Keywords=remove;duplicate;files;filesystem;lint;
