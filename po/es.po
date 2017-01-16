@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.4.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-10-24 14:13+0200\n"
+"POT-Creation-Date: 2017-01-15 16:15+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,20 +17,12 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/rmlint.c:74
-msgid "Received Interrupt, stopping..."
-msgstr "Interrupción Recibida, deteniendo..."
-
-#: src/rmlint.c:76
-msgid "Received second Interrupt, stopping hard."
-msgstr "Segunda Interrupción Recibida, deteniendo firmemente."
-
-#: src/rmlint.c:82
+#: src/rmlint.c:78
 #, c-format
 msgid "Aborting due to a fatal error. (signal received: %s)"
 msgstr "Abortando debido a un error fatal. (señal recibida: %s)"
 
-#: src/rmlint.c:84
+#: src/rmlint.c:80
 msgid "Please file a bug report (See rmlint -h)"
 msgstr "Por favor presente un reporte de error (Ver rmlint -h)"
 
@@ -69,6 +61,46 @@ msgstr "Duplicado(s)"
 #: lib/formats/pretty.c:42
 msgid "Duplicate Directorie(s)"
 msgstr "Directorio(s) duplicado(s)"
+
+#: lib/formats/summary.c:54
+#, c-format
+msgid " file(s) after investigation, nothing to search through.\n"
+msgstr "archivo(s) después de investigar, nada que buscar.\n"
+
+#: lib/formats/summary.c:69
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr "Apagado prematuro, probablemente no toda la pelusa fué encontrada.\n"
+
+#: lib/formats/summary.c:74
+#, c-format
+msgid ""
+"Note: Please use the saved script below for removal, not the above output."
+msgstr ""
+"Nota: Por favor use el script guardado abajo para eliminar, no la respuesta "
+"de arriba."
+
+#: lib/formats/summary.c:87
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr "En total %s archivos, en donde %s son duplicados en %s grupos.\n"
+
+#: lib/formats/summary.c:95
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr "Esto equivale a %s%s%s de duplicados lo cual podría ser eliminado.\n"
+
+#: lib/formats/summary.c:102
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr ""
+"otro(s) artículo(s) sospechoso(s) encontrado(s), los cuales podrían variar "
+"en tamaño.\n"
+
+#: lib/formats/summary.c:137
+#, c-format
+msgid "Wrote a %s%s%s file to: %s%s%s\n"
+msgstr "Escribió un archivo %s%s%s a: %s%s%s\n"
 
 #: lib/formats/progressbar.c:70
 msgid "reduces files to"
@@ -122,84 +154,48 @@ msgstr "archivos"
 msgid "Merging files into directories (stand by...)"
 msgstr "Combinando archivos en directorios (espere...)"
 
-#: lib/formats/summary.c:54
-#, c-format
-msgid " file(s) after investigation, nothing to search through.\n"
-msgstr "archivo(s) después de investigar, nada que buscar.\n"
-
-#: lib/formats/summary.c:69
-#, c-format
-msgid "Early shutdown, probably not all lint was found.\n"
-msgstr "Apagado prematuro, probablemente no toda la pelusa fué encontrada.\n"
-
-#: lib/formats/summary.c:74
-#, c-format
-msgid ""
-"Note: Please use the saved script below for removal, not the above output."
-msgstr ""
-"Nota: Por favor use el script guardado abajo para eliminar, no la respuesta de arriba."
-
-#: lib/formats/summary.c:87
-#, c-format
-msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
-msgstr "En total %s archivos, en donde %s son duplicados en %s grupos.\n"
-
-#: lib/formats/summary.c:95
-#, c-format
-msgid "This equals %s%s%s of duplicates which could be removed.\n"
-msgstr "Esto equivale a %s%s%s de duplicados lo cual podría ser eliminado.\n"
-
-#: lib/formats/summary.c:102
-#, c-format
-msgid "other suspicious item(s) found, which may vary in size.\n"
-msgstr "otro(s) artículo(s) sospechoso(s) encontrado(s), los cuales podrían variar en tamaño.\n"
-
-#: lib/formats/summary.c:137
-#, c-format
-msgid "Wrote a %s%s%s file to: %s%s%s\n"
-msgstr "Escribió un archivo %s%s%s a: %s%s%s\n"
-
-#: lib/formats/sh.c:461
+#: lib/formats/sh.c:485
 #, c-format
 msgid "%s is an invalid handler."
 msgstr "%s es un gestor inválido"
 
-#: lib/hash-utility.c:55 lib/cmdline.c:910
+#: lib/hash-utility.c:56 lib/cmdline.c:934
 #, c-format
 msgid "Unknown hash algorithm: '%s'"
 msgstr "Algoritmo de rastreo desconocido: '%s'"
 
-#: lib/hash-utility.c:133
+#: lib/hash-utility.c:140
 msgid "Digest type [SHA1]"
 msgstr "Asimilación tipo [SHA1]"
 
-#: lib/hash-utility.c:134
+#: lib/hash-utility.c:141
 msgid "Number of hashing threads [8]"
 msgstr "Número de hilos rastreados [8]"
 
-#: lib/hash-utility.c:135
+#: lib/hash-utility.c:142
 msgid "Print hash as self identifying multihash"
 msgstr "Muestra el rastreo como un multirastreo auto identificado"
 
-#: lib/hash-utility.c:136
+#: lib/hash-utility.c:143
 msgid "Megabytes read buffer [256 MB]"
 msgstr "Almacenamiento temporal de lectura de Megabytes [256]"
 
-#: lib/hash-utility.c:137
+#: lib/hash-utility.c:144
 msgid ""
 "Print hashes in order completed, not in order entered (reduces memory usage)"
 msgstr ""
-"Muestra a los rastreos en el orden completado, no en el orden ingresado (reduce el uso de memoria)"
+"Muestra a los rastreos en el orden completado, no en el orden ingresado "
+"(reduce el uso de memoria)"
 
-#: lib/hash-utility.c:138
+#: lib/hash-utility.c:145
 msgid "Space-separated list of files"
 msgstr "Enlistado de archivos separados-con-espacio"
 
-#: lib/hash-utility.c:144 lib/hash-utility.c:146
+#: lib/hash-utility.c:151 lib/hash-utility.c:153
 msgid "Hash a list of files"
 msgstr "Rastrea una lista de archivos"
 
-#: lib/hash-utility.c:152
+#: lib/hash-utility.c:159
 #, c-format
 msgid ""
 "Multi-threaded file digest (hash) calculator.\n"
@@ -224,21 +220,21 @@ msgstr ""
 "  Soportado, mas no útil:\n"
 "    %s\n"
 
-#: lib/hash-utility.c:188 lib/cmdline.c:1537
+#: lib/hash-utility.c:195 lib/cmdline.c:1522
 msgid "No valid paths given."
 msgstr "Ubicaciones proporcionadas no son válidas"
 
-#: lib/hash-utility.c:220 lib/cmdline.c:436
+#: lib/hash-utility.c:228 lib/cmdline.c:467
 #, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
 
-#: lib/hash-utility.c:223
+#: lib/hash-utility.c:231
 #, c-format
 msgid "Directories are not supported: %s"
 msgstr "Los directorios no son soportados: %s"
 
-#: lib/hash-utility.c:230
+#: lib/hash-utility.c:240
 #, c-format
 msgid "%s: Unknown file type"
 msgstr "%s: Tipo de archivo desconocido"
@@ -248,463 +244,369 @@ msgstr "%s: Tipo de archivo desconocido"
 msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
 msgstr "Algo falló leyendo %s; esperados %li bytes, obtenidos %li; ignorando"
 
-#: lib/replay.c:101 lib/utilities.c:471
-msgid "No valid json cache (no array in /)"
-msgstr "No hay json en cache válido (no hay arreglo en /)"
-
-#: lib/replay.c:150 lib/cmdline.c:736
-#, c-format
-msgid "lint type '%s' not recognised"
-msgstr "el tipo de pelusa '%s' no se reconoce"
-
-#: lib/replay.c:173
-#, c-format
-msgid "modification time of `%s` changed. Ignoring."
-msgstr "el tiempo de modificación de '%s' ha cambiado. Ignorando."
-
-#: lib/replay.c:487
-#, c-format
-msgid "Loading json-results `%s'"
-msgstr "Cargando json-results '%s'"
-
-#: lib/replay.c:565
-msgid "json-glib is needed for using --replay."
-msgstr "json-glib es necesario para usar --replay."
-
-#: lib/replay.c:566
-msgid "Please recompile `rmlint` with it installed."
-msgstr "Por favor recompile 'rmlint' con ello instalado."
-
-#: lib/traverse.c:346
-#, c-format
-msgid "filesystem loop detected at %s (skipping)"
-msgstr "retroalimentación de sistema de archivos detectada en %s (descartando)"
-
-#: lib/traverse.c:351
-#, c-format
-msgid "cannot read directory %s: %s"
-msgstr "no se puede leer el directorio %s: %s"
-
-#: lib/traverse.c:364
-#, c-format
-msgid "error %d in fts_read for %s (skipping)"
-msgstr "error en %d en fts_read para %s (descartando)"
-
-#: lib/traverse.c:394
-#, c-format
-msgid "Added big file %s"
-msgstr "Archivo grande %s añadido"
-
-#: lib/traverse.c:396
-#, c-format
-msgid "cannot stat file %s (skipping)"
-msgstr "no se puede obtener informacion del archivo %s (descartando)"
-
-#: lib/traverse.c:443
-#, c-format
-msgid "Unknown fts_info flag %d for file %s"
-msgstr "Bandera fts_info %d desconocida para archivo %s"
-
-#: lib/traverse.c:463
-#, c-format
-msgid "'%s': fts_read failed on %s"
-msgstr "'%s': fts_read falló en %s"
-
-#: lib/utilities.c:252
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
-msgstr "no se puede abrir archivo '%s' para prueba sin depurar: "
-
-#: lib/utilities.c:259
-msgid "ELF Library is out of date!"
-msgstr "La Librería ELF está fuera de fecha!"
-
-#: lib/utilities.c:450
-msgid "caching is not supported due to missing json-glib library."
-msgstr "el cacheo no es soportado debido a la librería inexistente json-glib"
-
-#: lib/utilities.c:461
-#, c-format
-msgid "Loading json-cache `%s'"
-msgstr "Cargando json-cache '%s"
-
-#: lib/utilities.c:464
-#, c-format
-msgid "FAILED: %s\n"
-msgstr "FALLO: %s\n"
-
-#: lib/utilities.c:734
-#, c-format
-msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
-msgstr "Montaje '%s' detectado en %s (#%u); Ignorando todos los archivos en él.\n"
-
-#: lib/formats.c:183
-#, c-format
-msgid "No such new_handler with this name: %s"
-msgstr "No hay tal new_handler con éste nombre: %s"
-
-#: lib/formats.c:205
-#, c-format
-msgid "Unable to open file for writing: %s"
-msgstr "Incapaz de abrir archivo para escritura: %s"
-
-#: lib/cmdline.c:80
+#: lib/cmdline.c:79
 #, c-format
 msgid "compiled with:"
 msgstr "compilado con:"
 
-#: lib/cmdline.c:86
+#: lib/cmdline.c:85
 #, c-format
 msgid ""
 "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> "
 "Thomas."
 msgstr ""
-"rmlint fué escrito por Christopher <sahib> Pahl y Daniel <SeeSpotRun> "
-"Thomas."
+"rmlint fué escrito por Christopher <sahib> Pahl y Daniel <SeeSpotRun> Thomas."
 
-#: lib/cmdline.c:89
+#: lib/cmdline.c:88
 #, c-format
 msgid ""
 "The code at https://github.com/sahib/rmlint is licensed under the terms of "
 "the GPLv3."
 msgstr ""
-"El código en https://github.com/sahib/rmlint tiene licencia bajo los términos de "
-"el GPLv3."
+"El código en https://github.com/sahib/rmlint tiene licencia bajo los "
+"términos de el GPLv3."
 
-#: lib/cmdline.c:114
+#: lib/cmdline.c:113
 msgid "You seem to have no manpage for rmlint."
 msgstr "Parece que no tienes manpage (manual) para rmlint"
 
-#: lib/cmdline.c:180
-msgid "Usage: rmlint --btrfs-clone source dest\n"
+#: lib/cmdline.c:114
+msgid "Please run rmlint --help to show the regular help."
+msgstr ""
+
+#: lib/cmdline.c:115
+msgid ""
+"Alternatively, visit https://rmlint.rtfd.org for the online documentation"
+msgstr ""
+
+#: lib/cmdline.c:237
+#, fuzzy
+msgid "Usage: rmlint --btrfs-clone [-r] source dest\n"
 msgstr "Uso: rmlint --btrfs-clone fuente dest\n"
 
-#: lib/cmdline.c:193
+#: lib/cmdline.c:250
 msgid "btrfs clone: failed to open source file"
 msgstr "btrfs clone: no logró abrir el archivo fuente."
 
-#: lib/cmdline.c:199
-msgid "btrfs clone: failed to open dest file."
+#: lib/cmdline.c:256
+#, fuzzy, c-format
+msgid "btrfs clone: error %i: failed to open dest file.%s"
 msgstr "btrfs clone: no logró abrir el archivo dest."
 
-#: lib/cmdline.c:234
+#: lib/cmdline.c:258
+msgid ""
+"\n"
+"\t(if target is a read-only snapshot then -r option is required)"
+msgstr ""
+
+#: lib/cmdline.c:293
 #, c-format
 msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
 msgstr "BTRFS_IOC_FILE_EXTENT_SAME regresó un error: (%d) %s"
 
-#: lib/cmdline.c:238
-msgid ""
-"BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > "
-"4.2"
+#: lib/cmdline.c:297
+msgid "Need to run as root user to clone to a read-only snapshot"
 msgstr ""
-"BTRFS_IOC_FILE_EXTENT_SAME regresó el estatus -22 - probablemente necesitas un kernel > "
-"4.2"
 
-#: lib/cmdline.c:241
+#: lib/cmdline.c:299
 #, c-format
 msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
 msgstr "BTRFS_IOC_FILE_EXTENT_SAME regresó un estatus %d para el archivo %s"
 
-#: lib/cmdline.c:244
+#: lib/cmdline.c:302
 msgid "Files don't match - not cloned"
 msgstr "Los archivos no son iguales - no se clonó"
 
-#: lib/cmdline.c:250
+#: lib/cmdline.c:308
 msgid "rmlint was not compiled with btrfs support."
 msgstr "rmlint no fué compilado con soporte para btrfs"
 
-#: lib/cmdline.c:306
+#: lib/cmdline.c:369
 msgid "Input size is empty"
 msgstr "El tamaño de ingreso está vacío"
 
-#: lib/cmdline.c:314
+#: lib/cmdline.c:377
 msgid "This does not look like a number"
 msgstr "Estto no parece un número"
 
-#: lib/cmdline.c:317
+#: lib/cmdline.c:380
 msgid "Negativ sizes are no good idea"
 msgstr "Tamaños negativos no son una buena idea"
 
-#: lib/cmdline.c:333
+#: lib/cmdline.c:396
 msgid "Given format specifier not found"
 msgstr "Dicho especificador de formato no fué encontrado"
 
-#: lib/cmdline.c:365
+#: lib/cmdline.c:428
 msgid "Max is smaller than min"
 msgstr "Max es más pequeño que min"
 
-#: lib/cmdline.c:377
+#: lib/cmdline.c:440
 msgid "cannot parse --size: "
 msgstr "no se puede analizar --size: "
 
-#: lib/cmdline.c:398
-msgid "--replay given; --with-metadata-cache will be ignored."
-msgstr "--replay dado; --with-metadata-cache será ignorado."
-
-#: lib/cmdline.c:408
-#, c-format
-msgid "Unable to open tmp cache: %s"
-msgstr "Incapaz de abrir cache tmp: %s"
-
-#: lib/cmdline.c:421
-#, c-format
-msgid "Unable to create cache attr `%s`: %s"
-msgstr "Incapaz de crear cache attr '%s': %s"
-
-#: lib/cmdline.c:504
+#: lib/cmdline.c:528
 #, c-format
 msgid "Adding -o %s as output failed"
 msgstr "Falló añadiendo -o %s como respuesta"
 
-#: lib/cmdline.c:516
+#: lib/cmdline.c:540
 #, c-format
 msgid "No format (format:key[=val]) specified in '%s'"
 msgstr "Sin formato (format:key[=val]) especificado en '%s'"
 
-#: lib/cmdline.c:526
+#: lib/cmdline.c:550
 #, c-format
 msgid "Missing key (format:key[=val]) in '%s'"
 msgstr "Llave perdida (format:key[=val]) en '%s'"
 
-#: lib/cmdline.c:541
+#: lib/cmdline.c:565
 #, c-format
 msgid "Invalid key `%s' for formatter `%s'"
 msgstr "Llave inválida '%s' para el formateador '%s'"
 
-#: lib/cmdline.c:568
+#: lib/cmdline.c:592
 #, c-format
 msgid "Unable to parse factor \"%s\": error begins at %s"
 msgstr "Incapaz de analizar el factor \"%s\": el error empieza en %s"
 
-#: lib/cmdline.c:578
+#: lib/cmdline.c:602
 #, c-format
 msgid "factor value is not in range [0-1]: %f"
 msgstr "el valor del factor no se encuentra dentro del rango [0-1]: %f"
 
-#: lib/cmdline.c:590
+#: lib/cmdline.c:614
 #, c-format
 msgid "Unable to parse offset \"%s\": "
 msgstr "Incapaz de analizar el offset \"%s\": "
 
-#: lib/cmdline.c:784
+#: lib/cmdline.c:760 lib/replay.c:154
+#, c-format
+msgid "lint type '%s' not recognised"
+msgstr "el tipo de pelusa '%s' no se reconoce"
+
+#: lib/cmdline.c:808
 #, c-format
 msgid "Unable to parse time spec \"%s\""
 msgstr "Incapaz de analizar la especificación de tiempo \"%s\""
 
-#: lib/cmdline.c:798
+#: lib/cmdline.c:822
 #, c-format
 msgid "-n %lu is newer than current time (%lu)."
 msgstr "-n %lu es mas reciente que el tiempo actual (%lu)."
 
-#: lib/cmdline.c:887
+#: lib/cmdline.c:911
 msgid "Only up to -pp or down to -PP flags allowed"
 msgstr "Sólo banderas hasta -pp o menores a -PP está permitido"
 
-#: lib/cmdline.c:939
+#: lib/cmdline.c:963
 #, c-format
 msgid "Invalid size description \"%s\": "
 msgstr "Tamaño de descripción inválido \"%s\": "
 
-#: lib/cmdline.c:1140
+#: lib/cmdline.c:1141
 msgid "Permissions string needs to be one or many of [rwx]"
 msgstr "La cadena de permisos necesita ser una o muchas de [rwx]"
 
-#: lib/cmdline.c:1153
+#: lib/cmdline.c:1154
 #, c-format
 msgid "%s may only contain [%s], not `%c`"
 msgstr "%s puede únicamente contener [%s], no '%c'"
 
-#: lib/cmdline.c:1284
+#: lib/cmdline.c:1276
 msgid "Specifiyng both -o and -O is not allowed"
 msgstr "Especificar -o y -O no está permitido"
 
-#: lib/cmdline.c:1304
+#: lib/cmdline.c:1296
 msgid "Could not start graphical user interface."
 msgstr "No se pudo iniciar la interfase de usuario gráfica."
 
-#: lib/cmdline.c:1335
+#: lib/cmdline.c:1327
 msgid "Specify max traversal depth"
 msgstr "Especificar la profundidad de recorrido máxima"
 
-#: lib/cmdline.c:1336
+#: lib/cmdline.c:1328
 msgid "Select originals by given  criteria"
 msgstr "Seleccionar los originales de acuerdo a el criterio dado"
 
-#: lib/cmdline.c:1337
+#: lib/cmdline.c:1329
 msgid "Sort rmlint output by given criteria"
 msgstr "Ordenar la respuesta de rmlint de acuerdo a el criterio dado"
 
-#: lib/cmdline.c:1338
+#: lib/cmdline.c:1330
 msgid "Specify lint types"
 msgstr "Especificar los tipos de pelusa"
 
-#: lib/cmdline.c:1339
+#: lib/cmdline.c:1331
 msgid "Specify size limits"
 msgstr "Especificar el límite de tamaño"
 
-#: lib/cmdline.c:1340
+#: lib/cmdline.c:1332
 msgid "Choose hash algorithm"
 msgstr "Escoger el algoritmo de rastreo"
 
-#: lib/cmdline.c:1341
+#: lib/cmdline.c:1333
 msgid "Add output (override default)"
 msgstr "Añadir respuesta (anula el preestablecido)"
 
-#: lib/cmdline.c:1342
+#: lib/cmdline.c:1334
 msgid "Add output (add to defaults)"
 msgstr "Añadir respuesta (añade a el preestablecido)"
 
-#: lib/cmdline.c:1343
+#: lib/cmdline.c:1335
 msgid "Newer than stamp file"
 msgstr "Más nuevo que el archivo de sello"
 
-#: lib/cmdline.c:1344
+#: lib/cmdline.c:1336
 msgid "Newer than timestamp"
 msgstr "Más nuevo que la marca de tiempo"
 
-#: lib/cmdline.c:1345
+#: lib/cmdline.c:1337
+msgid "Configure a formatter"
+msgstr "Configurar un formateador"
+
+#: lib/cmdline.c:1340
+msgid "Enable progressbar"
+msgstr "Habilitar la barra de progreso"
+
+#: lib/cmdline.c:1341
+msgid "Be more verbose (-vvv for much more)"
+msgstr "Sé más explicativo (-vvv para mucho más)"
+
+#: lib/cmdline.c:1342
+msgid "Be less verbose (-VVV for much less)"
+msgstr "Sé menos explicativo (-VVV para mucho menos)"
+
+#: lib/cmdline.c:1343
 msgid "Re-output a json file"
 msgstr "Dar respuesta nuevamente de un archivo json"
 
 #: lib/cmdline.c:1346
-msgid "Configure a formatter"
-msgstr "Configurar un formateador"
-
-#: lib/cmdline.c:1347
-msgid "Add json cache file"
-msgstr "Añadir un archivo de cache json"
-
-#: lib/cmdline.c:1350
-msgid "Enable progressbar"
-msgstr "Habilitar la barra de progreso"
-
-#: lib/cmdline.c:1351
-msgid "Be more verbose (-vvv for much more)"
-msgstr "Sé más explicativo (-vvv para mucho más)"
-
-#: lib/cmdline.c:1352
-msgid "Be less verbose (-VVV for much less)"
-msgstr "Sé menos explicativo (-VVV para mucho menos)"
-
-#: lib/cmdline.c:1355
 msgid "Be not that colorful"
 msgstr "No seas tan colorido"
 
-#: lib/cmdline.c:1356
+#: lib/cmdline.c:1347
 msgid "Find hidden files"
 msgstr "Encuentra archivos ocultos"
 
-#: lib/cmdline.c:1357
+#: lib/cmdline.c:1348
 msgid "Follow symlinks"
 msgstr "Sigue los enlaces simbólicos"
 
-#: lib/cmdline.c:1358
+#: lib/cmdline.c:1349
 msgid "Ignore symlinks"
 msgstr "Ignora los enlaces simbólicos"
 
-#: lib/cmdline.c:1359
+#: lib/cmdline.c:1350
 msgid "Use more paranoid hashing"
 msgstr "Usa un ratreo más paranóico"
 
-#: lib/cmdline.c:1360
+#: lib/cmdline.c:1351
 msgid "Do not cross mounpoints"
 msgstr "No cruza los puntos de montaje"
 
-#: lib/cmdline.c:1361
+#: lib/cmdline.c:1352
 msgid "Keep all tagged files"
 msgstr "Mantiene todos los archivos etiquetados"
 
-#: lib/cmdline.c:1362
+#: lib/cmdline.c:1353
 msgid "Keep all untagged files"
 msgstr "Mantiene todos los archivos sin etiquetar"
 
-#: lib/cmdline.c:1363
+#: lib/cmdline.c:1354
 msgid "Must have twin in tagged dir"
 msgstr "Debe tener gemelo en directorio etiquetado"
 
-#: lib/cmdline.c:1364
+#: lib/cmdline.c:1355
 msgid "Must have twin in untagged dir"
 msgstr "Debe tener gemelo en directorio sin etiquetar"
 
-#: lib/cmdline.c:1365
+#: lib/cmdline.c:1356
 msgid "Only find twins with same basename"
 msgstr "Sólo encuentra gemelos con el mismo nombre base"
 
-#: lib/cmdline.c:1366
+#: lib/cmdline.c:1357
 msgid "Only find twins with same extension"
 msgstr "Sólo encuentra gemelos con la misma extensión"
 
-#: lib/cmdline.c:1367
+#: lib/cmdline.c:1358
 msgid "Only find twins with same basename minus extension"
 msgstr "Sólo encuentra gemelos con el mismo nombre base menos la extensión"
 
-#: lib/cmdline.c:1368
+#: lib/cmdline.c:1359
 msgid "Find duplicate directories"
 msgstr "Encuentra directorios duplicados"
 
-#: lib/cmdline.c:1369
+#: lib/cmdline.c:1360
 msgid "Only use files with certain permissions"
 msgstr "Sólo usa archivos con ciertos permisos"
 
-#: lib/cmdline.c:1370
+#: lib/cmdline.c:1361
 msgid "Ignore hardlink twins"
 msgstr "Ignora gemelos con hardlink"
 
-#: lib/cmdline.c:1371
+#: lib/cmdline.c:1362
 msgid "Find hidden files in duplicate folders only"
 msgstr "Encuentra archivos ocultos en carpetas duplicadas únicamente"
 
-#: lib/cmdline.c:1374
+#: lib/cmdline.c:1363
+msgid "Consider duplicates only equal when mtime differs at max. T seconds"
+msgstr ""
+
+#: lib/cmdline.c:1366
 msgid "Show the manpage"
 msgstr "Muestra el manpage (manual)"
 
-#: lib/cmdline.c:1375
+#: lib/cmdline.c:1367
 msgid "Show the version & features"
 msgstr "Muestra la versión y características"
 
-#: lib/cmdline.c:1377
+#: lib/cmdline.c:1369
 msgid "If installed, start the optional gui with all following args"
-msgstr "Si se instaló, inicie la interfaz gráfica de usuario (gui) opcional con todos los siguientes argumentos"
+msgstr ""
+"Si se instaló, inicie la interfaz gráfica de usuario (gui) opcional con "
+"todos los siguientes argumentos"
 
-#: lib/cmdline.c:1378
+#: lib/cmdline.c:1370
 msgid ""
 "Work like sha1sum for all supported hash algorithms (see also --hash --help)"
 msgstr ""
-"Trabaja como sha1sum para todos los algoritmos de rastreo soportados (ver también --hash --help)"
+"Trabaja como sha1sum para todos los algoritmos de rastreo soportados (ver "
+"también --hash --help)"
 
-#: lib/cmdline.c:1379
+#: lib/cmdline.c:1371
 msgid "Clone extents from source to dest, if extents match"
 msgstr "Clona los alcances de la fuente al destino, si los alcances coinciden"
 
-#: lib/cmdline.c:1389
+#: lib/cmdline.c:1381
 msgid "Report hardlinks as duplicates"
 msgstr "Reporta hardlinks como duplicados"
 
-#: lib/cmdline.c:1439
+#: lib/cmdline.c:1427
 msgid "Cannot set current working directory"
 msgstr "No se puede ajustar el directorio de trabajo actual"
 
-#: lib/cmdline.c:1444
+#: lib/cmdline.c:1432
 msgid "Cannot join commandline"
 msgstr "No se puede añadir la línea de comandos"
 
-#: lib/cmdline.c:1453
+#: lib/cmdline.c:1441
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
 msgstr "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
 
-#: lib/cmdline.c:1471
+#: lib/cmdline.c:1459
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
 "It is especially good at finding duplicates and offers a big variety of "
 "options to handle them."
 msgstr ""
-"rmlint encuentra espacio desperdiciado y otras cosas rotas en tu sistema de archivos y "
-"te ofrece eliminarlas.\n"
+"rmlint encuentra espacio desperdiciado y otras cosas rotas en tu sistema de "
+"archivos y te ofrece eliminarlas.\n"
 "Es especialmente bueno encontrando duplicados y ofrece una gran variedad de "
 "opciones para manejarlos."
 
-#: lib/cmdline.c:1477
+#: lib/cmdline.c:1465
 msgid ""
 "Only the most important options and options that alter the defaults are "
 "shown above.\n"
@@ -713,64 +615,190 @@ msgid ""
 "or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
-"Sólo las opciones más importantes y las opciones que alteran los preestablecidos son "
-"mostradas arriba.\n"
-"Ver el manpage (manual) (man 1 rmlint o rmlint --show-man) para mucho más detalle "
-"en la información de su uso,\n"
-"o http://rmlint.rtfd.org/en/latest/rmlint.1.html para el manpage (manual) en línea.\n"
+"Sólo las opciones más importantes y las opciones que alteran los "
+"preestablecidos son mostradas arriba.\n"
+"Ver el manpage (manual) (man 1 rmlint o rmlint --show-man) para mucho más "
+"detalle en la información de su uso,\n"
+"o http://rmlint.rtfd.org/en/latest/rmlint.1.html para el manpage (manual) en "
+"línea.\n"
 "Tutoriales complementarios pueden encontrarse en: http://rmlint.rtfd.org"
 
-#: lib/cmdline.c:1528
-msgid "cannot create metadata cache (see above)"
-msgstr "no se puede crear cache de metainformación (ver arriba)"
-
-#: lib/cmdline.c:1532
+#: lib/cmdline.c:1517
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr "no se puede especificar ambas --keep-all-tagged y --keep-all-untagged"
 
-#: lib/cmdline.c:1535
+#: lib/cmdline.c:1520
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr "-q (--clamp-low) debe ser menor que -Q (--clamp-top)"
 
-#: lib/session.c:138
-#, c-format
-msgid "Cannot close tmp cache: %s\n"
-msgstr "No se puede cerrar el cache temporal: %s\n"
+#: lib/cmdline.c:1589
+#, fuzzy
+msgid "No valid .json files given, aborting."
+msgstr "No hay json en cache válido (no hay arreglo en /)"
 
-#: lib/config.h:108
+#: lib/session.c:139
+msgid "Received Interrupt, stopping..."
+msgstr "Interrupción Recibida, deteniendo..."
+
+#: lib/session.c:153
+msgid "Received second Interrupt, stopping hard."
+msgstr "Segunda Interrupción Recibida, deteniendo firmemente."
+
+#: lib/traverse.c:330
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr "retroalimentación de sistema de archivos detectada en %s (descartando)"
+
+#: lib/traverse.c:335
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr "no se puede leer el directorio %s: %s"
+
+#: lib/traverse.c:348
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr "error en %d en fts_read para %s (descartando)"
+
+#: lib/traverse.c:378
+#, c-format
+msgid "Added big file %s"
+msgstr "Archivo grande %s añadido"
+
+#: lib/traverse.c:380
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr "no se puede obtener informacion del archivo %s (descartando)"
+
+#: lib/traverse.c:427
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr "Bandera fts_info %d desconocida para archivo %s"
+
+#: lib/traverse.c:447
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr "'%s': fts_read falló en %s"
+
+#: lib/utilities.c:308
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr "no se puede abrir archivo '%s' para prueba sin depurar: "
+
+#: lib/utilities.c:315
+msgid "ELF Library is out of date!"
+msgstr "La Librería ELF está fuera de fecha!"
+
+#: lib/utilities.c:655
+#, c-format
+msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
+msgstr ""
+"Montaje '%s' detectado en %s (#%u); Ignorando todos los archivos en él.\n"
+
+#: lib/config.h:114
 msgid "ERROR"
 msgstr "ERROR"
 
-#: lib/config.h:113
+#: lib/config.h:119
 msgid "WARNING"
 msgstr "ADVERTENCIA"
 
-#: lib/config.h:118
+#: lib/config.h:124
 msgid "INFO"
 msgstr "INFO"
 
-#: lib/config.h:123
+#: lib/config.h:129
 msgid "DEBUG"
 msgstr "DEPURAR"
 
-#: lib/preprocess.c:245
+#: lib/preprocess.c:247
 msgid "Pattern has to start with `<`"
 msgstr "El patrón debe empezar con `<`"
 
-#: lib/preprocess.c:273
+#: lib/preprocess.c:275
 #, c-format
 msgid "`<` or `>` imbalance: %d"
 msgstr "`<` o `>` desequilibran: %d"
 
-#: lib/preprocess.c:280
+#: lib/preprocess.c:282
 msgid "empty pattern"
 msgstr "patrón vacío"
 
-#: lib/preprocess.c:328
+#: lib/preprocess.c:323
+msgid "no pattern given in <> after 'r' or 'x'"
+msgstr ""
+
+#: lib/preprocess.c:339
 #, c-format
 msgid "Cannot add more than %ld regex patterns."
 msgstr "No se puede añadir mas de %ld patrones de expresiones regulares"
 
-#: lib/preprocess.c:339
+#: lib/preprocess.c:351
 msgid "Error while parsing sortcriteria patterns: "
 msgstr "Error al analizar los patrones sortcriteria (criterio de órden)"
+
+#: lib/formats.c:211
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr "No hay tal new_handler con éste nombre: %s"
+
+#: lib/formats.c:233
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr "Incapaz de abrir archivo para escritura: %s"
+
+#: lib/replay.c:107
+msgid "No valid json cache (no array in /)"
+msgstr "No hay json en cache válido (no hay arreglo en /)"
+
+#: lib/replay.c:181
+#, c-format
+msgid "modification time of `%s` changed. Ignoring."
+msgstr "el tiempo de modificación de '%s' ha cambiado. Ignorando."
+
+#: lib/replay.c:485
+#, c-format
+msgid "Loading json-results `%s'"
+msgstr "Cargando json-results '%s'"
+
+#: lib/replay.c:600
+msgid "json-glib is needed for using --replay."
+msgstr "json-glib es necesario para usar --replay."
+
+#: lib/replay.c:601
+msgid "Please recompile `rmlint` with it installed."
+msgstr "Por favor recompile 'rmlint' con ello instalado."
+
+#~ msgid "caching is not supported due to missing json-glib library."
+#~ msgstr ""
+#~ "el cacheo no es soportado debido a la librería inexistente json-glib"
+
+#~ msgid "Loading json-cache `%s'"
+#~ msgstr "Cargando json-cache '%s"
+
+#~ msgid "FAILED: %s\n"
+#~ msgstr "FALLO: %s\n"
+
+#~ msgid ""
+#~ "BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel "
+#~ "> 4.2"
+#~ msgstr ""
+#~ "BTRFS_IOC_FILE_EXTENT_SAME regresó el estatus -22 - probablemente "
+#~ "necesitas un kernel > 4.2"
+
+#~ msgid "--replay given; --with-metadata-cache will be ignored."
+#~ msgstr "--replay dado; --with-metadata-cache será ignorado."
+
+#~ msgid "Unable to open tmp cache: %s"
+#~ msgstr "Incapaz de abrir cache tmp: %s"
+
+#~ msgid "Unable to create cache attr `%s`: %s"
+#~ msgstr "Incapaz de crear cache attr '%s': %s"
+
+#~ msgid "Add json cache file"
+#~ msgstr "Añadir un archivo de cache json"
+
+#~ msgid "cannot create metadata cache (see above)"
+#~ msgstr "no se puede crear cache de metainformación (ver arriba)"
+
+#~ msgid "Cannot close tmp cache: %s\n"
+#~ msgstr "No se puede cerrar el cache temporal: %s\n"
