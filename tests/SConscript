@@ -9,7 +9,7 @@ import subprocess
 
 
 def run_tests(target=None, source=None, env=None):
-    names = ['nosetests-3.3', 'nosetests-3', 'python3-nosetests', 'nosetests']
+    names = ['nosetests-3.3', 'nosetests-3', 'python3-nosetests', 'nosetests3', 'nosetests']
     for name in names:
         print('Found nosetests as ,,{}"'.format(name))
         if not subprocess.call(name + ' -s -v -a !slow', shell=True):
