@@ -871,7 +871,6 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev, _UNUSED const
     char *prev = g_strdup(path);
     while(TRUE) {
         char *parent_path = g_path_get_dirname(prev);
-        g_printerr("PREV %s %s\n", prev, parent_path);
 
         RmStat stat_buf;
         if(!rm_sys_stat(parent_path, &stat_buf)) {
