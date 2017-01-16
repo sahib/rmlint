@@ -6,6 +6,17 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.5.0 Penetrating Pineapple] -- [unreleased]
 
+## [2.4.6 Myopic Micrathene Bugfixes] -- 2017-01-16
+
+### Fixed
+
+* Update translation template.
+* Various fix to make rmlint ready to be packaged in debian.
+
+### Added
+
+* Output of rmlint.sh uses a colored prefix now.
+
 ## [2.4.5 Myopic Micrathene Bugfixes] -- 2016-12-12
 
 ### Fixed
