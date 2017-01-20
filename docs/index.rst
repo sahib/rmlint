@@ -21,6 +21,10 @@ to remove it. It is able to find:
    + Recursive empty directories.
    + Files with broken user or group id.
 
+.. raw:: html
+
+    <script type="text/javascript" src="https://asciinema.org/a/8leoh1nqxz7t5o3jkedkh4421.js" id="asciicast-8leoh1nqxz7t5o3jkedkh4421" async></script>
+
 **Key Features:**
 
 .. hlist::
