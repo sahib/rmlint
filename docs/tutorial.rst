@@ -4,6 +4,11 @@ Gentle Guide to ``rmlint``
 
 Welcome to the Tutorial of ``rmlint``.
 
+.. image:: _static/shredder.svg
+   :width: 45%
+   :align: center
+
+
 We use a few terms that might not be obvious to you at first,
 so we gonna explain them to you here.
 

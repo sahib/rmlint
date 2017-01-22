@@ -1,12 +1,4 @@
 |
-|
-
-.. image:: _static/shredder.svg
-   :width: 25%
-   :align: center
-
-|
-
 
 ``rmlint`` finds space waste and other broken things on your filesystem and offers
 to remove it. It is able to find:
@@ -15,7 +7,7 @@ to remove it. It is able to find:
    :columns: 2
 
    + Duplicate files & directories.
-   + Nonstripped Binaries 
+   + Nonstripped Binaries
    + Broken symlinks.
    + Empty files.
    + Recursive empty directories.
@@ -24,6 +16,9 @@ to remove it. It is able to find:
 .. raw:: html
 
     <script type="text/javascript" src="https://asciinema.org/a/8leoh1nqxz7t5o3jkedkh4421.js" id="asciicast-8leoh1nqxz7t5o3jkedkh4421" async></script>
+
+|
+
 
 **Key Features:**
 
