@@ -70,6 +70,11 @@ long list of files. You can do this easily with the ``-g`` switch:
 
     $ rmlint -g
 
+It will look like this:
+
+.. image:: _static/screenshot.png
+   :align: center
+
 Filtering input files
 ---------------------
 

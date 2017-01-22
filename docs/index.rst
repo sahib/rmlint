@@ -35,11 +35,6 @@ to remove it. It is able to find:
    + Can handle very large file sets (millions of files).
    + Colorful progressbar. (😃)
 
-|
-
-.. image:: _static/screenshot.png
-   :align: center
-
 ----
 
 .. .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
