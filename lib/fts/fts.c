@@ -101,6 +101,10 @@ static int fts_safe_changedir(const FTS *, const FTSENT *, int, const char *);
 #undef FTS_WHITEOUT
 #endif
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 4096
+#endif
+
 FTS *fts_open(char *const *argv, int options,
               int (*compar)(const FTSENT **, const FTSENT **)) {
     FTS *sp;
