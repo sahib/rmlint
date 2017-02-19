@@ -51,6 +51,13 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 
 #include "fts.h"
 
+#include "../config.h"
+
+#ifndef  FTS_PATH_MAX
+# define FTS_PATH_MAX PATH_MAX
+#endif
+
+
 static FTSENT *fts_alloc(FTS *, const char *, size_t);
 static FTSENT *fts_build(FTS *, int);
 static void fts_free(FTSENT *);
@@ -132,7 +139,7 @@ FTS *fts_open(char *const *argv, int options,
      * Start out with 1K of path space, and enough, in any case,
      * to hold the user's paths.
      */
-    if(fts_palloc(sp, MAX(fts_maxarglen(argv), MAXPATHLEN)))
+    if(fts_palloc(sp, MAX(fts_maxarglen(argv), FTS_PATH_MAX)))
         goto mem1;
 
     /* Allocate/initialize root's parent. */
