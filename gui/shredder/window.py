@@ -18,6 +18,7 @@ from gettext import gettext
 # External:
 from gi.repository import Gtk
 from gi.repository import Gio
+from gi.repository import Gdk
 
 # Internal:
 import shredder
@@ -260,6 +261,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.headerbar.pack_end(menu_button)
         self.headerbar.pack_end(search_button)
         self.add(self.main_grid)
+        self.connect('window-state-event', self._on_window_state_event)
 
     def add_header_widget(self, widget, align=Gtk.Align.END):
         """Add a widget to the header, either left or right of the title.
@@ -277,3 +279,11 @@ class MainWindow(Gtk.ApplicationWindow):
         """Remove a previously added headerwidget. Noop if it did not exist"""
         if widget in self.headerbar:
             self.headerbar.remove(widget)
+
+    def _on_window_state_event(self, widget, ev):
+        """Maximize app window instead of going fullscreen,
+        so we never lose the header widget.
+        """
+        if ev.new_window_state & Gdk.WindowState.FULLSCREEN:
+            self.unfullscreen()
+            self.maximize()
