@@ -94,6 +94,11 @@ typedef struct RmFmtHandler {
      */
     bool was_initialized;
 
+    /* Set to true (prior to calling head) if
+     * the file of this handler already existed
+     * on disk. */
+    bool file_existed_already;
+
     /* Callbacks, might be NULL */
     RmFmtHeadCallback head;
     RmFmtElemCallback elem;

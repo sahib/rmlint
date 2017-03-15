@@ -217,15 +217,23 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     FILE *file_handle = NULL;
     bool needs_full_path = false;
 
+    bool file_existed_already = false;
     if(g_strcmp0(path, "stdout") == 0) {
         file_handle = stdout;
+        file_existed_already = true;
     } else if(g_strcmp0(path, "stderr") == 0) {
         file_handle = stderr;
+        file_existed_already = true;
     } else if(g_strcmp0(path, "stdin") == 0) {
         /* I bet someone finds a use for this :-) */
         file_handle = stdin;
+        file_existed_already = true;
     } else {
         needs_full_path = true;
+        if(access(path, F_OK) == 0) {
+            file_existed_already = true;
+        }
+
         file_handle = fopen(path, "w");
     }
 
@@ -240,6 +248,8 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     RmFmtHandler *new_handler_copy = g_malloc0(new_handler->size);
     memcpy(new_handler_copy, new_handler, new_handler->size);
     g_mutex_init(&new_handler->print_mtx);
+
+    new_handler_copy->file_existed_already = file_existed_already;
 
     if(needs_full_path == false) {
         new_handler_copy->path = g_strdup(path);

@@ -258,8 +258,10 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         rm_sh_parse_handlers(self, "cmd,remove");
     }
 
-    if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
-        rm_log_perror("Could not chmod +x sh script");
+    if(parent->file_existed_already == false) {
+        if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
+            rm_log_perror("Could not chmod +x sh script");
+        }
     }
 
     /* Fill in all placeholders in the script template */
