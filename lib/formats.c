@@ -244,7 +244,19 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     if(needs_full_path == false) {
         new_handler_copy->path = g_strdup(path);
     } else {
-        new_handler_copy->path = realpath(path, NULL);
+        /* See this issue for more information:
+         * https://github.com/sahib/rmlint/issues/212
+         *
+         * Anonymous pipes will fail realpath(), this means that actually
+         * broken paths may fail later with this fix. The path for
+         * pipes is for example "/proc/self/fd/12".
+         * */
+        char *full_path = realpath(path, NULL);
+        if(full_path != NULL) {
+            new_handler_copy->path = full_path;
+        } else {
+            new_handler_copy->path = g_strdup(path);
+        }
     }
 
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
