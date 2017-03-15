@@ -65,14 +65,7 @@ def has_feature(feature):
     ).decode('utf-8')
 
 
-def run_rmlint_once(
-    *args,
-    dir_suffix=None,
-    use_default_dir=True,
-    outputs=None,
-    directly_return_output=False,
-    use_shell=False,
-):
+def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, directly_return_output=False, use_shell=False):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
