@@ -65,7 +65,7 @@ def has_feature(feature):
     ).decode('utf-8')
 
 
-def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
+def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, directly_return_output=False, use_shell=False):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -106,11 +106,18 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None):
         print('Waiting for 1000 seconds.')
         time.sleep(1000)
 
-    output = subprocess.check_output(cmd, shell=False, env=env)
+    if use_shell is True:
+        # Use /bin/bash, not /bin/sh
+        cmd = ["/bin/bash", "-c", " ".join(cmd)]
+
+    output = subprocess.check_output(cmd, env=env)
     if get_env_flag('RM_TS_USE_GDB'):
         print('==> START OF GDB OUTPUT <==')
         print(output.decode('utf-8'))
         print('==> END OF GDB OUTPUT <==')
+
+    if directly_return_output:
+        return output
 
     with open('/tmp/out.json', 'r') as f:
         json_data = json.loads(f.read())

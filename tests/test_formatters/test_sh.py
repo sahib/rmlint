@@ -99,3 +99,18 @@ def test_paranoia():
     assert footer['total_lint_size'] == 0
     assert footer['total_files'] == 1 # + 1
     assert footer['duplicates'] == 0
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_anon_pipe():
+    create_file('xxx', 'long-dummy-file-1')
+    create_file('xxx', 'long-dummy-file-2')
+
+    data = run_rmlint(
+        "-o sh:>(cat)",
+        directly_return_output=True,
+        use_shell=True
+    )
+
+    assert b'/long-dummy-file-1' in data
+    assert b'/long-dummy-file-2' in data

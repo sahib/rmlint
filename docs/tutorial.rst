@@ -4,6 +4,11 @@ Gentle Guide to ``rmlint``
 
 Welcome to the Tutorial of ``rmlint``.
 
+.. image:: _static/shredder.svg
+   :width: 45%
+   :align: center
+
+
 We use a few terms that might not be obvious to you at first,
 so we gonna explain them to you here.
 
@@ -64,6 +69,11 @@ long list of files. You can do this easily with the ``-g`` switch:
 .. code-block:: bash
 
     $ rmlint -g
+
+It will look like this:
+
+.. image:: _static/screenshot.png
+   :align: center
 
 Filtering input files
 ---------------------
