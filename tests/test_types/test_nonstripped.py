@@ -29,6 +29,9 @@ def create_binary(path, stripped=False):
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_negative():
+    if has_feature('nonstripped') is False:
+        return
+
     create_file(SOURCE, 'source.c')
     create_binary('source.c', stripped=True)
     head, *data, footer = run_rmlint('-T "none +nonstripped"')
@@ -39,6 +42,9 @@ def test_negative():
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_positive():
+    if has_feature('nonstripped') is False:
+        return
+
     create_file(SOURCE, 'source.c')
     create_binary('source.c', stripped=False)
     head, *data, footer = run_rmlint('-T "none +nonstripped"')
