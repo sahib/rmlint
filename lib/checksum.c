@@ -24,7 +24,7 @@
  */
 
 
-/* Welcome to hell.
+/* Welcome to hell!
  *
  * This file is 90% boring switch statements with innocent, but insane code
  * squashed between. Modify this file with care and make sure to test all
@@ -197,7 +197,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
 
     return NULL;
 }
-
 
 RmDigestType rm_string_to_digest_type(const char *string) {
     static GHashTable *code_table = NULL;
@@ -984,9 +983,9 @@ int rm_digest_get_bytes(RmDigest *self) {
         return self->bytes;
     } else if(self->paranoid->shadow_hash) {
         return self->paranoid->shadow_hash->bytes;
-    } else {
-        return 0;
     }
+
+    return 0;
 }
 
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {

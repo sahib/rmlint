@@ -168,7 +168,7 @@ typedef struct RmBuffer {
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
  *
- * @param string one of "md5", "sha1", "sha256", "sha512", "spooky", "murmur"
+ * @param string A valid digest type.
  *
  * @return RM_DIGEST_UNKNOWN on error, the type otherwise.
  */

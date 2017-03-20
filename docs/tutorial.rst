@@ -446,11 +446,11 @@ functions are not totally random, so the collision probability is slightly highe
 Due to the "birthday paradox", collision starts to become a real risk if you have
 more than about :math:`2^{80}` files of the same size.
 
-If you're wary, you might want to make a bit more paranoid than the default.
-By default the ``sha1`` hash algorithm is used, which we consider a good
-trade-off of speed and accuracy. ``rmlint``'s paranoia level can be easily
-inc/decreased using the ``-p`` (``--paranoid``)/ ``-P`` (``--less-paranoid``)
-option (which might be given twice each).
+If you're wary, you might want to make a bit more paranoid than the default. By
+default the ``blake2b`` (previously ``sha1`` was the default) hash algorithm is
+used, which we consider a good trade-off of speed and accuracy. ``rmlint``'s
+paranoia level can be easily inc/decreased using the ``-p`` (``--paranoid``)/
+``-P`` (``--less-paranoid``) option (which might be given twice each).
 
 Here's what they do in detail:
 

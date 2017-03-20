@@ -277,7 +277,7 @@ could potentially do something like this (based on http://web.archive.org/web/20
    # Duplicate(s):
        ls '/home/foo/test/order.ps'
        rm '/home/foo/test/letter_of_rec.ps'
-   $ rmlint test   -o summary   # run using default sha1 hash
+   $ rmlint test -a sha1 -o summary   # run using sha1 hash
    ==> In total 2 files, whereof 0 are duplicates in 0 groups.
 
 If your intention was to free up space by hardlinking the duplicate to the original, you would end up with two
@@ -293,12 +293,13 @@ each file is read twice, which can tend to slow things down.
 ``dupd`` uses direct file comparison, unless there are more than 3 files in a set of duplicates, in which
 case it uses MD5 only.
 
-``rmlint``'s default option uses a 160-bit SHA1 hash which means you need at
-least :math:`5.4\times10^{22}` files before you get a :math:`0.1\%` probability
-of collision.  ``rmlint``'s ``-p`` option uses ``SHA512``
+If you use ``rmlint``'s ``sha1`` hash features, which features 160 bit output,
+you need at least :math:`5.4\times10^{22}` files before you get a :math:`0.1\%`
+probability of collision.  ``rmlint``'s ``-p`` option uses ``SHA512``
 (:math:`5.2\times10^{75}` files for :math:`0.1\%` risk), while ``rmlint``'s
 ``-pp`` option uses direct file comparison to eliminate the risk altogether.
-Refer to the :ref:`benchmark_ref` chapter for speed and memory overhead implications.
+Refer to the :ref:`benchmark_ref` chapter for speed and memory overhead
+implications.
 
 
 Unusual Characters Robustness
