@@ -26,8 +26,9 @@
 
 /* Welcome to hell.
  *
- * This file is 90% borign switch statements with innocent, but insane code squashed between.
- * Modify this file with care and make sure to test all checksums afterwards.
+ * This file is 90% boring switch statements with innocent, but insane code
+ * squashed between. Modify this file with care and make sure to test all
+ * checksums afterwards.
  **/
 
 #include <stdio.h>
@@ -140,67 +141,79 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 //      RMDIGEST IMPLEMENTATION      //
 ///////////////////////////////////////
 
+static gpointer rm_init_digest_type_table(GHashTable **code_table) {
+    static struct {
+        char *name;
+        RmDigestType code;
+    } code_entries[] = {
+        {"md5", RM_DIGEST_MD5},
+        {"city512"   , RM_DIGEST_CITY512},
+        {"xxhash"    , RM_DIGEST_XXHASH},
+        {"farmhash"  , RM_DIGEST_XXHASH},
+        {"murmur"    , RM_DIGEST_MURMUR},
+        {"murmur128" , RM_DIGEST_MURMUR},
+        {"murmur256" , RM_DIGEST_MURMUR256},
+        {"murmur512" , RM_DIGEST_MURMUR512},
+        {"sha1"      , RM_DIGEST_SHA1},
+        {"sha256"    , RM_DIGEST_SHA256},
+        {"sha3"      , RM_DIGEST_SHA3_256},
+        {"sha3-256"  , RM_DIGEST_SHA3_256},
+        {"sha3-384"  , RM_DIGEST_SHA3_384},
+        {"sha3-512"  , RM_DIGEST_SHA3_512},
+        {"blake2s"   , RM_DIGEST_BLAKE2S},
+        {"blake2b"   , RM_DIGEST_BLAKE2B},
+        {"blake2sp"  , RM_DIGEST_BLAKE2SP},
+        {"blake2bp"  , RM_DIGEST_BLAKE2BP},
+        {"city256"   , RM_DIGEST_CITY256},
+        {"murmur256" , RM_DIGEST_MURMUR256},
+        {"spooky32"  , RM_DIGEST_SPOOKY32},
+        {"spooky64"  , RM_DIGEST_SPOOKY64},
+        {"spooky128" , RM_DIGEST_SPOOKY},
+        {"spooky"    , RM_DIGEST_SPOOKY},
+        {"ext"       , RM_DIGEST_EXT},
+        {"cumulative", RM_DIGEST_CUMULATIVE},
+        {"paranoid"  , RM_DIGEST_PARANOID},
+        {"bastard"   , RM_DIGEST_BASTARD},
+        {"bastard256", RM_DIGEST_BASTARD},
+        {"city"      , RM_DIGEST_CITY},
+        {"city128"   , RM_DIGEST_CITY},
+        {"city256"   , RM_DIGEST_CITY256},
+        {"city512"   , RM_DIGEST_CITY512},
+#if HAVE_SHA512
+        {"sha512"    , RM_DIGEST_SHA512},
+#endif
+    };
+
+    *code_table = g_hash_table_new(g_str_hash, g_str_equal);
+
+    const size_t n_codes = sizeof(code_entries) / sizeof(code_entries[0]);
+    for(size_t idx = 0; idx < n_codes; idx++) {
+        g_hash_table_insert(
+                *code_table,
+                code_entries[idx].name,
+                GUINT_TO_POINTER(code_entries[idx].code)
+        );
+    }
+
+    return NULL;
+}
+
+
 RmDigestType rm_string_to_digest_type(const char *string) {
-    /*  TODO: make this a dict? */
+    static GHashTable *code_table = NULL;
+    static GOnce table_once = G_ONCE_INIT;
+
     if(string == NULL) {
         return RM_DIGEST_UNKNOWN;
-    } else if(!strcasecmp(string, "md5")) {
-        return RM_DIGEST_MD5;
-#if HAVE_SHA512
-    } else if(!strcasecmp(string, "sha512")) {
-        return RM_DIGEST_SHA512;
-#endif
-    } else if(!strcasecmp(string, "city512")) {
-        return RM_DIGEST_CITY512;
-    } else if(!strcasecmp(string, "xxhash")) {
-        return RM_DIGEST_XXHASH;
-    } else if(!strcasecmp(string, "farmhash")) {
-        return RM_DIGEST_XXHASH;
-    } else if(!strcasecmp(string, "murmur512")) {
-        return RM_DIGEST_MURMUR512;
-    } else if(!strcasecmp(string, "sha256")) {
-        return RM_DIGEST_SHA256;
-    } else if(!strcasecmp(string, "sha3-256") || !strcasecmp(string, "sha3")) {
-        return RM_DIGEST_SHA3_256;
-    } else if(!strcasecmp(string, "sha3-384")) {
-        return RM_DIGEST_SHA3_384;
-    } else if(!strcasecmp(string, "sha3-512")) {
-        return RM_DIGEST_SHA3_512;
-    } else if(!strcasecmp(string, "blake2s")) {
-        return RM_DIGEST_BLAKE2S;
-    } else if(!strcasecmp(string, "blake2b")) {
-        return RM_DIGEST_BLAKE2B;
-    } else if(!strcasecmp(string, "blake2sp")) {
-        return RM_DIGEST_BLAKE2SP;
-    } else if(!strcasecmp(string, "blake2bp")) {
-        return RM_DIGEST_BLAKE2BP;
-    } else if(!strcasecmp(string, "city256")) {
-        return RM_DIGEST_CITY256;
-    } else if(!strcasecmp(string, "murmur256")) {
-        return RM_DIGEST_MURMUR256;
-    } else if(!strcasecmp(string, "sha1")) {
-        return RM_DIGEST_SHA1;
-    } else if(!strcasecmp(string, "spooky32")) {
-        return RM_DIGEST_SPOOKY32;
-    } else if(!strcasecmp(string, "spooky64")) {
-        return RM_DIGEST_SPOOKY64;
-    } else if(!strcasecmp(string, "murmur") || !strcasecmp(string, "murmur128")) {
-        return RM_DIGEST_MURMUR;
-    } else if(!strcasecmp(string, "spooky") || !strcasecmp(string, "spooky128")) {
-        return RM_DIGEST_SPOOKY;
-    } else if(!strcasecmp(string, "city") || !strcasecmp(string, "city128")) {
-        return RM_DIGEST_CITY;
-    } else if(!strcasecmp(string, "bastard") || !strcasecmp(string, "bastard256")) {
-        return RM_DIGEST_BASTARD;
-    } else if(!strcasecmp(string, "ext")) {
-        return RM_DIGEST_EXT;
-    } else if(!strcasecmp(string, "cumulative")) {
-        return RM_DIGEST_CUMULATIVE;
-    } else if(!strcasecmp(string, "paranoid")) {
-        return RM_DIGEST_PARANOID;
-    } else {
-        return RM_DIGEST_UNKNOWN;
     }
+
+    g_once(&table_once, (GThreadFunc)rm_init_digest_type_table, &code_table);
+
+    gchar *lower_key = g_utf8_strdown(string, -1);
+    RmDigestType code = GPOINTER_TO_UINT(g_hash_table_lookup(code_table, lower_key));
+    g_free(lower_key);
+
+    return code;
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
@@ -310,7 +323,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         ADD_SEED(digest, seed1);
         digest->bytes = 160 / 8;
         return digest;
-        /*  TODO: Try to somehow squash this to one. */
     case RM_DIGEST_SHA3_256:
         digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
         sha3_Init256(digest->sha3_ctx);
