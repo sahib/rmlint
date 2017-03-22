@@ -271,14 +271,30 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
         }                                                                   \
     }
 
-#define BLAKE_INIT(ALGO, ALGO_BIG)                                    \
-    {                                                                 \
-        digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));  \
-        ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);      \
-        ALGO##_update(digest->ALGO##_state, &seed1, sizeof(RmOff));  \
-        ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff));  \
-        digest->bytes = ALGO_BIG##_OUTBYTES;                          \
-    }                                                                 \
+#define BLAKE_INIT(ALGO, ALGO_BIG)                                      \
+    {                                                                   \
+        digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
+        ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);         \
+        if(seed1) {                                                     \
+            ALGO##_update(digest->ALGO##_state, &seed1, sizeof(RmOff)); \
+        }                                                               \
+        if(seed2) {                                                     \
+            ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
+        }                                                               \
+        digest->bytes = ALGO_BIG##_OUTBYTES;                            \
+    }                                                                   \
+
+#define SHA3_INIT(SIZE)                                           \
+        digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));  \
+        sha3_Init##SIZE(digest->sha3_ctx);                        \
+        if(seed1) {                                               \
+            sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff)); \
+        }                                                         \
+        if(seed2) {                                               \
+            sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff)); \
+        }                                                         \
+        digest->bytes = (SIZE) / 8;                               \
+
 
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
                         bool use_shadow_hash) {
@@ -323,25 +339,13 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         digest->bytes = 160 / 8;
         return digest;
     case RM_DIGEST_SHA3_256:
-        digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
-        sha3_Init256(digest->sha3_ctx);
-        sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff));
-        sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff));
-        digest->bytes = 256 / 8;
+        SHA3_INIT(256);
         return digest;
     case RM_DIGEST_SHA3_384:
-        digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
-        sha3_Init384(digest->sha3_ctx);
-        sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff));
-        sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff));
-        digest->bytes = 384 / 8;
+        SHA3_INIT(384);
         return digest;
     case RM_DIGEST_SHA3_512:
-        digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
-        sha3_Init512(digest->sha3_ctx);
-        sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff));
-        sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff));
-        digest->bytes = 512 / 8;
+        SHA3_INIT(512);
         return digest;
     case RM_DIGEST_BLAKE2S:
         BLAKE_INIT(blake2s, BLAKE2S);
