@@ -6,6 +6,24 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.5.0 Penetrating Pineapple] -- [unreleased]
 
+### Fixed
+
+* Do not chmod +x files that exist already (previous versions tried to +x e.g. /dev/null)
+* Support anonymous pipes in the sh formatter (Supported now: rmlint -o sh:>(cat))
+* Documentation should look a bit cleaner now.
+
+### Added
+
+* Added new checksums: blake2{s,sp,b,bp} and sha3{-256,-384,-512}. sha3 is an alias to sha3-256.
+* Support for GNU Hurd (well, at least it compiles :)
+* New "-o stats" formatter that prints some statistics about the run.
+
+### Changed
+
+* Changed the default hash function to blake2b.
+* The default formatter (pretty) now also outputs the time used for the run.
+* Updated existing translations.
+
 ## [2.4.6 Myopic Micrathene Bugfixes] -- 2017-01-16
 
 ### Fixed
