@@ -433,7 +433,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         for(guint8 block = 0; block < (digest->bytes / 16); block++) {
 #if RM_PLATFORM_32
             MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[block].first,
-                                &digest->checksum[block]);  //&
+                                &digest->checksum[block]);
 #elif RM_PLATFORM_64
             MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum[block].first,
                                 &digest->checksum[block]);
@@ -551,8 +551,8 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 }
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
-#if _RM_CHECKSUM_DEBUG
             } else {
+#if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Added twin candidate %p for %p",
                                   paranoid->twin_candidate, paranoid);
 #endif
@@ -726,25 +726,17 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         }
 
         return (!a_iter && !b_iter && bytes == a->bytes);
-
     } else if(rm_digest_needs_steal(a->type)) {
         guint8 *buf_a = rm_digest_steal(a);
         guint8 *buf_b = rm_digest_steal(b);
-
-        gboolean result;
-
-        if(a->bytes != b->bytes) {
-            result = false;
-        } else {
-            result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
-        }
+        gboolean result = !memcmp(buf_a, buf_b, a->bytes);
 
         g_slice_free1(a->bytes, buf_a);
         g_slice_free1(b->bytes, buf_b);
 
         return result;
     } else {
-        return !memcmp(a->checksum, b->checksum, MIN(a->bytes, b->bytes));
+        return !memcmp(a->checksum, b->checksum, a->bytes);
     }
 }
 
@@ -788,11 +780,13 @@ int rm_digest_get_bytes(RmDigest *self) {
 
     if(self->type != RM_DIGEST_PARANOID) {
         return self->bytes;
-    } else if(self->paranoid->shadow_hash) {
-        return self->paranoid->shadow_hash->bytes;
-    } else {
-        return 0;
     }
+
+    if(self->paranoid->shadow_hash) {
+        return self->paranoid->shadow_hash->bytes;
+    }
+
+    return 0;
 }
 
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
