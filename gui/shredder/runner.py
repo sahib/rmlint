@@ -45,7 +45,7 @@ class AlgorithmType(Enum):
         SHA512:   ['--algorithm', 'sha512'],
         SHA3:     ['--algorithm', 'sha3'],
         MD5:      ['--algorithm', 'md5'],
-        BLAKE2B:  ['--algorithm', 'blake2bp'],
+        BLAKE2B:  ['--algorithm', 'blake2b'],
         BLAKE2S:  ['--algorithm', 'blake2sp'],
         PARANOID: ['--algorithm', 'paranoid']
     }

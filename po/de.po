@@ -162,8 +162,8 @@ msgid "Unknown hash algorithm: '%s'"
 msgstr "Unbekannte Hashfunktion: \"%s\""
 
 #: lib/hash-utility.c:140
-msgid "Digest type [BLAKE2BP]"
-msgstr "Prüfsummentyp [BLAKE2BP]"
+msgid "Digest type [BLAKE2B]"
+msgstr "Prüfsummentyp [BLAKE2B]"
 
 #: lib/hash-utility.c:141
 msgid "Number of hashing threads [8]"

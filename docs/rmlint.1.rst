@@ -110,7 +110,7 @@ General Options
 
     By default this check is not done.
 
-:``-a --algorithm=name`` (**default\:** *blake2bp*):
+:``-a --algorithm=name`` (**default\:** *blake2b*):
 
     Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
