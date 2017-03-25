@@ -217,12 +217,12 @@
  *
  * Additional notes regarding "paranoid" hashing:
  *
- * The default file matching method uses the SHA1 cryptographic hash; there are
- * several other hash functions available as well.  The data hashing is somewhat
+ * The default file matching method uses the BLAKE2B cryptographic hash; there are
+ * several other hash functions available as well. The data hashing is somewhat
  * cpu-intensive but this is handled by separate threads (the hash pipes) so
  * generally doesn't bottleneck rmlint (as long as CPU exceeds disk reading
  * speed).  The subsequent hash matching is very fast because we only
- * need to compare 20 bytes (in the case of SHA1) to find matching files.
+ * need to compare 32 bytes (in the case of BLAKE2B) to find matching files.
  *
  * The "paranoid" method uses byte-by-byte comparison.  In the implementation,
  * this is masqueraded as a hash function, but there is no hashing involved.

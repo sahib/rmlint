@@ -5,8 +5,11 @@
         <value nick="sha1" value="3"/>
         <value nick="sha256" value="4"/>
         <value nick="sha512" value="5"/>
-        <value nick="MD5" value="6"/>
-        <value nick="byte-by-byte" value="7"/>
+        <value nick="sha3" value="6"/>
+        <value nick="MD5" value="7"/>
+        <value nick="blake2b" value="8"/>
+        <value nick="blake2s" value="9"/>
+        <value nick="byte-by-byte" value="10"/>
     </enum>
     <enum id="org.gnome.Shredder.MatchType">
         <value nick="No limitation" value="1"/>
@@ -72,7 +75,7 @@
             <description>Only find twins with a certain limitation</description>
         </key>
         <key name='computation-algorithm' enum='org.gnome.Shredder.AlgorithmType'>
-            <default>'sha1'</default>
+            <default>'blake2b'</default>
             <summary>Hash algorithm</summary>
             <description>Which hash algorithm to use</description>
         </key>

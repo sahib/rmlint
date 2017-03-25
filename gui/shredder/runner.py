@@ -34,14 +34,19 @@ ASCII_COLOR_REGEX = re.compile(r'\x1B\[\d+(.*?)m')
 
 class AlgorithmType(Enum):
     """Key: computation-algorithm"""
-    SPOOKY, CITY, SHA1, SHA256, SHA512, MD5, PARANOID = range(1, 8)
+    SPOOKY, CITY, SHA1, SHA256, SHA512, SHA3, MD5, \
+       BLAKE2B, BLAKE2S, PARANOID = range(1, 11)
+
     MAPPING = {
         SPOOKY:   ['--algorithm', 'spooky'],
         CITY:     ['--algorithm', 'city'],
         SHA1:     ['--algorithm', 'sha1'],
         SHA256:   ['--algorithm', 'sha256'],
         SHA512:   ['--algorithm', 'sha512'],
+        SHA3:     ['--algorithm', 'sha3'],
         MD5:      ['--algorithm', 'md5'],
+        BLAKE2B:  ['--algorithm', 'blake2bp'],
+        BLAKE2S:  ['--algorithm', 'blake2sp'],
         PARANOID: ['--algorithm', 'paranoid']
     }
 
