@@ -96,6 +96,9 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->offset_fails = 0;
 
     rm_session_read_kernel_version(session);
+
+    session->timer_since_proc_start = g_timer_new();
+    g_timer_start(session->timer_since_proc_start);
 }
 
 void rm_session_clear(RmSession *session) {
@@ -106,6 +109,7 @@ void rm_session_clear(RmSession *session) {
         g_strfreev(cfg->paths);
     }
 
+    g_timer_destroy(session->timer_since_proc_start);
     g_free(cfg->sort_criteria);
 
     g_timer_destroy(session->timer);

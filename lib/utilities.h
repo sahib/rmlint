@@ -444,4 +444,11 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads);
  */
 bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
 
+/**
+ * @brief Format some elapsed seconds into a human readable timestamp.
+ *
+ * @return The formatted string, free with g_free.
+ */
+char *rm_format_elapsed_time(gfloat elapsed_sec);
+
 #endif /* RM_UTILITIES_H_INCLUDE*/

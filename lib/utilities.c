@@ -1172,3 +1172,32 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
 
     return false;
 }
+
+#define SECONDS_PER_DAY     (24 * 60 * 60)
+#define SECONDS_PER_HOUR    (60 * 60)
+#define SECONDS_PER_MINUTE  (60)
+
+char *rm_format_elapsed_time(gfloat elapsed_sec) {
+    GString *buf = g_string_new(NULL);
+
+    if(elapsed_sec >= SECONDS_PER_DAY) {
+        gint days = elapsed_sec / SECONDS_PER_DAY;
+        elapsed_sec -= days * SECONDS_PER_DAY;
+        g_string_append_printf(buf, "%dd", days);
+    }
+
+    if(elapsed_sec >= SECONDS_PER_HOUR) {
+        gint hours = elapsed_sec / SECONDS_PER_HOUR;
+        elapsed_sec -= hours * SECONDS_PER_HOUR;
+        g_string_append_printf(buf, "%dh", hours);
+    }
+
+    if(elapsed_sec >= SECONDS_PER_MINUTE) {
+        gint minutes = elapsed_sec / SECONDS_PER_MINUTE;
+        elapsed_sec -= minutes * SECONDS_PER_MINUTE;
+        g_string_append_printf(buf, "%dm", minutes);
+    }
+
+    g_string_append_printf(buf, "%.3fs", elapsed_sec);
+    return g_string_free(buf, FALSE);
+}
