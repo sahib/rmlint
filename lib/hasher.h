@@ -134,6 +134,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher,
  * @param start_offset  Where to start reading the file (number of bytes from start)
  * @param bytes_to_read  How many bytes to read (pass 0 to read whole file)
  * @param is_symlink  If path is a symlink, pass TRUE to read the symlink itself rather
+ * @param bytes_read_out Out parameter for the number of bytes physically read.
  *than the linked file
  * @retval FALSE if read errors occurred
  **/
@@ -141,7 +142,8 @@ gboolean rm_hasher_task_hash(RmHasherTask *task,
                              char *path,
                              guint64 start_offset,
                              guint64 bytes_to_read,
-                             gboolean is_symlink);
+                             gboolean is_symlink,
+                             RmOff *bytes_read_out);
 
 /**
  * @brief Finalise a hashing task

@@ -1241,6 +1241,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files, RmShredGrou
             }
         } else {
             file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
+            session->unique_bytes += file->file_size;
         }
     }
 
@@ -1286,6 +1287,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     if(!file->is_original) {
         session->dup_counter++;
+        session->duplicate_bytes += file->file_size;
 
         /* Only check file size if it's not a hardlink.  Since deleting
          * hardlinks does not free any space they should not be counted unless
@@ -1294,6 +1296,8 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
         if(!RM_IS_BUNDLED_HARDLINK(file) && file->outer_link_count == 0) {
             session->total_lint_size += file->file_size;
         }
+    } else {
+        session->original_bytes += file->file_size;
     }
 }
 
@@ -1466,13 +1470,17 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             (cfg->shred_always_wait ||
              (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
+
+        RmOff bytes_read = 0;
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
-                                file->is_symlink)) {
+                                file->is_symlink, &bytes_read)) {
             /* rm_hasher_start_increment failed somewhere */
             file->status = RM_FILE_STATE_IGNORE;
             shredder_waiting = FALSE;
         }
+
+        session->shred_bytes_read += bytes_read;
 
         /* Update totals for file, device and session*/
         file->hash_offset += bytes_to_read;

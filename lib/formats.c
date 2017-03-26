@@ -140,6 +140,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *NULL_HANDLER;
     rm_fmt_register(self, NULL_HANDLER);
 
+    extern RmFmtHandler *STATS_HANDLER;
+    rm_fmt_register(self, STATS_HANDLER);
+
     return self;
 }
 

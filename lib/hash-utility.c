@@ -232,7 +232,7 @@ int rm_hasher_main(int argc, const char **argv) {
         } else if(S_ISREG(stat_buf.st_mode)) {
             RmHasherTask *task = rm_hasher_task_new(hasher, NULL, GINT_TO_POINTER(i));
             tag.read_succesful[i] = 
-                rm_hasher_task_hash(task, tag.paths[i], 0, stat_buf.st_size, FALSE);
+                rm_hasher_task_hash(task, tag.paths[i], 0, stat_buf.st_size, FALSE, NULL);
 
             rm_hasher_task_finish(task);
             continue;
