@@ -103,7 +103,7 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, 
         print('Running cmd from `{cwd}`: {cmd}'.format(
             cwd=os.getcwd(),
             cmd=' '.join(cmd)
-        )
+        ))
 
     if get_env_flag('RM_TS_SLEEP'):
         print('Waiting for 1000 seconds.')
