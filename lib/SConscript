@@ -92,6 +92,8 @@ library = env.Library(
     Glob('*.c')           +
     Glob('checksums/*.c') +
     Glob('checksums/xxhash/*.c') +
+    Glob('checksums/blake2/*.c') +
+    Glob('checksums/sha3/*.c') +
     Glob('formats/*.c') +
     Glob('fts/*.c')
 )

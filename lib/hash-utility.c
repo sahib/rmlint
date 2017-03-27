@@ -127,8 +127,8 @@ int rm_hasher_main(int argc, const char **argv) {
     /* Print a hash with builtin identifier */
     tag.print_multihash = FALSE;
 
-    /* Digest type (user option, default SHA1) */
-    tag.digest_type = RM_DIGEST_SHA1;
+    /* Digest type */
+    tag.digest_type = RM_DEFAULT_DIGEST;
     gint threads = 8;
     gint64 buffer_mbytes = 256;
 
@@ -137,7 +137,7 @@ int rm_hasher_main(int argc, const char **argv) {
     /* clang-format off */
 
     const GOptionEntry entries[] = {
-        {"digest-type"    , 'd'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _("Digest type [SHA1]")                                                            , "[TYPE]"}   ,
+        {"digest-type"    , 'd'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _("Digest type [BLAKE2B]")                                                        , "[TYPE]"}   ,
         {"num-threads"    , 't'  , 0                      , G_OPTION_ARG_INT             , &threads                              , _("Number of hashing threads [8]")                                                 , "N"}        ,
         {"multihash"      , 'm'  , 0                      , G_OPTION_ARG_NONE            , &tag.print_multihash                  , _("Print hash as self identifying multihash")                                      , NULL}       ,
         {"buffer-mbytes"  , 'b'  , 0                      , G_OPTION_ARG_INT64           , &buffer_mbytes                        , _("Megabytes read buffer [256 MB]")                                                , "MB"}       ,
@@ -202,7 +202,7 @@ int rm_hasher_main(int argc, const char **argv) {
 
     int buf_size = (g_strv_length(tag.paths) + 1) * sizeof(RmDigest *);
     tag.read_succesful = g_slice_alloc0(buf_size);
-    
+
     if(tag.print_in_order) {
         /* allocate buffer to collect results */
         tag.completed_digests_buffer = g_slice_alloc0(buf_size);

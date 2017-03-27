@@ -30,6 +30,9 @@
 #include <stdbool.h>
 #include "config.h"
 
+#include "checksums/blake2/blake2.h"
+#include "checksums/sha3/sha3.h"
+
 typedef enum RmDigestType {
     RM_DIGEST_UNKNOWN = 0,
     RM_DIGEST_MURMUR,
@@ -41,6 +44,14 @@ typedef enum RmDigestType {
     RM_DIGEST_SHA1,
     RM_DIGEST_SHA256,
     RM_DIGEST_SHA512,
+    RM_DIGEST_SHA3_256,
+    RM_DIGEST_SHA3_384,
+    RM_DIGEST_SHA3_512,
+    RM_DIGEST_BLAKE2S,
+    RM_DIGEST_BLAKE2B,
+    RM_DIGEST_BLAKE2SP  /*  Parallel version of BLAKE2P */,
+    RM_DIGEST_BLAKE2BP  /*  Parallel version of BLAKE2S */,
+    RM_DIGEST_BLAKE2XS,
     RM_DIGEST_MURMUR256,
     RM_DIGEST_CITY256,
     RM_DIGEST_BASTARD,
@@ -90,6 +101,11 @@ typedef struct RmDigest {
     /* Different storage structures are used depending on digest type: */
     union {
         GChecksum *glib_checksum;
+        blake2s_state *blake2s_state;
+        blake2b_state *blake2b_state;
+        blake2sp_state *blake2sp_state;
+        blake2bp_state *blake2bp_state;
+        sha3_context *sha3_ctx;
         RmUint128 *checksum;
         RmParanoid *paranoid;
     };
@@ -152,7 +168,7 @@ typedef struct RmBuffer {
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
  *
- * @param string one of "md5", "sha1", "sha256", "sha512", "spooky", "murmur"
+ * @param string A valid digest type.
  *
  * @return RM_DIGEST_UNKNOWN on error, the type otherwise.
  */

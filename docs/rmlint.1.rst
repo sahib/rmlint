@@ -110,17 +110,17 @@ General Options
 
     By default this check is not done.
 
-:``-a --algorithm=name`` (**default\:** *sha1*):
+:``-a --algorithm=name`` (**default\:** *blake2b*):
 
-    Choose the algorithm to use for finding duplicate files.  The algorithm can be
+    Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
     algorithms to identify duplicates.  The following well-known algorithms are available:
 
     **spooky**, **city**, **murmur**, **xxhash**, **md5**, **sha1**, **sha256**,
-    **sha512**, **farmhash**.
+    **sha512**, **farmhash**, **sha3**, **sha3-256**, **sha3-384**, **sha3-512**,
+    **blake2s**, **blake2b**, **blake2sp**, **blake2bp**.
 
-    The above are all 128 bit except sha1 (160 bit), sha256 and sha512.  There are also
-    some compound variations of the above functions:
+    There are also some compound variations of the above functions:
 
     * **bastard:** 256bit, combining **city**, and **murmur**.
     * **city256, city512, murmur256, murmur512:** Use multiple 128-bit hashes with different seeds.

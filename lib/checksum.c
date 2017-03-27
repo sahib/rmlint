@@ -23,6 +23,14 @@
  *
  */
 
+
+/* Welcome to hell!
+ *
+ * This file is 90% boring switch statements with innocent, but insane code
+ * squashed between. Modify this file with care and make sure to test all
+ * checksums afterwards.
+ **/
+
 #include <stdio.h>
 #include <string.h>
 #include <glib.h>
@@ -40,6 +48,8 @@
 #include "checksums/spooky-c.h"
 #include "checksums/cfarmhash.h"
 #include "checksums/xxhash/xxhash.h"
+#include "checksums/blake2/blake2.h"
+#include "checksums/sha3/sha3.h"
 
 #include "utilities.h"
 
@@ -131,52 +141,78 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 //      RMDIGEST IMPLEMENTATION      //
 ///////////////////////////////////////
 
+static gpointer rm_init_digest_type_table(GHashTable **code_table) {
+    static struct {
+        char *name;
+        RmDigestType code;
+    } code_entries[] = {
+        {"md5", RM_DIGEST_MD5},
+        {"city512"   , RM_DIGEST_CITY512},
+        {"xxhash"    , RM_DIGEST_XXHASH},
+        {"farmhash"  , RM_DIGEST_XXHASH},
+        {"murmur"    , RM_DIGEST_MURMUR},
+        {"murmur128" , RM_DIGEST_MURMUR},
+        {"murmur256" , RM_DIGEST_MURMUR256},
+        {"murmur512" , RM_DIGEST_MURMUR512},
+        {"sha1"      , RM_DIGEST_SHA1},
+        {"sha256"    , RM_DIGEST_SHA256},
+        {"sha3"      , RM_DIGEST_SHA3_256},
+        {"sha3-256"  , RM_DIGEST_SHA3_256},
+        {"sha3-384"  , RM_DIGEST_SHA3_384},
+        {"sha3-512"  , RM_DIGEST_SHA3_512},
+        {"blake2s"   , RM_DIGEST_BLAKE2S},
+        {"blake2b"   , RM_DIGEST_BLAKE2B},
+        {"blake2sp"  , RM_DIGEST_BLAKE2SP},
+        {"blake2bp"  , RM_DIGEST_BLAKE2BP},
+        {"city256"   , RM_DIGEST_CITY256},
+        {"murmur256" , RM_DIGEST_MURMUR256},
+        {"spooky32"  , RM_DIGEST_SPOOKY32},
+        {"spooky64"  , RM_DIGEST_SPOOKY64},
+        {"spooky128" , RM_DIGEST_SPOOKY},
+        {"spooky"    , RM_DIGEST_SPOOKY},
+        {"ext"       , RM_DIGEST_EXT},
+        {"cumulative", RM_DIGEST_CUMULATIVE},
+        {"paranoid"  , RM_DIGEST_PARANOID},
+        {"bastard"   , RM_DIGEST_BASTARD},
+        {"bastard256", RM_DIGEST_BASTARD},
+        {"city"      , RM_DIGEST_CITY},
+        {"city128"   , RM_DIGEST_CITY},
+        {"city256"   , RM_DIGEST_CITY256},
+        {"city512"   , RM_DIGEST_CITY512},
+#if HAVE_SHA512
+        {"sha512"    , RM_DIGEST_SHA512},
+#endif
+    };
+
+    *code_table = g_hash_table_new(g_str_hash, g_str_equal);
+
+    const size_t n_codes = sizeof(code_entries) / sizeof(code_entries[0]);
+    for(size_t idx = 0; idx < n_codes; idx++) {
+        g_hash_table_insert(
+                *code_table,
+                code_entries[idx].name,
+                GUINT_TO_POINTER(code_entries[idx].code)
+        );
+    }
+
+    return NULL;
+}
+
 RmDigestType rm_string_to_digest_type(const char *string) {
+    static GHashTable *code_table = NULL;
+    static GOnce table_once = G_ONCE_INIT;
+
     if(string == NULL) {
         return RM_DIGEST_UNKNOWN;
-    } else if(!strcasecmp(string, "md5")) {
-        return RM_DIGEST_MD5;
-#if HAVE_SHA512
-    } else if(!strcasecmp(string, "sha512")) {
-        return RM_DIGEST_SHA512;
-#endif
-    } else if(!strcasecmp(string, "city512")) {
-        return RM_DIGEST_CITY512;
-    } else if(!strcasecmp(string, "xxhash")) {
-        return RM_DIGEST_XXHASH;
-    } else if(!strcasecmp(string, "farmhash")) {
-        return RM_DIGEST_XXHASH;
-    } else if(!strcasecmp(string, "murmur512")) {
-        return RM_DIGEST_MURMUR512;
-    } else if(!strcasecmp(string, "sha256")) {
-        return RM_DIGEST_SHA256;
-    } else if(!strcasecmp(string, "city256")) {
-        return RM_DIGEST_CITY256;
-    } else if(!strcasecmp(string, "murmur256")) {
-        return RM_DIGEST_MURMUR256;
-    } else if(!strcasecmp(string, "sha1")) {
-        return RM_DIGEST_SHA1;
-    } else if(!strcasecmp(string, "spooky32")) {
-        return RM_DIGEST_SPOOKY32;
-    } else if(!strcasecmp(string, "spooky64")) {
-        return RM_DIGEST_SPOOKY64;
-    } else if(!strcasecmp(string, "murmur") || !strcasecmp(string, "murmur128")) {
-        return RM_DIGEST_MURMUR;
-    } else if(!strcasecmp(string, "spooky") || !strcasecmp(string, "spooky128")) {
-        return RM_DIGEST_SPOOKY;
-    } else if(!strcasecmp(string, "city") || !strcasecmp(string, "city128")) {
-        return RM_DIGEST_CITY;
-    } else if(!strcasecmp(string, "bastard") || !strcasecmp(string, "bastard256")) {
-        return RM_DIGEST_BASTARD;
-    } else if(!strcasecmp(string, "ext")) {
-        return RM_DIGEST_EXT;
-    } else if(!strcasecmp(string, "cumulative")) {
-        return RM_DIGEST_CUMULATIVE;
-    } else if(!strcasecmp(string, "paranoid")) {
-        return RM_DIGEST_PARANOID;
-    } else {
-        return RM_DIGEST_UNKNOWN;
     }
+
+    g_once(&table_once, (GThreadFunc)rm_init_digest_type_table, &code_table);
+
+    gchar *lower_key = g_utf8_strdown(string, -1);
+    RmDigestType code = GPOINTER_TO_UINT(g_hash_table_lookup(code_table, lower_key));
+    g_free(lower_key);
+
+    return code;
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
@@ -190,6 +226,13 @@ const char *rm_digest_type_to_string(RmDigestType type) {
                                   [RM_DIGEST_SHA1] = "sha1",
                                   [RM_DIGEST_SHA256] = "sha256",
                                   [RM_DIGEST_SHA512] = "sha512",
+                                  [RM_DIGEST_SHA3_256] = "sha3-256",
+                                  [RM_DIGEST_SHA3_384] = "sha3-384",
+                                  [RM_DIGEST_SHA3_512] = "sha3-512",
+                                  [RM_DIGEST_BLAKE2S] = "blake2s",
+                                  [RM_DIGEST_BLAKE2B] = "blake2b",
+                                  [RM_DIGEST_BLAKE2SP] = "blake2sp",
+                                  [RM_DIGEST_BLAKE2BP] = "blake2bp",
                                   [RM_DIGEST_MURMUR256] = "murmur256",
                                   [RM_DIGEST_CITY256] = "city256",
                                   [RM_DIGEST_BASTARD] = "bastard",
@@ -204,6 +247,7 @@ const char *rm_digest_type_to_string(RmDigestType type) {
     return names[MIN(type, sizeof(names) / sizeof(names[0]))];
 }
 
+/*  TODO: remove? */
 int rm_digest_type_to_multihash_id(RmDigestType type) {
     static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,  [RM_DIGEST_MURMUR] = 17,
                         [RM_DIGEST_SPOOKY] = 14,   [RM_DIGEST_SPOOKY32] = 16,
@@ -226,6 +270,31 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
                               sizeof(RmOff));                               \
         }                                                                   \
     }
+
+#define BLAKE_INIT(ALGO, ALGO_BIG)                                      \
+    {                                                                   \
+        digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
+        ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);         \
+        if(seed1) {                                                     \
+            ALGO##_update(digest->ALGO##_state, &seed1, sizeof(RmOff)); \
+        }                                                               \
+        if(seed2) {                                                     \
+            ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
+        }                                                               \
+        digest->bytes = ALGO_BIG##_OUTBYTES;                            \
+    }                                                                   \
+
+#define SHA3_INIT(SIZE)                                           \
+        digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));  \
+        sha3_Init##SIZE(digest->sha3_ctx);                        \
+        if(seed1) {                                               \
+            sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff)); \
+        }                                                         \
+        if(seed2) {                                               \
+            sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff)); \
+        }                                                         \
+        digest->bytes = (SIZE) / 8;                               \
+
 
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
                         bool use_shadow_hash) {
@@ -268,6 +337,27 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA1);
         ADD_SEED(digest, seed1);
         digest->bytes = 160 / 8;
+        return digest;
+    case RM_DIGEST_SHA3_256:
+        SHA3_INIT(256);
+        return digest;
+    case RM_DIGEST_SHA3_384:
+        SHA3_INIT(384);
+        return digest;
+    case RM_DIGEST_SHA3_512:
+        SHA3_INIT(512);
+        return digest;
+    case RM_DIGEST_BLAKE2S:
+        BLAKE_INIT(blake2s, BLAKE2S);
+        return digest;
+    case RM_DIGEST_BLAKE2B:
+        BLAKE_INIT(blake2b, BLAKE2B);
+        return digest;
+    case RM_DIGEST_BLAKE2SP:
+        BLAKE_INIT(blake2sp, BLAKE2S);
+        return digest;
+    case RM_DIGEST_BLAKE2BP:
+        BLAKE_INIT(blake2bp, BLAKE2B);
         return digest;
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CITY512:
@@ -359,6 +449,23 @@ void rm_digest_free(RmDigest *digest) {
         g_slist_free(digest->paranoid->rejects);
         g_slice_free(RmParanoid, digest->paranoid);
         break;
+    case RM_DIGEST_SHA3_256:
+    case RM_DIGEST_SHA3_384:
+    case RM_DIGEST_SHA3_512:
+        g_slice_free(sha3_context, digest->sha3_ctx);
+        break;
+    case RM_DIGEST_BLAKE2S:
+        g_slice_free(blake2s_state, digest->blake2s_state);
+        break;
+    case RM_DIGEST_BLAKE2B:
+        g_slice_free(blake2b_state, digest->blake2b_state);
+        break;
+    case RM_DIGEST_BLAKE2SP:
+        g_slice_free(blake2sp_state, digest->blake2sp_state);
+        break;
+    case RM_DIGEST_BLAKE2BP:
+        g_slice_free(blake2bp_state, digest->blake2bp_state);
+        break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_MURMUR512:
@@ -387,7 +494,7 @@ void rm_digest_free(RmDigest *digest) {
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     switch(digest->type) {
     case RM_DIGEST_EXT:
-/* Data is assumed to be a hex representation of a cchecksum.
+/* Data is assumed to be a hex representation of a checksum.
  * Needs to be compressed in pure memory first.
  *
  * Checksum is not updated but rather overwritten.
@@ -411,6 +518,23 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     case RM_DIGEST_SHA1:
         g_checksum_update(digest->glib_checksum, (const guchar *)data, size);
         break;
+    case RM_DIGEST_SHA3_256:
+    case RM_DIGEST_SHA3_384:
+    case RM_DIGEST_SHA3_512:
+        sha3_Update(digest->sha3_ctx, data, size);
+        break;
+    case RM_DIGEST_BLAKE2S:
+        blake2s_update(digest->blake2s_state, data, size);
+        break;
+    case RM_DIGEST_BLAKE2B:
+        blake2b_update(digest->blake2b_state, data, size);
+        break;
+    case RM_DIGEST_BLAKE2SP:
+        blake2sp_update(digest->blake2sp_state, data, size);
+        break;
+    case RM_DIGEST_BLAKE2BP:
+        blake2bp_update(digest->blake2bp_state, data, size);
+        break;
     case RM_DIGEST_SPOOKY32:
         digest->checksum[0].first = spooky_hash32(data, size, digest->checksum[0].first);
         break;
@@ -433,7 +557,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         for(guint8 block = 0; block < (digest->bytes / 16); block++) {
 #if RM_PLATFORM_32
             MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[block].first,
-                                &digest->checksum[block]);  //&
+                                &digest->checksum[block]);
 #elif RM_PLATFORM_64
             MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum[block].first,
                                 &digest->checksum[block]);
@@ -551,8 +675,8 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 }
                 paranoid->twin_candidate = NULL;
                 paranoid->twin_candidate_buffer = NULL;
-#if _RM_CHECKSUM_DEBUG
             } else {
+#if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Added twin candidate %p for %p",
                                   paranoid->twin_candidate, paranoid);
 #endif
@@ -560,6 +684,16 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
         }
     }
 }
+
+
+#define BLAKE_COPY(ALGO)                                                        \
+{                                                                               \
+        self = g_slice_new0(RmDigest);                                          \
+        self->bytes = digest->bytes;                                            \
+        self->type = digest->type;                                              \
+        self->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));              \
+        memcpy(self->ALGO##_state, digest->ALGO##_state, sizeof(ALGO##_state)); \
+}                                                                               \
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
     rm_assert_gentle(digest);
@@ -575,6 +709,27 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
         self->bytes = digest->bytes;
         self->type = digest->type;
         self->glib_checksum = g_checksum_copy(digest->glib_checksum);
+        break;
+    case RM_DIGEST_SHA3_256:
+    case RM_DIGEST_SHA3_384:
+    case RM_DIGEST_SHA3_512:
+        self = g_slice_new0(RmDigest);
+        self->bytes = digest->bytes;
+        self->type = digest->type;
+        self->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
+        memcpy(self->sha3_ctx, digest->sha3_ctx, sizeof(sha3_context));
+        break;
+    case RM_DIGEST_BLAKE2S:
+        BLAKE_COPY(blake2s);
+        break;
+    case RM_DIGEST_BLAKE2B:
+        BLAKE_COPY(blake2b);
+        break;
+    case RM_DIGEST_BLAKE2SP:
+        BLAKE_COPY(blake2sp);
+        break;
+    case RM_DIGEST_BLAKE2BP:
+        BLAKE_COPY(blake2bp);
         break;
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
@@ -611,6 +766,13 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     case RM_DIGEST_SHA512:
     case RM_DIGEST_SHA256:
     case RM_DIGEST_SHA1:
+    case RM_DIGEST_SHA3_256:
+    case RM_DIGEST_SHA3_384:
+    case RM_DIGEST_SHA3_512:
+    case RM_DIGEST_BLAKE2S:
+    case RM_DIGEST_BLAKE2B:
+    case RM_DIGEST_BLAKE2SP:
+    case RM_DIGEST_BLAKE2BP:
         /* for all of the above, reading the digest is destructive, so we
          * need to take a copy */
         return TRUE;
@@ -636,17 +798,52 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     }
 }
 
+#define BLAKE_STEAL(ALGO)                                         \
+    {                                                             \
+                RmDigest *copy = rm_digest_copy(digest);          \
+                ALGO##_final(copy->ALGO##_state, result, buflen); \
+                rm_assert_gentle(buflen == digest->bytes);        \
+                rm_digest_free(copy);                             \
+    }
+
 guint8 *rm_digest_steal(RmDigest *digest) {
     guint8 *result = g_slice_alloc0(digest->bytes);
     gsize buflen = digest->bytes;
 
     if(rm_digest_needs_steal(digest->type)) {
         /* reading the digest is destructive, so we need to take a copy */
-        RmDigest *copy = rm_digest_copy(digest);
-        g_checksum_get_digest(copy->glib_checksum, result, &buflen);
-        rm_assert_gentle(buflen == digest->bytes);
-        rm_digest_free(copy);
+        switch(digest->type) {
+            case RM_DIGEST_SHA3_256:
+            case RM_DIGEST_SHA3_384:
+            case RM_DIGEST_SHA3_512: {
+                RmDigest *copy = rm_digest_copy(digest);
+                memcpy(result, sha3_Finalize(copy->sha3_ctx), digest->bytes);
+                rm_assert_gentle(buflen == digest->bytes);
+                rm_digest_free(copy);
+                break;
+            }
+            case RM_DIGEST_BLAKE2S:
+                BLAKE_STEAL(blake2s);
+                break;
+            case RM_DIGEST_BLAKE2B:
+                BLAKE_STEAL(blake2b);
+                break;
+            case RM_DIGEST_BLAKE2SP:
+                BLAKE_STEAL(blake2sp);
+                break;
+            case RM_DIGEST_BLAKE2BP:
+                BLAKE_STEAL(blake2bp);
+                break;
+            default: {
+                RmDigest *copy = rm_digest_copy(digest);
+                g_checksum_get_digest(copy->glib_checksum, result, &buflen);
+                rm_assert_gentle(buflen == digest->bytes);
+                rm_digest_free(copy);
+                break;
+            }
+        }
     } else {
+        /*  Stateless checksum, just copy it. */
         memcpy(result, digest->checksum, digest->bytes);
     }
     return result;
@@ -726,25 +923,17 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         }
 
         return (!a_iter && !b_iter && bytes == a->bytes);
-
     } else if(rm_digest_needs_steal(a->type)) {
         guint8 *buf_a = rm_digest_steal(a);
         guint8 *buf_b = rm_digest_steal(b);
-
-        gboolean result;
-
-        if(a->bytes != b->bytes) {
-            result = false;
-        } else {
-            result = !memcmp(buf_a, buf_b, MIN(a->bytes, b->bytes));
-        }
+        gboolean result = !memcmp(buf_a, buf_b, a->bytes);
 
         g_slice_free1(a->bytes, buf_a);
         g_slice_free1(b->bytes, buf_b);
 
         return result;
     } else {
-        return !memcmp(a->checksum, b->checksum, MIN(a->bytes, b->bytes));
+        return !memcmp(a->checksum, b->checksum, a->bytes);
     }
 }
 
@@ -788,11 +977,13 @@ int rm_digest_get_bytes(RmDigest *self) {
 
     if(self->type != RM_DIGEST_PARANOID) {
         return self->bytes;
-    } else if(self->paranoid->shadow_hash) {
-        return self->paranoid->shadow_hash->bytes;
-    } else {
-        return 0;
     }
+
+    if(self->paranoid->shadow_hash) {
+        return self->paranoid->shadow_hash->bytes;
+    }
+
+    return 0;
 }
 
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
