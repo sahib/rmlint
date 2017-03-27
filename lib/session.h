@@ -95,6 +95,13 @@ typedef struct RmSession {
     RmOff dup_group_counter;
     RmOff other_lint_cnt;
 
+    RmOff duplicate_bytes;
+    RmOff unique_bytes;
+    RmOff original_bytes;
+    RmOff shred_bytes_read;
+
+    GTimer *timer_since_proc_start;
+
     /* flag indicating if rmlint was aborted early */
     volatile gint aborted;
 

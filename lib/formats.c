@@ -103,6 +103,8 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     self->config = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
                                          (GDestroyNotify)g_hash_table_unref);
 
+    self->handler_order = g_queue_new();
+
     self->session = session;
     g_queue_init(&self->groups);
     g_rec_mutex_init(&self->state_mtx);
@@ -140,6 +142,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *NULL_HANDLER;
     rm_fmt_register(self, NULL_HANDLER);
 
+    extern RmFmtHandler *STATS_HANDLER;
+    rm_fmt_register(self, STATS_HANDLER);
+
     return self;
 }
 
@@ -167,6 +172,7 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
 }
 
 void rm_fmt_clear(RmFmtTable *self) {
+    g_printerr("rm_fmt_clear %d\n", rm_fmt_len(self));
     if(rm_fmt_len(self) <= 0) {
         return;
     }
@@ -175,6 +181,7 @@ void rm_fmt_clear(RmFmtTable *self) {
     g_hash_table_remove_all(self->handler_to_file);
     g_hash_table_remove_all(self->path_to_handler);
     g_hash_table_remove_all(self->config);
+    g_queue_clear(self->handler_order);
 }
 
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
@@ -182,13 +189,12 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_mutex_init(&handler->print_mtx);
 }
 
-#define RM_FMT_FOR_EACH_HANDLER(self)                     \
-    FILE *file = NULL;                                    \
-    RmFmtHandler *handler = NULL;                         \
-                                                          \
-    GHashTableIter iter;                                  \
-    g_hash_table_iter_init(&iter, self->handler_to_file); \
-    while(g_hash_table_iter_next(&iter, (gpointer *)&handler, (gpointer *)&file))
+#define RM_FMT_FOR_EACH_HANDLER_BEGIN(self)                                  \
+    for(GList *iter = self->handler_order->head; iter; iter = iter->next) {  \
+        RmFmtHandler *handler = iter->data;                                  \
+        FILE *file = g_hash_table_lookup(self->handler_to_file, handler);    \
+
+#define RM_FMT_FOR_EACH_HANDLER_END }
 
 #define RM_FMT_CALLBACK(func, ...)                               \
     if(func) {                                                   \
@@ -272,14 +278,16 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
     g_hash_table_insert(self->handler_to_file, new_handler_copy, file_handle);
     g_hash_table_insert(self->path_to_handler, new_handler_copy->path, new_handler);
     g_hash_table_add(self->handler_set, (char *)new_handler_copy->name);
+    g_queue_push_tail(self->handler_order, new_handler_copy);
 
     return true;
 }
 
 static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
-    RM_FMT_FOR_EACH_HANDLER(self) {
+    RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
         RM_FMT_CALLBACK(handler->elem, result);
     }
+    RM_FMT_FOR_EACH_HANDLER_END
 }
 
 static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
@@ -379,17 +387,19 @@ void rm_fmt_close(RmFmtTable *self) {
 
     g_queue_clear(&self->groups);
 
-    RM_FMT_FOR_EACH_HANDLER(self) {
+    RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
         g_mutex_clear(&handler->print_mtx);
     }
+    RM_FMT_FOR_EACH_HANDLER_END
 
     g_hash_table_unref(self->name_to_handler);
     g_hash_table_unref(self->handler_to_file);
     g_hash_table_unref(self->path_to_handler);
     g_hash_table_unref(self->config);
     g_hash_table_unref(self->handler_set);
+    g_queue_free(self->handler_order);
     g_rec_mutex_clear(&self->state_mtx);
     g_slice_free(RmFmtTable, self);
 }
@@ -424,9 +434,10 @@ void rm_fmt_unlock_state(RmFmtTable *self) {
 void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
     rm_fmt_lock_state(self);
     {
-        RM_FMT_FOR_EACH_HANDLER(self) {
+        RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
             RM_FMT_CALLBACK(handler->prog, state);
         }
+        RM_FMT_FOR_EACH_HANDLER_END
     }
     rm_fmt_unlock_state(self);
 }
