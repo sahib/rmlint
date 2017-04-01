@@ -172,7 +172,6 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
 }
 
 void rm_fmt_clear(RmFmtTable *self) {
-    g_printerr("rm_fmt_clear %d\n", rm_fmt_len(self));
     if(rm_fmt_len(self) <= 0) {
         return;
     }
