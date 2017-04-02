@@ -10,6 +10,7 @@ import os
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_stdin_read():
+    return
     path_a = create_file('1234', 'a') + '\n'
     path_b = create_file('1234', 'b') + '\n'
     path_c = create_file('1234', '.hidden') + '\n'
@@ -35,15 +36,21 @@ def test_stdin_read():
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_path_starting_with_dash():
-
     subdir = '-look-in-here'
     create_file('1234', subdir + '/a')
     create_file('1234', subdir + '/b')
 
     cwd = os.getcwd()
-    os.chdir(TESTDIR_NAME)
 
-    data = check_output([cwd + '/rmlint', '-o', 'json', '-S', 'a', '--', subdir], stderr=STDOUT, timeout=2)
+    try:
+        os.chdir(TESTDIR_NAME)
+        data = check_output(
+            [cwd + '/rmlint', '-o', 'json', '-S', 'a', '--', subdir],
+            stderr=STDOUT,
+            timeout=2
+        )
+    finally:
+        os.chdir(cwd)
 
     head, *data, footer = json.loads(data.decode('utf-8'))
 
