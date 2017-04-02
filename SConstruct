@@ -7,7 +7,9 @@ import glob
 import subprocess
 import platform
 
+import SCons
 import SCons.Conftest as tests
+from SCons.Script.SConscript import SConsEnvironment
 
 pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
 
@@ -628,6 +630,21 @@ conf.check_uname()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+SConsEnvironment.Chmod = SCons.Action.ActionFactory(
+    os.chmod,
+    lambda dest, mode: 'Chmod("%s", 0%o)' % (dest, mode)
+)
+
+
+def InstallPerm(env, dest, files, perm):
+    obj = env.Install(dest, files)
+    for i in obj:
+        env.AddPostAction(i, env.Chmod(str(i), perm))
+    return dest
+
+# put this function "in" scons
+SConsEnvironment.InstallPerm = InstallPerm
 
 # Your extra checks here
 env = conf.Finish()

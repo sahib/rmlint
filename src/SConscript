@@ -26,7 +26,7 @@ for progname in ['rmlint']:
 
 
 if 'install' in COMMAND_LINE_TARGETS:
-    env.Alias('install', env.Install('$PREFIX/bin', programs))
+    env.Alias('install', env.InstallPerm('$PREFIX/bin', programs, 0755))
 
 
 env.Default(programs)
