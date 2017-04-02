@@ -1243,9 +1243,11 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
         int read_paths = 0;
         const char *dir_path = paths[i];
 
-        if(strncmp(dir_path, "-", 1) == 0) {
+        if(strcmp(dir_path, "-") == 0) {
+            /* option '-' means read paths from stdin */
             read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
-        } else if(strncmp(dir_path, "//", 2) == 0 && strlen(dir_path) == 2) {
+        } else if(strcmp(dir_path, "//") == 0) {
+            /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
         } else {
             read_paths = rm_cmd_add_path(session, is_prefd, path_index, paths[i]);
