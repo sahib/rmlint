@@ -202,9 +202,14 @@ typedef struct RmFile {
     /* The index of the path this file belongs to. */
     RmOff path_index;
 
-    /* Filesize in bytes
+    /* Filesize in bytes; this may be less than actual_file_size,
+     * since -q / -Q may limit this number.
      */
     RmOff file_size;
+
+    /* Filesize of a file when it was traversed by rmlint.
+     */
+    RmOff actual_file_size;
 
     /* How many bytes were already read.
     * (lower or equal file_size)

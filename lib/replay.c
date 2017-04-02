@@ -247,8 +247,8 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
         return true;
     }
 
-    return ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->file_size) &&
-            (cfg->maxsize == (RmOff)-1 || file->file_size <= cfg->maxsize));
+    return ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->actual_file_size) &&
+            (cfg->maxsize == (RmOff)-1 || file->actual_file_size <= cfg->maxsize));
 }
 
 static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file, const char *file_path) {
@@ -408,7 +408,7 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
             session->dup_counter += 1;
 
             if(!RM_IS_BUNDLED_HARDLINK(file)) {
-                session->total_lint_size += file->file_size;
+                session->total_lint_size += file->actual_file_size;
             }
         }
     } else {
@@ -466,7 +466,7 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
 /////////////////////////////////////////
 
 static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref,
-                                      bool is_last) {
+                                  bool is_last) {
     GQueue *group = *group_ref;
     if(group->length > 1) {
         g_queue_push_tail(cage->groups, group);

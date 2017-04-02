@@ -82,6 +82,7 @@ typedef struct RmCfg {
 
     gboolean use_absolute_start_offset;
     gboolean use_absolute_end_offset;
+
     RmOff skip_start_offset;
     RmOff skip_end_offset;
 

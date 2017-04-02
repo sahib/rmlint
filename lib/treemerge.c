@@ -309,7 +309,7 @@ static RmOff rm_tm_calc_file_size(const RmDirectory *directory) {
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        acc += file->file_size;
+        acc += file->actual_file_size;
     }
 
     /* Recursively propagate to children */
@@ -339,6 +339,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
 
     /* Recursively calculate the file size */
     file->file_size = rm_tm_calc_file_size(self);
+    file->actual_file_size = file->file_size;
     file->is_prefd = (self->prefd_files >= self->dupe_count);
 }
 

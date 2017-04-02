@@ -13,7 +13,6 @@ import shutil
 import shlex
 import subprocess
 
-USE_VALGRIND = True
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
 def runs_as_root():

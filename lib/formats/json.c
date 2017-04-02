@@ -51,7 +51,7 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
                                        const char *file_path, char *cksum) {
     guint32 hash = 0;
     hash = file->inode ^ file->dev;
-    hash ^= file->file_size;
+    hash ^= file->actual_file_size;
 
     for(int i = 0; i < 8192; ++i) {
         hash ^= spooky_hash32(file_path, strlen(file_path), i);
@@ -295,7 +295,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
         rm_fmt_json_key_unsafe(out, "path", file_path);
         rm_fmt_json_sep(self, out);
         if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
-            rm_fmt_json_key_int(out, "size", file->file_size);
+            rm_fmt_json_key_int(out, "size", file->actual_file_size);
             rm_fmt_json_sep(self, out);
             if(file->twin_count >= 0) {
                 rm_fmt_json_key_int(out, "twins", file->twin_count);

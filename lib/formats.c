@@ -293,8 +293,8 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
     RmFile *fa = ga->files.head->data;
     RmFile *fb = gb->files.head->data;
 
-    RmOff sa = fa->file_size * (ga->files.length - 1);
-    RmOff sb = fb->file_size * (gb->files.length - 1);
+    RmOff sa = fa->actual_file_size * (ga->files.length - 1);
+    RmOff sb = fb->actual_file_size * (gb->files.length - 1);
 
     /* Better do not compare big unsigneds via a - b... */
     if(sa < sb) {

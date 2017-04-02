@@ -46,8 +46,7 @@ def test_path_starting_with_dash():
         os.chdir(TESTDIR_NAME)
         data = check_output(
             [cwd + '/rmlint', '-o', 'json', '-S', 'a', '--', subdir],
-            stderr=STDOUT,
-            timeout=2
+            stderr=STDOUT
         )
     finally:
         os.chdir(cwd)

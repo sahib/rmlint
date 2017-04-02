@@ -1241,7 +1241,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files, RmShredGrou
             }
         } else {
             file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
-            session->unique_bytes += file->file_size;
+            session->unique_bytes += file->actual_file_size;
         }
     }
 
@@ -1287,17 +1287,17 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     if(!file->is_original) {
         session->dup_counter++;
-        session->duplicate_bytes += file->file_size;
+        session->duplicate_bytes += file->actual_file_size;
 
         /* Only check file size if it's not a hardlink.  Since deleting
          * hardlinks does not free any space they should not be counted unless
          * all of them would be removed.
          */
         if(!RM_IS_BUNDLED_HARDLINK(file) && file->outer_link_count == 0) {
-            session->total_lint_size += file->file_size;
+            session->total_lint_size += file->actual_file_size;
         }
     } else {
-        session->original_bytes += file->file_size;
+        session->original_bytes += file->actual_file_size;
     }
 }
 

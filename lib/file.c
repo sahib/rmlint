@@ -77,6 +77,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path,
         }
     }
 
+    self->actual_file_size = actual_file_size;
     self->hash_offset = start_seek;
 
     self->lint_type = type;
