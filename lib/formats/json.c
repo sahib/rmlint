@@ -260,7 +260,6 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
     if (file->lint_type == RM_LINT_TYPE_UNIQUE_FILE && (!file->digest || !session->cfg->write_unfinished)) {
         /* unique file with no partial checksum */
         return;
-         /* TODO: add option to output all unique files */
     }
 
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];

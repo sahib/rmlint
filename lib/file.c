@@ -64,6 +64,8 @@ RmFile *rm_file_new(struct RmSession *session, const char *path,
 
     self->depth = depth;
     self->path_depth = rm_util_path_depth(path);
+    self->file_size = 0;
+    self->actual_file_size = 0;
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -75,9 +77,10 @@ RmFile *rm_file_new(struct RmSession *session, const char *path,
         } else {
             self->file_size = actual_file_size * cfg->skip_end_factor;
         }
+
+        self->actual_file_size = actual_file_size;
     }
 
-    self->actual_file_size = actual_file_size;
     self->hash_offset = start_seek;
 
     self->lint_type = type;
