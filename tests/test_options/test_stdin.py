@@ -10,7 +10,6 @@ import os
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_stdin_read():
-    return
     path_a = create_file('1234', 'a') + '\n'
     path_b = create_file('1234', 'b') + '\n'
     path_c = create_file('1234', '.hidden') + '\n'
