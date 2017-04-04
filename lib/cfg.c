@@ -28,6 +28,12 @@
 
 #include "cfg.h"
 
+static void rm_path_free(RmPath *rmpath) {
+    free(rmpath->path);
+    g_slice_free(RmPath, rmpath);
+}
+
+
 /* Options not specified by commandline get a default option -
  * this is usually called before rm_cmd_parse_args */
 void rm_cfg_set_default(RmCfg *cfg) {
@@ -79,4 +85,50 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->mtime_window = -1;
 
     rm_trie_init(&cfg->file_trie);
+}
+
+
+guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
+    int rc = 0;
+
+#if HAVE_FACCESSAT
+    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
+#else
+    rc = access(path, R_OK);
+#endif
+
+    if(rc != 0) {
+        rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
+                            strerror(errno));
+        return 0;
+    }
+
+    char *real_path = realpath(path, NULL);
+    if(real_path == NULL) {
+        rm_log_warning_line(_("Can't get real path for directory or file \"%s\": %s"),
+                            path, strerror(errno));
+        return 0;
+    }
+
+    RmPath *rmpath = g_slice_new(RmPath);
+    rmpath->path = real_path;
+    rmpath->idx = cfg->path_count++;
+    rmpath->is_prefd = is_prefd;
+    rmpath->treat_as_single_vol = strncmp(path, "//", 2) == 0;
+
+    if(cfg->replay && g_str_has_suffix(rmpath->path, ".json")) {
+        cfg->json_paths = g_slist_prepend(cfg->json_paths, rmpath);
+        return 1;
+    }
+
+    cfg->paths = g_slist_prepend(cfg->paths, rmpath);
+    return 1;
+}
+
+
+void rm_cfg_free_paths(RmCfg *cfg) {
+    g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
+    cfg->paths = NULL;
+    g_slist_free_full(cfg->json_paths, (GDestroyNotify)rm_path_free);
+    cfg->json_paths = NULL;
 }

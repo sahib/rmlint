@@ -89,11 +89,11 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path,
     polly->index = 1;
     polly->is_prefd = is_prefd;
 
-    for(int idx = 0; session->cfg->paths[idx]; ++idx) {
-        RmStat stat_buf;
-        const char *path = session->cfg->paths[idx];
+    for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
+        RmPath *rmpath = iter->data;
 
-        if(rm_sys_stat(path, &stat_buf) != -1) {
+        RmStat stat_buf;
+        if(rm_sys_stat(rmpath->path, &stat_buf) != -1) {
             g_hash_table_add(polly->disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));
         }
     }
@@ -303,16 +303,18 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
      * If this turns out to be an performance problem, we could turn cfg->paths
      * into a RmTrie and use it to find the longest prefix easily.
      */
-    for(int i = 0; cfg->paths[i]; ++i) {
-        char *path = cfg->paths[i];
-        size_t path_len = strlen(path);
 
-        if(strncmp(file_path, path, path_len) == 0) {
+    /* iterate through cmdline paths */
+    for(GSList *iter = cfg->paths; iter; iter = iter->next) {
+        RmPath *rmpath = iter->data;
+        size_t path_len = strlen(rmpath->path);
+
+        if(strncmp(file_path, rmpath->path, path_len) == 0) {
             if(path_len > highest_match) {
                 highest_match = path_len;
 
-                file->is_prefd = cfg->is_prefd[i] || polly->is_prefd;
-                file->path_index = i;
+                file->is_prefd = rmpath->is_prefd || polly->is_prefd;
+                file->path_index = rmpath->idx;
             }
         }
     }

@@ -452,47 +452,15 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
-static bool rm_cmd_add_path(RmSession *session, bool is_prefd, int index,
-                            const char *path) {
-    RmCfg *cfg = session->cfg;
-    int rc = 0;
 
-#if HAVE_FACCESSAT
-    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
-#else
-    rc = access(path, R_OK);
-#endif
-
-    if(rc != 0) {
-        rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
-                            strerror(errno));
-        return FALSE;
-    } else {
-        cfg->is_prefd = g_realloc(cfg->is_prefd, sizeof(char) * (index + 1));
-        cfg->is_prefd[index] = is_prefd;
-        cfg->paths = g_realloc(cfg->paths, sizeof(char *) * (index + 2));
-
-        char *abs_path = NULL;
-        if(strncmp(path, "//", 2) == 0) {
-            abs_path = g_strdup(path);
-        } else {
-            abs_path = realpath(path, NULL);
-        }
-
-        cfg->paths[index] = abs_path ? abs_path : g_strdup(path);
-        cfg->paths[index + 1] = NULL;
-        return TRUE;
-    }
-}
-
-static int rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd, int index) {
+static int rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
     int paths_added = 0;
     char path_buf[PATH_MAX];
     char *tokbuf = NULL;
 
     while(fgets(path_buf, PATH_MAX, stdin)) {
-        paths_added += rm_cmd_add_path(session, is_prefd, index + paths_added,
-                                       strtok_r(path_buf, "\n", &tokbuf));
+        paths_added +=
+            rm_cfg_add_path(session->cfg, is_prefd, strtok_r(path_buf, "\n", &tokbuf));
     }
 
     return paths_added;
@@ -1014,7 +982,7 @@ static void rm_cmd_set_default_outputs(RmSession *session) {
     rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
 
-    if(session->do_replay) {
+    if(session->cfg->replay) {
         rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
         rm_fmt_add(session->formats, "json", "rmlint.replay.json");
     } else {
@@ -1199,7 +1167,7 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name, const gchar
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name, _UNUSED const gchar *x,
                                     RmSession *session, _UNUSED GError **error) {
 
-    session->do_replay = true;
+    session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
     return true;
 }
@@ -1232,7 +1200,6 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 }
 
 static bool rm_cmd_set_paths(RmSession *session, char **paths) {
-    int path_index = 0;
     bool is_prefd = false;
     bool not_all_paths_read = false;
 
@@ -1240,32 +1207,25 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
-        int read_paths = 0;
-        const char *dir_path = paths[i];
 
-        if(strcmp(dir_path, "-") == 0) {
+        if(strcmp(paths[i], "-") == 0) {
             /* option '-' means read paths from stdin */
-            read_paths = rm_cmd_read_paths_from_stdin(session, is_prefd, path_index);
-        } else if(strcmp(dir_path, "//") == 0) {
+            rm_cmd_read_paths_from_stdin(session, is_prefd);
+        } else if(strcmp(paths[i], "//") == 0) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
         } else {
-            read_paths = rm_cmd_add_path(session, is_prefd, path_index, paths[i]);
+            not_all_paths_read |= rm_cfg_add_path(cfg, is_prefd, paths[i]);
         }
 
-        if(read_paths == 0) {
-            not_all_paths_read = true;
-        } else {
-            path_index += read_paths;
-        }
     }
 
     g_strfreev(paths);
 
-    if(path_index == 0 && not_all_paths_read == false) {
+    if(cfg->path_count == 0 && not_all_paths_read == false) {
         /* Still no path set? - use `pwd` */
-        rm_cmd_add_path(session, is_prefd, path_index, cfg->iwd);
-    } else if(path_index == 0 && not_all_paths_read) {
+        rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
+    } else if(cfg->path_count == 0 && not_all_paths_read) {
         return false;
     }
 
@@ -1483,7 +1443,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         session->cmdline_parse_error = TRUE;
     }
 
-    /* Silent fixes of invalid numberic input */
+    /* Silent fixes of invalid numeric input */
     cfg->threads = CLAMP(cfg->threads, 1, 128);
     cfg->depth = CLAMP(cfg->depth, 1, PATH_MAX / 2 + 1);
 
@@ -1545,46 +1505,15 @@ static int rm_cmd_replay_main(RmSession *session) {
     bool one_valid_json = false;
     RmCfg *cfg = session->cfg;
 
-    int json_file_count = 0, total_count = 0;
-    for(int i = 0; cfg->paths[i]; i++) {
-        json_file_count += !!g_str_has_suffix(cfg->paths[i], ".json");
-        total_count++;
-    }
+    for(GSList *iter = cfg->json_paths; iter; iter = iter->next) {
+        RmPath *jsonpath = iter->data;
 
-    /* If the commandline only consisted of json files,
-     * we assume `pwd` as path to check.
-     */
-    if(json_file_count == total_count) {
-        rm_cmd_add_path(session, false, total_count, cfg->iwd);
-    }
-
-    for(int i = 0; cfg->paths[i]; i++) {
-        char *json_file = cfg->paths[i];
-        if(!g_str_has_suffix(json_file, ".json")) {
-            continue;
-        }
-
-        /*  remember if this path was prefd */
-        bool is_prefd = cfg->is_prefd[i];
-
-        /* Remove the file from the actual paths to scan. */
-        for(int j = i; cfg->paths[j]; j++) {
-            cfg->paths[j] = cfg->paths[j + 1];
-            if(cfg->paths[j + 1]) {
-                cfg->is_prefd[j] = cfg->is_prefd[j + 1];
-            }
-        }
-
-        if(!rm_parrot_cage_load(&cage, json_file, is_prefd)) {
-            rm_log_warning_line("Loading %s failed.", json_file);
+        if(!rm_parrot_cage_load(&cage, jsonpath->path, jsonpath->is_prefd)) {
+            rm_log_warning_line("Loading %s failed.", jsonpath->path);
         } else {
             one_valid_json = true;
         }
 
-        g_free(json_file);
-
-        /* Next element is now at current pos; adjust. */
-        i--;
     }
 
     if(!one_valid_json) {
@@ -1606,7 +1535,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
 
-    if(session->do_replay) {
+    if(session->cfg->replay) {
         return rm_cmd_replay_main(session);
     }
 
@@ -1620,8 +1549,7 @@ int rm_cmd_main(RmSession *session) {
         rm_log_debug_line("No mount table created.");
     }
 
-    session->mds = rm_mds_new(cfg->threads, session->mounts,
-                              cfg->fake_pathindex_as_disk);
+    session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
 
     rm_traverse_tree(session);
 

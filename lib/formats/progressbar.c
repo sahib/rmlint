@@ -296,7 +296,7 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(session->do_replay) {
+    if(session->cfg->replay) {
         /* Makes not much sense to print a progressbar with --replay */
         return;
     }

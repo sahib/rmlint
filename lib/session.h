@@ -135,9 +135,6 @@ typedef struct RmSession {
     /* true once traverse finished running */
     bool traverse_finished;
 
-    /* List of path to json files that should be re-outputted. */
-    bool do_replay;
-
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];
 } RmSession;

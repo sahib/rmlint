@@ -160,8 +160,16 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
     return 0;
 }
 
-static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *session) {
-    if(*paths == NULL) {
+static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *session) {
+
+    /* put paths into format expected by fts */
+    guint path_count = g_slist_length(paths);
+    char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
+    for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
+        path_vec[idx] = ((RmPath *)paths->data)->path;
+    }
+
+    if(*path_vec == NULL) {
         rm_log_error("No paths passed to rm_tm_count_files\n");
         return false;
     }
@@ -179,7 +187,8 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
     RmTrie file_tree;
     rm_trie_init(&file_tree);
 
-    FTS *fts = fts_open(paths, fts_flags, NULL);
+
+    FTS *fts = fts_open(path_vec, fts_flags, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
         return false;
@@ -236,9 +245,9 @@ static bool rm_tm_count_files(RmTrie *count_tree, char **paths, RmSession *sessi
      * otherwise we would continue merging till / with fatal consequences,
      * since / does not have more files as paths[0]
      */
-    for(int i = 0; paths[i]; ++i) {
+    for(int i = 0; path_vec[i]; ++i) {
         /* Just call the callback directly */
-        RmNode *node = rm_trie_search_node(&file_tree, paths[i]);
+        RmNode *node = rm_trie_search_node(&file_tree, path_vec[i]);
         if(node != NULL) {
             node->data = GINT_TO_POINTER(true);
             rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
@@ -778,7 +787,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         if(result_dirs.length >= 2) {
             rm_shred_forward_to_output(self->session, &file_adaptor_group);
-        } 
+        }
 
         g_queue_clear(&file_adaptor_group);
         g_queue_clear(&result_dirs);
