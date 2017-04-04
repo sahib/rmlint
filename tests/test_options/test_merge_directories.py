@@ -276,12 +276,13 @@ def test_keepall_tagged():
     create_file('test', 'dups/folder/subfolder/file')
     create_file('test', 'dups/samefolder/subfolder/file')
 
-    for untagged_path in [os.path.join(TESTDIR_NAME, 'origs'), TESTDIR_NAME]:
+    for untagged_path in [os.path.join(TESTDIR_NAME, 'dups'), TESTDIR_NAME]:
         for options in ['-D -S a -k -m {d} // {o}', '-D -S a -k {d} // {o}']:
             head, *data, footer = run_rmlint(options.format(
                 d=untagged_path,
-                o=os.path.join(TESTDIR_NAME, 'origs')
-            ))
+                o=os.path.join(TESTDIR_NAME, 'origs')),
+                use_default_dir=False
+            )
 
             assert len(data) == 4
             assert footer['total_files'] == 4
@@ -308,12 +309,13 @@ def test_keepall_untagged():
     create_file('test', 'dups/folder/subfolder/file')
     create_file('test', 'dups/samefolder/subfolder/file')
 
-    for untagged_path in [os.path.join(TESTDIR_NAME, 'origs'), TESTDIR_NAME]:
+    for untagged_path in [os.path.join(TESTDIR_NAME, 'dups'), TESTDIR_NAME]:
         for options in ['-D -S a -K -M {d} // {o}', '-D -S a -K {d} // {o}']:
             head, *data, footer = run_rmlint(options.format(
                 d=untagged_path,
-                o=os.path.join(TESTDIR_NAME, 'origs')
-            ))
+                o=os.path.join(TESTDIR_NAME, 'origs')),
+                use_default_dir=False
+            )
 
             assert len(data) == 4
             assert footer['total_files'] == 4
