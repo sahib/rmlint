@@ -338,10 +338,8 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
                 if(FLOAT_IS_ZERO(diff)) {
                     return 0;
                 }
-
-                r = diff;
-            }
-            break;
+                r = diff>0 ? 1 : -1;
+            } break;
         case 'p':
             r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
             break;
