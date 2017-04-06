@@ -21,6 +21,8 @@ def path_index(file_path):
 def path_depth(file_path):
     return len([c for c in file_path if c == '/'])
 
+def in_order(a, b, increasing):
+    return (a < b) if increasing else (b < a)
 
 # dispatcher for comparison tests
 def validate_order(data, tests):
@@ -36,19 +38,19 @@ def validate_order(data, tests):
         for test in tests:
             cmp_a, cmp_b = (testfuncs[test.lower()](e) for e in [a, b])
 
-            # Equal? Try again.
+            # Equal? Go to next criterion.
             if cmp_a == cmp_b:
                 continue
 
-            a_comes_first = test.islower()
+            # special handling for mtime rounding
+            if (test.lower()=='m' and abs(cmp_a-cmp_b) < 0.00000001):
+                continue
 
-            if (cmp_a < cmp_b) and a_comes_first:
+            if in_order(cmp_a, cmp_b, test.islower()):
+                # order is correct; ignore any remaining (less important) criteria
                 break
 
-            if (cmp_b < cmp_a) and not a_comes_first:
-                break
-
-            # Something's wrong.
+            # Order is incorrect.
             assert False
 
 
