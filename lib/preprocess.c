@@ -416,9 +416,9 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 gdouble diff = a->mtime - b->mtime;
                 if(FLOAT_IS_ZERO(diff)) {
                     cmp = 0;
+                } else {
+                    cmp = (diff>0.0) ? 1 : -1;
                 }
-
-                cmp = diff;
                 break;
             }
             case 'a':
