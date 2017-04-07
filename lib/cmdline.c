@@ -773,7 +773,7 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name,
         }
     }
 
-    if(FLOAT_IS_ZERO(result) || result < 0) {
+    if(FLOAT_SIGN_DIFF(result, 0.0, MTIME_TOL) != 1) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Unable to parse time spec \"%s\""),
                     string);
         return false;

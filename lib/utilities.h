@@ -48,14 +48,24 @@ typedef struct stat RmStat;
 //  MATHS SHORTCUTS   //
 ////////////////////////
 
-#define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing unit64's */
+// Signum function
+#define SIGN(X) ((X) > 0 ? 1 : ((X) < 0 ? -1 : 0))
 
-// This is not a good general method for comparing floats.
-// Currently only used to compare different mtimes, where
-// the time might not be very exact or meaningful anyways.
+// Returns 1 if X>Y, -1 if X<Y or 0 if X==Y
+#define SIGN_DIFF(X, Y) (((X) > (Y)) - ((X) < (Y))) /* handy for comparing uint64's */
+
+// Compare two floats; tolerate +/- tol when testing for equality
 // See also:
 // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition
-#define FLOAT_IS_ZERO(X) (fabs(X) < 0.00000001)
+#define FLOAT_SIGN_DIFF(X, Y, tol) ((X) - (Y) > (tol) ? 1 : ((Y) - (X) > (tol) ? -1 : 0))
+
+// Time tolerance (seconds) when comparing two mtimes
+#define MTIME_TOL (0.00000001)
+
+#define RETURN_IF_NONZERO(X) \
+    if((X) != 0) {           \
+        return (X);          \
+    }
 
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
