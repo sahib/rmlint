@@ -261,7 +261,7 @@ def create_link(path, target, symlink=False):
     )
 
 
-def create_file(data, name):
+def create_file(data, name, mtime=None):
     full_path = os.path.join(TESTDIR_NAME, name)
     if '/' in name:
         try:
@@ -271,6 +271,9 @@ def create_file(data, name):
 
     with open(full_path, 'w') as handle:
         handle.write(data)
+
+    if not mtime is None:
+        subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
 
     return full_path
 

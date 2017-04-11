@@ -3,8 +3,6 @@
 from nose import with_setup
 from tests.utils import *
 
-import time
-
 from itertools import permutations, combinations
 
 
@@ -57,15 +55,12 @@ def validate_order(data, tests):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
-    create_file('xxx', PATHS[1] + 'a')
-    create_file('xxx', PATHS[0] + 'c')
-    create_file('xxx', PATHS[2] + 'B')
-
-    # Make sure it takes some time to re-reun
-    time.sleep(1.2)
-    create_file('xxx', PATHS[2] + 'b')
-    create_file('xxx', PATHS[1] + 'c')
-    create_file('xxx', PATHS[2] + 'c')
+    create_file('xxx', PATHS[1] + 'a', mtime='2004-02-29  16:21:42.4')
+    create_file('xxx', PATHS[0] + 'c', mtime='2004-02-29  16:21:42.6')
+    create_file('xxx', PATHS[2] + 'B', mtime='2004-02-29  16:21:43.1')
+    create_file('xxx', PATHS[2] + 'b', mtime='2004-02-29  16:21:43.0')
+    create_file('xxx', PATHS[1] + 'c', mtime='2004-02-29  16:21:41.5')
+    create_file('xxx', PATHS[2] + 'c', mtime='2004-02-29  16:21:41.0')
 
     joiner = ' ' + TESTDIR_NAME + '/'
     search_paths = joiner + joiner.join(PATHS)
