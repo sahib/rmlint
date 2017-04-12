@@ -97,11 +97,9 @@ static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
 
     if(session->cfg->mtime_window >= 0) {
         gdouble diff = file_a->mtime - file_b->mtime;
-        if(FLOAT_IS_ZERO(diff)) {
-            return 0;
+        if(!(FLOAT_IS_ZERO(diff))) {
+            return (diff < 0) ? -1 : +1;
         }
-
-        return (diff < 0) ? -1 : +1;
     }
 
     return rm_pp_cmp_orig_criteria(file_a, file_b, session);
@@ -421,9 +419,9 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 gdouble diff = a->mtime - b->mtime;
                 if(FLOAT_IS_ZERO(diff)) {
                     cmp = 0;
+                } else {
+                    cmp = (diff > 0.0) ? 1 : -1;
                 }
-
-                cmp = diff;
                 break;
             }
             case 'a':
