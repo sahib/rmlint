@@ -53,10 +53,9 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 
 #include "../config.h"
 
-#ifndef  FTS_PATH_MAX
-# define FTS_PATH_MAX PATH_MAX
+#ifndef FTS_PATH_MAX
+#define FTS_PATH_MAX PATH_MAX
 #endif
-
 
 static FTSENT *fts_alloc(FTS *, const char *, size_t);
 static FTSENT *fts_build(FTS *, int);

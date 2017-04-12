@@ -48,8 +48,8 @@
 #ifndef CITY_HASH_H_
 #define CITY_HASH_H_
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 typedef uint8_t uint8;
 typedef uint32_t uint32;

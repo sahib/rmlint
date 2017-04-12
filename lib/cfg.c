@@ -22,8 +22,8 @@
 * Hosted on http://github.com/sahib/rmlint
 **/
 
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "cfg.h"
@@ -32,7 +32,6 @@ static void rm_path_free(RmPath *rmpath) {
     free(rmpath->path);
     g_slice_free(RmPath, rmpath);
 }
-
 
 /* Options not specified by commandline get a default option -
  * this is usually called before rm_cmd_parse_args */
@@ -71,7 +70,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->verbosity = G_LOG_LEVEL_INFO;
     cfg->follow_symlinks = false;
 
-    cfg->total_mem = (RmOff) 1024 * 1024 * 1024;
+    cfg->total_mem = (RmOff)1024 * 1024 * 1024;
     cfg->sweep_size = 1024 * 1024 * 1024;
     cfg->sweep_count = 1024 * 16;
 
@@ -86,7 +85,6 @@ void rm_cfg_set_default(RmCfg *cfg) {
 
     rm_trie_init(&cfg->file_trie);
 }
-
 
 guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = 0;
@@ -124,7 +122,6 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     cfg->paths = g_slist_prepend(cfg->paths, rmpath);
     return 1;
 }
-
 
 void rm_cfg_free_paths(RmCfg *cfg) {
     g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);

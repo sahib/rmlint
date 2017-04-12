@@ -24,9 +24,9 @@
  */
 
 #include <ctype.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "file.h"
 #include "formats.h"
@@ -188,10 +188,10 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_mutex_init(&handler->print_mtx);
 }
 
-#define RM_FMT_FOR_EACH_HANDLER_BEGIN(self)                                  \
-    for(GList *iter = self->handler_order->head; iter; iter = iter->next) {  \
-        RmFmtHandler *handler = iter->data;                                  \
-        FILE *file = g_hash_table_lookup(self->handler_to_file, handler);    \
+#define RM_FMT_FOR_EACH_HANDLER_BEGIN(self)                                 \
+    for(GList *iter = self->handler_order->head; iter; iter = iter->next) { \
+        RmFmtHandler *handler = iter->data;                                 \
+        FILE *file = g_hash_table_lookup(self->handler_to_file, handler);
 
 #define RM_FMT_FOR_EACH_HANDLER_END }
 
@@ -334,14 +334,13 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
             r = strcasecmp(fa->folder->basename, fb->folder->basename);
             break;
         case 'm': {
-                gdouble diff = fa->mtime - fb->mtime;
-                if(FLOAT_IS_ZERO(diff)) {
-                    return 0;
-                }
-
-                r = diff;
+            gdouble diff = fa->mtime - fb->mtime;
+            if(FLOAT_IS_ZERO(diff)) {
+                return 0;
             }
-            break;
+
+            r = diff;
+        } break;
         case 'p':
             r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
             break;

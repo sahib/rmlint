@@ -27,11 +27,9 @@
 
 #include <stdio.h>
 
-#include "pathtricia.h"
 #include "checksum.h"
+#include "pathtricia.h"
 #include "utilities.h"
-
-
 
 /* Struct for paths passed to rmlint from command line (or stdin) */
 typedef struct RmPath {
@@ -159,6 +157,5 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
  * @brief free all data associated with cfg->paths.
  */
 void rm_cfg_free_paths(RmCfg *cfg);
-
 
 #endif /* end of include guard */

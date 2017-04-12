@@ -23,15 +23,15 @@
 *
 **/
 
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "config.h"
-#include "session.h"
 #include "formats.h"
-#include "traverse.h"
 #include "preprocess.h"
+#include "session.h"
+#include "traverse.h"
 
 #if HAVE_UNAME
 #include "sys/utsname.h"
@@ -145,13 +145,13 @@ bool rm_session_was_aborted() {
     static GOnce print_once = G_ONCE_INIT;
 
     switch(rc) {
-        case 1:
-            g_once (&print_once, rm_session_print_first_abort_warn, NULL);
-            break;
-        case 2:
-            rm_log_warning_line(_("Received second Interrupt, stopping hard."));
-            exit(EXIT_FAILURE);
-            break;
+    case 1:
+        g_once(&print_once, rm_session_print_first_abort_warn, NULL);
+        break;
+    case 2:
+        rm_log_warning_line(_("Received second Interrupt, stopping hard."));
+        exit(EXIT_FAILURE);
+        break;
     }
 
     return rc;

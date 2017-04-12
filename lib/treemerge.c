@@ -58,14 +58,14 @@
 #include <glib.h>
 #include <string.h>
 
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
-#include "treemerge.h"
-#include "shredder.h"
-#include "preprocess.h"
 #include "formats.h"
 #include "pathtricia.h"
+#include "preprocess.h"
+#include "shredder.h"
+#include "treemerge.h"
 
 #include "fts/fts.h"
 
@@ -86,8 +86,8 @@ typedef struct RmDirectory {
 
     struct {
         gdouble dir_mtime; /* Directory Metadata: Modification Time */
-        ino_t dir_inode;  /* Directory Metadata: Inode             */
-        dev_t dir_dev;    /* Directory Metadata: Device ID         */
+        ino_t dir_inode;   /* Directory Metadata: Inode             */
+        dev_t dir_dev;     /* Directory Metadata: Device ID         */
     } metadata;
 } RmDirectory;
 
@@ -161,7 +161,6 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
 }
 
 static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *session) {
-
     /* put paths into format expected by fts */
     guint path_count = g_slist_length(paths);
     char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
@@ -186,7 +185,6 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
      */
     RmTrie file_tree;
     rm_trie_init(&file_tree);
-
 
     FTS *fts = fts_open(path_vec, fts_flags, NULL);
     if(fts == NULL) {
@@ -502,7 +500,8 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     return self;
 }
 
-int rm_tm_destroy_iter(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, _UNUSED RmTreeMerger *tm) {
+int rm_tm_destroy_iter(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level,
+                       _UNUSED RmTreeMerger *tm) {
     RmDirectory *directory = node->data;
     rm_directory_free(directory);
     return 0;
@@ -686,8 +685,8 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     }
 }
 
-static int rm_tm_iter_unfinished_files(_UNUSED RmTrie *trie, RmNode *node, _UNUSED int level,
-                                       _UNUSED void *user_data) {
+static int rm_tm_iter_unfinished_files(_UNUSED RmTrie *trie, RmNode *node,
+                                       _UNUSED int level, _UNUSED void *user_data) {
     RmTreeMerger *self = user_data;
     rm_tm_forward_unresolved(self, node->data);
     return 0;
@@ -823,10 +822,9 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
-        if (self->session->cfg->partial_hidden) {
+        if(self->session->cfg->partial_hidden) {
             /* with --partial-hidden we do not want to output */
-            rm_util_queue_foreach_remove(file_list,
-                    (RmRFunc)rm_tm_hidden_file, NULL);
+            rm_util_queue_foreach_remove(file_list, (RmRFunc)rm_tm_hidden_file, NULL);
         }
 
         if(file_list->length >= 2) {
@@ -835,7 +833,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 self->session->dup_group_counter -= 1;
                 self->session->dup_counter -= file_list->length - 1;
             } else {
-                rm_shred_group_find_original(self->session, file_list, RM_SHRED_GROUP_FINISHING);
+                rm_shred_group_find_original(self->session, file_list,
+                                             RM_SHRED_GROUP_FINISHING);
                 rm_shred_forward_to_output(self->session, file_list);
             }
         }

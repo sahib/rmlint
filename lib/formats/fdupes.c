@@ -40,8 +40,8 @@ typedef struct RmFmtHandlerFdupes {
     bool use_same_line;
 } RmFmtHandlerFdupes;
 
-static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSED FILE *out,
-                        RmFile *file) {
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
+                        _UNUSED FILE *out, RmFile *file) {
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {

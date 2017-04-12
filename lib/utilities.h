@@ -29,11 +29,11 @@
 #include <glib.h>
 #include <stdbool.h>
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/uio.h>
 
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
@@ -53,7 +53,8 @@ typedef struct stat RmStat;
 // This is not a good general method for comparing floats.
 // Currently only used to compare different mtimes, where
 // the time might not be very exact or meaningful anyways.
-// See also: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition
+// See also:
+// https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition
 #define FLOAT_IS_ZERO(X) (fabs(X) < 0.00000001)
 
 ////////////////////////////////////
@@ -102,7 +103,7 @@ static inline void rm_sys_close(int fd) {
 
 static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
                                    RmOff offset) {
-#if RM_IS_APPLE	|| RM_IS_CYGWIN
+#if RM_IS_APPLE || RM_IS_CYGWIN
     if(lseek(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
     }

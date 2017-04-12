@@ -25,34 +25,34 @@
 
 #include "config.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <errno.h>
-#include <search.h>
-#include <sys/time.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <search.h>
+#include <sys/time.h>
 
 #include "cmdline.h"
-#include "treemerge.h"
-#include "traverse.h"
-#include "preprocess.h"
-#include "shredder.h"
-#include "utilities.h"
 #include "formats.h"
-#include "replay.h"
 #include "hash-utility.h"
 #include "md-scheduler.h"
+#include "preprocess.h"
+#include "replay.h"
+#include "shredder.h"
+#include "traverse.h"
+#include "treemerge.h"
+#include "utilities.h"
 
 #if HAVE_BTRFS_H
-#include <sys/ioctl.h>
 #include <linux/btrfs.h>
+#include <sys/ioctl.h>
 #endif
 
 static void rm_cmd_show_version(void) {
@@ -112,7 +112,8 @@ static void rm_cmd_show_manpage(void) {
     if(!found_manpage) {
         rm_log_warning_line(_("You seem to have no manpage for rmlint."));
         rm_log_warning_line(_("Please run rmlint --help to show the regular help."));
-        rm_log_warning_line(_("Alternatively, visit https://rmlint.rtfd.org for the online documentation"));
+        rm_log_warning_line(_(
+            "Alternatively, visit https://rmlint.rtfd.org for the online documentation"));
     }
 
     exit(0);
@@ -129,31 +130,30 @@ static void rm_cmd_show_manpage(void) {
 * We try to work around this by manually installing dist-packages to the
 * sys.path by first calling a small bootstrap script.
 */
-static const char RM_PY_BOOTSTRAP[] = ""
-"# This is a bootstrap script for the rmlint-gui.                              \n"
-"# See the src/rmlint.c in rmlint's source for more info.                      \n"
-"import sys, os, site                                                          \n"
-"                                                                              \n"
-"# Also default to dist-packages on debian(-based):                            \n"
-"sites = site.getsitepackages()                                                \n"
-"sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites]) \n"
-"sys.path.extend(sites)                                                        \n"
-"                                                                              \n"
-"# Cleanup self:                                                               \n"
-"try:                                                                          \n"
-"    os.remove(sys.argv[0])                                                    \n"
-"except:                                                                       \n"
-"    print('Note: Could not remove bootstrap script at ', sys.argv[0])         \n"
-"                                                                              \n"
-"# Run shredder by importing the main:                                         \n"
-"try:                                                                          \n"
-"    import shredder                                                           \n"
-"    shredder.run_gui()                                                        \n"
-"except ImportError as err:                                                    \n"
-"    print('Failed to load shredder:', err)                                    \n"
-"    print('This might be due to a corrupted install; try reinstalling.')      \n"
-;
-
+static const char RM_PY_BOOTSTRAP[] =
+    ""
+    "# This is a bootstrap script for the rmlint-gui.                              \n"
+    "# See the src/rmlint.c in rmlint's source for more info.                      \n"
+    "import sys, os, site                                                          \n"
+    "                                                                              \n"
+    "# Also default to dist-packages on debian(-based):                            \n"
+    "sites = site.getsitepackages()                                                \n"
+    "sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites]) \n"
+    "sys.path.extend(sites)                                                        \n"
+    "                                                                              \n"
+    "# Cleanup self:                                                               \n"
+    "try:                                                                          \n"
+    "    os.remove(sys.argv[0])                                                    \n"
+    "except:                                                                       \n"
+    "    print('Note: Could not remove bootstrap script at ', sys.argv[0])         \n"
+    "                                                                              \n"
+    "# Run shredder by importing the main:                                         \n"
+    "try:                                                                          \n"
+    "    import shredder                                                           \n"
+    "    shredder.run_gui()                                                        \n"
+    "except ImportError as err:                                                    \n"
+    "    print('Failed to load shredder:', err)                                    \n"
+    "    print('This might be due to a corrupted install; try reinstalling.')      \n";
 
 static void rm_cmd_start_gui(int argc, const char **argv) {
     const char *commands[] = {"python3", "python", NULL};
@@ -161,19 +161,19 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
 
     GError *error = NULL;
     gchar *bootstrap_path = NULL;
-    int bootstrap_fd = g_file_open_tmp(".shredder-bootstrap.py.XXXXXX", &bootstrap_path, &error);
+    int bootstrap_fd =
+        g_file_open_tmp(".shredder-bootstrap.py.XXXXXX", &bootstrap_path, &error);
 
     if(bootstrap_fd < 0) {
-        rm_log_warning("Could not bootstrap gui: Unable to create tempfile: %s", error->message);
+        rm_log_warning("Could not bootstrap gui: Unable to create tempfile: %s",
+                       error->message);
         g_error_free(error);
         return;
     }
 
     if(write(bootstrap_fd, RM_PY_BOOTSTRAP, sizeof(RM_PY_BOOTSTRAP)) < 0) {
-        rm_log_warning_line(
-            "Could not bootstrap gui: Unable to write to tempfile: %s",
-            g_strerror(errno)
-        );
+        rm_log_warning_line("Could not bootstrap gui: Unable to write to tempfile: %s",
+                            g_strerror(errno));
         return;
     }
 
@@ -237,7 +237,8 @@ static void rm_cmd_btrfs_clone_usage(void) {
     rm_log_error(_("Usage: rmlint --btrfs-clone [-r] source dest\n"));
 }
 
-static void rm_cmd_btrfs_clone(const char *source, const char *dest, const gboolean read_only) {
+static void rm_cmd_btrfs_clone(const char *source, const char *dest,
+                               const gboolean read_only) {
 #if HAVE_BTRFS_H
     struct {
         struct btrfs_ioctl_same_args args;
@@ -254,8 +255,9 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest, const gbool
     extent_same.info.fd = rm_sys_open(dest, read_only ? O_RDONLY : O_RDWR);
     if(extent_same.info.fd < 0) {
         rm_log_error_line(_("btrfs clone: error %i: failed to open dest file.%s"),
-                errno,
-                read_only ? "" : _("\n\t(if target is a read-only snapshot then -r option is required)"));
+                          errno,
+                          read_only ? "" : _("\n\t(if target is a read-only snapshot "
+                                             "then -r option is required)"));
         rm_sys_close(source_fd);
         return;
     }
@@ -293,8 +295,7 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest, const gbool
         rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"), ret,
                           strerror(ret));
     } else if(extent_same.info.status == -22 && read_only && getuid()) {
-        rm_log_error_line(
-            _("Need to run as root user to clone to a read-only snapshot"));
+        rm_log_error_line(_("Need to run as root user to clone to a read-only snapshot"));
     } else if(extent_same.info.status < 0) {
         rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
                           extent_same.info.status, dest);
@@ -315,7 +316,7 @@ static int rm_cmd_maybe_btrfs_clone(RmSession *session, int argc, const char **a
         /* treat as a btrfs clone subcommand... */
         if(!rm_session_check_kernel_version(session, 4, 2)) {
             rm_log_warning_line("This needs at least linux >= 4.2.");
-        } else if(argc ==5 && g_strcmp0("-r", argv[2]) == 0) {
+        } else if(argc == 5 && g_strcmp0("-r", argv[2]) == 0) {
             /* -r option for deduping read-only snapshots */
             /* TODO: add check for root user permissions */
             rm_cmd_btrfs_clone(argv[3], argv[4], TRUE);
@@ -451,7 +452,6 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [3] = G_LOG_LEVEL_MESSAGE |
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
-
 
 static int rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
     int paths_added = 0;
@@ -750,8 +750,9 @@ static bool rm_cmd_timestamp_is_plain(const char *stamp) {
     return strchr(stamp, 'T') ? false : true;
 }
 
-static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name, const gchar *string,
-                                       RmSession *session, GError **error) {
+static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name,
+                                       const gchar *string, RmSession *session,
+                                       GError **error) {
     gdouble result = 0;
     bool plain = rm_cmd_timestamp_is_plain(string);
     session->cfg->filter_mtime = false;
@@ -936,8 +937,9 @@ static gboolean rm_cmd_parse_mem(const gchar *size_spec, GError **error, RmOff *
     }
 }
 
-static gboolean rm_cmd_parse_limit_mem(_UNUSED const char *option_name, const gchar *size_spec,
-                                       RmSession *session, GError **error) {
+static gboolean rm_cmd_parse_limit_mem(_UNUSED const char *option_name,
+                                       const gchar *size_spec, RmSession *session,
+                                       GError **error) {
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
 }
 
@@ -965,8 +967,9 @@ static gboolean rm_cmd_parse_clamp_top(_UNUSED const char *option_name, const gc
     return (error && *error == NULL);
 }
 
-static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name, _UNUSED const gchar *value,
-                                      RmSession *session, _UNUSED GError **error) {
+static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
+                                      _UNUSED const gchar *value, RmSession *session,
+                                      _UNUSED GError **error) {
     rm_fmt_clear(session->formats);
     rm_fmt_add(session->formats, "progressbar", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
@@ -1000,20 +1003,23 @@ static gboolean rm_cmd_parse_no_progress(_UNUSED const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_loud(_UNUSED const char *option_name, _UNUSED const gchar *count,
-                                  RmSession *session, _UNUSED GError **error) {
+static gboolean rm_cmd_parse_loud(_UNUSED const char *option_name,
+                                  _UNUSED const gchar *count, RmSession *session,
+                                  _UNUSED GError **error) {
     rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->verbosity_count);
     return true;
 }
 
-static gboolean rm_cmd_parse_quiet(_UNUSED const char *option_name, _UNUSED const gchar *count,
-                                   RmSession *session, _UNUSED GError **error) {
+static gboolean rm_cmd_parse_quiet(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *count, RmSession *session,
+                                   _UNUSED GError **error) {
     rm_cmd_set_verbosity_from_cnt(session->cfg, --session->verbosity_count);
     return true;
 }
 
-static gboolean rm_cmd_parse_paranoid(_UNUSED const char *option_name, _UNUSED const gchar *count,
-                                      RmSession *session, _UNUSED GError **error) {
+static gboolean rm_cmd_parse_paranoid(_UNUSED const char *option_name,
+                                      _UNUSED const gchar *count, RmSession *session,
+                                      _UNUSED GError **error) {
     rm_cmd_set_paranoia_from_cnt(session->cfg, ++session->paranoia_count, error);
     return true;
 }
@@ -1026,8 +1032,8 @@ static gboolean rm_cmd_parse_less_paranoid(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_partial_hidden(_UNUSED const char *option_name,
-                                            _UNUSED const gchar *count, RmSession *session,
-                                            _UNUSED GError **error) {
+                                            _UNUSED const gchar *count,
+                                            RmSession *session, _UNUSED GError **error) {
     RmCfg *cfg = session->cfg;
     cfg->ignore_hidden = false;
     cfg->partial_hidden = true;
@@ -1046,8 +1052,8 @@ static gboolean rm_cmd_parse_see_symlinks(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_follow_symlinks(_UNUSED const char *option_name,
-                                             _UNUSED const gchar *count, RmSession *session,
-                                             _UNUSED GError **error) {
+                                             _UNUSED const gchar *count,
+                                             RmSession *session, _UNUSED GError **error) {
     RmCfg *cfg = session->cfg;
     cfg->see_symlinks = false;
     cfg->follow_symlinks = true;
@@ -1056,7 +1062,8 @@ static gboolean rm_cmd_parse_follow_symlinks(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
-                                               _UNUSED const gchar *count, RmSession *session,
+                                               _UNUSED const gchar *count,
+                                               RmSession *session,
                                                _UNUSED GError **error) {
     RmCfg *cfg = session->cfg;
     cfg->ignore_hidden = true;
@@ -1066,7 +1073,8 @@ static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
-                                               _UNUSED const gchar *count, RmSession *session,
+                                               _UNUSED const gchar *count,
+                                               RmSession *session,
                                                _UNUSED GError **error) {
     RmCfg *cfg = session->cfg;
     cfg->merge_directories = true;
@@ -1086,8 +1094,9 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     return true;
 }
 
-static gboolean rm_cmd_parse_permissions(_UNUSED const char *option_name, const gchar *perms,
-                                         RmSession *session, GError **error) {
+static gboolean rm_cmd_parse_permissions(_UNUSED const char *option_name,
+                                         const gchar *perms, RmSession *session,
+                                         GError **error) {
     RmCfg *cfg = session->cfg;
 
     if(perms == NULL) {
@@ -1128,8 +1137,9 @@ static gboolean rm_cmd_check_lettervec(const char *option_name, const char *crit
     return true;
 }
 
-static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name, const gchar *criteria,
-                                    RmSession *session, GError **error) {
+static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
+                                    const gchar *criteria, RmSession *session,
+                                    GError **error) {
     RmCfg *cfg = session->cfg;
     if(!rm_cmd_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
         return false;
@@ -1144,8 +1154,9 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name, const gchar
     return true;
 }
 
-static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name, const gchar *criteria,
-                                    RmSession *session, GError **error) {
+static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
+                                    const gchar *criteria, RmSession *session,
+                                    GError **error) {
     RmCfg *cfg = session->cfg;
 
     g_free(cfg->sort_criteria);
@@ -1164,9 +1175,9 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name, const gchar
     return true;
 }
 
-static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name, _UNUSED const gchar *x,
-                                    RmSession *session, _UNUSED GError **error) {
-
+static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
+                                    _UNUSED const gchar *x, RmSession *session,
+                                    _UNUSED GError **error) {
     session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
     return true;
@@ -1207,7 +1218,6 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
-
         if(strcmp(paths[i], "-") == 0) {
             /* option '-' means read paths from stdin */
             rm_cmd_read_paths_from_stdin(session, is_prefd);
@@ -1217,7 +1227,6 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
         } else {
             not_all_paths_read |= rm_cfg_add_path(cfg, is_prefd, paths[i]);
         }
-
     }
 
     g_strfreev(paths);
@@ -1513,7 +1522,6 @@ static int rm_cmd_replay_main(RmSession *session) {
         } else {
             one_valid_json = true;
         }
-
     }
 
     if(!one_valid_json) {

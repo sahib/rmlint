@@ -27,8 +27,8 @@
 #define RM_HASHER_H
 
 #include <glib.h>
-#include "config.h"
 #include "checksum.h"
+#include "config.h"
 
 /**
  * @file hasher.h

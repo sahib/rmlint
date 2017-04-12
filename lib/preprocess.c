@@ -22,17 +22,17 @@
  * Hosted on http://github.com/sahib/rmlint
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "preprocess.h"
-#include "utilities.h"
-#include "formats.h"
 #include "cmdline.h"
+#include "formats.h"
+#include "preprocess.h"
 #include "shredder.h"
+#include "utilities.h"
 
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->folder->basename);
@@ -89,7 +89,7 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
 }
 
 static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
-                      const RmSession *session) {
+                             const RmSession *session) {
     gint result = rm_file_cmp(file_a, file_b);
     if(result != 0) {
         return result;
@@ -108,7 +108,7 @@ static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
 }
 
 static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
-                       const RmSession *session) {
+                              const RmSession *session) {
     gint result = rm_file_cmp(file_a, file_b);
     if(result != 0) {
         return result;
@@ -121,7 +121,8 @@ static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
      */
     if(session->cfg->mtime_window >= 0) {
         gdouble diff = file_a->mtime - file_b->mtime;
-        if(FLOAT_IS_ZERO(diff - session->cfg->mtime_window) || fabs(diff) < session->cfg->mtime_window) {
+        if(FLOAT_IS_ZERO(diff - session->cfg->mtime_window) ||
+           fabs(diff) < session->cfg->mtime_window) {
             return 0;
         }
 
@@ -160,22 +161,23 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
 
 static ino_t rm_path_parent_inode(RmFile *file) {
     char parent_path[PATH_MAX];
-    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent, parent_path, PATH_MAX);
+    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent,
+                       parent_path, PATH_MAX);
     RmStat stat_buf;
     int retval = rm_sys_stat(parent_path, &stat_buf);
-    if (retval == -1) {
-        rm_log_error_line("Failed to get parent path: stat failed: %s", g_strerror(errno));
+    if(retval == -1) {
+        rm_log_error_line("Failed to get parent path: stat failed: %s",
+                          g_strerror(errno));
         return 0;
     }
 
     return stat_buf.st_ino;
 }
 
-static bool rm_path_have_same_parent(RmPathDoubleKey *key_a,
-                                     RmPathDoubleKey *key_b) {
+static bool rm_path_have_same_parent(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
     return (file_a->folder->parent == file_b->folder->parent ||
-        rm_path_parent_inode(file_a) == rm_path_parent_inode(file_b));
+            rm_path_parent_inode(file_a) == rm_path_parent_inode(file_b));
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
@@ -319,8 +321,9 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
             continue;
         }
 
-        if (sortcrit[i + 1] != '<') {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("no pattern given in <> after 'r' or 'x'"));
+        if(sortcrit[i + 1] != '<') {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("no pattern given in <> after 'r' or 'x'"));
             break;
         }
 
@@ -337,7 +340,7 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
             } else if(pattern_count != -1) {
                 g_set_error(error, RM_ERROR_QUARK, 0,
                             _("Cannot add more than %lu regex patterns."),
-                            (unsigned long) RM_PATTERN_N_MAX);
+                            (unsigned long)RM_PATTERN_N_MAX);
 
                 /* Make sure to set the warning only once */
                 pattern_count = -1;
@@ -445,7 +448,8 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
                 cmp = rm_pp_cmp_by_regex(
                     g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
                     (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
-                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
+                    (RmPatternBitmask *)&b->pattern_bitmask_basename,
+                    b->folder->basename);
                 regex_cursor++;
                 break;
             }
@@ -685,7 +689,8 @@ void rm_preprocess(RmSession *session) {
             g_hash_table_steal_all(node_table);
             if(tables->size_groups->data == NULL) {
                 /* zero size group after handling other lint; remove it */
-                tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
+                tables->size_groups =
+                    g_slist_delete_link(tables->size_groups, tables->size_groups);
             }
         }
 
