@@ -11,12 +11,17 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Do not chmod +x files that exist already (previous versions tried to +x e.g. /dev/null)
 * Support anonymous pipes in the sh formatter (Supported now: rmlint -o sh:>(cat))
 * Documentation should look a bit cleaner now.
+* Fixed a crash when a file was clamped to a size of 0.
+* Fixed a rounding error bug that can happen while sorting mtimes.
+* Fixed the slightly broken --mtime-window option (was too permissive in rare cases)
+* Force permissions (0755 for binary, 0644 for manpage) when installing files in the filesystem.
 
 ### Added
 
 * Added new checksums: blake2{s,sp,b,bp} and sha3{-256,-384,-512}. sha3 is an alias to sha3-256.
 * Support for GNU Hurd (well, at least it compiles :)
 * New "-o stats" formatter that prints some statistics about the run.
+* Progressbar now additionally shows an ETA time (how long rmlint will probably run)
 
 ### Changed
 
