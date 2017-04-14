@@ -449,6 +449,35 @@ bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
  *
  * @return The formatted string, free with g_free.
  */
-char *rm_format_elapsed_time(gfloat elapsed_sec);
+char *rm_format_elapsed_time(gfloat elapsed_sec, int sec_precision);
+
+typedef struct {
+    gdouble sum;
+    gdouble *values;
+
+    int max_values;
+    int cursor;
+} RmRunningMean;
+
+/**
+ * @brief Initialize a running mean window.
+ *
+ * The window has a fixed length. rm_running_mean_get() can be used
+ * to efficiently calculate the mean of this window. When new values
+ * are added, the oldest values will be removed.
+ */
+void rm_running_mean_init(RmRunningMean *m, int max_values);
+
+/**
+ * @brief Add a new value to the mean window.
+ */
+void rm_running_mean_add(RmRunningMean *m, gdouble value);
+
+/**
+ * @brief Get the current mean.
+ *
+ * @return The current mean (0.0 if no values available)
+ */
+gdouble rm_running_mean_get(RmRunningMean *m);
 
 #endif /* RM_UTILITIES_H_INCLUDE*/
