@@ -23,6 +23,7 @@ variables which are:
   sometimes ``tmpfs`` might therefore slow down your computer. By default
   ``/tmp`` will be used.
 - ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
+- ``RM_TS_CHECK_LEAKS``: Fail test if valgrind indicates (definite) memory leak.
 - ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger a
   backtrace.
 - ``RM_TS_PEDANTIC``: Run each test several times with different optimization options
