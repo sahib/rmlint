@@ -69,7 +69,7 @@ static void rm_fmt_prog(RmSession *session,
     char numbers[64];
 
     ARROW fprintf(out, _("%sDuplicate finding stats (includes hardlinks):%s\n\n"),
-            MAYBE_BLUE(out, session), MAYBE_RESET(out, session));
+                  MAYBE_BLUE(out, session), MAYBE_RESET(out, session));
 
     rm_util_size_to_human_readable(session->original_bytes, numbers, sizeof(numbers));
     fprintf(out, _("%s%15s%s bytes of originals\n"), MAYBE_RED(out, session), numbers,
@@ -80,12 +80,12 @@ static void rm_fmt_prog(RmSession *session,
             MAYBE_RESET(out, session));
 
     rm_util_size_to_human_readable(session->unique_bytes, numbers, sizeof(numbers));
-    fprintf(out, _("%s%15s%s bytes of non-duplicates\n"), MAYBE_RED(out, session), numbers,
-            MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15s%s bytes of non-duplicates\n"), MAYBE_RED(out, session),
+            numbers, MAYBE_RESET(out, session));
 
     rm_util_size_to_human_readable(session->shred_bytes_read, numbers, sizeof(numbers));
-    fprintf(out, _("%s%15s%s bytes of files data actually read\n"), MAYBE_RED(out, session),
-            numbers, MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15s%s bytes of files data actually read\n"),
+            MAYBE_RED(out, session), numbers, MAYBE_RESET(out, session));
 
     fprintf(out, _("%s%15d%s Files in total\n"), MAYBE_RED(out, session),
             session->total_files, MAYBE_RESET(out, session));
@@ -97,6 +97,7 @@ static void rm_fmt_prog(RmSession *session,
             session->other_lint_cnt, MAYBE_RESET(out, session));
 
     gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
+
     char *elapsed_time = rm_format_elapsed_time(elapsed, 5);
     fprintf(
             out,
@@ -108,17 +109,13 @@ static void rm_fmt_prog(RmSession *session,
     char eff_total[64] = "NaN";
     char eff_dupes[64] = "NaN";
     if(session->shred_bytes_read != 0) {
-        gfloat efficiency = 100 * (0
-                + session->duplicate_bytes
-                + session->original_bytes
-                + session->unique_bytes
-            ) / session->shred_bytes_read;
+        gfloat efficiency = 100 * (0 + session->duplicate_bytes +
+                                   session->original_bytes + session->unique_bytes) /
+                            session->shred_bytes_read;
 
         snprintf(eff_total, sizeof(eff_total), "%.0f%%", efficiency);
-        efficiency = 100 * (0
-                + session->duplicate_bytes
-                + session->original_bytes
-            ) / session->shred_bytes_read;
+        efficiency = 100 * (0 + session->duplicate_bytes + session->original_bytes) /
+                     session->shred_bytes_read;
         snprintf(eff_dupes, sizeof(eff_dupes), "%.1f%%", efficiency);
     }
 

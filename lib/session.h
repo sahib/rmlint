@@ -26,10 +26,10 @@
 #ifndef RM_SESSION_H
 #define RM_SESSION_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
 #include <glib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* Needed for RmTreeMerger */
 #include "treemerge.h"
@@ -134,9 +134,6 @@ typedef struct RmSession {
 
     /* true once traverse finished running */
     bool traverse_finished;
-
-    /* List of path to json files that should be re-outputted. */
-    bool do_replay;
 
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];

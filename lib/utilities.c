@@ -23,21 +23,20 @@
  *
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <ctype.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-
-#include <pwd.h>
 #include <grp.h>
+#include <pwd.h>
 
 #include <libgen.h>
 
@@ -51,21 +50,21 @@
 #endif
 
 #if HAVE_FIEMAP
-#include <linux/fs.h>
 #include <linux/fiemap.h>
+#include <linux/fs.h>
 #endif
 
 /* Internal headers */
 #include "config.h"
-#include "utilities.h"
 #include "file.h"
+#include "utilities.h"
 
 /* External libraries */
 #include <glib.h>
 
 #if HAVE_LIBELF
-#include <libelf.h>
 #include <gelf.h>
+#include <libelf.h>
 #endif
 
 #if HAVE_BLKID
@@ -250,19 +249,18 @@ gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_dat
 
 gpointer rm_util_slist_pop(GSList **list, GMutex *lock) {
     gpointer result = NULL;
-    if (lock) {
+    if(lock) {
         g_mutex_lock(lock);
     }
-    if (*list) {
+    if(*list) {
         result = (*list)->data;
         *list = g_slist_delete_link(*list, *list);
     }
-    if (lock) {
+    if(lock) {
         g_mutex_unlock(lock);
     }
     return result;
 }
-
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
@@ -673,8 +671,9 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     return self;
 }
 
-int rm_mounts_devno_to_wholedisk(_UNUSED RmMountEntry *entry, _UNUSED dev_t rdev, _UNUSED char *disk,
-                                 _UNUSED size_t disk_size, _UNUSED dev_t *result) {
+int rm_mounts_devno_to_wholedisk(_UNUSED RmMountEntry *entry, _UNUSED dev_t rdev,
+                                 _UNUSED char *disk, _UNUSED size_t disk_size,
+                                 _UNUSED dev_t *result) {
     return blkid_devno_to_wholedisk(rdev, disk, disk_size, result);
 }
 
@@ -855,7 +854,8 @@ bool rm_mounts_is_nonrotational(RmMountTable *self, dev_t device) {
     }
 }
 
-dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev, _UNUSED const char *path) {
+dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev,
+                            _UNUSED const char *path) {
     if(self == NULL) {
         return 0;
     }
@@ -876,8 +876,8 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev, _UNUSED const
 
         RmStat stat_buf;
         if(!rm_sys_stat(parent_path, &stat_buf)) {
-            RmPartitionInfo *parent_part = g_hash_table_lookup(
-                self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
+            RmPartitionInfo *parent_part =
+                g_hash_table_lookup(self->part_table, GINT_TO_POINTER(stat_buf.st_dev));
             if(parent_part) {
                 /* create new partition table entry for dev pointing to parent_part*/
                 rm_log_debug_line("Adding partition info for " GREEN "%s" RESET
@@ -1108,7 +1108,8 @@ bool rm_offsets_match(char *path1, char *path2) {
 
 #else /* Probably FreeBSD */
 
-RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset, _UNUSED RmOff *file_offset_next) {
+RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
+                            _UNUSED RmOff *file_offset_next) {
     return 0;
 }
 
@@ -1175,9 +1176,9 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
     return false;
 }
 
-#define SECONDS_PER_DAY     (24 * 60 * 60)
-#define SECONDS_PER_HOUR    (60 * 60)
-#define SECONDS_PER_MINUTE  (60)
+#define SECONDS_PER_DAY (24 * 60 * 60)
+#define SECONDS_PER_HOUR (60 * 60)
+#define SECONDS_PER_MINUTE (60)
 
 char *rm_format_elapsed_time(gfloat elapsed_sec, int sec_precision) {
     GString *buf = g_string_new(NULL);

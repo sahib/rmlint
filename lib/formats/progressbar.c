@@ -27,9 +27,9 @@
 #include "../utilities.h"
 
 #include <glib.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 #include <sys/ioctl.h>
 
@@ -352,7 +352,7 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(session->do_replay) {
+    if(session->cfg->replay) {
         /* Makes not much sense to print a progressbar with --replay */
         return;
     }

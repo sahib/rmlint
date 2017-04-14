@@ -34,8 +34,8 @@ typedef struct RmFmtHandlerUniques {
     RmFmtHandler parent;
 } RmFmtHandlerUniques;
 
-static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSED FILE *out,
-                        RmFile *file) {
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
+                        _UNUSED FILE *out, RmFile *file) {
     if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
         /* we only not want to list unfinished files. */
         return;
@@ -56,16 +56,14 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
 
 static RmFmtHandlerUniques UNIQUES_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent =
-        {
-            .size = sizeof(UNIQUES_HANDLER_IMPL),
-            .name = "uniques",
-            .head = NULL,
-            .elem = rm_fmt_elem,
-            .prog = NULL,
-            .foot = NULL,
-            .valid_keys = {NULL},
-        }
-};
+    .parent = {
+        .size = sizeof(UNIQUES_HANDLER_IMPL),
+        .name = "uniques",
+        .head = NULL,
+        .elem = rm_fmt_elem,
+        .prog = NULL,
+        .foot = NULL,
+        .valid_keys = {NULL},
+    }};
 
 RmFmtHandler *UNIQUES_HANDLER = (RmFmtHandler *)&UNIQUES_HANDLER_IMPL;

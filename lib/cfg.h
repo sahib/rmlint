@@ -27,9 +27,24 @@
 
 #include <stdio.h>
 
-#include "pathtricia.h"
 #include "checksum.h"
+#include "pathtricia.h"
 #include "utilities.h"
+
+/* Struct for paths passed to rmlint from command line (or stdin) */
+typedef struct RmPath {
+    /* the RealPath of the passed string */
+    char *path;
+
+    /* index number (command line order) */
+    guint idx;
+
+    /* whether path was tagged as preferred path */
+    bool is_prefd;
+
+    /* whether to treat all files under path as one filesystem */
+    bool treat_as_single_vol;
+} RmPath;
 
 /* Storage struct for all options settable in cmdline. */
 typedef struct RmCfg {
@@ -69,6 +84,7 @@ typedef struct RmCfg {
     gboolean fake_fiemap;
     gboolean progress_enabled;
     gboolean list_mounts;
+    gboolean replay;
 
     int permissions;
 
@@ -86,10 +102,15 @@ typedef struct RmCfg {
     RmOff skip_start_offset;
     RmOff skip_end_offset;
 
-    /* all paths we should traverse (NULL terminated vector) */
-    char **paths;
-    char *is_prefd;
+    /* paths passed by command line */
+    GSList *paths;
+    GSList *json_paths;
+    guint path_count;
+
+    /* working dir rmlint called from */
     char *iwd;
+
+    /* the full command line */
     char *joined_argv;
 
     char *sort_criteria;
@@ -126,5 +147,15 @@ typedef struct RmCfg {
  * @brief Reset RmCfg to default cfg and all other vars to 0.
  */
 void rm_cfg_set_default(RmCfg *cfg);
+
+/**
+ * @brief check and add a path to cfg->paths.
+ */
+guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
+
+/**
+ * @brief free all data associated with cfg->paths.
+ */
+void rm_cfg_free_paths(RmCfg *cfg);
 
 #endif /* end of include guard */

@@ -23,13 +23,13 @@
 *
 **/
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
 #include <glib.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "pathtricia.h"
 #include "config.h"
+#include "pathtricia.h"
 
 //////////////////////////
 //  RmPathNode Methods  //

@@ -24,19 +24,19 @@
  */
 
 /* Internal headers */
-#include "config.h"
 #include "replay.h"
-#include "session.h"
-#include "formats.h"
+#include "config.h"
 #include "file.h"
+#include "formats.h"
 #include "preprocess.h"
+#include "session.h"
 #include "shredder.h"
 
 /* External libraries */
-#include <string.h>
-#include <math.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <math.h>
+#include <string.h>
 
 #if HAVE_JSON_GLIB
 #include <json-glib/json-glib.h>
@@ -80,8 +80,8 @@ static void rm_parrot_close(RmParrot *polly) {
     g_free(polly);
 }
 
-static RmParrot *rm_parrot_open(RmSession *session, const char *json_path,
-                                bool is_prefd, GError **error) {
+static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool is_prefd,
+                                GError **error) {
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
     polly->session = session;
     polly->parser = json_parser_new();
@@ -89,11 +89,11 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path,
     polly->index = 1;
     polly->is_prefd = is_prefd;
 
-    for(int idx = 0; session->cfg->paths[idx]; ++idx) {
-        RmStat stat_buf;
-        const char *path = session->cfg->paths[idx];
+    for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
+        RmPath *rmpath = iter->data;
 
-        if(rm_sys_stat(path, &stat_buf) != -1) {
+        RmStat stat_buf;
+        if(rm_sys_stat(rmpath->path, &stat_buf) != -1) {
             g_hash_table_add(polly->disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));
         }
     }
@@ -251,7 +251,8 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
             (cfg->maxsize == (RmOff)-1 || file->actual_file_size <= cfg->maxsize));
 }
 
-static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file, const char *file_path) {
+static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file,
+                                   const char *file_path) {
     if(!cfg->ignore_hidden) {
         return true;
     }
@@ -303,16 +304,18 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
      * If this turns out to be an performance problem, we could turn cfg->paths
      * into a RmTrie and use it to find the longest prefix easily.
      */
-    for(int i = 0; cfg->paths[i]; ++i) {
-        char *path = cfg->paths[i];
-        size_t path_len = strlen(path);
 
-        if(strncmp(file_path, path, path_len) == 0) {
+    /* iterate through cmdline paths */
+    for(GSList *iter = cfg->paths; iter; iter = iter->next) {
+        RmPath *rmpath = iter->data;
+        size_t path_len = strlen(rmpath->path);
+
+        if(strncmp(file_path, rmpath->path, path_len) == 0) {
             if(path_len > highest_match) {
                 highest_match = path_len;
 
-                file->is_prefd = cfg->is_prefd[i] || polly->is_prefd;
-                file->path_index = i;
+                file->is_prefd = rmpath->is_prefd || polly->is_prefd;
+                file->path_index = rmpath->idx;
             }
         }
     }
@@ -371,7 +374,6 @@ static int rm_parrot_fix_match_opts(RmFile *file, GQueue *group) {
     }
     return remove;
 }
-
 
 static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
     RmCfg *cfg = cage->session->cfg;
@@ -433,8 +435,8 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
         }
     }
 
-    if(cfg->match_with_extension || cfg->match_without_extension ||
-         cfg->match_basename || cfg->unmatched_basenames) {
+    if(cfg->match_with_extension || cfg->match_without_extension || cfg->match_basename ||
+       cfg->unmatched_basenames) {
         /* This is probably a sucky way to do it, due to n^2,
          * but I doubt that will make a large performance difference.
          */
@@ -466,7 +468,7 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
 /////////////////////////////////////////
 
 static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref,
-                                  bool is_last) {
+                                      bool is_last) {
     GQueue *group = *group_ref;
     if(group->length > 1) {
         g_queue_push_tail(cage->groups, group);
@@ -545,18 +547,13 @@ void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session) {
 }
 
 static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
-    GHashTable *digest_to_group = g_hash_table_new(
-            (GHashFunc)rm_digest_hash,
-            (GEqualFunc)rm_digest_equal
-        );
+    GHashTable *digest_to_group =
+        g_hash_table_new((GHashFunc)rm_digest_hash, (GEqualFunc)rm_digest_equal);
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
         RmFile *head_file = group->head->data;
-        GQueue *existing_group = g_hash_table_lookup(
-                digest_to_group,
-                head_file->digest
-            );
+        GQueue *existing_group = g_hash_table_lookup(digest_to_group, head_file->digest);
 
         if(existing_group != NULL) {
             // Merge the two groups and get rid of the old one.
@@ -592,7 +589,8 @@ void rm_parrot_cage_close(RmParrotCage *cage) {
 
 #else
 
-bool rm_parrot_cage_load(_UNUSED RmParrotCage *cage, _UNUSED const char *json_path, _UNUSED bool is_prefd) {
+bool rm_parrot_cage_load(_UNUSED RmParrotCage *cage, _UNUSED const char *json_path,
+                         _UNUSED bool is_prefd) {
     return false;
 }
 

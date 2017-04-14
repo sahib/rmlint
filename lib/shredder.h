@@ -37,7 +37,6 @@ typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_FINISHED
 } RmShredGroupStatus;
 
-
 /**
  * @brief Find duplicate RmFile and pass them to postprocess; free/destroy all other
  *RmFiles.
@@ -63,7 +62,8 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group);
 /**
  * @brief Find the original file in a group and mark it.
  */
-void rm_shred_group_find_original(RmSession *session, GQueue *group, RmShredGroupStatus status);
+void rm_shred_group_find_original(RmSession *session, GQueue *group,
+                                  RmShredGroupStatus status);
 
 /**
  * @brief post-processing sorting of files by criteria (-S and -[kmKM])

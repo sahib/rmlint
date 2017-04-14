@@ -28,8 +28,8 @@
 
 #include <glib.h>
 #include "config.h"
-#include "utilities.h"
 #include "session.h"
+#include "utilities.h"
 
 /**
  * @file md-scheduler.h

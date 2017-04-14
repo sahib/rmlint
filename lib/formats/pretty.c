@@ -84,7 +84,8 @@ typedef struct RmFmtHandlerPretty {
     int elems_written;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(_UNUSED RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
+static void rm_fmt_head(_UNUSED RmSession *session, RmFmtHandler *parent,
+                        _UNUSED FILE *out) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
     self->user = rm_util_get_username();
