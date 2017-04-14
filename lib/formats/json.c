@@ -166,7 +166,7 @@ static void rm_fmt_json_close(RmFmtHandlerJSON *self, FILE *out) {
 }
 
 static void rm_fmt_json_sep(RmFmtHandlerJSON *self, FILE *out) {
-    fprintf(out, ", %s", self->pretty ? "\n  " : "");
+    fprintf(out, ",%s", self->pretty ? "\n  " : "");
 }
 
 /////////////////////////
