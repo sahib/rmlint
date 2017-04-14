@@ -3,8 +3,6 @@
 from nose import with_setup
 from tests.utils import *
 
-import time
-
 from itertools import permutations, combinations
 
 
@@ -21,6 +19,8 @@ def path_index(file_path):
 def path_depth(file_path):
     return len([c for c in file_path if c == '/'])
 
+def in_order(a, b, increasing):
+    return (a < b) if increasing else (b < a)
 
 # dispatcher for comparison tests
 def validate_order(data, tests):
@@ -36,34 +36,31 @@ def validate_order(data, tests):
         for test in tests:
             cmp_a, cmp_b = (testfuncs[test.lower()](e) for e in [a, b])
 
-            # Equal? Try again.
+            # Equal? Go to next criterion.
             if cmp_a == cmp_b:
                 continue
 
-            a_comes_first = test.islower()
+            # special handling for mtime rounding
+            if (test.lower()=='m' and abs(cmp_a-cmp_b) < 0.00000001):
+                continue
 
-            if (cmp_a < cmp_b) and a_comes_first:
+            if in_order(cmp_a, cmp_b, test.islower()):
+                # order is correct; ignore any remaining (less important) criteria
                 break
 
-            if (cmp_b < cmp_a) and not a_comes_first:
-                break
-
-            # Something's wrong.
+            # Order is incorrect.
             assert False
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
-    create_file('xxx', PATHS[1] + 'a')
-    create_file('xxx', PATHS[0] + 'c')
-    create_file('xxx', PATHS[2] + 'B')
-
-    # Make sure it takes some time to re-reun
-    time.sleep(1.2)
-    create_file('xxx', PATHS[2] + 'b')
-    create_file('xxx', PATHS[1] + 'c')
-    create_file('xxx', PATHS[2] + 'c')
+    create_file('xxx', PATHS[1] + 'a', mtime='2004-02-29  16:21:42.4')
+    create_file('xxx', PATHS[0] + 'c', mtime='2004-02-29  16:21:42.6')
+    create_file('xxx', PATHS[2] + 'B', mtime='2004-02-29  16:21:43.1')
+    create_file('xxx', PATHS[2] + 'b', mtime='2004-02-29  16:21:43.0')
+    create_file('xxx', PATHS[1] + 'c', mtime='2004-02-29  16:21:41.5')
+    create_file('xxx', PATHS[2] + 'c', mtime='2004-02-29  16:21:41.0')
 
     joiner = ' ' + TESTDIR_NAME + '/'
     search_paths = joiner + joiner.join(PATHS)
