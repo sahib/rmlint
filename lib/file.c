@@ -78,6 +78,11 @@ RmFile *rm_file_new(struct RmSession *session, const char *path,
             self->file_size = actual_file_size * cfg->skip_end_factor;
         }
 
+        /* Check if the actual slice the file will be > 0; we don't want empty files in shredder */
+        if((self->file_size - start_seek) == 0 && actual_file_size != 0) {
+            return NULL;
+        }
+
         self->actual_file_size = actual_file_size;
     }
 
