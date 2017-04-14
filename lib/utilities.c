@@ -30,9 +30,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+
 
 #include <pwd.h>
 #include <grp.h>
@@ -1177,7 +1179,7 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
 #define SECONDS_PER_HOUR    (60 * 60)
 #define SECONDS_PER_MINUTE  (60)
 
-char *rm_format_elapsed_time(gfloat elapsed_sec) {
+char *rm_format_elapsed_time(gfloat elapsed_sec, int sec_precision) {
     GString *buf = g_string_new(NULL);
 
     if(elapsed_sec >= SECONDS_PER_DAY) {
@@ -1198,6 +1200,29 @@ char *rm_format_elapsed_time(gfloat elapsed_sec) {
         g_string_append_printf(buf, "%dm ", minutes);
     }
 
-    g_string_append_printf(buf, "%.3fs", elapsed_sec);
+    g_string_append_printf(buf, "%.*fs", sec_precision, elapsed_sec);
     return g_string_free(buf, FALSE);
+}
+
+void rm_running_mean_init(RmRunningMean *m, int max_values) {
+    m->sum = 0;
+    m->values = g_malloc0(max_values * sizeof(gdouble));
+    m->max_values = max_values;
+    m->cursor = 0;
+}
+
+void rm_running_mean_add(RmRunningMean *m, gdouble value) {
+    int pos = (++m->cursor) % m->max_values;
+    m->sum += value;
+    m->sum -= m->values[pos];
+    m->values[pos] = value;
+}
+
+gdouble rm_running_mean_get(RmRunningMean *m) {
+    int n = MIN(m->max_values, m->cursor);
+    if(n == 0) {
+        return 0.0;
+    }
+
+    return m->sum / n;
 }

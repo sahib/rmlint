@@ -24,6 +24,7 @@
  */
 
 #include "../formats.h"
+#include "../utilities.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -55,6 +56,11 @@ typedef struct RmFmtHandlerProgress {
     RmFmtProgressState last_state;
     struct winsize terminal;
     GTimer *timer;
+
+    /* Estimated Time of Arrival calculation */
+    RmRunningMean read_diff_mean;
+    RmRunningMean eta_mean;
+    RmOff last_shred_bytes_remaining;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
@@ -73,8 +79,44 @@ static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
     }
 }
 
-static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress *self,
-                                        int max_len, FILE *out) {
+static gdouble rm_fmt_progress_calculated_eta(
+        RmSession *session,
+        RmFmtHandlerProgress *self,
+        gdouble elapsed_sec,
+        RmFmtProgressState state) {
+    if(self->last_shred_bytes_remaining == 0) {
+        self->last_shred_bytes_remaining = session->shred_bytes_remaining;
+        return -1.0;
+    }
+
+    if(state != RM_PROGRESS_STATE_SHREDDER) {
+        return -1.0;
+    }
+
+    RmOff last_diff = self->last_shred_bytes_remaining - session->shred_bytes_remaining;
+    self->last_shred_bytes_remaining = session->shred_bytes_remaining;
+
+    rm_running_mean_add(&self->read_diff_mean, last_diff);
+
+    gdouble avg_bytes_read = rm_running_mean_get(&self->read_diff_mean);
+    gdouble throughput = avg_bytes_read / elapsed_sec;
+
+    gdouble eta_sec = 0;
+    if(throughput != 0.0) {
+        eta_sec = session->shred_bytes_remaining / throughput;
+    }
+
+    rm_running_mean_add(&self->eta_mean, eta_sec);
+    return rm_running_mean_get(&self->eta_mean);
+}
+
+static void rm_fmt_progress_format_text(
+        RmSession *session,
+        RmFmtHandlerProgress *self,
+        int max_len,
+        gdouble elapsed_sec,
+        FILE *out
+    ) {
     /* This is very ugly, but more or less required since we need to translate
      * the text to different languages and still determine the right textlength.
      */
@@ -106,17 +148,31 @@ static void rm_fmt_progress_format_text(RmSession *session, RmFmtHandlerProgress
     case RM_PROGRESS_STATE_SHREDDER:
         self->percent = 1.0 - ((gdouble)session->shred_bytes_remaining /
                                (gdouble)session->shred_bytes_after_preprocess);
-        rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf,
-                                       sizeof(num_buf));
+
+        gdouble eta_sec = rm_fmt_progress_calculated_eta(session, self, elapsed_sec, self->last_state);
+        char *eta_info = NULL;
+        if(eta_sec >= 0) {
+            eta_info = rm_format_elapsed_time(eta_sec, 0);
+        }
+
+        rm_util_size_to_human_readable(
+                session->shred_bytes_remaining, num_buf,
+                sizeof(num_buf)
+        );
+
         self->text_len = g_snprintf(
             self->text_buf, sizeof(self->text_buf),
-            "%s (%s%" LLU "%s %s %s%" LLU "%s %s; %s%s%s %s %s%" LLU "%s %s)",
-            _("Matching"), MAYBE_RED(out, session), session->dup_counter,
-            MAYBE_RESET(out, session), _("dupes of"), MAYBE_YELLOW(out, session),
-            session->dup_group_counter, MAYBE_RESET(out, session), _("originals"),
-            MAYBE_GREEN(out, session), num_buf, MAYBE_RESET(out, session),
-            _("to scan in"), MAYBE_GREEN(out, session), session->shred_files_remaining,
-            MAYBE_RESET(out, session), _("files"));
+                "%s (%s%" LLU "%s %s %s%" LLU "%s %s; %s%s%s %s %s%" LLU "%s %s, ETA: %s%s%s)",
+                    _("Matching"), MAYBE_RED(out, session), session->dup_counter,
+                    MAYBE_RESET(out, session), _("dupes of"), MAYBE_YELLOW(out, session),
+                    session->dup_group_counter, MAYBE_RESET(out, session), _("originals"),
+                    MAYBE_GREEN(out, session), num_buf, MAYBE_RESET(out, session),
+                    _("to scan in"), MAYBE_GREEN(out, session), session->shred_files_remaining,
+                    MAYBE_RESET(out, session), _("files"),
+                    MAYBE_GREEN(out, session), (eta_info) ? eta_info : "0s", MAYBE_RESET(out, session)
+            );
+
+        g_free(eta_info);
         break;
     case RM_PROGRESS_STATE_MERGE:
         self->percent = 1.0;
@@ -306,6 +362,10 @@ static void rm_fmt_prog(RmSession *session,
         const char *update_interval_str =
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
+        rm_running_mean_init(&self->read_diff_mean, 10);
+        rm_running_mean_init(&self->eta_mean, 25);
+        self->last_shred_bytes_remaining = 0;
+
         self->plain = true;
         if(rm_fmt_get_config_value(session->formats, "progressbar", "fancy") != NULL) {
             self->plain = false;
@@ -348,12 +408,9 @@ static void rm_fmt_prog(RmSession *session,
         force_draw = true;
     }
 
-    if(state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) {
-        g_timer_start(self->timer);
-        force_draw = true;
-    }
-
-    if(state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished) {
+    /* Restart the time after these stages finished */
+    if((state == RM_PROGRESS_STATE_TRAVERSE && session->traverse_finished) ||
+       (state == RM_PROGRESS_STATE_SHREDDER && session->shredder_finished)) {
         g_timer_start(self->timer);
         force_draw = true;
     }
@@ -362,12 +419,14 @@ static void rm_fmt_prog(RmSession *session,
     ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
     self->last_state = state;
 
-    if(force_draw ||
-       g_timer_elapsed(self->timer, NULL) * 1000.0 >= self->update_interval) {
+    // g_printerr(".\n");
+
+    gdouble elapsed_sec = g_timer_elapsed(self->timer, NULL);
+    if(force_draw || elapsed_sec * 1000.0 >= self->update_interval) {
         /* Max. 70% (-1 char) are allowed for the text */
         int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
 
-        rm_fmt_progress_format_text(session, self, text_width, out);
+        rm_fmt_progress_format_text(session, self, text_width, elapsed_sec, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
             self->percent = 1.05;
@@ -376,7 +435,9 @@ static void rm_fmt_prog(RmSession *session,
 
         rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
         rm_fmt_progress_print_text(self, text_width, out);
+
         fprintf(out, "%s\r", MAYBE_RESET(out, session));
+
         g_timer_start(self->timer);
     }
 

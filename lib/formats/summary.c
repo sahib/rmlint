@@ -103,7 +103,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
-    char *elapsed_time = rm_format_elapsed_time(elapsed);
+    char *elapsed_time = rm_format_elapsed_time(elapsed, 3);
     ARROW fprintf(out, _("Scanning took in total %s%s%s. Is that good enough?\n"),
             MAYBE_RED(out, session), elapsed_time, MAYBE_RESET(out, session));
     g_free(elapsed_time);
