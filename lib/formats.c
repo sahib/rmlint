@@ -24,9 +24,9 @@
  */
 
 #include <ctype.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "file.h"
 #include "formats.h"
@@ -188,10 +188,10 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_mutex_init(&handler->print_mtx);
 }
 
-#define RM_FMT_FOR_EACH_HANDLER_BEGIN(self)                                  \
-    for(GList *iter = self->handler_order->head; iter; iter = iter->next) {  \
-        RmFmtHandler *handler = iter->data;                                  \
-        FILE *file = g_hash_table_lookup(self->handler_to_file, handler);    \
+#define RM_FMT_FOR_EACH_HANDLER_BEGIN(self)                                 \
+    for(GList *iter = self->handler_order->head; iter; iter = iter->next) { \
+        RmFmtHandler *handler = iter->data;                                 \
+        FILE *file = g_hash_table_lookup(self->handler_to_file, handler);
 
 #define RM_FMT_FOR_EACH_HANDLER_END }
 
@@ -297,15 +297,7 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
     RmOff sb = fb->actual_file_size * (gb->files.length - 1);
 
     /* Better do not compare big unsigneds via a - b... */
-    if(sa < sb) {
-        return -1;
-    }
-
-    if(sa > sb) {
-        return +1;
-    }
-
-    return 0;
+    return SIGN_DIFF(sa, sb);
 }
 
 static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
@@ -325,7 +317,7 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
     }
 
     for(int i = 0; rank_order[i]; ++i) {
-        gint64 r = 0;
+        gint r = 0;
         switch(tolower((unsigned char)rank_order[i])) {
         case 's':
             r = rm_fmt_rank_size(ga, gb);
@@ -333,26 +325,21 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
         case 'a':
             r = strcasecmp(fa->folder->basename, fb->folder->basename);
             break;
-        case 'm': {
-                gdouble diff = fa->mtime - fb->mtime;
-                if(FLOAT_IS_ZERO(diff)) {
-                    return 0;
-                }
-                r = diff>0.0 ? 1 : -1;
-            } break;
+        case 'm':
+            r = FLOAT_SIGN_DIFF(fa->mtime, fb->mtime, MTIME_TOL);
+            break;
         case 'p':
-            r = ((gint64)fa->path_index) - ((gint64)fb->path_index);
+            r = SIGN_DIFF(fa->path_index, fb->path_index);
             break;
         case 'n':
-            r = ((gint64)ga->files.length) - ((gint64)gb->files.length);
+            r = SIGN_DIFF(ga->files.length, gb->files.length);
             break;
         case 'o':
-            r = ga->index - gb->index;
+            r = SIGN_DIFF(ga->index, gb->index);
             break;
         }
 
         if(r != 0) {
-            r = CLAMP(r, -1, +1);
             return isupper((unsigned char)rank_order[i]) ? -r : r;
         }
     }

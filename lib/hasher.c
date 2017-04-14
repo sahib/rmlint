@@ -23,9 +23,9 @@
  *
  */
 
+#include <glib.h>
 #include <stdio.h>
 #include <string.h>
-#include <glib.h>
 
 #include <fcntl.h>
 
@@ -443,10 +443,9 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
     return self;
 }
 
-gboolean rm_hasher_task_hash(
-        RmHasherTask *task, char *path, guint64 start_offset,
-        guint64 bytes_to_read, gboolean is_symlink, RmOff *bytes_read_out
-) {
+gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset,
+                             guint64 bytes_to_read, gboolean is_symlink,
+                             RmOff *bytes_read_out) {
     guint64 bytes_read = 0;
     if(is_symlink) {
         bytes_read = rm_hasher_symlink_read(task->hasher, task->digest, path);

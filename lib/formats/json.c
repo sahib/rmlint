@@ -23,10 +23,10 @@
  *
  */
 
-#include "../formats.h"
-#include "../utilities.h"
-#include "../preprocess.h"
 #include "../checksums/spooky-c.h"
+#include "../formats.h"
+#include "../preprocess.h"
+#include "../utilities.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -257,7 +257,8 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
     if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
         return;
     }
-    if (file->lint_type == RM_LINT_TYPE_UNIQUE_FILE && (!file->digest || !session->cfg->write_unfinished)) {
+    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE &&
+       (!file->digest || !session->cfg->write_unfinished)) {
         /* unique file with no partial checksum */
         return;
     }

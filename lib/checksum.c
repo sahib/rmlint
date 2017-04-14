@@ -23,7 +23,6 @@
  *
  */
 
-
 /* Welcome to hell!
  *
  * This file is 90% boring switch statements with innocent, but insane code
@@ -31,25 +30,25 @@
  * checksums afterwards.
  **/
 
+#include <glib.h>
 #include <stdio.h>
 #include <string.h>
-#include <glib.h>
 
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include "checksum.h"
 
+#include "checksums/blake2/blake2.h"
+#include "checksums/cfarmhash.h"
 #include "checksums/city.h"
 #include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
-#include "checksums/spooky-c.h"
-#include "checksums/cfarmhash.h"
-#include "checksums/xxhash/xxhash.h"
-#include "checksums/blake2/blake2.h"
 #include "checksums/sha3/sha3.h"
+#include "checksums/spooky-c.h"
+#include "checksums/xxhash/xxhash.h"
 
 #include "utilities.h"
 
@@ -86,7 +85,6 @@ RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
 }
 
 void rm_buffer_pool_destroy(RmBufferPool *pool) {
-
     g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
 
     g_mutex_clear(&pool->lock);
@@ -100,10 +98,10 @@ RmBuffer *rm_buffer_get(RmBufferPool *pool) {
     {
         while(!buffer) {
             buffer = rm_util_slist_pop(&pool->stack, NULL);
-            if (!buffer && pool->avail_buffers > 0) {
+            if(!buffer && pool->avail_buffers > 0) {
                 buffer = rm_buffer_new(pool);
             }
-            if (!buffer) {
+            if(!buffer) {
                 if(!pool->mem_warned) {
                     rm_log_warning_line(
                         "read buffer limit reached - waiting for "
@@ -114,7 +112,6 @@ RmBuffer *rm_buffer_get(RmBufferPool *pool) {
             }
         }
         pool->avail_buffers--;
-
     }
     g_mutex_unlock(&pool->lock);
 
@@ -147,40 +144,40 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         RmDigestType code;
     } code_entries[] = {
         {"md5", RM_DIGEST_MD5},
-        {"city512"   , RM_DIGEST_CITY512},
-        {"xxhash"    , RM_DIGEST_XXHASH},
-        {"farmhash"  , RM_DIGEST_XXHASH},
-        {"murmur"    , RM_DIGEST_MURMUR},
-        {"murmur128" , RM_DIGEST_MURMUR},
-        {"murmur256" , RM_DIGEST_MURMUR256},
-        {"murmur512" , RM_DIGEST_MURMUR512},
-        {"sha1"      , RM_DIGEST_SHA1},
-        {"sha256"    , RM_DIGEST_SHA256},
-        {"sha3"      , RM_DIGEST_SHA3_256},
-        {"sha3-256"  , RM_DIGEST_SHA3_256},
-        {"sha3-384"  , RM_DIGEST_SHA3_384},
-        {"sha3-512"  , RM_DIGEST_SHA3_512},
-        {"blake2s"   , RM_DIGEST_BLAKE2S},
-        {"blake2b"   , RM_DIGEST_BLAKE2B},
-        {"blake2sp"  , RM_DIGEST_BLAKE2SP},
-        {"blake2bp"  , RM_DIGEST_BLAKE2BP},
-        {"city256"   , RM_DIGEST_CITY256},
-        {"murmur256" , RM_DIGEST_MURMUR256},
-        {"spooky32"  , RM_DIGEST_SPOOKY32},
-        {"spooky64"  , RM_DIGEST_SPOOKY64},
-        {"spooky128" , RM_DIGEST_SPOOKY},
-        {"spooky"    , RM_DIGEST_SPOOKY},
-        {"ext"       , RM_DIGEST_EXT},
+        {"city512", RM_DIGEST_CITY512},
+        {"xxhash", RM_DIGEST_XXHASH},
+        {"farmhash", RM_DIGEST_XXHASH},
+        {"murmur", RM_DIGEST_MURMUR},
+        {"murmur128", RM_DIGEST_MURMUR},
+        {"murmur256", RM_DIGEST_MURMUR256},
+        {"murmur512", RM_DIGEST_MURMUR512},
+        {"sha1", RM_DIGEST_SHA1},
+        {"sha256", RM_DIGEST_SHA256},
+        {"sha3", RM_DIGEST_SHA3_256},
+        {"sha3-256", RM_DIGEST_SHA3_256},
+        {"sha3-384", RM_DIGEST_SHA3_384},
+        {"sha3-512", RM_DIGEST_SHA3_512},
+        {"blake2s", RM_DIGEST_BLAKE2S},
+        {"blake2b", RM_DIGEST_BLAKE2B},
+        {"blake2sp", RM_DIGEST_BLAKE2SP},
+        {"blake2bp", RM_DIGEST_BLAKE2BP},
+        {"city256", RM_DIGEST_CITY256},
+        {"murmur256", RM_DIGEST_MURMUR256},
+        {"spooky32", RM_DIGEST_SPOOKY32},
+        {"spooky64", RM_DIGEST_SPOOKY64},
+        {"spooky128", RM_DIGEST_SPOOKY},
+        {"spooky", RM_DIGEST_SPOOKY},
+        {"ext", RM_DIGEST_EXT},
         {"cumulative", RM_DIGEST_CUMULATIVE},
-        {"paranoid"  , RM_DIGEST_PARANOID},
-        {"bastard"   , RM_DIGEST_BASTARD},
+        {"paranoid", RM_DIGEST_PARANOID},
+        {"bastard", RM_DIGEST_BASTARD},
         {"bastard256", RM_DIGEST_BASTARD},
-        {"city"      , RM_DIGEST_CITY},
-        {"city128"   , RM_DIGEST_CITY},
-        {"city256"   , RM_DIGEST_CITY256},
-        {"city512"   , RM_DIGEST_CITY512},
+        {"city", RM_DIGEST_CITY},
+        {"city128", RM_DIGEST_CITY},
+        {"city256", RM_DIGEST_CITY256},
+        {"city512", RM_DIGEST_CITY512},
 #if HAVE_SHA512
-        {"sha512"    , RM_DIGEST_SHA512},
+        {"sha512", RM_DIGEST_SHA512},
 #endif
     };
 
@@ -188,11 +185,9 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
 
     const size_t n_codes = sizeof(code_entries) / sizeof(code_entries[0]);
     for(size_t idx = 0; idx < n_codes; idx++) {
-        g_hash_table_insert(
-                *code_table,
-                code_entries[idx].name,
-                GUINT_TO_POINTER(code_entries[idx].code)
-        );
+        g_hash_table_insert(*code_table,
+                            code_entries[idx].name,
+                            GUINT_TO_POINTER(code_entries[idx].code));
     }
 
     return NULL;
@@ -282,19 +277,18 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
             ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
         }                                                               \
         digest->bytes = ALGO_BIG##_OUTBYTES;                            \
-    }                                                                   \
+    }
 
-#define SHA3_INIT(SIZE)                                           \
-        digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));  \
-        sha3_Init##SIZE(digest->sha3_ctx);                        \
-        if(seed1) {                                               \
-            sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff)); \
-        }                                                         \
-        if(seed2) {                                               \
-            sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff)); \
-        }                                                         \
-        digest->bytes = (SIZE) / 8;                               \
-
+#define SHA3_INIT(SIZE)                                       \
+    digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));  \
+    sha3_Init##SIZE(digest->sha3_ctx);                        \
+    if(seed1) {                                               \
+        sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff)); \
+    }                                                         \
+    if(seed2) {                                               \
+        sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff)); \
+    }                                                         \
+    digest->bytes = (SIZE) / 8;
 
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
                         bool use_shadow_hash) {
@@ -423,8 +417,7 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
 
 void rm_digest_release_buffers(RmDigest *digest) {
     if(digest->paranoid && digest->paranoid->buffers) {
-        g_slist_free_full(digest->paranoid->buffers,
-                          (GDestroyNotify)rm_buffer_free);
+        g_slist_free_full(digest->paranoid->buffers, (GDestroyNotify)rm_buffer_free);
         digest->paranoid->buffers = NULL;
     }
 }
@@ -685,15 +678,14 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     }
 }
 
-
 #define BLAKE_COPY(ALGO)                                                        \
-{                                                                               \
+    {                                                                           \
         self = g_slice_new0(RmDigest);                                          \
         self->bytes = digest->bytes;                                            \
         self->type = digest->type;                                              \
         self->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));              \
         memcpy(self->ALGO##_state, digest->ALGO##_state, sizeof(ALGO##_state)); \
-}                                                                               \
+    }
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
     rm_assert_gentle(digest);
@@ -798,12 +790,12 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     }
 }
 
-#define BLAKE_STEAL(ALGO)                                         \
-    {                                                             \
-                RmDigest *copy = rm_digest_copy(digest);          \
-                ALGO##_final(copy->ALGO##_state, result, buflen); \
-                rm_assert_gentle(buflen == digest->bytes);        \
-                rm_digest_free(copy);                             \
+#define BLAKE_STEAL(ALGO)                                 \
+    {                                                     \
+        RmDigest *copy = rm_digest_copy(digest);          \
+        ALGO##_final(copy->ALGO##_state, result, buflen); \
+        rm_assert_gentle(buflen == digest->bytes);        \
+        rm_digest_free(copy);                             \
     }
 
 guint8 *rm_digest_steal(RmDigest *digest) {
@@ -813,34 +805,34 @@ guint8 *rm_digest_steal(RmDigest *digest) {
     if(rm_digest_needs_steal(digest->type)) {
         /* reading the digest is destructive, so we need to take a copy */
         switch(digest->type) {
-            case RM_DIGEST_SHA3_256:
-            case RM_DIGEST_SHA3_384:
-            case RM_DIGEST_SHA3_512: {
-                RmDigest *copy = rm_digest_copy(digest);
-                memcpy(result, sha3_Finalize(copy->sha3_ctx), digest->bytes);
-                rm_assert_gentle(buflen == digest->bytes);
-                rm_digest_free(copy);
-                break;
-            }
-            case RM_DIGEST_BLAKE2S:
-                BLAKE_STEAL(blake2s);
-                break;
-            case RM_DIGEST_BLAKE2B:
-                BLAKE_STEAL(blake2b);
-                break;
-            case RM_DIGEST_BLAKE2SP:
-                BLAKE_STEAL(blake2sp);
-                break;
-            case RM_DIGEST_BLAKE2BP:
-                BLAKE_STEAL(blake2bp);
-                break;
-            default: {
-                RmDigest *copy = rm_digest_copy(digest);
-                g_checksum_get_digest(copy->glib_checksum, result, &buflen);
-                rm_assert_gentle(buflen == digest->bytes);
-                rm_digest_free(copy);
-                break;
-            }
+        case RM_DIGEST_SHA3_256:
+        case RM_DIGEST_SHA3_384:
+        case RM_DIGEST_SHA3_512: {
+            RmDigest *copy = rm_digest_copy(digest);
+            memcpy(result, sha3_Finalize(copy->sha3_ctx), digest->bytes);
+            rm_assert_gentle(buflen == digest->bytes);
+            rm_digest_free(copy);
+            break;
+        }
+        case RM_DIGEST_BLAKE2S:
+            BLAKE_STEAL(blake2s);
+            break;
+        case RM_DIGEST_BLAKE2B:
+            BLAKE_STEAL(blake2b);
+            break;
+        case RM_DIGEST_BLAKE2SP:
+            BLAKE_STEAL(blake2sp);
+            break;
+        case RM_DIGEST_BLAKE2BP:
+            BLAKE_STEAL(blake2bp);
+            break;
+        default: {
+            RmDigest *copy = rm_digest_copy(digest);
+            g_checksum_get_digest(copy->glib_checksum, result, &buflen);
+            rm_assert_gentle(buflen == digest->bytes);
+            rm_digest_free(copy);
+            break;
+        }
         }
     } else {
         /*  Stateless checksum, just copy it. */

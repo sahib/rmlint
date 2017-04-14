@@ -112,7 +112,6 @@ struct _RmMDSDevice {
 
     /* is disk rotational? */
     gboolean is_rotational;
-
 };
 
 //////////////////////////////////////////////
@@ -223,7 +222,8 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 
     /* process tasks from device->sorted_tasks */
     RmMDSTask *task = NULL;
-    while(processed < mds->pass_quota && (task = rm_util_slist_pop(&device->sorted_tasks, &device->lock))) {
+    while(processed < mds->pass_quota &&
+          (task = rm_util_slist_pop(&device->sorted_tasks, &device->lock))) {
         if(mds->func(task->task_data, mds->user_data)) {
             /* task succeeded; update counters */
             ++processed;

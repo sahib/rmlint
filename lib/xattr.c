@@ -23,12 +23,12 @@
 *
 **/
 
-#include "config.h"
 #include "xattr.h"
+#include "config.h"
 
-#include <sys/types.h>
-#include <string.h>
 #include <errno.h>
+#include <string.h>
+#include <sys/types.h>
 
 #if HAVE_XATTR
 #include <sys/xattr.h>

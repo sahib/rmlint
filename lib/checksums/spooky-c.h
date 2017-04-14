@@ -26,8 +26,8 @@
 // slower than MD5.
 //
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define SC_NUMVARS 12
 #define SC_BLOCKSIZE (8 * SC_NUMVARS)

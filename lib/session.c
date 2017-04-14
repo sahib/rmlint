@@ -23,15 +23,15 @@
 *
 **/
 
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "config.h"
-#include "session.h"
 #include "formats.h"
-#include "traverse.h"
 #include "preprocess.h"
+#include "session.h"
+#include "traverse.h"
 
 #if HAVE_UNAME
 #include "sys/utsname.h"
@@ -84,7 +84,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
     session->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
-    session->do_replay = false;
 
     session->verbosity_count = 2;
     session->paranoia_count = 0;
@@ -104,10 +103,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 void rm_session_clear(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
-    /* Free mem */
-    if(cfg->paths) {
-        g_strfreev(cfg->paths);
-    }
+    rm_cfg_free_paths(cfg);
 
     g_timer_destroy(session->timer_since_proc_start);
     g_free(cfg->sort_criteria);
@@ -126,7 +122,6 @@ void rm_session_clear(RmSession *session) {
     }
 
     g_free(cfg->joined_argv);
-    g_free(cfg->is_prefd);
     g_free(cfg->iwd);
 
     rm_trie_destroy(&cfg->file_trie);
@@ -150,13 +145,13 @@ bool rm_session_was_aborted() {
     static GOnce print_once = G_ONCE_INIT;
 
     switch(rc) {
-        case 1: 
-            g_once (&print_once, rm_session_print_first_abort_warn, NULL);
-            break;
-        case 2:
-            rm_log_warning_line(_("Received second Interrupt, stopping hard."));
-            exit(EXIT_FAILURE);
-            break;
+    case 1:
+        g_once(&print_once, rm_session_print_first_abort_warn, NULL);
+        break;
+    case 2:
+        rm_log_warning_line(_("Received second Interrupt, stopping hard."));
+        exit(EXIT_FAILURE);
+        break;
     }
 
     return rc;

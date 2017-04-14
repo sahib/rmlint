@@ -22,17 +22,17 @@
  * Hosted on http://github.com/sahib/rmlint
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "preprocess.h"
-#include "utilities.h"
-#include "formats.h"
 #include "cmdline.h"
+#include "formats.h"
+#include "preprocess.h"
 #include "shredder.h"
+#include "utilities.h"
 
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->folder->basename);
@@ -41,6 +41,7 @@ static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_
     if(ext_a && ext_b) {
         return g_ascii_strcasecmp(ext_a, ext_b);
     } else {
+        /* file with an extension outranks one without */
         return (!!ext_a - !!ext_b);
     }
 }
@@ -56,9 +57,7 @@ static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *fi
     size_t a_len = (ext_a) ? (ext_a - basename_a) : (int)strlen(basename_a);
     size_t b_len = (ext_b) ? (ext_b - basename_b) : (int)strlen(basename_a);
 
-    if(a_len != b_len) {
-        return a_len - b_len;
-    }
+    RETURN_IF_NONZERO(SIGN_DIFF(a_len, b_len));
 
     return g_ascii_strncasecmp(basename_a, basename_b, a_len);
 }
@@ -67,50 +66,44 @@ static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *fi
  * size and then other factors depending on settings */
 gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
     gint result = SIGN_DIFF(file_a->file_size, file_b->file_size);
+    RETURN_IF_NONZERO(result);
 
     RmCfg *cfg = file_a->session->cfg;
 
-    if(result == 0) {
-        result = (cfg->match_basename) ? rm_file_basenames_cmp(file_a, file_b) : 0;
+    if(cfg->match_basename) {
+        result = rm_file_basenames_cmp(file_a, file_b);
+        RETURN_IF_NONZERO(result);
     }
 
-    if(result == 0) {
-        result =
-            (cfg->match_with_extension) ? rm_file_cmp_with_extension(file_a, file_b) : 0;
+    if(cfg->match_with_extension) {
+        result = rm_file_cmp_with_extension(file_a, file_b);
+        RETURN_IF_NONZERO(result);
     }
 
-    if(result == 0) {
-        result = (cfg->match_without_extension)
-                     ? rm_file_cmp_without_extension(file_a, file_b)
-                     : 0;
+    if(cfg->match_without_extension) {
+        result = rm_file_cmp_without_extension(file_a, file_b);
     }
 
     return result;
 }
 
 static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
-                      const RmSession *session) {
+                             const RmSession *session) {
     gint result = rm_file_cmp(file_a, file_b);
-    if(result != 0) {
-        return result;
-    }
+    RETURN_IF_NONZERO(result);
 
     if(session->cfg->mtime_window >= 0) {
-        gdouble diff = file_a->mtime - file_b->mtime;
-        if(!(FLOAT_IS_ZERO(diff))) {
-            return (diff < 0) ? -1 : +1;
-        }
+        result = FLOAT_SIGN_DIFF(file_a->mtime, file_b->mtime, MTIME_TOL);
+        RETURN_IF_NONZERO(result);
     }
 
     return rm_pp_cmp_orig_criteria(file_a, file_b, session);
 }
 
 static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
-                       const RmSession *session) {
+                              const RmSession *session) {
     gint result = rm_file_cmp(file_a, file_b);
-    if(result != 0) {
-        return result;
-    }
+    RETURN_IF_NONZERO(result);
 
     /* If --mtime-window is specified, we need to check if the mtime is inside
      * the window. The file list was sorted by rm_file_cmp_full by taking the
@@ -118,13 +111,9 @@ static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
      * differently.
      */
     if(session->cfg->mtime_window >= 0) {
-        gdouble diff = file_a->mtime - file_b->mtime;
-        if(FLOAT_IS_ZERO(diff - session->cfg->mtime_window) || fabs(diff) < session->cfg->mtime_window) {
-            return 0;
-        }
-
-        /* Split the group. */
-        return (diff < 0) ? -1 : +1;
+        /* this will split group (return +/-1) if mtime difference is larger than
+         * mtime window */
+        return FLOAT_SIGN_DIFF(file_a->mtime, file_b->mtime, session->cfg->mtime_window);
     }
 
     return 0;
@@ -152,28 +141,30 @@ typedef struct RmPathDoubleKey {
 } RmPathDoubleKey;
 
 static guint rm_path_double_hash(const RmPathDoubleKey *key) {
-    /* depend only on the always set components, never change the hash duringthe run */
+    /* depend only on the always set components, never change the hash duringthe run
+     */
     return rm_node_hash(key->file);
 }
 
 static ino_t rm_path_parent_inode(RmFile *file) {
     char parent_path[PATH_MAX];
-    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent, parent_path, PATH_MAX);
+    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent,
+                       parent_path, PATH_MAX);
     RmStat stat_buf;
     int retval = rm_sys_stat(parent_path, &stat_buf);
-    if (retval == -1) {
-        rm_log_error_line("Failed to get parent path: stat failed: %s", g_strerror(errno));
+    if(retval == -1) {
+        rm_log_error_line("Failed to get parent path: stat failed: %s",
+                          g_strerror(errno));
         return 0;
     }
 
     return stat_buf.st_ino;
 }
 
-static bool rm_path_have_same_parent(RmPathDoubleKey *key_a,
-                                     RmPathDoubleKey *key_b) {
+static bool rm_path_have_same_parent(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
     return (file_a->folder->parent == file_b->folder->parent ||
-        rm_path_parent_inode(file_a) == rm_path_parent_inode(file_b));
+            rm_path_parent_inode(file_a) == rm_path_parent_inode(file_b));
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
@@ -317,8 +308,9 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
             continue;
         }
 
-        if (sortcrit[i + 1] != '<') {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("no pattern given in <> after 'r' or 'x'"));
+        if(sortcrit[i + 1] != '<') {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("no pattern given in <> after 'r' or 'x'"));
             break;
         }
 
@@ -335,7 +327,7 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
             } else if(pattern_count != -1) {
                 g_set_error(error, RM_ERROR_QUARK, 0,
                             _("Cannot add more than %lu regex patterns."),
-                            (unsigned long) RM_PATTERN_N_MAX);
+                            (unsigned long)RM_PATTERN_N_MAX);
 
                 /* Make sure to set the warning only once */
                 pattern_count = -1;
@@ -387,6 +379,50 @@ static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
     return 0;
 }
 
+/*
+ * Sort two files in accordance with single criterion
+ */
+static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const RmFile *b,
+                               const char *a_path, const char *b_path, int *regex_cursor,
+                               const RmSession *session) {
+    int sign = (isupper(criterion) ? -1 : 1);
+    switch(tolower(criterion)) {
+    case 'm':
+        return sign * FLOAT_SIGN_DIFF(a->mtime, b->mtime, MTIME_TOL);
+    case 'a':
+        return sign * g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
+    case 'l':
+        return sign * SIGN_DIFF(strlen(a->folder->basename), strlen(b->folder->basename));
+    case 'd':
+        return sign * SIGN_DIFF(a->depth, b->depth);
+    case 'h':
+        return sign * SIGN_DIFF(a->link_count, b->link_count);
+    case 'o':
+        return sign * SIGN_DIFF(a->outer_link_count, b->outer_link_count);
+    case 'p':
+        return sign * SIGN_DIFF(a->path_index, b->path_index);
+    case 'x': {
+        int cmp = rm_pp_cmp_by_regex(
+            g_ptr_array_index(session->pattern_cache, *regex_cursor), *regex_cursor,
+            (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
+            (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
+        (*regex_cursor)++;
+        return sign * cmp;
+    }
+    case 'r': {
+        int cmp = rm_pp_cmp_by_regex(
+            g_ptr_array_index(session->pattern_cache, *regex_cursor), *regex_cursor,
+            (RmPatternBitmask *)&a->pattern_bitmask_path, a_path,
+            (RmPatternBitmask *)&b->pattern_bitmask_path, b_path);
+        (*regex_cursor)++;
+        return sign * cmp;
+    }
+    default:
+        rm_assert_gentle_not_reached();
+        return 0;
+    }
+}
+
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 /* Return:
  *      a negative integer file 'a' outranks 'b',
@@ -394,75 +430,25 @@ static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
  *      a positive integer if file 'b' outranks 'a'
  */
 int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *session) {
-    if(a->lint_type != b->lint_type) {
-        /* "other" lint outranks duplicates and has lower ENUM */
-        return a->lint_type - b->lint_type;
-    } else if(a->is_symlink != b->is_symlink) {
-        return a->is_symlink - b->is_symlink;
-    } else if(a->is_prefd != b->is_prefd) {
-        return (b->is_prefd - a->is_prefd);
-    } else {
-        /* Only fill in path if we have a pattern in sort_criteria */
-        bool path_needed = (session->pattern_cache->len > 0);
-        RM_DEFINE_PATH_IF_NEEDED(a, path_needed);
-        RM_DEFINE_PATH_IF_NEEDED(b, path_needed);
+    /* "other" lint outranks duplicates and has lower ENUM */
+    RETURN_IF_NONZERO(SIGN_DIFF(a->lint_type, b->lint_type))
 
-        RmCfg *sets = session->cfg;
+    RETURN_IF_NONZERO(SIGN_DIFF(a->is_symlink, b->is_symlink))
 
-        for(int i = 0, regex_cursor = 0; sets->sort_criteria[i]; i++) {
-            gint64 cmp = 0;
-            switch(tolower((unsigned char)sets->sort_criteria[i])) {
-            case 'm': {
-                gdouble diff = a->mtime - b->mtime;
-                if(FLOAT_IS_ZERO(diff)) {
-                    cmp = 0;
-                } else {
-                    cmp = (diff>0.0) ? 1 : -1;
-                }
-                break;
-            }
-            case 'a':
-                cmp = g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
-                break;
-            case 'l':
-                cmp = strlen(a->folder->basename) - strlen(b->folder->basename);
-                break;
-            case 'd':
-                cmp = (gint64)a->depth - (gint64)b->depth;
-                break;
-            case 'h':
-                cmp = (gint64)a->link_count - (gint64)b->link_count;
-                break;
-            case 'o':
-                cmp = (gint64)a->outer_link_count - (gint64)b->outer_link_count;
-                break;
-            case 'p':
-                cmp = (gint64)a->path_index - (gint64)b->path_index;
-                break;
-            case 'x': {
-                cmp = rm_pp_cmp_by_regex(
-                    g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
-                    (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
-                    (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
-                regex_cursor++;
-                break;
-            }
-            case 'r':
-                cmp = rm_pp_cmp_by_regex(
-                    g_ptr_array_index(session->pattern_cache, regex_cursor), regex_cursor,
-                    (RmPatternBitmask *)&a->pattern_bitmask_path, a_path,
-                    (RmPatternBitmask *)&b->pattern_bitmask_path, b_path);
-                regex_cursor++;
-                break;
-            }
-            if(cmp) {
-                /* reverse order if uppercase option */
-                cmp = cmp * (isupper((unsigned char)sets->sort_criteria[i]) ? -1 : +1);
-                return cmp;
-            }
-        }
-        return 0;
+    RETURN_IF_NONZERO(SIGN_DIFF(b->is_prefd, a->is_prefd))
+
+    /* Only fill in path if we have a pattern in sort_criteria */
+    bool path_needed = (session->pattern_cache->len > 0);
+    RM_DEFINE_PATH_IF_NEEDED(a, path_needed);
+    RM_DEFINE_PATH_IF_NEEDED(b, path_needed);
+
+    RmCfg *cfg = session->cfg;
+    for(int i = 0, regex_cursor = 0; cfg->sort_criteria[i]; i++) {
+        int res = rm_pp_cmp_criterion(cfg->sort_criteria[i], a, b, a_path, b_path,
+                                      &regex_cursor, session);
+        RETURN_IF_NONZERO(res);
     }
+    return 0;
 }
 
 void rm_file_list_insert_file(RmFile *file, const RmSession *session) {
@@ -542,7 +528,8 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
  * file itself is "other lint" types it is likewise sent to rm_pp_handle_other_lint.
  * If there are no files left after this then return TRUE so that the
  * cluster can be deleted from the node_table hash table.
- * NOTE: we rely on rm_file_list_insert to select an RM_LINT_TYPE_DUPE_CANDIDATE as head
+ * NOTE: we rely on rm_file_list_insert to select an RM_LINT_TYPE_DUPE_CANDIDATE as
+ * head
  * file (unless ALL the files are "other lint"). */
 static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_cluster,
                                             RmSession *session) {
@@ -683,7 +670,8 @@ void rm_preprocess(RmSession *session) {
             g_hash_table_steal_all(node_table);
             if(tables->size_groups->data == NULL) {
                 /* zero size group after handling other lint; remove it */
-                tables->size_groups = g_slist_delete_link(tables->size_groups, tables->size_groups);
+                tables->size_groups =
+                    g_slist_delete_link(tables->size_groups, tables->size_groups);
             }
         }
 
@@ -693,7 +681,8 @@ void rm_preprocess(RmSession *session) {
     session->other_lint_cnt += rm_pp_handler_other_lint(session);
 
     rm_log_debug_line(
-        "path doubles removal/hardlink bundling/other lint finished at %.3f; removed %u "
+        "path doubles removal/hardlink bundling/other lint finished at %.3f; removed "
+        "%u "
         "of %d",
         g_timer_elapsed(session->timer, NULL), removed, session->total_files);
 

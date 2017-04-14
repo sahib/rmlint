@@ -26,8 +26,8 @@
 #ifndef RM_PATHTRICIA_H
 #define RM_PATHTRICIA_H
 
-#include <stdbool.h>
 #include <glib.h>
+#include <stdbool.h>
 
 typedef struct _RmNode {
     /* Element of the path */
