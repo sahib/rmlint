@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.5.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-01-15 16:15+0100\n"
+"POT-Creation-Date: 2017-04-14 21:14+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -60,42 +60,6 @@ msgstr ""
 
 #: lib/formats/pretty.c:42
 msgid "Duplicate Directorie(s)"
-msgstr ""
-
-#: lib/formats/summary.c:54
-#, c-format
-msgid " file(s) after investigation, nothing to search through.\n"
-msgstr ""
-
-#: lib/formats/summary.c:69
-#, c-format
-msgid "Early shutdown, probably not all lint was found.\n"
-msgstr ""
-
-#: lib/formats/summary.c:74
-#, c-format
-msgid ""
-"Note: Please use the saved script below for removal, not the above output."
-msgstr ""
-
-#: lib/formats/summary.c:87
-#, c-format
-msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
-msgstr ""
-
-#: lib/formats/summary.c:95
-#, c-format
-msgid "This equals %s%s%s of duplicates which could be removed.\n"
-msgstr ""
-
-#: lib/formats/summary.c:102
-#, c-format
-msgid "other suspicious item(s) found, which may vary in size.\n"
-msgstr ""
-
-#: lib/formats/summary.c:137
-#, c-format
-msgid "Wrote a %s%s%s file to: %s%s%s\n"
 msgstr ""
 
 #: lib/formats/progressbar.c:70
@@ -150,82 +114,141 @@ msgstr ""
 msgid "Merging files into directories (stand by...)"
 msgstr ""
 
+#: lib/formats/stats.c:52
+#, c-format
+msgid "No shred stats.\n"
+msgstr ""
+
+#: lib/formats/stats.c:71
+#, c-format
+msgid ""
+"%sDuplicate finding stats (includes hardlinks):%s\n"
+"\n"
+msgstr ""
+
+#: lib/formats/stats.c:75
+#, c-format
+msgid "%s%15s%s bytes of originals\n"
+msgstr ""
+
+#: lib/formats/stats.c:79
+#, c-format
+msgid "%s%15s%s bytes of duplicates\n"
+msgstr ""
+
+#: lib/formats/stats.c:83
+#, c-format
+msgid "%s%15s%s bytes of non-duplicates\n"
+msgstr ""
+
+#: lib/formats/stats.c:87
+#, c-format
+msgid "%s%15s%s bytes of files data actually read\n"
+msgstr ""
+
+#: lib/formats/stats.c:90
+#, c-format
+msgid "%s%15d%s Files in total\n"
+msgstr ""
+
+#: lib/formats/stats.c:92 lib/formats/stats.c:94 lib/formats/stats.c:96
+msgid "%s%15"
+msgstr ""
+
+#: lib/formats/stats.c:103
+#, c-format
+msgid "%s%15s%s of time spent scanning\n"
+msgstr ""
+
+#: lib/formats/stats.c:125
+#, c-format
+msgid "%s%15s%s Algorithm efficiency on total files basis\n"
+msgstr ""
+
+#: lib/formats/stats.c:127
+#, c-format
+msgid "%s%15s%s Algorithm efficiency on duplicate file basis\n"
+msgstr ""
+
+#: lib/formats/summary.c:54
+#, c-format
+msgid " file(s) after investigation, nothing to search through.\n"
+msgstr ""
+
+#: lib/formats/summary.c:69
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr ""
+
+#: lib/formats/summary.c:74
+#, c-format
+msgid ""
+"Note: Please use the saved script below for removal, not the above output."
+msgstr ""
+
+#: lib/formats/summary.c:87
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr ""
+
+#: lib/formats/summary.c:95
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr ""
+
+#: lib/formats/summary.c:102
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr ""
+
+#: lib/formats/summary.c:107
+#, c-format
+msgid "Scanning took in total %s%s%s. Is that good enough?\n"
+msgstr ""
+
+#: lib/formats/summary.c:143
+#, c-format
+msgid "Wrote a %s%s%s file to: %s%s%s\n"
+msgstr ""
+
 #: lib/formats/sh.c:485
 #, c-format
 msgid "%s is an invalid handler."
 msgstr ""
 
-#: lib/hash-utility.c:56 lib/cmdline.c:934
+#: lib/traverse.c:330
 #, c-format
-msgid "Unknown hash algorithm: '%s'"
+msgid "filesystem loop detected at %s (skipping)"
 msgstr ""
 
-#: lib/hash-utility.c:140
-msgid "Digest type [SHA1]"
-msgstr ""
-
-#: lib/hash-utility.c:141
-msgid "Number of hashing threads [8]"
-msgstr ""
-
-#: lib/hash-utility.c:142
-msgid "Print hash as self identifying multihash"
-msgstr ""
-
-#: lib/hash-utility.c:143
-msgid "Megabytes read buffer [256 MB]"
-msgstr ""
-
-#: lib/hash-utility.c:144
-msgid ""
-"Print hashes in order completed, not in order entered (reduces memory usage)"
-msgstr ""
-
-#: lib/hash-utility.c:145
-msgid "Space-separated list of files"
-msgstr ""
-
-#: lib/hash-utility.c:151 lib/hash-utility.c:153
-msgid "Hash a list of files"
-msgstr ""
-
-#: lib/hash-utility.c:159
+#: lib/traverse.c:335
 #, c-format
-msgid ""
-"Multi-threaded file digest (hash) calculator.\n"
-"\n"
-"  Available digest types:\n"
-"    %s\n"
-"\n"
-"  Versions with different bit numbers:\n"
-"    %s\n"
-"\n"
-"  Supported, but not useful:\n"
-"    %s\n"
+msgid "cannot read directory %s: %s"
 msgstr ""
 
-#: lib/hash-utility.c:195 lib/cmdline.c:1522
-msgid "No valid paths given."
-msgstr ""
-
-#: lib/hash-utility.c:228 lib/cmdline.c:467
+#: lib/traverse.c:348
 #, c-format
-msgid "Can't open directory or file \"%s\": %s"
+msgid "error %d in fts_read for %s (skipping)"
 msgstr ""
 
-#: lib/hash-utility.c:231
+#: lib/traverse.c:378
 #, c-format
-msgid "Directories are not supported: %s"
+msgid "Added big file %s"
 msgstr ""
 
-#: lib/hash-utility.c:240
+#: lib/traverse.c:380
 #, c-format
-msgid "%s: Unknown file type"
+msgid "cannot stat file %s (skipping)"
 msgstr ""
 
-#: lib/hasher.c:310
+#: lib/traverse.c:427
 #, c-format
-msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
+msgid "Unknown fts_info flag %d for file %s"
+msgstr ""
+
+#: lib/traverse.c:447
+#, c-format
+msgid "'%s': fts_read failed on %s"
 msgstr ""
 
 #: lib/cmdline.c:79
@@ -325,6 +348,11 @@ msgstr ""
 msgid "cannot parse --size: "
 msgstr ""
 
+#: lib/cmdline.c:467 lib/hash-utility.c:228
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr ""
+
 #: lib/cmdline.c:528
 #, c-format
 msgid "Adding -o %s as output failed"
@@ -379,6 +407,11 @@ msgstr ""
 msgid "Only up to -pp or down to -PP flags allowed"
 msgstr ""
 
+#: lib/cmdline.c:934 lib/hash-utility.c:56
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr ""
+
 #: lib/cmdline.c:963
 #, c-format
 msgid "Invalid size description \"%s\": "
@@ -393,184 +426,184 @@ msgstr ""
 msgid "%s may only contain [%s], not `%c`"
 msgstr ""
 
-#: lib/cmdline.c:1276
+#: lib/cmdline.c:1278
 msgid "Specifiyng both -o and -O is not allowed"
 msgstr ""
 
-#: lib/cmdline.c:1296
+#: lib/cmdline.c:1298
 msgid "Could not start graphical user interface."
 msgstr ""
 
-#: lib/cmdline.c:1327
+#: lib/cmdline.c:1329
 msgid "Specify max traversal depth"
 msgstr ""
 
-#: lib/cmdline.c:1328
+#: lib/cmdline.c:1330
 msgid "Select originals by given  criteria"
 msgstr ""
 
-#: lib/cmdline.c:1329
+#: lib/cmdline.c:1331
 msgid "Sort rmlint output by given criteria"
 msgstr ""
 
-#: lib/cmdline.c:1330
+#: lib/cmdline.c:1332
 msgid "Specify lint types"
 msgstr ""
 
-#: lib/cmdline.c:1331
+#: lib/cmdline.c:1333
 msgid "Specify size limits"
 msgstr ""
 
-#: lib/cmdline.c:1332
+#: lib/cmdline.c:1334
 msgid "Choose hash algorithm"
 msgstr ""
 
-#: lib/cmdline.c:1333
+#: lib/cmdline.c:1335
 msgid "Add output (override default)"
 msgstr ""
 
-#: lib/cmdline.c:1334
+#: lib/cmdline.c:1336
 msgid "Add output (add to defaults)"
 msgstr ""
 
-#: lib/cmdline.c:1335
+#: lib/cmdline.c:1337
 msgid "Newer than stamp file"
 msgstr ""
 
-#: lib/cmdline.c:1336
+#: lib/cmdline.c:1338
 msgid "Newer than timestamp"
 msgstr ""
 
-#: lib/cmdline.c:1337
+#: lib/cmdline.c:1339
 msgid "Configure a formatter"
 msgstr ""
 
-#: lib/cmdline.c:1340
+#: lib/cmdline.c:1342
 msgid "Enable progressbar"
 msgstr ""
 
-#: lib/cmdline.c:1341
+#: lib/cmdline.c:1343
 msgid "Be more verbose (-vvv for much more)"
 msgstr ""
 
-#: lib/cmdline.c:1342
+#: lib/cmdline.c:1344
 msgid "Be less verbose (-VVV for much less)"
 msgstr ""
 
-#: lib/cmdline.c:1343
+#: lib/cmdline.c:1345
 msgid "Re-output a json file"
 msgstr ""
 
-#: lib/cmdline.c:1346
+#: lib/cmdline.c:1348
 msgid "Be not that colorful"
 msgstr ""
 
-#: lib/cmdline.c:1347
+#: lib/cmdline.c:1349
 msgid "Find hidden files"
 msgstr ""
 
-#: lib/cmdline.c:1348
+#: lib/cmdline.c:1350
 msgid "Follow symlinks"
 msgstr ""
 
-#: lib/cmdline.c:1349
+#: lib/cmdline.c:1351
 msgid "Ignore symlinks"
 msgstr ""
 
-#: lib/cmdline.c:1350
+#: lib/cmdline.c:1352
 msgid "Use more paranoid hashing"
 msgstr ""
 
-#: lib/cmdline.c:1351
+#: lib/cmdline.c:1353
 msgid "Do not cross mounpoints"
 msgstr ""
 
-#: lib/cmdline.c:1352
+#: lib/cmdline.c:1354
 msgid "Keep all tagged files"
 msgstr ""
 
-#: lib/cmdline.c:1353
+#: lib/cmdline.c:1355
 msgid "Keep all untagged files"
 msgstr ""
 
-#: lib/cmdline.c:1354
+#: lib/cmdline.c:1356
 msgid "Must have twin in tagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1355
+#: lib/cmdline.c:1357
 msgid "Must have twin in untagged dir"
 msgstr ""
 
-#: lib/cmdline.c:1356
+#: lib/cmdline.c:1358
 msgid "Only find twins with same basename"
 msgstr ""
 
-#: lib/cmdline.c:1357
+#: lib/cmdline.c:1359
 msgid "Only find twins with same extension"
 msgstr ""
 
-#: lib/cmdline.c:1358
+#: lib/cmdline.c:1360
 msgid "Only find twins with same basename minus extension"
 msgstr ""
 
-#: lib/cmdline.c:1359
+#: lib/cmdline.c:1361
 msgid "Find duplicate directories"
 msgstr ""
 
-#: lib/cmdline.c:1360
+#: lib/cmdline.c:1362
 msgid "Only use files with certain permissions"
 msgstr ""
 
-#: lib/cmdline.c:1361
+#: lib/cmdline.c:1363
 msgid "Ignore hardlink twins"
 msgstr ""
 
-#: lib/cmdline.c:1362
+#: lib/cmdline.c:1364
 msgid "Find hidden files in duplicate folders only"
 msgstr ""
 
-#: lib/cmdline.c:1363
+#: lib/cmdline.c:1365
 msgid "Consider duplicates only equal when mtime differs at max. T seconds"
 msgstr ""
 
-#: lib/cmdline.c:1366
+#: lib/cmdline.c:1368
 msgid "Show the manpage"
 msgstr ""
 
-#: lib/cmdline.c:1367
+#: lib/cmdline.c:1369
 msgid "Show the version & features"
 msgstr ""
 
-#: lib/cmdline.c:1369
+#: lib/cmdline.c:1371
 msgid "If installed, start the optional gui with all following args"
 msgstr ""
 
-#: lib/cmdline.c:1370
+#: lib/cmdline.c:1372
 msgid ""
 "Work like sha1sum for all supported hash algorithms (see also --hash --help)"
 msgstr ""
 
-#: lib/cmdline.c:1371
+#: lib/cmdline.c:1373
 msgid "Clone extents from source to dest, if extents match"
 msgstr ""
 
-#: lib/cmdline.c:1381
+#: lib/cmdline.c:1383
 msgid "Report hardlinks as duplicates"
 msgstr ""
 
-#: lib/cmdline.c:1427
+#: lib/cmdline.c:1429
 msgid "Cannot set current working directory"
 msgstr ""
 
-#: lib/cmdline.c:1432
+#: lib/cmdline.c:1434
 msgid "Cannot join commandline"
 msgstr ""
 
-#: lib/cmdline.c:1441
+#: lib/cmdline.c:1443
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
 msgstr ""
 
-#: lib/cmdline.c:1459
+#: lib/cmdline.c:1461
 msgid ""
 "rmlint finds space waste and other broken things on your filesystem and "
 "offers to remove it.\n"
@@ -578,7 +611,7 @@ msgid ""
 "options to handle them."
 msgstr ""
 
-#: lib/cmdline.c:1465
+#: lib/cmdline.c:1467
 msgid ""
 "Only the most important options and options that alter the defaults are "
 "shown above.\n"
@@ -588,125 +621,79 @@ msgid ""
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
 
-#: lib/cmdline.c:1517
+#: lib/cmdline.c:1519
 msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
 msgstr ""
 
-#: lib/cmdline.c:1520
+#: lib/cmdline.c:1522
 msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr ""
 
-#: lib/cmdline.c:1589
+#: lib/cmdline.c:1524 lib/hash-utility.c:195
+msgid "No valid paths given."
+msgstr ""
+
+#: lib/cmdline.c:1591
 msgid "No valid .json files given, aborting."
 msgstr ""
 
-#: lib/session.c:139
-msgid "Received Interrupt, stopping..."
+#: lib/hash-utility.c:140
+msgid "Digest type [BLAKE2B]"
 msgstr ""
 
-#: lib/session.c:153
-msgid "Received second Interrupt, stopping hard."
+#: lib/hash-utility.c:141
+msgid "Number of hashing threads [8]"
 msgstr ""
 
-#: lib/traverse.c:330
+#: lib/hash-utility.c:142
+msgid "Print hash as self identifying multihash"
+msgstr ""
+
+#: lib/hash-utility.c:143
+msgid "Megabytes read buffer [256 MB]"
+msgstr ""
+
+#: lib/hash-utility.c:144
+msgid ""
+"Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr ""
+
+#: lib/hash-utility.c:145
+msgid "Space-separated list of files"
+msgstr ""
+
+#: lib/hash-utility.c:151 lib/hash-utility.c:153
+msgid "Hash a list of files"
+msgstr ""
+
+#: lib/hash-utility.c:159
 #, c-format
-msgid "filesystem loop detected at %s (skipping)"
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"    %s\n"
+"\n"
+"  Versions with different bit numbers:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
 msgstr ""
 
-#: lib/traverse.c:335
+#: lib/hash-utility.c:231
 #, c-format
-msgid "cannot read directory %s: %s"
+msgid "Directories are not supported: %s"
 msgstr ""
 
-#: lib/traverse.c:348
+#: lib/hash-utility.c:240
 #, c-format
-msgid "error %d in fts_read for %s (skipping)"
+msgid "%s: Unknown file type"
 msgstr ""
 
-#: lib/traverse.c:378
+#: lib/hasher.c:310
 #, c-format
-msgid "Added big file %s"
-msgstr ""
-
-#: lib/traverse.c:380
-#, c-format
-msgid "cannot stat file %s (skipping)"
-msgstr ""
-
-#: lib/traverse.c:427
-#, c-format
-msgid "Unknown fts_info flag %d for file %s"
-msgstr ""
-
-#: lib/traverse.c:447
-#, c-format
-msgid "'%s': fts_read failed on %s"
-msgstr ""
-
-#: lib/utilities.c:308
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
-msgstr ""
-
-#: lib/utilities.c:315
-msgid "ELF Library is out of date!"
-msgstr ""
-
-#: lib/utilities.c:655
-#, c-format
-msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
-msgstr ""
-
-#: lib/config.h:114
-msgid "ERROR"
-msgstr ""
-
-#: lib/config.h:119
-msgid "WARNING"
-msgstr ""
-
-#: lib/config.h:124
-msgid "INFO"
-msgstr ""
-
-#: lib/config.h:129
-msgid "DEBUG"
-msgstr ""
-
-#: lib/preprocess.c:247
-msgid "Pattern has to start with `<`"
-msgstr ""
-
-#: lib/preprocess.c:275
-#, c-format
-msgid "`<` or `>` imbalance: %d"
-msgstr ""
-
-#: lib/preprocess.c:282
-msgid "empty pattern"
-msgstr ""
-
-#: lib/preprocess.c:323
-msgid "no pattern given in <> after 'r' or 'x'"
-msgstr ""
-
-#: lib/preprocess.c:339
-#, c-format
-msgid "Cannot add more than %ld regex patterns."
-msgstr ""
-
-#: lib/preprocess.c:351
-msgid "Error while parsing sortcriteria patterns: "
-msgstr ""
-
-#: lib/formats.c:211
-#, c-format
-msgid "No such new_handler with this name: %s"
-msgstr ""
-
-#: lib/formats.c:233
-#, c-format
-msgid "Unable to open file for writing: %s"
+msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
 msgstr ""
 
 #: lib/replay.c:107
@@ -729,4 +716,78 @@ msgstr ""
 
 #: lib/replay.c:601
 msgid "Please recompile `rmlint` with it installed."
+msgstr ""
+
+#: lib/session.c:143
+msgid "Received Interrupt, stopping..."
+msgstr ""
+
+#: lib/session.c:157
+msgid "Received second Interrupt, stopping hard."
+msgstr ""
+
+#: lib/utilities.c:308
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr ""
+
+#: lib/utilities.c:315
+msgid "ELF Library is out of date!"
+msgstr ""
+
+#: lib/utilities.c:655
+#, c-format
+msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
+msgstr ""
+
+#: lib/formats.c:216
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr ""
+
+#: lib/formats.c:246
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr ""
+
+#: lib/preprocess.c:245
+msgid "Pattern has to start with `<`"
+msgstr ""
+
+#: lib/preprocess.c:273
+#, c-format
+msgid "`<` or `>` imbalance: %d"
+msgstr ""
+
+#: lib/preprocess.c:280
+msgid "empty pattern"
+msgstr ""
+
+#: lib/preprocess.c:321
+msgid "no pattern given in <> after 'r' or 'x'"
+msgstr ""
+
+#: lib/preprocess.c:337
+#, c-format
+msgid "Cannot add more than %lu regex patterns."
+msgstr ""
+
+#: lib/preprocess.c:349
+msgid "Error while parsing sortcriteria patterns: "
+msgstr ""
+
+#: lib/config.h:114
+msgid "ERROR"
+msgstr ""
+
+#: lib/config.h:119
+msgid "WARNING"
+msgstr ""
+
+#: lib/config.h:124
+msgid "INFO"
+msgstr ""
+
+#: lib/config.h:129
+msgid "DEBUG"
 msgstr ""
