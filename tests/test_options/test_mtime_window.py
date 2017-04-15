@@ -74,7 +74,6 @@ def test_consider_mtime_subsecond():
     head, *data, footer = run_rmlint('--mtime-window=0')
     assert len(data) == 0
 
-@attr('known_issue')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_consider_mtime_fail_by_association():
     create_file('xxx', 'a')
