@@ -86,6 +86,17 @@ def check_git_rev(context):
     return rev
 
 
+def check_sysmacro_h(context):
+    rc = 1
+    if rc and tests.CheckHeader(context, 'sys/sysmacros.h'):
+        rc = 0
+
+    conf.env['HAVE_SYSMACROS_H'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_libelf(context):
     rc = 1
 
@@ -514,7 +525,8 @@ conf = Configure(env, custom_tests={
     'check_linux_limits': check_linux_limits,
     'check_btrfs_h': check_btrfs_h,
     'check_uname': check_uname,
-    'check_cygwin': check_cygwin
+    'check_cygwin': check_cygwin,
+    'check_sysmacro_h': check_sysmacro_h
 })
 
 if not conf.CheckCC():
@@ -627,6 +639,7 @@ conf.check_posix_fadvise()
 conf.check_faccessat()
 conf.check_btrfs_h()
 conf.check_uname()
+conf.check_sysmacro_h()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])

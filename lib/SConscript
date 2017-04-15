@@ -35,6 +35,7 @@ def build_config_template(target, source, env):
             HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
             HAVE_FACCESSAT=env['HAVE_FACCESSAT'],
             HAVE_UNAME=env['HAVE_UNAME'],
+            HAVE_SYSMACROS_H=env['HAVE_SYSMACROS_H'],
             VERSION_MAJOR=VERSION_MAJOR,
             VERSION_MINOR=VERSION_MINOR,
             VERSION_PATCH=VERSION_PATCH,
