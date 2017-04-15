@@ -1060,7 +1060,7 @@ static void rm_shred_hash_callback(_UNUSED RmHasher *hasher, RmDigest *digest,
  * 2. Use g_hash_table_foreach_remove to delete all singleton and other
  *    non-qualifying groups from size_groups via rm_shred_group_preprocess.
  * 3. Use g_hash_table_foreach to do the FIEMAP lookup for all remaining
- * 	  files via rm_shred_device_preprocess.
+ *    files via rm_shred_device_preprocess.
  * */
 
 /* Called for each file; find appropriate RmShredGroup (ie files with same size) and
@@ -1300,40 +1300,107 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     }
 }
 
-static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
+static void rm_shred_finish_single_group(
+        GQueue *group,
+        RmShredGroupStatus status,
+        RmDigest *digest,
+        RmShredTag *tag
+    ) {
     RmCfg *cfg = tag->session->cfg;
 
-    if(g_queue_get_length(group->held_files) > 0) {
-        /* find the original(s) (note this also unbundles hardlinks and sorts
-         * the group from highest ranked to lowest ranked
-         */
-        rm_shred_group_find_original(tag->session, group->held_files, group->status);
+    if(g_queue_get_length(group) <= 1) {
+        return;
+    }
 
-        /* Update statistics */
-        if(group->status == RM_SHRED_GROUP_FINISHING) {
-            rm_fmt_lock_state(tag->session->formats);
-            {
-                tag->session->dup_group_counter++;
-                g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals,
-                                tag->session);
-            }
-            rm_fmt_unlock_state(tag->session->formats);
+    /* find the original(s) (note this also unbundles hardlinks and sorts
+     * the group from highest ranked to lowest ranked
+     */
+    rm_shred_group_find_original(tag->session, group, status);
+
+    /* Update statistics */
+    if(status == RM_SHRED_GROUP_FINISHING) {
+        rm_fmt_lock_state(tag->session->formats);
+        {
+            tag->session->dup_group_counter++;
+            g_queue_foreach(group, (GFunc)rm_shred_dupe_totals,
+                            tag->session);
         }
+        rm_fmt_unlock_state(tag->session->formats);
+    }
 
-        /* Cache the files for merging them into directories */
+    /* Cache the files for merging them into directories */
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        file->digest = digest;
+
+        if(cfg->merge_directories && status == RM_SHRED_GROUP_FINISHING) {
+            rm_tm_feed(tag->session->dir_merger, file);
+        }
+    }
+
+    if(cfg->merge_directories == false || status == RM_SHRED_GROUP_DORMANT) {
+        /* Output them directly, do not merge them first. */
+        rm_shred_forward_to_output(tag->session, group);
+    }
+}
+
+static int rm_shred_sort_by_mtime(const RmFile *file_a, const RmFile *file_b, RmShredTag *tag) {
+    if(tag->session->cfg->mtime_window >= 0) {
+        return FLOAT_SIGN_DIFF(file_a->mtime, file_b->mtime, MTIME_TOL);
+    }
+
+    return 0;
+}
+
+static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
+    /* Features like --mtime-window require post processing, i.e. the shred group
+     * needs to be split up further by criteria like "mtime difference too high".
+     * This is done here.
+     * */
+    GQueue *curr_group = NULL;
+    gdouble mtime_window = tag->session->cfg->mtime_window;
+
+    if(mtime_window >= 0) {
+        curr_group = g_queue_new();
+        g_queue_sort(
+            group->held_files,
+            (GCompareDataFunc)rm_shred_sort_by_mtime,
+            tag
+        );
+
         for(GList *iter = group->held_files->head; iter; iter = iter->next) {
-            RmFile *file = iter->data;
-            file->digest = group->digest;
-
-            if(cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING) {
-                rm_tm_feed(tag->session->dir_merger, file);
+            if(iter->prev == NULL) {
+                g_queue_push_tail(curr_group, iter->data);
+                continue;
             }
-        }
 
-        if(cfg->merge_directories == false || group->status == RM_SHRED_GROUP_DORMANT) {
-            /* Output them directly, do not merge them first. */
-            rm_shred_forward_to_output(tag->session, group->held_files);
+            RmFile *curr = iter->data, *prev = iter->prev->data;
+            if(curr->mtime - prev->mtime > mtime_window) {
+                rm_shred_finish_single_group(
+                    curr_group,
+                    group->status,
+                    group->digest,
+                    tag
+                );
+
+                g_queue_free(curr_group);
+                curr_group = g_queue_new();
+            }
+
+            g_queue_push_tail(curr_group, iter->data);
         }
+    }
+
+    rm_shred_finish_single_group(
+        (curr_group == NULL) ? group->held_files : curr_group,
+        group->status,
+        group->digest,
+        tag
+    );
+
+    if(curr_group) {
+        g_queue_free(curr_group);
+
     }
 
     if(group->status == RM_SHRED_GROUP_FINISHING) {

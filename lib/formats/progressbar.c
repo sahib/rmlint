@@ -363,7 +363,7 @@ static void rm_fmt_prog(RmSession *session,
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
         rm_running_mean_init(&self->read_diff_mean, 10);
-        rm_running_mean_init(&self->eta_mean, 25);
+        rm_running_mean_init(&self->eta_mean, 50);
         self->last_shred_bytes_remaining = 0;
 
         self->plain = true;
