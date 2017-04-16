@@ -89,12 +89,12 @@ static void rm_fmt_prog(RmSession *session,
 
     fprintf(out, _("%s%15d%s Files in total\n"), MAYBE_RED(out, session),
             session->total_files, MAYBE_RESET(out, session));
-    fprintf(out, _("%s%15" LLU "%s Duplicate files\n"), MAYBE_RED(out, session),
-            session->dup_counter, MAYBE_RESET(out, session));
-    fprintf(out, _("%s%15" LLU "%s Groups in total\n"), MAYBE_RED(out, session),
-            session->dup_group_counter, MAYBE_RESET(out, session));
-    fprintf(out, _("%s%15" LLU "%s Other lint items\n"), MAYBE_RED(out, session),
-            session->other_lint_cnt, MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15ld%s Duplicate files\n"), MAYBE_RED(out, session),
+            (long)session->dup_counter, MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15ld%s Groups in total\n"), MAYBE_RED(out, session),
+            (long)session->dup_group_counter, MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15ld%s Other lint items\n"), MAYBE_RED(out, session),
+            (long)session->other_lint_cnt, MAYBE_RESET(out, session));
 
     gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
 

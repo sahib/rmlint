@@ -15,6 +15,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Fixed a rounding error bug that can happen while sorting mtimes.
 * Fixed the slightly broken --mtime-window option (was too permissive in rare cases)
 * Force permissions (0755 for binary, 0644 for manpage) when installing files in the filesystem.
+* Fix wrong ordering when using -D without -k or -K.
 
 ### Added
 
