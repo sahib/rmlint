@@ -30,7 +30,16 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <sys/sysmacros.h>
+#include "config.h"
+
+/* Be safe: This header is not essential and might be missing on some systems.
+ * We only include it here, because it fixes some recent warning...
+ * */
+#ifdef HAVE_SYSMACROS_H
+# include <sys/sysmacros.h>
+#endif
+
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -39,8 +48,6 @@
 #include <pwd.h>
 
 #include <libgen.h>
-
-#include "config.h"
 
 /* Not available there,
  * but might be on other non-linux systems

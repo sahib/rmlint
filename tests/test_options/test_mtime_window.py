@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+from nose.plugins.attrib import attr
 from nose import with_setup
 from tests.utils import *
 
@@ -72,3 +73,21 @@ def test_consider_mtime_subsecond():
 
     head, *data, footer = run_rmlint('--mtime-window=0')
     assert len(data) == 0
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_consider_mtime_fail_by_association():
+    create_file('xxx', 'a')
+    create_file('yyy', 'b')
+    create_file('xxx', 'c')
+
+    set_mtime('a', '2004-02-29  16:21:42')
+    set_mtime('b', '2004-02-29  16:21:44')
+    set_mtime('c', '2004-02-29  16:21:46')
+
+    head, *data, footer = run_rmlint('--mtime-window=3')
+
+    assert len(data) == 0
+    assert footer['total_files'] == 3
+    assert footer['total_lint_size'] == 0
+    assert footer['duplicates'] == 0
+    assert footer['duplicate_sets'] == 0
