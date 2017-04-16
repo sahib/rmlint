@@ -650,10 +650,10 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
     RmCfg *cfg = self->session->cfg;
 
     if(da->prefd_files - db->prefd_files) {
-        if(cfg->keep_all_tagged) {
-            return db->prefd_files - da->prefd_files;
-        } else {
+        if(cfg->keep_all_untagged) {
             return da->prefd_files - db->prefd_files;
+        } else {
+            return db->prefd_files - da->prefd_files;
         }
     }
 
@@ -761,6 +761,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
+
             RmFile *mask = rm_directory_as_new_file(self, directory);
             g_queue_push_tail(self->free_list, mask);
             g_queue_push_tail(&file_adaptor_group, mask);

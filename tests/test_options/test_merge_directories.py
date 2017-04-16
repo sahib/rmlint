@@ -155,9 +155,6 @@ def test_deep_full_twice():
     create_nested('deep_b', 'abcd')
     create_nested('deep_b', 'efgh')
 
-    # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
-    # subprocess.call('./rmlint -S a -D ' + TESTDIR_NAME + '/deep_a ' + TESTDIR_NAME + '/deep_b', shell=True)
-
     head, *data, footer = run_rmlint(
         '-D -S a {t}/deep_a {t}/deep_b'.format(
             t=TESTDIR_NAME
@@ -270,7 +267,6 @@ def test_keepall_tagged():
     #
     # Make sure -k protects duplicate directories too,
     # when they're in a pref'd path.
-
     create_file('test', 'origs/folder/subfolder/file')
     create_file('test', 'origs/samefolder/subfolder/file')
     create_file('test', 'dups/folder/subfolder/file')
@@ -292,21 +288,9 @@ def test_keepall_tagged():
         return run_rmlint(options, use_default_dir=False)
 
 
-
-    ############# test 1: simple -km test
+    ### test 1: simple -km test
     head, *data, footer = do_test('-k -m', dupedir, origdir)
-    # origdir is identical to dupedir and is protected by -k
-    # -o pretty (partial) output as at rmlint 82f433a:
-    # # Duplicate Directorie(s):
-    # ls -la '/tmp/rmlint-unit-testdir/origs'            <- expected
-    # rm -rf '/tmp/rmlint-unit-testdir/dups'             <- expected
-    # ls -la '/tmp/rmlint-unit-testdir/origs/folder'     <- harmless but probably unwanted noise
-    # ls -la '/tmp/rmlint-unit-testdir/origs/samefolder' <- harmless but probably unwanted noise
-    #
-    # ==> In total 4 files, whereof 2 are duplicates in 1 groups.
-    # ==> This equals 8 B of duplicates which could be removed.
-
-    assert len(data) >= 2    # TODO: discuss/resolve desired handling of tagged dupes with -km
+    assert len(data) >= 2
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
@@ -317,15 +301,14 @@ def test_keepall_tagged():
     assert data[1]['path'].endswith(dupedir)
     assert not data[1]['is_original']
 
-
-    ############# test 2: -km test with tagged originals dir nested under untagged dir
+    ### test 2: -km test with tagged originals dir nested under untagged dir
+    # Files in origdir are traversed as both untagged (as parentdir/origs) and
+    # tagged (as origdir) but the tagged traversal should take precedence
+    # during preprocessing path double removal.  Therefore should give same
+    # result as previous, except for total file count.
     head, *data, footer = do_test('-k -m', parentdir, origdir)
-    # Files in origdir are traversed as both untagged (as parentdir/origs) and tagged (as origdir)
-    # but the tagged traversal should take precedence during preprocessing path double removal.
-    # Therefore should give same result as previous, except for total file count.
 
     assert len(data) >= 2
-    # assert footer['total_files'] == 6 #(total_files may be 6 or 8 depending on when path doubles are detected/rejected...)
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
 
@@ -335,51 +318,26 @@ def test_keepall_tagged():
     assert data[1]['path'].endswith(dupedir)
     assert not data[1]['is_original']
 
-
-    ############# test 3: tag just part of a nested originals dir
+    ### test 3: tag just part of a nested originals dir
     head, *data, footer = do_test('-k -m', parentdir, origsubdir)
-    # -o pretty (partial) output as at rmlint 82f433a:
-    # # Duplicate Directorie(s):
-    # ls -la '/tmp/rmlint-unit-testdir/origs/folder'
-    # rm -rf '/tmp/rmlint-unit-testdir/origs/samefolder'
-    # rm -rf '/tmp/rmlint-unit-testdir/dups/samefolder'
-    # rm -rf '/tmp/rmlint-unit-testdir/dups/folder'
-    #
-    # ==> In total 7 files, whereof 3 are duplicates in 1 groups.
-    # ==> This equals 12 B of duplicates which could be removed.
-
     assert len(data) == 4
-    # assert footer['total_files'] == 4
     assert footer['duplicates'] == 3
     assert footer['duplicate_sets'] == 1
 
-
-    #############  test 4: test that tagging takes precedence over -S Ap option (BROKEN)
+    ###  test 4: test that tagging takes precedence over -S Ap option
     head, *data, footer = do_test('', dupedir, origdir)
-    # -o pretty (partial) output as at rmlint 82f433a:
-    # # Duplicate Directorie(s):
-    # ls -la '/tmp/rmlint-unit-testdir/dups'            <- wrong; tagging sould take precedence
-    # rm -rf '/tmp/rmlint-unit-testdir/origs'
-    # ls -la '/tmp/rmlint-unit-testdir/dups/samefolder' <- good; -S Ap is "keep last alphabetically"
-    # rm -rf '/tmp/rmlint-unit-testdir/dups/folder'
-    #
-    # ==> In total 4 files, whereof 3 are duplicates in 1 groups.
-    # ==> This equals 12 B of duplicates which could be removed.
-
     assert len(data) == 4
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 3
     assert footer['duplicate_sets'] == 1
 
-    #TODO: assert data[0]['path'].endswith(origdir)
+    assert data[0]['path'].endswith(origdir)
     assert data[0]['is_original']
 
-    #TODO: assert data[1]['path'].endswith(dupedir)
+    assert data[1]['path'].endswith(dupedir)
     assert not data[1]['is_original']
 
-
-    ############# test 5: test that self-duplicates in untagged dir are
-    #                     preserved by -m option
+    ### test 5: test self-duplicates in untagged dir are preserved by -m option
     head, *data, footer = do_test('-k -m', unmatcheddir, origdir)
     # unmatcheddir contains self-duplicates but is protected by -m
     # -o pretty (partial) output as at rmlint 82f433a:
@@ -390,51 +348,9 @@ def test_keepall_tagged():
     assert footer['duplicates'] == 0
     assert footer['duplicate_sets'] == 0
 
-
-
-
-
-
-
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_keepall_untagged():
-
-    create_file('test', 'origs/folder/subfolder/file')
-    create_file('test', 'origs/samefolder/subfolder/file')
-    create_file('test', 'dups/folder/subfolder/file')
-    create_file('test', 'dups/samefolder/subfolder/file')
-    create_file('abcd', 'unmatched/folder/subfolder/file')
-    create_file('abcd', 'unmatched/samefolder/subfolder/unmatched')
-
-    parentdir = TESTDIR_NAME
-    dupedir = os.path.join(TESTDIR_NAME, 'dups')
-    origdir = os.path.join(TESTDIR_NAME, 'origs')
-    origsubdir = os.path.join(origdir, 'folder')
-    unmatcheddir = os.path.join(TESTDIR_NAME, 'unmatched')
-
-    def do_test(km_opts, untagged_path, tagged_path):
-        options = '-D -S Ap {maybe_km} {untagged} // {tagged}'.format(
-                maybe_km = km_opts,
-                untagged = untagged_path,
-                tagged = tagged_path)
-        return run_rmlint(options, use_default_dir=False)
-
-
-
-    ############# test 1: simple -KM test
+    ### test 6: simple -KM test
     head, *data, footer = do_test('-K -M', origdir, dupedir)
-    # origdir is identical to dupedir and is protected by -K
-    # -o pretty (partial) output as at rmlint 82f433a:
-    # # Duplicate Directorie(s):
-    # ls -la '/tmp/rmlint-unit-testdir/origs'            <- expected
-    # rm -rf '/tmp/rmlint-unit-testdir/dups'             <- expected
-    # ls -la '/tmp/rmlint-unit-testdir/origs/samefolder' <- harmless but probably unwanted noise
-    # ls -la '/tmp/rmlint-unit-testdir/origs/folder'     <- harmless but probably unwanted noise
-    #
-    # ==> In total 4 files, whereof 2 are duplicates in 1 groups.
-    # ==> This equals 8 B of duplicates which could be removed.
-
-    assert len(data) >= 2    # TODO: discuss/resolve desired handling of tagged dupes with -km
+    assert len(data) >= 2
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
@@ -445,15 +361,14 @@ def test_keepall_untagged():
     assert data[1]['path'].endswith(dupedir)
     assert not data[1]['is_original']
 
+    ### test 7: -KM test with tagged duplicates dir nested under untagged dir
+    # Files in origdir are traversed as both untagged (as parentdir/origs) and
+    # tagged (as origdir) but the tagged traversal should take precedence
+    # during preprocessing path double removal.  Therefore should give same
+    # result as previous, except for total file count.
 
-    ############# test 2: -KM test with tagged duplicates dir nested under untagged dir
     head, *data, footer = do_test('-K -M', parentdir, dupedir)
-    # Files in origdir are traversed as both untagged (as parentdir/origs) and tagged (as origdir)
-    # but the tagged traversal should take precedence during preprocessing path double removal.
-    # Therefore should give same result as previous, except for total file count.
-
     assert len(data) >= 2
-    # assert footer['total_files'] == 6 #(total_files may be 6 or 8 depending on when path doubles are detected/rejected...)
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
 
@@ -463,22 +378,13 @@ def test_keepall_untagged():
     assert data[1]['path'].endswith(dupedir)
     assert not data[1]['is_original']
 
-
-    ############# test 3: N/A
-
-
-    #############  test 4: N/A
-
-
-    ############# test 5: test that self-duplicates in untagged dir are
-    #                     preserved by -m option
-    head, *data, footer = do_test('-K -M', origdir, unmatcheddir)
+    ### test 8: test self-duplicates in untagged dir are preserved by -m option
     # unmatcheddir contains self-duplicates but is protected by -M
     # -o pretty (partial) output as at rmlint 82f433a:
     # ==> In total 4 files, whereof 0 are duplicates in 0 groups.
+    head, *data, footer = do_test('-K -M', origdir, unmatcheddir)
 
     assert len(data) == 0
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 0
     assert footer['duplicate_sets'] == 0
-
