@@ -112,6 +112,11 @@ cp_hardlink() {
     echo $COL_YELLOW 'Hardlinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
+            # If it's a directory cp will create a new copy into
+            # the destination path. This would lead to more wasted space...
+            if [ -d "$1" ]; then
+                rm -rf "$1"
+            fi
             cp --remove-destination --archive --link "$2" "$1"
         fi
     fi
@@ -122,6 +127,9 @@ cp_symlink() {
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
+            if [ -d "$1" ]; then
+                rm -rf "$1"
+            fi
             cp --remove-destination --archive --symbolic-link "$2" "$1"
             touch -mr "$0" "$1"
         fi
@@ -134,6 +142,9 @@ cp_reflink() {
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
+            if [ -d "$1" ]; then
+                rm -rf "$1"
+            fi
             cp --reflink=always "$2" "$1"
             touch -mr "$0" "$1"
         fi

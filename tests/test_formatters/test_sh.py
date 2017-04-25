@@ -114,3 +114,26 @@ def test_anon_pipe():
 
     assert b'/long-dummy-file-1' in data
     assert b'/long-dummy-file-2' in data
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hardlink_duplicate_directories():
+    create_file('xxx', 'dir_a/x')
+    create_file('xxx', 'dir_b/x')
+
+    sh_path = os.path.join(TESTDIR_NAME, "result.sh")
+    header, *data, footer = run_rmlint(
+        "-D -S a -c sh:link -o sh:{}".format(sh_path),
+    )
+    assert len(data) == 2
+    assert data[0]["path"].endswith("dir_a")
+    assert data[1]["path"].endswith("dir_a")
+
+    subprocess.call(
+        ["/bin/sh", "/tmp/rmlint-unit-test.sh"],
+        shell=False
+    )
+
+    full_dupe_a = os.path.join(TESTDIR_NAME, "dir_a/x")
+    full_dupe_b = os.path.join(TESTDIR_NAME, "dir_b/x")
+    assert os.stat(full_dupe_a).st_ino == os.stat(full_dupe_b)
