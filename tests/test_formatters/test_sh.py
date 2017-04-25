@@ -127,13 +127,13 @@ def test_hardlink_duplicate_directories():
     )
     assert len(data) == 2
     assert data[0]["path"].endswith("dir_a")
-    assert data[1]["path"].endswith("dir_a")
+    assert data[1]["path"].endswith("dir_b")
 
-    subprocess.call(
-        ["/bin/sh", "/tmp/rmlint-unit-test.sh"],
-        shell=False
+    subprocess.check_output(
+        ["/bin/sh", sh_path, "-d"],
+        shell=False,
     )
 
     full_dupe_a = os.path.join(TESTDIR_NAME, "dir_a/x")
     full_dupe_b = os.path.join(TESTDIR_NAME, "dir_b/x")
-    assert os.stat(full_dupe_a).st_ino == os.stat(full_dupe_b)
+    assert os.stat(full_dupe_a).st_ino == os.stat(full_dupe_b).st_ino
