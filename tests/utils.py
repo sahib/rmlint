@@ -218,12 +218,13 @@ def run_rmlint_pedantic(*args, **kwargs):
 
     data = None
 
-    output_len = len(kwargs['outputs']) if 'outputs' in kwargs else 0
+    output_len = len(kwargs.get('outputs', []))
 
     for option in options:
         new_data = run_rmlint_once(*(args + (option, )), **kwargs)
 
         data_skip, new_data_skip = data, new_data
+
         if output_len is not 0:
             if new_data:
                 new_data_skip = new_data[:-output_len]
@@ -244,8 +245,8 @@ def run_rmlint_pedantic(*args, **kwargs):
     return data
 
 
-def run_rmlint(*args, **kwargs):
-    if get_env_flag('RM_TS_PEDANTIC'):
+def run_rmlint(*args, force_no_pendantic=False, **kwargs):
+    if get_env_flag('RM_TS_PEDANTIC') and force_no_pendantic is False:
         return run_rmlint_pedantic(*args, **kwargs)
     else:
         return run_rmlint_once(*args, **kwargs)

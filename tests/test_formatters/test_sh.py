@@ -108,6 +108,7 @@ def test_anon_pipe():
 
     data = run_rmlint(
         "-o sh:>(cat)",
+        force_no_pendantic=True,
         directly_return_output=True,
         use_shell=True
     )
