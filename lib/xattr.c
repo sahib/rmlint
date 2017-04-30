@@ -168,14 +168,13 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
         cksum_hex_str[rm_digest_get_bytes(file->digest) * 2 + 1], timestamp[64] = {0};
 
     int timestamp_bytes = 0;
-    double actual_time_sec = difftime(file->mtime, 0);
 
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
        rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str)) ||
        (timestamp_bytes = snprintf(
-            timestamp, sizeof(timestamp), "%lld", (long long)actual_time_sec)) == -1 ||
+            timestamp, sizeof(timestamp), "%.9f", file->mtime)) == -1 ||
        rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)) {
         return errno;
     }
@@ -205,7 +204,7 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
         return NULL;
     }
 
-    if(g_ascii_strtoll(mtime_buf, NULL, 10) < (gint64)file->mtime) {
+    if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) < 0) {
         /* Data is too old and not useful, autoclean it */
         rm_xattr_clear_hash(session, file);
         return NULL;
