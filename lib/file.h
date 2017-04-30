@@ -172,11 +172,6 @@ typedef struct RmFile {
      */
     bool free_digest : 1;
 
-    /* If true, the checksum of this file was read from the xattrs of the file.
-     * It was cached previously by rmlint on the disk.
-     */
-    bool has_ext_cksum : 1;
-
     /* If true, the file will be request to be pre-cached on the next read */
     bool fadvise_requested : 1;
 
@@ -224,6 +219,11 @@ typedef struct RmFile {
      * with RmShredGroup
      */
     RmDigest *digest;
+
+    /* digest of this file read from file extended attributes (previously written by
+     * rmlint)
+     */
+    char *ext_cksum;
 
     /* Those are never used at the same time.
      * disk_offset is used during computation,

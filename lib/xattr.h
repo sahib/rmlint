@@ -41,16 +41,16 @@
 int rm_xattr_write_hash(RmSession *session, RmFile *file);
 
 /**
- * @brief Read hash as hexstring from xattrs.
+ * @brief Read hash as hexstring from xattrs into file->ext_cksum.
  *
  * If the mtime of the file does not match, the checksum is discarded.
  *
  * @param session Session to validate cfg against.
  * @param file file to read the path from and to check the mtime.
  *
- * @return an allocated hexstring or NULL on failure or if they're is no data.
+ * @return true if checksum read successfully.
  */
-char *rm_xattr_read_hash(RmSession *session, RmFile *file);
+gboolean rm_xattr_read_hash(RmSession *session, RmFile *file);
 
 /**
  * @brief Clear all data that may have been writen to file.

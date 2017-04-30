@@ -332,9 +332,7 @@ typedef struct RmShredTag {
     (group->session->cfg->must_match_untagged || group->session->cfg->keep_all_tagged)
 #define NEEDS_NEW(group) (group->session->cfg->min_mtime)
 
-#define HAS_CACHE(session) (session->cfg->read_cksum_from_xattr)
-
-#define NEEDS_SHADOW_HASH(cfg) \
+#define NEEDS_SHADOW_HASH(cfg)                                         \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
 /* Performance is faster with shadow hash, probably due to hash collisions in
  * large RmShredGroups */
@@ -691,7 +689,7 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
 
 static void rm_shred_write_cksum_to_xattr(const RmSession *session, RmFile *file) {
     if(session->cfg->write_cksum_to_xattr) {
-        if(file->has_ext_cksum == false) {
+        if(!file->ext_cksum) {
             rm_xattr_write_hash((RmSession *)session, file);
         }
     }
@@ -1106,28 +1104,20 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     rm_shred_group_push_file(*group, file, true);
 
     if(cfg->read_cksum_from_xattr) {
-        char *ext_cksum = rm_xattr_read_hash(session, file);
-        if(ext_cksum != NULL) {
-            file->folder->data = ext_cksum;
-        }
-    }
-
-    if(HAS_CACHE(session)) {
-        if(rm_trie_search(&cfg->file_trie, file_path)) {
-            (*group)->num_ext_cksums += 1;
-            file->has_ext_cksum = 1;
+        if(rm_xattr_read_hash(session, file)) {
+            (*group)->num_ext_cksums++;
         }
     }
 }
 
-static void rm_shred_process_group(GSList *files, RmShredTag *main) {
+static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
     /* push files to shred group */
     RmShredGroup *group = NULL;
     g_slist_foreach(files, (GFunc)rm_shred_file_preprocess, &group);
     g_slist_free(files);
 
     /* check if group has external checksums for all files */
-    if(HAS_CACHE(main->session) && group->num_files == group->num_ext_cksums) {
+    if(group->num_files == group->num_ext_cksums) {
         group->has_only_ext_cksums = true;
     }
 
@@ -1442,15 +1432,14 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
 
         RM_DEFINE_PATH(file);
 
-        char *hexstring = file->folder->data;
-
-        if(hexstring != NULL) {
-            rm_digest_update(file->digest, (unsigned char *)hexstring, strlen(hexstring));
-            rm_log_debug_line("%s=%s was read from cache.", hexstring, file_path);
+        if(file->ext_cksum != NULL) {
+            rm_digest_update(file->digest, (unsigned char *)file->ext_cksum,
+                             strlen(file->ext_cksum));
+            rm_log_debug_line("%s=%s was read from cache.", file->ext_cksum, file_path);
         } else {
             rm_log_warning_line(
                 "Unable to read external checksum from internal cache for %s", file_path);
-            file->has_ext_cksum = 0;
+            file->ext_cksum = NULL;
             group->has_only_ext_cksums = 0;
         }
     } else if(group->digest_type == RM_DIGEST_PARANOID) {
