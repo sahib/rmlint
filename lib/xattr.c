@@ -205,7 +205,7 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
         return NULL;
     }
 
-    if(g_ascii_strtoll(mtime_buf, NULL, 10) < file->mtime) {
+    if(g_ascii_strtoll(mtime_buf, NULL, 10) < (gint64)file->mtime) {
         /* Data is too old and not useful, autoclean it */
         rm_xattr_clear_hash(session, file);
         return NULL;
