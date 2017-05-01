@@ -1083,15 +1083,21 @@ static gint rm_shred_cluster_ext(RmFile *file, RmFile *prev) {
     if(prev && file->ext_cksum && prev->ext_cksum &&
        strcmp(file->ext_cksum, prev->ext_cksum) == 0) {
         /* ext_cksum match: cluster it */
+#if _RM_SHRED_DEBUG
         RM_DEFINE_PATH(file);
         RM_DEFINE_PATH(prev);
-        rm_log_debug_line("cluster %s<--%s", prev_path, file_path);
+        rm_log_debug_line("cluster %s <-- %s", prev_path, file_path);
+#endif
         rm_file_cluster_add(prev, file);
         return TRUE;
     }
 
     if(file->hardlinks) {
         /* create cluster based on files own hardlinks (does counting) */
+#if _RM_SHRED_DEBUG
+        RM_DEFINE_PATH(file);
+        rm_log_debug_line("self cluster %s", file_path);
+#endif
         rm_file_cluster_add(file, file);
     }
 
@@ -1373,7 +1379,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 
         while(file->cluster) {
             /* unbundle ext_cksum twins */
-            rm_assert_gentle(file->cluster->files.tail);
             RmFile *last = file->cluster->files.tail->data;
             rm_file_cluster_remove(last);
             if(last != file) {
