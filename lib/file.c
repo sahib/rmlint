@@ -192,6 +192,7 @@ static void rm_file_remove_from_cluster_count(RmFile *f, RmFileCluster *cluster)
 }
 
 void rm_file_cluster_add(RmFile *host, RmFile *guest) {
+    rm_assert_gentle(!guest->cluster || host==guest);
     if(!host->cluster) {
         host->cluster = g_slice_new0(RmFileCluster);
         /* note: technically not necessary (just re-zero's it)
@@ -206,6 +207,7 @@ void rm_file_cluster_add(RmFile *host, RmFile *guest) {
 }
 
 void rm_file_cluster_remove(RmFile *file) {
+    rm_assert_gentle(file->cluster);
     if(!file->cluster) {
         return;
     }

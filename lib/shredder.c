@@ -1082,7 +1082,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
 }
 
 /* if file and prev are external checksum twins then cluster file into prev */
-static gint rm_shred_cluster_ext(RmFile *file, RmFile *prev, _UNUSED gpointer user_data) {
+static gint rm_shred_cluster_ext(RmFile *file, RmFile *prev) {
     if(prev && file->ext_cksum && prev->ext_cksum &&
        strcmp(file->ext_cksum, prev->ext_cksum) == 0) {
         /* ext_cksum match: cluster it */
@@ -1134,7 +1134,20 @@ static void rm_shred_process_group(GSList *files, RmShredTag *main) {
     files = g_slist_sort(files, (GCompareFunc)rm_shred_cmp_ext_cksum);
 
     /* cluster ext_cksum twins */
-    rm_util_slist_foreach_remove(&files, (RmRFunc)rm_shred_cluster_ext, NULL);
+    for(GSList *prev = NULL, *iter = files, *next = NULL; iter; iter = next) {
+        next = iter->next;
+        if(rm_shred_cluster_ext(iter->data, prev ? prev->data : NULL)) {
+            /* delete iter from GSList */
+            g_slist_free1(iter);
+            if(prev) {
+                prev->next = next;
+            } else {
+                files = next;
+            }
+        } else {
+            prev = iter;
+        }
+    }
 
     /* push files to shred group */
     RmShredGroup *group = NULL;
