@@ -204,6 +204,10 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
+    if(cksum_hex_str == NULL || strcmp(cksum_hex_str, "")==0) {
+        return FALSE;
+    }
+
     if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) < 0) {
         /* Data is too old and not useful, autoclean it */
         rm_log_debug_line("Checksum too old for %s, %li < %li",
@@ -215,8 +219,6 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     }
 
     file->ext_cksum = g_strdup(cksum_hex_str);
-    rm_log_debug_line(
-        "Read checksum from xattr for %s: %s", file->folder->basename, file->ext_cksum);
     return TRUE;
 #else
     return FALSE;
