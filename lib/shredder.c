@@ -1371,16 +1371,13 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     for(GList *iter = group->held_files->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        if(file->cluster) {
+        while(file->cluster) {
             /* unbundle ext_cksum twins */
-            GList *next = NULL;
-            for(GList *twin = file->cluster->files.head; twin; twin = next) {
-                next = twin->next;
-                RmFile *clustered = twin->data;
-                rm_file_cluster_remove(clustered);
-                if(clustered != file) {
-                    g_queue_push_tail(group->held_files, clustered);
-                }
+            rm_assert_gentle(file->cluster->files.tail);
+            RmFile *last = file->cluster->files.tail->data;
+            rm_file_cluster_remove(last);
+            if(last != file) {
+                g_queue_push_tail(group->held_files, last);
             }
         }
 
