@@ -198,19 +198,18 @@ void rm_file_cluster_add(RmFile *host, RmFile *guest) {
         /* note: technically not necessary (just re-zero's it)
          * but still good practice in case someone refactors glib */
         g_queue_init(&host->cluster->files);
+        if (guest != host) {
+            rm_file_cluster_add(host, host);
+        }
     }
     guest->cluster = host->cluster;
     g_queue_push_tail(&host->cluster->files, guest);
-
     /* adjust cluster totals including bundled hardlinks */
     rm_file_foreach_hardlink(guest, (RmRFunc)rm_file_add_to_cluster_count, host->cluster);
 }
 
 void rm_file_cluster_remove(RmFile *file) {
     rm_assert_gentle(file->cluster);
-    if(!file->cluster) {
-        return;
-    }
 
     /* adjust cluster totals including bundled hardlinks */
     rm_file_foreach_hardlink(file, (RmRFunc)rm_file_remove_from_cluster_count,
