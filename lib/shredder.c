@@ -1116,11 +1116,6 @@ static void rm_shred_process_group(GSList *files, RmShredTag *main) {
     rm_assert_gentle(files);
     rm_assert_gentle(files->data);
 
-    if(main->session->cfg->read_cksum_from_xattr) {
-        /* load checksums from xattr */
-        g_slist_foreach(files, (GFunc)rm_xattr_read_hash, main->session);
-    }
-
     /* cluster hardlinks and ext_cksum matches;
      * Initially I over-complicated this until I realised that hardlinks
      * share common extended attributes.  So there is no need to
