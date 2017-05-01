@@ -890,9 +890,6 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->n_new += RM_FILE_N_NEW(file);
         shred_group->n_clusters++;
 
-        if(file->cluster && shred_group->unique_basename && cfg->unmatched_basenames) {
-        }
-
         rm_assert_gentle(file->hash_offset == shred_group->hash_offset);
 
         rm_shred_group_update_status(shred_group);
@@ -1112,7 +1109,7 @@ static gint rm_shred_cmp_ext_cksum(RmFile *a, RmFile *b) {
     return strcmp(a->ext_cksum, b->ext_cksum);
 }
 
-static void rm_shred_process_group(GSList *files, RmShredTag *main) {
+static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
     rm_assert_gentle(files);
     rm_assert_gentle(files->data);
 
