@@ -254,7 +254,7 @@ void rm_util_queue_push_tail_queue(GQueue *dest, GQueue *src);
  *
  * @return True if the element should be removed.
  */
-typedef gboolean (*RmRFunc)(gpointer data, gpointer user_data);
+typedef gint (*RmRFunc)(gpointer data, gpointer user_data);
 
 /**
  * @brief Iterate over a GQueue and call `func` on each element.

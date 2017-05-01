@@ -134,7 +134,7 @@ static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, 
         return false;
     }
 
-    if (self->last_original && file->hardlinks.hardlink_head == self->last_original) {
+    if (self->last_original && RM_FILE_HARDLINK_HEAD(file) == self->last_original) {
         *out = g_strdup_printf("skip_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
         *out = g_strdup_printf("cp_hardlink '%s' '%s'", dupe_escaped, orig_escaped);

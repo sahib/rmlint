@@ -513,10 +513,9 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
         return FALSE;
     }
 
-    if(head->hardlinks.is_head) {
+    if(head->hardlinks) {
         /* bundle hardlink */
-        g_queue_push_tail(head->hardlinks.files, file);
-        file->hardlinks.hardlink_head = head;
+        rm_file_hardlink_add(head, file);
     }
 
     /* remove file from inode_cluster queue */
@@ -555,8 +554,7 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
         RmFile *headfile = inode_cluster->head->data;
         if(cfg->find_hardlinked_dupes) {
             /* prepare to bundle files under the hardlink head */
-            headfile->hardlinks.files = g_queue_new();
-            headfile->hardlinks.is_head = TRUE;
+            rm_file_hardlink_add(headfile, headfile);
         }
 
         /* hardlink cluster are counted as filtered files since they are either

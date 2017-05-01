@@ -38,7 +38,7 @@
  *
  * @return 0 on sucess, some errno on failure.
  */
-int rm_xattr_write_hash(RmSession *session, RmFile *file);
+int rm_xattr_write_hash(RmFile *file, RmSession *session);
 
 /**
  * @brief Read hash as hexstring from xattrs into file->ext_cksum.
@@ -50,7 +50,7 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file);
  *
  * @return true if checksum read successfully.
  */
-gboolean rm_xattr_read_hash(RmSession *session, RmFile *file);
+gboolean rm_xattr_read_hash(RmFile *file, RmSession *session);
 
 /**
  * @brief Clear all data that may have been writen to file.
@@ -60,6 +60,6 @@ gboolean rm_xattr_read_hash(RmSession *session, RmFile *file);
  *
  * @return 0 on success, some errno on failure.
  */
-int rm_xattr_clear_hash(RmSession *session, RmFile *file);
+int rm_xattr_clear_hash(RmFile *file, RmSession *session);
 
 #endif

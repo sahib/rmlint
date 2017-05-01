@@ -154,7 +154,7 @@ static int rm_xattr_del(RmFile *file, const char *key) {
 //  ACTUAL API FUNCTIONS  //
 ////////////////////////////
 
-int rm_xattr_write_hash(RmSession *session, RmFile *file) {
+int rm_xattr_write_hash(RmFile *file, RmSession *session) {
     rm_assert_gentle(file);
     rm_assert_gentle(file->digest);
     rm_assert_gentle(session);
@@ -182,7 +182,7 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
     return 0;
 }
 
-gboolean rm_xattr_read_hash(RmSession *session, RmFile *file) {
+gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     rm_assert_gentle(file);
     rm_assert_gentle(session);
 
@@ -210,7 +210,7 @@ gboolean rm_xattr_read_hash(RmSession *session, RmFile *file) {
                           file->folder->basename,
                           g_ascii_strtoll(mtime_buf, NULL, 10),
                           (gint64)file->mtime);
-        rm_xattr_clear_hash(session, file);
+        rm_xattr_clear_hash(file, session);
         return FALSE;
     }
 
@@ -223,7 +223,7 @@ gboolean rm_xattr_read_hash(RmSession *session, RmFile *file) {
 #endif
 }
 
-int rm_xattr_clear_hash(RmSession *session, RmFile *file) {
+int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
     rm_assert_gentle(file);
     rm_assert_gentle(session);
 

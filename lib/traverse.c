@@ -169,7 +169,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
 
         if(trav_session->session->cfg->clear_xattr_fields &&
            file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-            rm_xattr_clear_hash(session, file);
+            rm_xattr_clear_hash(file, session);
         }
     }
 }
