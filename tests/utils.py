@@ -234,7 +234,7 @@ def run_rmlint_pedantic(*args, **kwargs):
         # We cannot compare checksum in all cases.
         compare_checksum = not option.startswith('--algorithm=')
 
-        if data_skip is not None and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
+        if data_skip is not None and not 'directly_return_output' in kwargs and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)
             pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
