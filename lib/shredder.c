@@ -1126,9 +1126,13 @@ static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
     files = g_slist_sort(files, (GCompareFunc)rm_shred_cmp_ext_cksum);
 
     /* cluster ext_cksum twins */
+    gboolean all_have_ext_cksums = TRUE;
     for(GSList *prev = NULL, *iter = files, *next = NULL; iter; iter = next) {
         next = iter->next;
-        if(rm_shred_cluster_ext(iter->data, prev ? prev->data : NULL)) {
+        RmFile *file = iter->data;
+        all_have_ext_cksums &= !!file->ext_cksum;
+        RmFile *prev_file = prev ? prev->data : NULL;
+        if(rm_shred_cluster_ext(file, prev_file)) {
             /* delete iter from GSList */
             g_slist_free1(iter);
             if(prev) {
@@ -1143,12 +1147,18 @@ static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
 
     /* push files to shred group */
     RmShredGroup *group = NULL;
-    g_slist_foreach(files, (GFunc)rm_shred_file_preprocess, &group);
-    g_slist_free(files);
+    RmFile *file = NULL;
+    while((file = rm_util_slist_pop(&files, NULL))) {
+        rm_shred_file_preprocess(file, &group);
+        if(all_have_ext_cksums) {
+            /* only one cluster per RmShredGroup */
+            rm_shred_group_finalise(group);
+            group = NULL;
+        }
+    }
 
-    rm_assert_gentle(group);
     /* remove group if it failed to launch (eg if only 1 file) */
-    if(group->status == RM_SHRED_GROUP_DORMANT) {
+    if(group && group->status == RM_SHRED_GROUP_DORMANT) {
         rm_shred_group_finalise(group);
     }
 }
