@@ -192,13 +192,13 @@ static void rm_file_remove_from_cluster_count(RmFile *f, RmFileCluster *cluster)
 }
 
 void rm_file_cluster_add(RmFile *host, RmFile *guest) {
-    rm_assert_gentle(!guest->cluster || host==guest);
+    rm_assert_gentle(!guest->cluster || host == guest);
     if(!host->cluster) {
         host->cluster = g_slice_new0(RmFileCluster);
         /* note: technically not necessary (just re-zero's it)
          * but still good practice in case someone refactors glib */
         g_queue_init(&host->cluster->files);
-        if (guest != host) {
+        if(guest != host) {
             rm_file_cluster_add(host, host);
         }
     }

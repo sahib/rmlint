@@ -869,7 +869,8 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             /* do some fancy footwork for cfg->unmatched_basenames criterion */
             if(shred_group->num_files == 0) {
                 shred_group->unique_basename = file;
-            } else if(shred_group->unique_basename && rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
+            } else if(shred_group->unique_basename &&
+                      rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
                 shred_group->unique_basename = NULL;
             }
             if(file->cluster) {
@@ -1295,7 +1296,8 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
 }
 
 
-static int rm_shred_sort_by_mtime(const RmFile *file_a, const RmFile *file_b, RmShredTag *tag) {
+static int rm_shred_sort_by_mtime(const RmFile *file_a, const RmFile *file_b,
+                                  RmShredTag *tag) {
     if(tag->session->cfg->mtime_window >= 0) {
         return FLOAT_SIGN_DIFF(file_a->mtime, file_b->mtime, MTIME_TOL);
     }
@@ -1313,7 +1315,8 @@ static RmShredGroup *rm_shred_create_rejects(RmShredGroup *group, RmFile *file) 
     return rejects;
 }
 
-static void rm_shred_group_transfer(RmFile *file, RmShredGroup *source, RmShredGroup *dest) {
+static void rm_shred_group_transfer(RmFile *file, RmShredGroup *source,
+                                    RmShredGroup *dest) {
     rm_shred_group_push_file(dest, file, FALSE);
     rm_assert_gentle(g_queue_remove(source->held_files, file));
     source->num_files--;
@@ -1327,16 +1330,16 @@ static RmShredGroup *rm_shred_mtime_rejects(RmShredGroup *group, RmShredTag *tag
     gdouble mtime_window = tag->session->cfg->mtime_window;
 
     if(mtime_window >= 0) {
-
         g_queue_sort(group->held_files, (GCompareDataFunc)rm_shred_sort_by_mtime, tag);
 
         for(GList *iter = group->held_files->head, *next = NULL; iter; iter = next) {
             next = iter->next;
             RmFile *curr = iter->data, *next_file = next ? next->data : NULL;
-            if (rejects) {
+            if(rejects) {
                 /* move remaining files into a new group */
                 rm_shred_group_transfer(curr, group, rejects);
-            } else if(next_file && next_file->mtime - curr->mtime > mtime_window + MTIME_TOL) {
+            } else if(next_file &&
+                      next_file->mtime - curr->mtime > mtime_window + MTIME_TOL) {
                 /* create new group for rejects */
                 rejects = rm_shred_create_rejects(group, next_file);
             }
@@ -1345,13 +1348,14 @@ static RmShredGroup *rm_shred_mtime_rejects(RmShredGroup *group, RmShredTag *tag
     return rejects;
 }
 
-
 static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *tag) {
     RmShredGroup *rejects = NULL;
-    if(tag->session->cfg->unmatched_basenames && group->status == RM_SHRED_GROUP_FINISHING) {
+    if(tag->session->cfg->unmatched_basenames &&
+       group->status == RM_SHRED_GROUP_FINISHING) {
         /* remove files which match headfile's basename */
         RmFile *headfile = group->held_files->head->data;
-        for(GList *iter = group->held_files->head->next, *next = NULL; iter; iter = next) {
+        for(GList *iter = group->held_files->head->next, *next = NULL; iter;
+            iter = next) {
             next = iter->next;
             RmFile *curr = iter->data;
             if(rm_file_basenames_cmp(curr, headfile) == 0) {
@@ -1371,7 +1375,7 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
  * maybe split out mtime rejects (--mtime-window option)
  * maybe split out basename twins (--unmatched-basename option)
  */
-static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
+static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     if(!group) {
         return;
     }
@@ -1388,7 +1392,8 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
     rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag);
 
     /* re-check whether what is left of the group still meets all criteria */
-    group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING : RM_SHRED_GROUP_DORMANT;
+    group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING
+                                                      : RM_SHRED_GROUP_DORMANT;
 
     /* find the original(s) (note this also sorts the group from highest
      * ranked to lowest ranked
@@ -1400,8 +1405,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
         rm_fmt_lock_state(tag->session->formats);
         {
             tag->session->dup_group_counter++;
-            g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals,
-                            tag->session);
+            g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals, tag->session);
         }
         rm_fmt_unlock_state(tag->session->formats);
     }
@@ -1422,7 +1426,6 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
         rm_shred_forward_to_output(tag->session, group->held_files);
     }
 
-
     if(group->status == RM_SHRED_GROUP_FINISHING) {
         group->status = RM_SHRED_GROUP_FINISHED;
     }
@@ -1433,7 +1436,6 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
     /* Do not force free files here, output module might need do that itself. */
     rm_shred_group_free(group, false);
 }
-
 
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     RmCfg *cfg = tag->session->cfg;
@@ -1480,7 +1482,6 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 
     rm_shred_group_postprocess(group, tag);
 }
-
 
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
