@@ -1210,19 +1210,6 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         return comparasion;
     }
 }
-/* Discard files with same basename as headfile.
- * (RmRFunc for rm_util_queue_foreach_remove).
- */
-static gint rm_shred_remove_basename_matches(RmFile *file, RmFile *headfile) {
-    if(file == headfile) {
-        return 0;
-    }
-    if(rm_file_basenames_cmp(file, headfile) != 0) {
-        return 0;
-    }
-    rm_shred_discard_file(file, TRUE);
-    return 1;
-}
 
 /* iterate over group to find highest ranked; return it and tag it as original    */
 /* also in special cases (eg keep_all_tagged) there may be more than one original,
@@ -1230,7 +1217,7 @@ static gint rm_shred_remove_basename_matches(RmFile *file, RmFile *headfile) {
  */
 void rm_shred_group_find_original(RmSession *session, GQueue *files,
                                   RmShredGroupStatus status) {
-    /* iterate over group, unbundling hardlinks and identifying "tagged" originals */
+    /* iterate over group, identifying "tagged" originals */
     for(GList *iter = files->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         file->is_original = false;
@@ -1256,7 +1243,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files,
         }
     }
 
-    /* sort the unbundled group */
+    /* sort the group (order probably changed since initial preprocessing sort) */
     g_queue_sort(files, (GCompareDataFunc)rm_shred_cmp_orig_criteria, session);
 
     RmFile *headfile = files->head->data;
@@ -1268,11 +1255,6 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files,
         rm_log_debug_line("tagging %s as original because it is highest ranked",
                           headfile_path);
 #endif
-    }
-    if(session->cfg->unmatched_basenames && status == RM_SHRED_GROUP_FINISHING) {
-        /* remove files which match headfile's basename */
-        rm_util_queue_foreach_remove(files, (RmRFunc)rm_shred_remove_basename_matches,
-                                     files->head->data);
     }
 }
 
@@ -1312,57 +1294,6 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
     }
 }
 
-static void rm_shred_finish_single_group(
-        GQueue *group,
-        RmShredGroupStatus status,
-        RmDigest *digest,
-        RmShredTag *tag
-    ) {
-    RmCfg *cfg = tag->session->cfg;
-
-    if(g_queue_get_length(group) == 0) {
-        return;
-    }
-
-    /* find the original(s) (note this also unbundles hardlinks and sorts
-     * the group from highest ranked to lowest ranked
-     */
-    rm_shred_group_find_original(tag->session, group, status);
-
-    /* Check if that group still qualifies to be forwarded to output.
-     * Only unique files may live in a group of size 1. */
-    RmFile *head_file = group->head->data;
-    if(g_queue_get_length(group) == 1 &&
-       head_file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
-        return;
-    }
-
-    /* Update statistics */
-    if(status == RM_SHRED_GROUP_FINISHING) {
-        rm_fmt_lock_state(tag->session->formats);
-        {
-            tag->session->dup_group_counter++;
-            g_queue_foreach(group, (GFunc)rm_shred_dupe_totals,
-                            tag->session);
-        }
-        rm_fmt_unlock_state(tag->session->formats);
-    }
-
-    /* Cache the files for merging them into directories */
-    for(GList *iter = group->head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        file->digest = digest;
-
-        if(cfg->merge_directories && status == RM_SHRED_GROUP_FINISHING) {
-            rm_tm_feed(tag->session->dir_merger, file);
-        }
-    }
-
-    if(cfg->merge_directories == false || status == RM_SHRED_GROUP_DORMANT) {
-        /* Output them directly, do not merge them first. */
-        rm_shred_forward_to_output(tag->session, group);
-    }
-}
 
 static int rm_shred_sort_by_mtime(const RmFile *file_a, const RmFile *file_b, RmShredTag *tag) {
     if(tag->session->cfg->mtime_window >= 0) {
@@ -1372,7 +1303,139 @@ static int rm_shred_sort_by_mtime(const RmFile *file_a, const RmFile *file_b, Rm
     return 0;
 }
 
+static RmShredGroup *rm_shred_create_rejects(RmShredGroup *group, RmFile *file) {
+    if(group->digest) {
+        file->digest = rm_digest_copy(group->digest);
+    }
+    RmShredGroup *rejects = rm_shred_group_new(file);
+    rejects->status = group->status;
+    rejects->parent = group->parent;
+    return rejects;
+}
+
+static void rm_shred_group_transfer(RmFile *file, RmShredGroup *source, RmShredGroup *dest) {
+    rm_shred_group_push_file(dest, file, FALSE);
+    rm_assert_gentle(g_queue_remove(source->held_files, file));
+    source->num_files--;
+    source->n_pref -= file->is_prefd;
+    source->n_npref -= !file->is_prefd;
+    source->n_new -= !file->is_new;
+}
+
+static RmShredGroup *rm_shred_mtime_rejects(RmShredGroup *group, RmShredTag *tag) {
+    RmShredGroup *rejects = NULL;
+    gdouble mtime_window = tag->session->cfg->mtime_window;
+
+    if(mtime_window >= 0) {
+
+        g_queue_sort(group->held_files, (GCompareDataFunc)rm_shred_sort_by_mtime, tag);
+
+        for(GList *iter = group->held_files->head, *next = NULL; iter; iter = next) {
+            next = iter->next;
+            RmFile *curr = iter->data, *next_file = next ? next->data : NULL;
+            if (rejects) {
+                /* move remaining files into a new group */
+                rm_shred_group_transfer(curr, group, rejects);
+            } else if(next_file && next_file->mtime - curr->mtime > mtime_window + MTIME_TOL) {
+                /* create new group for rejects */
+                rejects = rm_shred_create_rejects(group, next_file);
+            }
+        }
+    }
+    return rejects;
+}
+
+
+static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *tag) {
+    RmShredGroup *rejects = NULL;
+    if(tag->session->cfg->unmatched_basenames && group->status == RM_SHRED_GROUP_FINISHING) {
+        /* remove files which match headfile's basename */
+        RmFile *headfile = group->held_files->head->data;
+        for(GList *iter = group->held_files->head->next, *next = NULL; iter; iter = next) {
+            next = iter->next;
+            RmFile *curr = iter->data;
+            if(rm_file_basenames_cmp(curr, headfile) == 0) {
+                if(!rejects) {
+                    rejects = rm_shred_create_rejects(group, curr);
+                }
+                rm_shred_group_transfer(curr, group, rejects);
+            }
+        }
+    }
+    return rejects;
+}
+
+
+/* post-process a group:
+ * decide which file(s) are originals
+ * maybe split out mtime rejects (--mtime-window option)
+ * maybe split out basename twins (--unmatched-basename option)
+ */
+static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
+    if(!group) {
+        return;
+    }
+    RmCfg *cfg = tag->session->cfg;
+
+    rm_assert_gentle(group->held_files);
+
+    /* Features like --mtime-window require post processing, i.e. the shred group
+     * needs to be split up further by criteria like "mtime difference too high".
+     * This is done here.
+     * */
+    rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag);
+    rm_shred_group_postprocess(rm_shred_basename_rejects(group, tag), tag);
+
+    /* re-check whether what is left of the group still meets all criteria */
+    group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING : RM_SHRED_GROUP_DORMANT;
+
+    /* find the original(s) (note this also sorts the group from highest
+     * ranked to lowest ranked
+     */
+    rm_shred_group_find_original(tag->session, group->held_files, group->status);
+
+    /* Update statistics */
+    if(group->status == RM_SHRED_GROUP_FINISHING) {
+        rm_fmt_lock_state(tag->session->formats);
+        {
+            tag->session->dup_group_counter++;
+            g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals,
+                            tag->session);
+        }
+        rm_fmt_unlock_state(tag->session->formats);
+    }
+
+    for(GList *iter = group->held_files->head; iter; iter = iter->next) {
+        /* link file to its (shared) digest */
+        RmFile *file = iter->data;
+        file->digest = group->digest;
+
+        /* Cache the files for merging them into directories */
+        if(cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING) {
+            rm_tm_feed(tag->session->dir_merger, file);
+        }
+    }
+
+    if(cfg->merge_directories == false || group->status == RM_SHRED_GROUP_DORMANT) {
+        /* Output them directly, do not merge them first. */
+        rm_shred_forward_to_output(tag->session, group->held_files);
+    }
+
+
+    if(group->status == RM_SHRED_GROUP_FINISHING) {
+        group->status = RM_SHRED_GROUP_FINISHED;
+    }
+#if _RM_SHRED_DEBUG
+    rm_log_debug_line("Free from rm_shred_result_factory");
+#endif
+
+    /* Do not force free files here, output module might need do that itself. */
+    rm_shred_group_free(group, false);
+}
+
+
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
+
     /* Unbundle the hardlinks and clusters of each file to a flattened list of files */
     for(GList *iter = group->held_files->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
@@ -1405,62 +1468,9 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
         }
     }
 
-    /* Features like --mtime-window require post processing, i.e. the shred group
-     * needs to be split up further by criteria like "mtime difference too high".
-     * This is done here.
-     * */
-    GQueue *curr_group = NULL;
-    gdouble mtime_window = tag->session->cfg->mtime_window;
-
-    if(mtime_window >= 0) {
-        curr_group = g_queue_new();
-        g_queue_sort(group->held_files, (GCompareDataFunc)rm_shred_sort_by_mtime, tag);
-
-        for(GList *iter = group->held_files->head; iter; iter = iter->next) {
-            if(iter->prev == NULL) {
-                g_queue_push_tail(curr_group, iter->data);
-                continue;
-            }
-
-            RmFile *curr = iter->data, *prev = iter->prev->data;
-            if(curr->mtime - prev->mtime > mtime_window) {
-                rm_shred_finish_single_group(
-                    curr_group,
-                    group->status,
-                    group->digest,
-                    tag
-                );
-
-                g_queue_free(curr_group);
-                curr_group = g_queue_new();
-            }
-
-            g_queue_push_tail(curr_group, iter->data);
-        }
-    }
-
-    /* Finish up the last (or default) group */
-    rm_shred_finish_single_group(
-        (curr_group == NULL) ? group->held_files : curr_group,
-        group->status,
-        group->digest,
-        tag
-    );
-
-    if(curr_group) {
-        g_queue_free(curr_group);
-    }
-
-    if(group->status == RM_SHRED_GROUP_FINISHING) {
-        group->status = RM_SHRED_GROUP_FINISHED;
-    }
-#if _RM_SHRED_DEBUG
-    rm_log_debug_line("Free from rm_shred_result_factory");
-#endif
-
-    /* Do not force free files here, output module might need do that itself. */
-    rm_shred_group_free(group, false);
+    rm_shred_group_postprocess(group, tag);
 }
+
 
 /////////////////////////////////
 //    ACTUAL IMPLEMENTATION    //
