@@ -18,4 +18,5 @@ script:
     - scons config
     - export RM_TS_PRINT_CMD=1
     - export RM_TS_PEDANTIC=0
+    - export RM_TS_USE_GDB=1
     - sudo -E nosetests3 -s -v -a '!slow'

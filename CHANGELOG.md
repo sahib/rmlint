@@ -4,13 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.5.0 Penetrating Pineapple] -- [unreleased]
+## [2.6.0 Penetrating Pineapple] -- [unreleased]
 
 ### Fixed
 
 * Do not chmod +x files that exist already (previous versions tried to +x e.g. /dev/null)
 * Support anonymous pipes in the sh formatter (Supported now: rmlint -o sh:>(cat))
-* Documentation should look a bit cleaner now.
+* Documentation should look a bit cleaner now (new font, asciinema video).
 * Fixed a crash when a file was clamped to a size of 0.
 * Fixed a rounding error bug that can happen while sorting mtimes.
 * Fixed the slightly broken --mtime-window option (was too permissive in rare cases)
