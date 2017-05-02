@@ -1410,18 +1410,19 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
         rm_fmt_unlock_state(tag->session->formats);
     }
 
+    gboolean treemerge = cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING;
     for(GList *iter = group->held_files->head; iter; iter = iter->next) {
         /* link file to its (shared) digest */
         RmFile *file = iter->data;
         file->digest = group->digest;
 
         /* Cache the files for merging them into directories */
-        if(cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING) {
+        if(treemerge) {
             rm_tm_feed(tag->session->dir_merger, file);
         }
     }
 
-    if(cfg->merge_directories == false || group->status == RM_SHRED_GROUP_DORMANT) {
+    if(!treemerge) {
         /* Output them directly, do not merge them first. */
         rm_shred_forward_to_output(tag->session, group->held_files);
     }
