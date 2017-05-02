@@ -3,7 +3,6 @@ install:
     - sudo apt-get update
     - sudo apt-get install python3-sphinx python3-nose gettext python3-setuptools 
     - sudo apt-get install libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev
-    - sudo apt-get install gdb
 
 compiler:
   - clang
@@ -19,5 +18,4 @@ script:
     - scons config
     - export RM_TS_PRINT_CMD=1
     - export RM_TS_PEDANTIC=0
-    - export RM_TS_USE_GDB=1
     - sudo -E nosetests3 -s -v -a '!slow'
