@@ -1383,8 +1383,9 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
      * needs to be split up further by criteria like "mtime difference too high".
      * This is done here.
      * */
-    rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag);
+    rm_shred_group_find_original(tag->session, group->held_files, group->status);
     rm_shred_group_postprocess(rm_shred_basename_rejects(group, tag), tag);
+    rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag);
 
     /* re-check whether what is left of the group still meets all criteria */
     group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING : RM_SHRED_GROUP_DORMANT;
@@ -1426,7 +1427,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
         group->status = RM_SHRED_GROUP_FINISHED;
     }
 #if _RM_SHRED_DEBUG
-    rm_log_debug_line("Free from rm_shred_result_factory");
+    rm_log_debug_line("Free from rm_shred_group_postprocess");
 #endif
 
     /* Do not force free files here, output module might need do that itself. */
