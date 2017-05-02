@@ -1436,6 +1436,15 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag){
 
 
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
+    RmCfg *cfg = tag->session->cfg;
+
+    /* maybe create group's digest from external checksums */
+    RmFile *headfile = group->held_files->head->data;
+    char *cksum = headfile->ext_cksum;
+    if(cksum && !group->digest) {
+        group->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
+        rm_digest_update(group->digest, (unsigned char *)cksum, strlen(cksum));
+    }
 
     /* Unbundle the hardlinks and clusters of each file to a flattened list of files */
     for(GList *iter = group->held_files->head; iter; iter = iter->next) {
