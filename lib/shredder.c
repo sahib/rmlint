@@ -869,7 +869,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             /* do some fancy footwork for cfg->unmatched_basenames criterion */
             if(shred_group->num_files == 0) {
                 shred_group->unique_basename = file;
-            } else if(rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
+            } else if(shred_group->unique_basename && rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
                 shred_group->unique_basename = NULL;
             }
             if(file->cluster) {
