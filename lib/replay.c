@@ -211,10 +211,9 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     /* Fix the hardlink relationship */
     JsonNode *hardlink_of = json_object_get_member(object, "hardlink_of");
     if(hardlink_of != NULL) {
-        file->hardlinks.is_head = false;
-        file->hardlinks.hardlink_head = polly->last_original;
+        rm_file_hardlink_add(polly->last_original, file);
     } else {
-        file->hardlinks.is_head = true;
+        rm_assert_gentle(!file->hardlinks);
     }
 
     return file;
@@ -409,7 +408,7 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
         if(!file->is_original) {
             session->dup_counter += 1;
 
-            if(!RM_IS_BUNDLED_HARDLINK(file)) {
+            if(!RM_FILE_IS_HARDLINK(file)) {
                 session->total_lint_size += file->actual_file_size;
             }
         }

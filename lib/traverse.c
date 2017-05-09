@@ -167,9 +167,13 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
         g_atomic_int_add(&trav_session->session->total_files, 1);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
-        if(trav_session->session->cfg->clear_xattr_fields &&
-           file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-            rm_xattr_clear_hash(session, file);
+        if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+            if(cfg->clear_xattr_fields) {
+                rm_xattr_clear_hash(file, session);
+            }
+            if(cfg->read_cksum_from_xattr) {
+                rm_xattr_read_hash(file, session);
+            }
         }
     }
 }

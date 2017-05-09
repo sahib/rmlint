@@ -427,17 +427,8 @@ Caching
     Read or write cached checksums from the extended file attributes.
     This feature can be used to speed up consecutive runs.
 
-    **CAUTION:** This is a potentially unsafe feature. The cache file might be
-    changed accidentally, potentially causing ``rmlint`` to report false
-    positives. As a security feature the `mtime` of each cached file is checked
-    against the `mtime` of the time the checksum was created.
-
-    **NOTE:** The speedup you may experience may vary wildly. In some cases the
-    parsing of the json file might take longer than the actual hashing. Also,
-    the cached json file will not be of use when doing many modifications
-    between the runs, i.e. causing an update of `mtime` on most files. This
-    feature is mostly intended for large datasets in order to prevent the
-    re-hashing of large files.
+    **CAUTION:** This could potentially lead to false positives if file contents are
+    somehow modified without changing the file mtime.
 
     **NOTE:** Many tools do not support extended file attributes properly,
     resulting in a loss of the information when copying the file or editing it.

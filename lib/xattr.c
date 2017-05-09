@@ -154,13 +154,13 @@ static int rm_xattr_del(RmFile *file, const char *key) {
 //  ACTUAL API FUNCTIONS  //
 ////////////////////////////
 
-int rm_xattr_write_hash(RmSession *session, RmFile *file) {
+int rm_xattr_write_hash(RmFile *file, RmSession *session) {
     rm_assert_gentle(file);
     rm_assert_gentle(file->digest);
     rm_assert_gentle(session);
 
 #if HAVE_XATTR
-    if(file->has_ext_cksum || session->cfg->write_cksum_to_xattr == false) {
+    if(file->ext_cksum || session->cfg->write_cksum_to_xattr == false) {
         return EINVAL;
     }
 
@@ -168,14 +168,13 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
         cksum_hex_str[rm_digest_get_bytes(file->digest) * 2 + 1], timestamp[64] = {0};
 
     int timestamp_bytes = 0;
-    double actual_time_sec = difftime(file->mtime, 0);
 
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
        rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str)) ||
        (timestamp_bytes = snprintf(
-            timestamp, sizeof(timestamp), "%lld", (long long)actual_time_sec)) == -1 ||
+            timestamp, sizeof(timestamp), "%.9f", file->mtime)) == -1 ||
        rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)) {
         return errno;
     }
@@ -183,13 +182,13 @@ int rm_xattr_write_hash(RmSession *session, RmFile *file) {
     return 0;
 }
 
-char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
+gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     rm_assert_gentle(file);
     rm_assert_gentle(session);
 
 #if HAVE_XATTR
     if(session->cfg->read_cksum_from_xattr == false) {
-        return NULL;
+        return FALSE;
     }
 
     char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
@@ -202,25 +201,31 @@ char *rm_xattr_read_hash(RmSession *session, RmFile *file) {
        rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
-        return NULL;
+        return FALSE;
     }
 
-    if(g_ascii_strtoll(mtime_buf, NULL, 10) < file->mtime) {
+    if(cksum_hex_str == NULL || strcmp(cksum_hex_str, "")==0) {
+        return FALSE;
+    }
+
+    if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) < 0) {
         /* Data is too old and not useful, autoclean it */
-        rm_xattr_clear_hash(session, file);
-        return NULL;
+        rm_log_debug_line("Checksum too old for %s, %li < %li",
+                          file->folder->basename,
+                          g_ascii_strtoll(mtime_buf, NULL, 10),
+                          (gint64)file->mtime);
+        rm_xattr_clear_hash(file, session);
+        return FALSE;
     }
 
-    /* remember, this file is special. A unicorn amongst files. */
-    file->has_ext_cksum = true;
-
-    return g_strdup(cksum_hex_str);
+    file->ext_cksum = g_strdup(cksum_hex_str);
+    return TRUE;
 #else
-    return NULL;
+    return FALSE;
 #endif
 }
 
-int rm_xattr_clear_hash(RmSession *session, RmFile *file) {
+int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
     rm_assert_gentle(file);
     rm_assert_gentle(session);
 

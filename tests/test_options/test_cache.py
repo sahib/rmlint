@@ -15,7 +15,13 @@ def create_files():
 
     # Different content and size
     create_file('a' * 3, '3.a')
-    create_file('a' * 4, '3.a')
+    create_file('a' * 4, '3.a_')
+
+    # Size group that will generate ext_cksums for all files
+    create_file('b' * 2, '4.a')
+    create_file('b' * 2, '4.b')
+    create_file('c' * 2, '4.c')
+    create_file('c' * 2, '4.d')
 
     # duplicate_dirs + with --write_unfinished
     create_file('x', 'dir_a/1')
@@ -39,10 +45,14 @@ def check(data, write_cache):
     assert path_in('dir_a', dupe_trees)
     assert path_in('dir_b', dupe_trees)
 
-    assert len(dupe_files) == 3
+    assert len(dupe_files) == 7
     assert path_in('2.a', dupe_files)
     assert path_in('2.a_', dupe_files)
     assert path_in('1.a', dupe_files)
+    assert path_in('4.a', dupe_files)
+    assert path_in('4.b', dupe_files)
+    assert path_in('4.c', dupe_files)
+    assert path_in('4.d', dupe_files)
 
 
 @with_setup(usual_setup_func, usual_teardown_func)

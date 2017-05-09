@@ -311,7 +311,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
             rm_fmt_json_sep(self, out);
 
             if(session->cfg->find_hardlinked_dupes) {
-                RmFile *hardlink_head = file->hardlinks.hardlink_head;
+                RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
 
                 if(hardlink_head && hardlink_head != file) {
                     char orig_checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];

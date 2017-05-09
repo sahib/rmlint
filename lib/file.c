@@ -69,6 +69,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
     self->mtime = rm_sys_stat_mtime_float(statp);
+    self->is_new = (self->mtime >= cfg->min_mtime);
 
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
         if(cfg->use_absolute_end_offset) {
@@ -108,14 +109,15 @@ void rm_file_build_path(RmFile *file, char *buf) {
 }
 
 void rm_file_destroy(RmFile *file) {
-    if(file->hardlinks.is_head && file->hardlinks.files) {
-        g_queue_free_full(file->hardlinks.files, (GDestroyNotify)rm_file_destroy);
+    if(file->hardlinks) {
+        g_queue_remove(file->hardlinks, file);
+        if(file->hardlinks->length == 0) {
+            g_queue_free(file->hardlinks);
+        }
     }
 
-    // TODO: Make this more generic.
-    /* --xattr-read can write cksums in here */
-    if(file->folder && file->folder->data) {
-        g_free(file->folder->data);
+    if(file->ext_cksum) {
+        g_free(file->ext_cksum);
     }
 
     if(file->free_digest) {
@@ -155,4 +157,79 @@ RmLintType rm_file_string_to_lint_type(const char *type) {
 
 gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
     return g_ascii_strcasecmp(file_a->folder->basename, file_b->folder->basename);
+}
+
+void rm_file_hardlink_add(RmFile *head, RmFile *link) {
+    if(!head->hardlinks) {
+        head->hardlinks = g_queue_new();
+    }
+    link->hardlinks = head->hardlinks;
+    g_queue_push_tail(head->hardlinks, link);
+}
+
+static gint rm_file_foreach_hardlink(RmFile *f, RmRFunc func, gpointer user_data) {
+    if(!f->hardlinks) {
+        return func(f, user_data);
+    }
+
+    gint result = 0;
+    for(GList *iter = f->hardlinks->head; iter; iter = iter->next) {
+        result += func(iter->data, user_data);
+    }
+    return result;
+}
+
+static void rm_file_add_to_cluster_count(RmFile *f, RmFileCluster *cluster) {
+    cluster->num_prefd += f->is_prefd;
+    cluster->num_new += f->is_new;
+    cluster->num_files += 1;
+}
+
+static void rm_file_remove_from_cluster_count(RmFile *f, RmFileCluster *cluster) {
+    cluster->num_prefd -= f->is_prefd;
+    cluster->num_new -= f->is_new;
+    cluster->num_files -= 1;
+}
+
+void rm_file_cluster_add(RmFile *host, RmFile *guest) {
+    rm_assert_gentle(!guest->cluster || host == guest);
+    if(!host->cluster) {
+        host->cluster = g_slice_new0(RmFileCluster);
+        /* note: technically not necessary (just re-zero's it)
+         * but still good practice in case someone refactors glib */
+        g_queue_init(&host->cluster->files);
+        if(guest != host) {
+            rm_file_cluster_add(host, host);
+        }
+    }
+    guest->cluster = host->cluster;
+    g_queue_push_tail(&host->cluster->files, guest);
+    /* adjust cluster totals including bundled hardlinks */
+    rm_file_foreach_hardlink(guest, (RmRFunc)rm_file_add_to_cluster_count, host->cluster);
+}
+
+void rm_file_cluster_remove(RmFile *file) {
+    rm_assert_gentle(file->cluster);
+
+    /* adjust cluster totals including bundled hardlinks */
+    rm_file_foreach_hardlink(file, (RmRFunc)rm_file_remove_from_cluster_count,
+                             file->cluster);
+
+    g_queue_remove(&file->cluster->files, file);
+    if(file->cluster->files.length == 0) {
+        g_slice_free(RmFileCluster, file->cluster);
+    }
+    file->cluster = NULL;
+}
+
+gint rm_file_foreach(RmFile *f, RmRFunc func, gpointer user_data) {
+    if(!f->cluster) {
+        return rm_file_foreach_hardlink(f, func, user_data);
+    }
+
+    gint result = 0;
+    for(GList *iter = f->cluster->files.head; iter; iter = iter->next) {
+        result += rm_file_foreach_hardlink(iter->data, func, user_data);
+    }
+    return result;
 }
