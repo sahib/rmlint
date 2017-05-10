@@ -1580,6 +1580,12 @@ int rm_cmd_main(RmSession *session) {
         session->dir_merger = rm_tm_new(session);
     }
 
+	if(session->total_files < 2 && session->cfg->run_equal_mode) {
+		rm_log_warning_line("Not enough files for --equal (need at least two to compare)");
+		return EXIT_FAILURE;
+	}
+
+
     if(session->total_files >= 1) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);

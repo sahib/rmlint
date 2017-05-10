@@ -205,6 +205,18 @@ General Options
     A set of paths given on the commandline or from *stdin* is hashed using one
     of the available hash algorithms.  Use ``rmlint --hash -h`` to see options.
 
+:``--equal``:
+
+    Check if the paths given on the commandline all have equal content. If all paths
+    are equal and no other error happened, rmlint will exit with an exit code 0.
+    Otherwise it will exit with a nonzero exit code. All other options can be used
+    as normal, but note that no other formatters will be executed by default.
+
+    Note: This even works for directories and also in combination with
+    paranoid; note that rmlint does not care about the layout of the directory,
+    but only about the content of the files in it. At least two paths need to
+    be given to the commandline.
+
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them.
