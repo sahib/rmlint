@@ -24,6 +24,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Support for GNU Hurd (well, at least it compiles :)
 * New "-o stats" formatter that prints some statistics about the run.
 * Progressbar now additionally shows an ETA time (how long rmlint will probably run)
+* A new ``--equal`` option that works like the ``cmp`` utility, but supports directories.
 
 ### Changed
 
