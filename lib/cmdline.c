@@ -1577,6 +1577,16 @@ int rm_cmd_main(RmSession *session) {
 
     if(cfg->merge_directories) {
         rm_assert_gentle(cfg->cache_file_structs);
+
+		/* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
+		 * on two dupicate directories which is likely not a valid assumption. */
+		const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
+		const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
+		if((handler_key != NULL && strstr(handler_key, "clone") != NULL) || clone_key != NULL) {
+			rm_log_error_line(_("Using -D together with -c sh:clone is currently not possible. Sorry."));
+			return EXIT_FAILURE;
+		}
+
         session->dir_merger = rm_tm_new(session);
     }
 
