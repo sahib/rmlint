@@ -88,8 +88,9 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, 
 
     cmd += [
         './rmlint', target_dir, '-V',
+    ] + shlex.split(' '.join(args)) + [
         '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
-    ] + shlex.split(' '.join(args))
+    ]
 
     for idx, output in enumerate(outputs or []):
         cmd.append('-o')
