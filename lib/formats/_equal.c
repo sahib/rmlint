@@ -63,6 +63,7 @@ static void rm_fmt_elem(
 		/* We do not want to handle unique files here.
 		 * If it is unique, it will be not equal...
 		 * */
+		self->mismatch_found = true;
 		return;
 	}
 
