@@ -145,7 +145,7 @@ cp_reflink() {
             if [ -d "$1" ]; then
                 rm -rf "$1"
             fi
-            cp --reflink=always "$2" "$1"
+            cp --archive --reflink=always "$2" "$1"
             touch -mr "$0" "$1"
         fi
     fi
