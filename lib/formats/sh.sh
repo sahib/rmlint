@@ -99,7 +99,7 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if cmp -s "$1" "$2"; then
+        if rmlint -p --equal "$1" "$2"; then
             return 0
         else
             echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET

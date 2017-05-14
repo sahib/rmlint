@@ -137,6 +137,10 @@ typedef struct RmSession {
 
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];
+
+	/*  When run with --equal this holds the exit code for rmlint
+	 *  (the exit code is determined by the _equal formatter) */
+	int equal_exit_code;
 } RmSession;
 
 /**

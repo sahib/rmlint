@@ -27,6 +27,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Progressbar now additionally shows an ETA time (how long rmlint will probably run)
 * New option ``--honour-dir-layout (-j)`` that makes ``--merge-directories (-D)``
   also check if the directory layout is the same.
+* A new ``--equal`` option that works like the ``cmp`` utility, but supports directories.
 
 ### Changed
 

@@ -142,6 +142,12 @@ typedef struct RmCfg {
      * the end of the program run and printed then.
      */
     gboolean cache_file_structs;
+
+	/* Instead of running in duplicate detection mode,
+	 * check if the passed arguments are equal files
+	 * (or directories)
+	 */
+	gboolean run_equal_mode;
 } RmCfg;
 
 /**

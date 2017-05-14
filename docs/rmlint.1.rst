@@ -129,6 +129,7 @@ General Options
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
+    Use ``-pp`` if you want byte-by-byte comparison without any hashing.
 
     * **-p** is equivalent to **--algorithm=sha512**
     * **-pp** is equivalent to **--algorithm=paranoid**
@@ -157,8 +158,17 @@ General Options
     always should make sure that the investigated directory is not modified
     during ``rmlint``'s or its removal scripts run.
 
-    Output is deferred until all duplicates were found.
-    Duplicate directories are printed first, followed by any remaining duplicate files.
+    IMPORTANT: Definition of equal: Two directories are considered equal by
+    ``rmlint`` if they contain the exact same data, no matter how are the files
+    contaning the data are named. Imagine that ``rmlint`` creates a long,
+    sorted stream out of the data found in the directory and compares this in
+    a magic way. This means that the layout of the directory is not considered
+    to be important by ``rmlint``. This might be surprising to some users, but
+    remember that ``rmlint`` generally cares only about content, not about any
+    other metadata or layout.
+
+    Output is deferred until all duplicates were found. Duplicate directories
+    are printed first, followed by any remaining duplicate files.
 
     **--rank-by** applies for directories too, but 'p' or 'P' (path index)
     has no defined (i.e. useful) meaning. Sorting takes only place when the number of
@@ -169,8 +179,11 @@ General Options
     * This option enables ``--partial-hidden`` and ``-@`` (``--see-symlinks``)
       for convenience. If this is not desired, you should change this after
       specifying ``-D``.
-    * This feature might not deliver perfect result in corner cases.
-    * This feature might add some runtime.
+    * This feature might not deliver perfect result in corner cases, but
+      should never report false positives.
+    * This feature might add some runtime for large datasets.
+    * When using this option, you will not be able to use the ``-c sh:clone`` option.
+      Use ``-c sh:link`` as a good alternative.
 
 :``-j --honour-dir-layout`` (**default\:** *disabled*):
 
@@ -203,14 +216,30 @@ General Options
     See also: http://rmlint.readthedocs.org/en/latest/gui.html
 
     The gui has its own set of options, see ``--gui --help`` for a list.  These
-    should be placed at the end, ie ``rmlint --gui [options]``
+    should be placed at the end, ie ``rmlint --gui [options]`` when calling
+    it from commandline.
 
 :``--hash``:
 
     Make ``rmlint`` work as a multi-threaded file hash utility, similar to the
-    popular ``md5sum`` or ``sha1sum`` utilities, but faster.
+    popular ``md5sum`` or ``sha1sum`` utilities, but faster and with more algorithms.
     A set of paths given on the commandline or from *stdin* is hashed using one
     of the available hash algorithms.  Use ``rmlint --hash -h`` to see options.
+
+:``--equal``:
+
+    Check if the paths given on the commandline all have equal content. If all
+    paths are equal and no other error happened, rmlint will exit with an exit
+    code 0. Otherwise it will exit with a nonzero exit code. All other options
+    can be used as normal, but note that no other formatters (``sh``, ``csv``
+    etc.) will be executed by default.
+
+    Note: This even works for directories and also in combination with paranoid
+    mode (pass ``-pp`` for byte comparison); remember that rmlint does not care
+    about the layout of the directory, but only about the content of the files
+    in it. At least two paths need to be given to the commandline.
+
+    By default this will use hashing to compare the files and/or directories.
 
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
@@ -255,7 +284,7 @@ Traversal Options
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
-    ``-f`` will always follow symbolic links. If file system loops occur
+    ``-f`` will always follow symbolic links. If file system loops occurs
     ``rmlint`` will detect this. If `-F` is specified, symbolic links will be
     ignored completely, if ``-@`` is specified, ``rmlint`` will see symlinks and
     treats them like small files with the path to their target in them. The
@@ -264,8 +293,8 @@ Traversal Options
 
 :``-x --no-crossdev`` / ``-X --crossdev`` (**default**):
 
-    Stay always on the same device (``-x``),
-    or allow crossing mountpoints (``-X``)?
+    Stay always on the same device (``-x``), or allow crossing mountpoints
+    (``-X``). The latter is the default.
 
 :``-r --hidden`` / ``-R --no-hidden`` (**default**) / ``--partial-hidden``:
 
@@ -288,14 +317,13 @@ Traversal Options
 
     Only consider those files as dupes that have the same file extension. For
     example two photos would only match if they are a ``.png``. The extension is
-    compared case insensitive, so ``.PNG`` is the same as ``.png``.
+    compared case-insensitive, so ``.PNG`` is the same as ``.png``.
 
 :``-i --match-without-extension`` / ``-I --no-match-without-extension`` (**default**):
 
     Only consider those files as dupes that have the same basename minus the file
     extension. For example: ``banana.png`` and ``banana.jpeg`` would be considered,
-    while ``apple.png`` and ``peach.png`` won't. The comparison is also
-    case-insensitive.
+    while ``apple.png`` and ``peach.png`` won't. The comparison is case-insensitive.
 
 :``-n --newer-than-stamp=<timestamp_filename>`` / ``-N --newer-than=<iso8601_timestamp_or_unix_timestamp>``:
 
@@ -309,11 +337,12 @@ Traversal Options
     If the file does not initially exist, no filtering is done but the stampfile
     is still written.
 
-    ``-N`` in contrast takes the timestamp directly and will not write anything.
+    ``-N``, in contrast, takes the timestamp directly and will not write anything.
 
-    Note that ``rmlint`` will find duplicates newer than ``timestamp``, even if the original is
-    older.  If you want only find duplicates where both original and duplicate are newer
-    than ``timestamp`` you can use ``find(1)``:
+    Note that ``rmlint`` will find duplicates newer than ``timestamp``, even if
+    the original is older.  If you want only find duplicates where both
+    original and duplicate are newer than ``timestamp`` you can use
+    ``find(1)``:
 
     * ``find -mtime -1 | rmlint - # find all files younger than a day``
 
@@ -340,9 +369,10 @@ Original Detection Options
 
     Sort the files in a group of duplicates into originals and duplicates by
     one or more criteria. Each criteria is defined by a single letter (except
-    **r** and **x**). Multiple criteria may be given as string, where the
-    first criteria is the most important. If one criteria cannot decide between
-    original and duplicate the next one is tried.
+    **r** and **x** which expect a regex pattern after the letter). Multiple
+    criteria may be given as string, where the first criteria is the most
+    important. If one criteria cannot decide between original and duplicate the
+    next one is tried.
 
     - **m**: keep lowest mtime (oldest)           **M**: keep highest mtime (newest)
     - **a**: keep first alphabetically            **A**: keep last alphabetically
@@ -676,6 +706,10 @@ This is a collection of common usecases and other tricks:
   also in *data*. Do not delete any files in *data*:
 
   ``$ rmlint backup // data --keep-all-tagged --must-match-tagged``
+
+* Compare if the directories a b c and are equal
+
+  ``$ rmlint --equal a b c; echo $?  # Will print 0 if they are equal``
 
 PROBLEMS
 ========

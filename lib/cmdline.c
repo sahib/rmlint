@@ -1191,6 +1191,16 @@ static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
     return true;
 }
 
+static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED GError **error) {
+	rm_cmd_parse_merge_directories(NULL, NULL, session, error);
+    session->cfg->run_equal_mode = true;
+    rm_fmt_clear(session->formats);
+    rm_fmt_add(session->formats, "_equal", "stdout");
+    return true;
+}
+
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -1320,6 +1330,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
         {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
         {"replay"   , 'Y' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(replay)   , _("Re-output a json file")                , "path/to/rmlint.json"} ,
+        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)    , _("Test for equality of PATHS")           , "PATHS"}           ,
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
@@ -1567,7 +1578,7 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->mounts == NULL) {
-        rm_log_debug_line("No mount table created.");
+       rm_log_debug_line("No mount table created.");
     }
 
     session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
@@ -1579,8 +1590,31 @@ int rm_cmd_main(RmSession *session) {
 
     if(cfg->merge_directories) {
         rm_assert_gentle(cfg->cache_file_structs);
+
+		/* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
+		 * on two dupicate directories which is likely not a valid assumption.
+         * Emit a warning if the raw -D is used in conjunction with that.
+         * */
+		const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
+		const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
+		if(
+            cfg->honour_dir_layout == false && (
+                (handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
+                clone_key != NULL
+            )
+        ) {
+			rm_log_error_line(_("Using -D together with -c sh:clone is currently not possible. Sorry."));
+            rm_log_error_line(_("Either do not use -D, or attempt to run again with -Dj."));
+			return EXIT_FAILURE;
+		}
+
         session->dir_merger = rm_tm_new(session);
     }
+
+	if(session->total_files < 2 && session->cfg->run_equal_mode) {
+		rm_log_warning_line(_("Not enough files for --equal (need at least two to compare)"));
+		return EXIT_FAILURE;
+	}
 
     if(session->total_files >= 1) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
@@ -1619,6 +1653,10 @@ int rm_cmd_main(RmSession *session) {
                           session->shred_files_remaining);
         exit_state = EXIT_FAILURE;
     }
+
+	if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode)  {
+		return session->equal_exit_code;
+	}
 
     return exit_state;
 }
