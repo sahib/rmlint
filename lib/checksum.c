@@ -976,3 +976,16 @@ void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
     }
     g_async_queue_push(target->paranoid->incoming_twin_candidates, candidate);
 }
+
+guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *out_len) {
+    RmDigest *digest = rm_digest_new(algo, 0, 0, 0, false);
+    rm_digest_update(digest, data, len);
+
+    guint8 *buf = rm_digest_steal(digest);
+    if(out_len != NULL) {
+        *out_len = digest->bytes;
+    }
+
+    rm_digest_free(digest);
+    return buf;
+}

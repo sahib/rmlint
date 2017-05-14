@@ -75,6 +75,7 @@ typedef struct RmCfg {
     gboolean match_with_extension;
     gboolean match_without_extension;
     gboolean merge_directories;
+    gboolean honour_dir_layout;
     gboolean write_cksum_to_xattr;
     gboolean read_cksum_from_xattr;
     gboolean clear_xattr_fields;

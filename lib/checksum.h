@@ -257,6 +257,15 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer);
 guint8 *rm_digest_steal(RmDigest *digest);
 
 /**
+ * @brief Hash `length` bytes of `data` with the algorithm `algo`.
+ *
+ * @return a newly allocated checksum with the length of *out_len.
+ *           Free with g_slice_free1
+ **/
+guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *out_len);
+
+
+/**
  * @brief Hash a Digest, suitable for GHashTable.
  *
  * For RM_DIGEST_PARANOID this is basically the same

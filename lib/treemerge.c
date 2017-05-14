@@ -188,6 +188,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
 
     if(*path_vec == NULL) {
         rm_log_error("No paths passed to rm_tm_count_files\n");
+        g_free(path_vec);
         return false;
     }
 
@@ -207,6 +208,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
     FTS *fts = fts_open(path_vec, fts_flags, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
+        g_free(path_vec);
         return false;
     }
 
@@ -252,6 +254,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
 
     if(fts_close(fts) != 0) {
         rm_log_perror("fts_close failed");
+        g_free(path_vec);
         return false;
     }
 
@@ -271,6 +274,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
     }
 
     rm_trie_destroy(&file_tree);
+    g_free(path_vec);
     return true;
 }
 
@@ -411,13 +415,7 @@ static guint rm_directory_hash(const RmDirectory *d) {
     return rm_digest_hash(d->digest) ^ d->dupe_count;
 }
 
-static int rm_directory_add(RmDirectory *directory, RmFile *file) {
-    /* Update the directorie's hash with the file's hash
-       Since we cannot be sure in which order the files come in
-       we have to add the hash cummulatively.
-     */
-    int new_dupes = 0;
-
+static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile *file) {
     rm_assert_gentle(file);
     rm_assert_gentle(file->digest);
     rm_assert_gentle(directory);
@@ -433,25 +431,36 @@ static int rm_directory_add(RmDirectory *directory, RmFile *file) {
         digest_bytes = file->digest->bytes;
     }
 
-    /* + and not XOR, since ^ would yield 0 for same hashes always. No matter
-     * which hashes. Also this would be confusing. For me and for debuggers.
+    /* Update the directorie's hash with the file's hash
+       Since we cannot be sure in which order the files come in
+       we have to add the hash cummulatively.
      */
     rm_digest_update(directory->digest, file_digest, digest_bytes);
+
+    /* Add the path to the checksum if we require the same layout too */
+    if(self->session->cfg->honour_dir_layout) {
+        const char *basename = file->folder->basename;
+        gsize basename_cksum_len = 0;
+        guint8 *basename_cksum = rm_digest_sum(
+                RM_DIGEST_BLAKE2B,
+                (const guint8 *)basename,
+                strlen(basename) + 1,  /* include the nul-byte */
+                &basename_cksum_len
+        );
+        rm_digest_update(directory->digest, basename_cksum, basename_cksum_len);
+        g_slice_free1(basename_cksum_len, basename_cksum);
+    }
+
+    g_slice_free1(digest_bytes, file_digest);
 
     /* The file value is not really used, but we need some non-null value */
     g_hash_table_add(directory->hash_set, file->digest);
 
-    g_slice_free1(digest_bytes, file_digest);
-
-    new_dupes += 1 + RM_FILE_HARDLINK_COUNT(file);
-
-    directory->dupe_count += new_dupes;
+    directory->dupe_count += 1 + RM_FILE_HARDLINK_COUNT(file);
     directory->prefd_files += file->is_prefd;
-
-    return new_dupes;
 }
 
-static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
+static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent, RmDirectory *subdir) {
     if(subdir->was_merged) {
         return;
     }
@@ -477,6 +486,21 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
     unsigned char *subdir_cksum = rm_digest_steal(subdir->digest);
     rm_digest_update(parent->digest, subdir_cksum, subdir->digest->bytes);
     g_slice_free1(subdir->digest->bytes, subdir_cksum);
+
+    if(self->session->cfg->honour_dir_layout) {
+        char *basename = g_path_get_basename(subdir->dirname);
+        gsize basename_cksum_len = 0;
+        guint8* basename_cksum = rm_digest_sum(
+                RM_DIGEST_BLAKE2B,
+                (const guint8 *)basename,
+                strlen(basename) + 1,  /* include the nul-byte */
+                &basename_cksum_len
+        );
+
+        rm_digest_update(parent->digest, basename_cksum, basename_cksum_len);
+        g_slice_free1(basename_cksum_len, basename_cksum);
+        g_free(basename);
+    }
 
     subdir->was_merged = true;
 }
@@ -576,7 +600,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     }
 
     g_queue_push_tail(self->free_list, file);
-    rm_directory_add(directory, file);
+    rm_directory_add(self, directory, file);
 
     /* Add the file to this directory */
     g_queue_push_head(&directory->known_files, file);
@@ -871,7 +895,7 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
         g_free(parent_dir);
     }
 
-    rm_directory_add_subdir(parent, directory);
+    rm_directory_add_subdir(self, parent, directory);
 
     if(parent->dupe_count == parent->file_count && parent->file_count > 0) {
         rm_tm_insert_dir(self, parent);

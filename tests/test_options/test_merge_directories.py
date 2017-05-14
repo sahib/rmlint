@@ -406,3 +406,25 @@ def test_equal_content_different_layout():
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("tree-b")
     assert data[1]["is_original"] is False
+
+    # Now, try to honour the layout
+    head, *data, footer = run_rmlint('-pp -Dj --rank-by a')
+    for point in data:
+        assert point["type"] == "duplicate_file"
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_nested_content_with_same_layout():
+    create_nested('deep', 'xyzabc')
+    create_nested('deep', 'uvwabc')
+
+    head, *data, footer = run_rmlint('-Dj --rank-by a')
+
+    assert len(data) == 10
+    assert data[0]["path"].endswith("deep/u/v/w")
+    assert data[1]["path"].endswith("deep/x/y/z")
+
+    # No need to test again what the functions above already test,
+    # just check if those are duplicate files as expected.
+    for point in data[2:]:
+        assert point["type"] == "duplicate_file"

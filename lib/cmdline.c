@@ -1073,7 +1073,7 @@ static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
-                                               _UNUSED const gchar *count,
+                                               _UNUSED const gchar *_,
                                                RmSession *session,
                                                _UNUSED GError **error) {
     RmCfg *cfg = session->cfg;
@@ -1091,6 +1091,14 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     /* Keep RmFiles after shredder. */
     cfg->cache_file_structs = true;
 
+    return true;
+}
+
+static gboolean rm_cmd_parse_honour_dir_layout(_UNUSED const char *option_name,
+                                               _UNUSED const gchar *_,
+                                               RmSession *session,
+                                               _UNUSED GError **error) {
+    session->cfg->honour_dir_layout = true;
     return true;
 }
 
@@ -1328,6 +1336,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"match-extension"          , 'e'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_with_extension     , _("Only find twins with same extension")                                  , NULL}     ,
         {"match-without-extension"  , 'i'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_without_extension  , _("Only find twins with same basename minus extension")                   , NULL}     ,
         {"merge-directories"        , 'D'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(merge_directories)        , _("Find duplicate directories")                                           , NULL}     ,
+        {"honour-dir-layout"        , 'j'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(honour_dir_layout)        , _("Only find directories with same file layout")                          , NULL}     ,
         {"perms"                    , 'z'  , OPTIONAL  , G_OPTION_ARG_CALLBACK  , FUNC(permissions)              , _("Only use files with certain permissions")                              , "[RWX]+"} ,
         {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
@@ -1461,6 +1470,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
          * If the latter is not specfified, ignore it all together */
         cfg->ignore_hidden = true;
         cfg->partial_hidden = false;
+    }
+
+    if(cfg->honour_dir_layout && !cfg->merge_directories) {
+        rm_log_warning_line(_("--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
     }
 
     if(cfg->progress_enabled) {

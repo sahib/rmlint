@@ -17,6 +17,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Force permissions (0755 for binary, 0644 for manpage) when installing files in the filesystem.
 * Fix wrong ordering when using -D without -k or -K.
 * Fix a space wasting bug that happened with -D and -c sh:link.
+* Fix a bug in treemerge that sometimes lead to directories not being detected (should be also slightly faster now)
 
 ### Added
 
@@ -24,6 +25,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Support for GNU Hurd (well, at least it compiles :)
 * New "-o stats" formatter that prints some statistics about the run.
 * Progressbar now additionally shows an ETA time (how long rmlint will probably run)
+* New option ``--honour-dir-layout (-j)`` that makes ``--merge-directories (-D)``
+  also check if the directory layout is the same.
 
 ### Changed
 

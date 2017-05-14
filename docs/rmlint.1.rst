@@ -172,6 +172,13 @@ General Options
     * This feature might not deliver perfect result in corner cases.
     * This feature might add some runtime.
 
+:``-j --honour-dir-layout`` (**default\:** *disabled*):
+
+    Only recognize directories as duplicates that have the same path layout. In
+    other words: All duplicates that build the duplicate directory must have
+    the same path from the root of the directory.
+    This flag has no effect without ``--merge-directories``.
+
 :``-y --sort-by=order`` (**default\:** *none*):
 
     During output, sort the found duplicate groups by criteria described by `order`.
@@ -476,7 +483,7 @@ Rarely used, miscellaneous options
     Also it might be useful for approximate comparison where it suffices when
     the file is the same in the middle part.
 
-:``-Z --mtime-window=T`` (**default\:** *-1*)
+:``-Z --mtime-window=T`` (**default\:** *-1*):
 
     Only consider those files as duplicates that have the same content and
     the same modification time (mtime) within a certain window of *T* seconds.
