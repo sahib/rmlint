@@ -581,17 +581,9 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
         memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
     case RM_DIGEST_CUMULATIVE: {
-        /* This is basically FNV1a, it is just important that the order of
-         * adding data to the hash has no effect on the result, so it can
-         * be used as a lookup key:
-         *
-         * http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-         * */
-        RmOff hash = 0xcbf29ce484222325;
+        /*  This only XORS the two checksums. */
         for(gsize i = 0; i < digest->bytes; ++i) {
-            hash ^= ((guint8 *)data)[i % size];
-            hash *= 0x100000001b3;
-            ((guint8 *)digest->checksum)[i] += hash;
+            ((guint8 *)digest->checksum)[i] ^= ((guint8 *)data)[i % size];
         }
     } break;
     case RM_DIGEST_PARANOID:

@@ -388,3 +388,21 @@ def test_keepall_tagged():
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 0
     assert footer['duplicate_sets'] == 0
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_equal_content_different_layout():
+    # Different duplicates in different subdirs.
+    create_file('xxx', "tree-a/sub2/x")
+    create_file('yyy', "tree-a/sub1/y")
+
+    # Same files but on top level.
+    create_file('xxx', "tree-b/x")
+    create_file('yyy', "tree-b/y")
+
+    head, *data, footer = run_rmlint('-pp -D --rank-by a')
+
+    assert data[0]["path"].endswith("tree-a")
+    assert data[0]["is_original"] is True
+    assert data[1]["path"].endswith("tree-b")
+    assert data[1]["is_original"] is False

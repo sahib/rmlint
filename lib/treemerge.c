@@ -27,7 +27,8 @@
  *
  * It tries to solve the following problem and sometimes even succeeds:
  * Take a list of duplicates (as RmFiles) and figure out which directories
- * consist fully out of duplicates and can be thus removed.
+ * consist fully out of equal duplicates and can be thus removed.
+ * It does NOT care about paths or filesystem layout by default.
  *
  * The basic algorithm is split in four phases:
  *
@@ -36,18 +37,33 @@
  *              an radix-tree (libart is used here). The key is the path, the
  *              value the count of files in it. Invalid directories and
  *              directories above the given are set to -1.
+ *              This step happens before shreddering files.
+ *
+ *              Result of this step: A trie that contains all directories with
+ *              the count of files in it.
+ *
  * - Feeding:   Collect all duplicates and store them in RmDirectory structures.
  *              If a directory appears to consist of dupes only (num_dupes == num_files)
- *              then it is remembered as valid directory.
+ *              then it is remembered as valid directory. This step happens in parallel
+ *              to shreddering files.
+ *
+ *              Result of this step: A list of directories that contain only duplicates
+ *              and duplicates that are separated from that.
+ *
  * - Upcluster: Take all valid directories and cluster them up, so subdirs get
  *              merged into the parent directory. Continue as long the parent
  *              directory is full too. Remember full directories in a hashtable
  *              with the hash of the directory (which is a hash of the file's
  *              hashes) as key and a list of matching directories as value.
+ *
+ *              Result of this step: A hashtable with equal directories
+ *              (that however may contain other equal directories)
+ *
  * - Extract:   Extract the result information out of the hashtable top-down.
  *              If a directory is reported, mark all subdirs of it as finished
  *              so they do not get reported twice. Files that could not be
  *              grouped in directories are found and reported as usually.
+ *              Some ugly and tricky parts are in here due to the many options of rmlint.
  */
 
 /*
@@ -76,13 +92,15 @@ typedef struct RmDirectory {
     gint64 prefd_files;  /* Files in this directory that are tagged as original        */
     gint64 dupe_count;   /* Count of RmFiles actually in this directory                */
     gint64 file_count;   /* Count of files actually in this directory (or -1 on error) */
-    gint64 mergeups;     /* number of times this directory was merged up               */
+    gint64 mergeups;     /* number of times this directory was merged up
+                            This is used to find the highest ranking directory. */
     bool finished : 1;   /* Was this dir or one of his parents already printed?        */
     bool was_merged : 1; /* true if this directory was merged up already (only once)   */
-    bool was_inserted : 1; /* true if this directory was added to results (only once) */
-    unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)        */
-    GHashTable *hash_set; /* Set of hashes, used for equality check (to be sure)        */
-    RmDigest *digest;     /* Common digest of all RmFiles in this directory             */
+    bool was_inserted : 1; /* true if this directory was added to results (only once)  */
+    unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)       */
+    GHashTable *hash_set; /* Set of hashes, used for true equality check               */
+    RmDigest *digest;     /* Common XOR digest of all RmFiles in this directory.
+                             note that this is only used as fast hash comparison.      */
 
     struct {
         gdouble dir_mtime; /* Directory Metadata: Modification Time */
@@ -358,7 +376,7 @@ static RmFile *rm_directory_as_new_file(RmTreeMerger *merger, const RmDirectory 
 }
 
 static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
-    if(d1->mergeups != d2->mergeups) {
+    if(d1->dupe_count != d2->dupe_count) {
         return false;
     }
 
@@ -370,6 +388,7 @@ static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
         return false;
     }
 
+    /* Compare the exact contents of the hash sets */
     gpointer digest_key;
     GHashTableIter iter;
 
@@ -389,7 +408,7 @@ static guint rm_directory_hash(const RmDirectory *d) {
      * To prevent this case, rm_directory_equal really compares
      * all the file's hashes with each other.
      */
-    return rm_digest_hash(d->digest) ^ d->mergeups;
+    return rm_digest_hash(d->digest) ^ d->dupe_count;
 }
 
 static int rm_directory_add(RmDirectory *directory, RmFile *file) {
@@ -448,16 +467,10 @@ static void rm_directory_add_subdir(RmDirectory *parent, RmDirectory *subdir) {
                subdir->dupe_count, subdir->file_count);
 #endif
 
-    /**
-     * Here's something weird:
-     * - a counter is used and substraced at once from parent->dupe_count.
-     * - it would ofc. be nicer to substract it step by step.
-     * - but for some weird reasons this only works on clang, not gcc.
-     * - yes, what. But I tested this, I promise!
-     */
+    /* Take over the child's digests */
     for(GList *iter = subdir->known_files.head; iter; iter = iter->next) {
-        int c = rm_directory_add(parent, (RmFile *)iter->data);
-        parent->dupe_count -= c;
+        RmFile *file = iter->data;
+        g_hash_table_add(parent->hash_set, file->digest);
     }
 
     /* Inherit the child's checksum */
