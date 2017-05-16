@@ -60,6 +60,7 @@ def test_paranoia():
     create_link('a', 'hardlink_a', symlink=False)
 
     head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    print(head, data, footer)
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 6
@@ -73,11 +74,14 @@ def test_paranoia():
     text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-d', '-p', '-x'])
     text = text.decode('utf-8')
 
+    print("TEXT", text)
+
     # Change back 'c':
     with open(os.path.join(TESTDIR_NAME, 'c'), 'w') as handle:
         handle.write('xxx')
 
     head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    print(head, data, footer)
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3
@@ -92,6 +96,7 @@ def test_paranoia():
     text = subprocess.check_output([os.path.join(TESTDIR_NAME, 'rmlint.sh'), '-d', '-p'])
     text = text.decode('utf-8')
     head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    print(head, data, footer)
 
     assert 'original has disappeared' in text
 
