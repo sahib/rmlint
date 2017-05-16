@@ -364,7 +364,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      rmpath->treat_as_single_vol, p->fts_level);
                     rm_log_warning_line(_("Added big file %s"), p->fts_path);
                 } else {
-                    rm_log_warning(_("cannot stat file %s (skipping)"), p->fts_path);
+                    rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
                 }
             } break;
             case FTS_SL:                     /* symbolic link */

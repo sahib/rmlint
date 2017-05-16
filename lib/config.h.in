@@ -67,7 +67,7 @@
 
 #define rm_log_perror(message)                                                           \
     if(errno) {{                                                                         \
-        rm_log_error("%s:%d: %s: %s\n", __FILE__, __LINE__, message, g_strerror(errno)); \
+        rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
     }}                                                                                   \
 
 #define _UNUSED G_GNUC_UNUSED
