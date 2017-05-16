@@ -417,19 +417,37 @@ static guint rm_directory_hash(const RmDirectory *d) {
 
 static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile *file) {
     rm_assert_gentle(file);
-    rm_assert_gentle(file->digest);
     rm_assert_gentle(directory);
 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
 
-    if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal(file->digest->paranoid->shadow_hash);
-        digest_bytes = file->digest->paranoid->shadow_hash->bytes;
-    } else {
-        file_digest = rm_digest_steal(file->digest);
-        digest_bytes = file->digest->bytes;
-    }
+	/* It is valid that the file digest may be NULL if all files of a group
+	 * consisted of hardlinks only. In this case we do not need to hash files
+	 * and thus receive an empty digest here. In this case we use the device
+	 * and inode id as checksum data. This might introduce very unlikely
+	 * possibilty for hash collisions, but this should be okay. */
+	if(file->digest == NULL) {
+		file->digest = rm_digest_new(RM_DIGEST_BLAKE2B, 0, 0, 0, false);
+
+		/* Built a token from the device and inode */
+		guint8 hardlink_token[32 + 1];
+		gsize token_len = g_snprintf(
+				(gchar *)hardlink_token,
+				sizeof(hardlink_token),
+				"%016lx:%016lx", file->dev, file->inode
+		);
+
+		rm_digest_update(file->digest, hardlink_token, token_len);
+	}
+
+	if(file->digest->type == RM_DIGEST_PARANOID) {
+		file_digest = rm_digest_steal(file->digest->paranoid->shadow_hash);
+		digest_bytes = file->digest->paranoid->shadow_hash->bytes;
+	} else {
+		file_digest = rm_digest_steal(file->digest);
+		digest_bytes = file->digest->bytes;
+	}
 
     /* Update the directorie's hash with the file's hash
        Since we cannot be sure in which order the files come in
