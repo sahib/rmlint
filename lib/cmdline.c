@@ -1424,6 +1424,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto failure;
     }
 
+	cfg->full_argv0_path = realpath(argv[0], NULL);
+
     ////////////////////
     // OPTION PARSING //
     ////////////////////

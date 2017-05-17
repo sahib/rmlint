@@ -111,6 +111,9 @@ typedef struct RmCfg {
     /* working dir rmlint called from */
     char *iwd;
 
+	/* Path to the rmlint binary of this run */
+	char *full_argv0_path;
+
     /* the full command line */
     char *joined_argv;
 
