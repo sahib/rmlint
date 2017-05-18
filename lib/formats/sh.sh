@@ -32,7 +32,7 @@ COL_YELLOW='\e[0;33m'
 COL_RESET='\e[0m'
 
 print_progress_prefix() {
-    if [ -n $PROGRESS_TOTAL ]; then
+    if [ ! -z "$PROGRESS_TOTAL" ]; then
         echo -n $COL_BLUE
         /bin/printf "[%6.1f%%] " $(echo $PROGRESS_CURR '*' 100 / $PROGRESS_TOTAL | bc -l)
         echo -n $COL_RESET
