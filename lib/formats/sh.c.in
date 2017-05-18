@@ -274,6 +274,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         out, SH_SCRIPT_TEMPLATE_HEAD,
         session->cfg->iwd,
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
+		session->cfg->full_argv0_path,
         rm_util_get_username(),
         rm_util_get_groupname(),
         (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",

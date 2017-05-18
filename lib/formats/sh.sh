@@ -7,6 +7,8 @@ PROGRESS_TOTAL=
 # rmlint was executed from: %s
 # Your command line was: %s
 
+RMLINT_BINARY='%s'
+
 USER='%s'
 GROUP='%s'
 
@@ -119,7 +121,7 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if rmlint -p --equal "$1" "$2"; then
+        if $RMLINT_BINARY -p --equal "$1" "$2"; then
             return 0
         else
             echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
@@ -168,7 +170,7 @@ cp_reflink() {
             if [ -d "$1" ]; then
                 rm -rf "$1"
             fi
-            cp --reflink=always "$2" "$1"
+            cp --archive --reflink=always "$2" "$1"
             touch -mr "$0" "$1"
         fi
     fi
@@ -180,9 +182,9 @@ clone() {
     echo $COL_YELLOW 'Cloning to: ' "$1" $COL_RESET
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            sudo rmlint --btrfs-clone -r "$2" "$1"
+            sudo $RMLINT_BINARY --btrfs-clone -r "$2" "$1"
         else
-            rmlint --btrfs-clone "$2" "$1"
+            $RMLINT_BINARY --btrfs-clone "$2" "$1"
         fi
     fi
 }

@@ -125,6 +125,7 @@ void rm_session_clear(RmSession *session) {
     }
 
     g_free(cfg->joined_argv);
+    g_free(cfg->full_argv0_path);
     g_free(cfg->iwd);
 
     rm_trie_destroy(&cfg->file_trie);
