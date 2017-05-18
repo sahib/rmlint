@@ -1,4 +1,8 @@
 #!/bin/sh
+
+PROGRESS_CURR=0
+PROGRESS_TOTAL=                             
+
 # This file was autowritten by rmlint
 # rmlint was executed from: %s
 # Your command line was: %s
@@ -25,7 +29,17 @@ COL_GREEN='\e[0;32m'
 COL_YELLOW='\e[0;33m'
 COL_RESET='\e[0m'
 
+print_progress_prefix() {
+    if [ -n $PROGRESS_TOTAL ]; then
+        echo -n $COL_BLUE
+        /bin/printf "[%6.1f%%] " $(echo $PROGRESS_CURR '*' 100 / $PROGRESS_TOTAL | bc -l)
+        echo -n $COL_RESET
+        PROGRESS_CURR=$(($PROGRESS_CURR + 1))
+    fi
+}
+
 handle_emptyfile() {
+    print_progress_prefix
     echo $COL_GREEN 'Deleting empty file:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
@@ -33,6 +47,7 @@ handle_emptyfile() {
 }
 
 handle_emptydir() {
+    print_progress_prefix
     echo $COL_GREEN 'Deleting empty directory:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rmdir "$1"
@@ -40,6 +55,7 @@ handle_emptydir() {
 }
 
 handle_bad_symlink() {
+    print_progress_prefix
     echo $COL_GREEN 'Deleting symlink pointing nowhere:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
@@ -47,6 +63,7 @@ handle_bad_symlink() {
 }
 
 handle_unstripped_binary() {
+    print_progress_prefix
     echo $COL_GREEN 'Stripping debug symbols of:' $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         strip -s "$1"
@@ -54,6 +71,7 @@ handle_unstripped_binary() {
 }
 
 handle_bad_user_id() {
+    print_progress_prefix
     echo $COL_GREEN 'chown' "$USER" $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         chown "$USER" "$1"
@@ -61,6 +79,7 @@ handle_bad_user_id() {
 }
 
 handle_bad_group_id() {
+    print_progress_prefix
     echo $COL_GREEN 'chgrp' "$GROUP" $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         chgrp "$GROUP" "$1"
@@ -68,6 +87,7 @@ handle_bad_group_id() {
 }
 
 handle_bad_user_and_group_id() {
+    print_progress_prefix
     echo $COL_GREEN 'chown' "$USER:$GROUP" $COL_RESET "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         chown "$USER:$GROUP" "$1"
@@ -109,6 +129,7 @@ original_check() {
 }
 
 cp_hardlink() {
+    print_progress_prefix
     echo $COL_YELLOW 'Hardlinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
@@ -123,6 +144,7 @@ cp_hardlink() {
 }
 
 cp_symlink() {
+    print_progress_prefix
     echo $COL_YELLOW 'Symlinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
@@ -137,6 +159,7 @@ cp_symlink() {
 }
 
 cp_reflink() {
+    print_progress_prefix
     # reflink $1 to $2's data, preserving $1's  mtime
     echo $COL_YELLOW 'Reflinking to original:' "$1" $COL_RESET
     if original_check "$1" "$2"; then
@@ -152,6 +175,7 @@ cp_reflink() {
 }
 
 clone() {
+    print_progress_prefix
     # clone $1 from $2's data
     echo $COL_YELLOW 'Cloning to: ' "$1" $COL_RESET
     if [ -z "$DO_DRY_RUN" ]; then
@@ -164,19 +188,23 @@ clone() {
 }
 
 skip_hardlink() {
+    print_progress_prefix
     echo $COL_BLUE 'Leaving as-is (already hardlinked to original):' $COL_RESET "$1"
 }
 
 skip_reflink() {
+    print_progress_prefix
     echo $COL_BLUE 'Leaving as-is (already reflinked to original):' $COL_RESET "$1"
 }
 
 user_command() {
+    print_progress_prefix
     # You can define this function to do what you want:
     %s
 }
 
 remove_cmd() {
+    print_progress_prefix
     echo $COL_YELLOW 'Deleting:' $COL_RESET "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
@@ -186,6 +214,7 @@ remove_cmd() {
 }
 
 original_cmd() {
+    print_progress_prefix
     echo $COL_GREEN 'Keeping: ' $COL_RESET "$1"
 }
 

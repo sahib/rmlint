@@ -46,6 +46,7 @@ typedef struct RmFmtHandlerShScript {
     const char *user_cmd;
 
     GByteArray *order;
+    RmOff line_count;
 } RmFmtHandlerShScript;
 
 static const char *SH_SCRIPT_TEMPLATE_HEAD = "<<SH_SOURCE>>";
@@ -55,7 +56,7 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "                                               \n"
     "if [ -z $DO_REMOVE ] && [ -z $DO_DRY_RUN ]     \n"
     "then                                           \n"
-    "  echo \"Deleting script \" \"$0\"             \n" 
+    "  echo \"Deleting script \" \"$0\"             \n"
     "  %s '%s';                                     \n"
     "fi                                             \n"
     ;
@@ -237,6 +238,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
     char *script_header = NULL;
 
+    self->line_count = 0;
     self->session = session;
     self->user_cmd = rm_fmt_get_config_value(session->formats, "sh", "cmd");
 
@@ -335,6 +337,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
 
     if(prefix != NULL) {
         fprintf(out, "%s %s\n", prefix, comment);
+        self->line_count++;
         g_free(prefix);
     }
 
@@ -395,6 +398,23 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
 
     char *escaped_path = rm_fmt_sh_escape_path(parent->path);
     fprintf(out, SH_SCRIPT_TEMPLATE_FOOT, "rm -f", escaped_path);
+
+    const char progress_marker_text[] = "PROGRESS_TOTAL=";
+    char *progress_marker = strstr(SH_SCRIPT_TEMPLATE_HEAD, progress_marker_text);
+    if(progress_marker != NULL) {
+        gsize offset = (progress_marker - SH_SCRIPT_TEMPLATE_HEAD) +
+                       sizeof(progress_marker_text) - 1;
+
+        /* Go to the exact write position */
+        if(fseek(out, offset, SEEK_SET) != -1) {
+            if(fprintf(out, "%"LLU, self->line_count) < 0) {
+                rm_log_perror("writing total progress failed; there will be no proress bar");
+            }
+        } else {
+            rm_log_perror("Seeking in script failed; there will be no progress bar");
+        }
+    }
+
     g_free(escaped_path);
 }
 
@@ -408,7 +428,8 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .foot = rm_fmt_foot,
         .valid_keys = {"handler", "cmd", "clone", "link", "hardlink", "symlink", NULL},
     },
-    .last_original = NULL
+    .last_original = NULL,
+    .line_count = 0
 };
 
 RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *) &SH_SCRIPT_HANDLER_IMPL;
