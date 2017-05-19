@@ -357,7 +357,11 @@ typedef struct RmShredGroup {
      * bundled hardlinked files and ext_cksum twins) */
     gsize num_files;
 
+    /* number of file clusters */
     gsize n_clusters;
+
+    /* number of distinct inodes */
+    gsize n_inodes;
 
     /* number of pending digests (ignores clustered files)*/
     gsize num_pending;
@@ -827,7 +831,9 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
     if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group) &&
-       group->hash_offset < group->file_size && group->n_clusters > 1) {
+       group->hash_offset < group->file_size &&
+       (group->n_clusters > 1 ||
+        (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
         /* group can go active */
         group->status = RM_SHRED_GROUP_START_HASHING;
     }
@@ -890,6 +896,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->n_npref += RM_FILE_N_NPREFD(file);
         shred_group->n_new += RM_FILE_N_NEW(file);
         shred_group->n_clusters++;
+        shred_group->n_inodes += RM_FILE_INODE_COUNT(file);
 
         rm_assert_gentle(file->hash_offset == shred_group->hash_offset);
 

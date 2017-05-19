@@ -278,10 +278,11 @@ typedef struct RmFile {
 
 /* structure for pre-matched duplicates (hardlinks or ext_cksum twins) */
 typedef struct RmFileCluster {
-    GQueue files;    /* files in the cluster (files may contain embedded hardlinks) */
-    guint num_files; /* number of files (including embedded hardlinks) */
-    guint num_prefd; /* number of "preferred" files in cluster */
-    guint num_new;   /* number of files newer than mtime cut-off */
+    GQueue files;     /* files in the cluster (files may contain embedded hardlinks) */
+    guint num_files;  /* number of files (including embedded hardlinks) */
+    guint num_prefd;  /* number of "preferred" files in cluster */
+    guint num_new;    /* number of files newer than mtime cut-off */
+    guint num_inodes; /* number of distinct inodes in cluster */
 } RmFileCluster;
 
 #define RM_FILE_CLUSTER_HEAD(file) \
@@ -292,6 +293,7 @@ typedef struct RmFileCluster {
     (file->cluster ? file->cluster->files.length - file->cluster->num_prefd \
                    : !file->is_prefd)
 #define RM_FILE_CLUSTER_SIZE(file) ((file->cluster) ? file->cluster->num_files : 1)
+#define RM_FILE_INODE_COUNT(file) ((file->cluster) ? file->cluster->num_inodes : 1)
 
 #define RM_FILE_HAS_PREFD(file) (!!RM_FILE_N_PREFD(file))
 #define RM_FILE_HAS_NPREFD(file) (!!RM_FILE_N_NPREFD(file))

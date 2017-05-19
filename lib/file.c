@@ -204,6 +204,7 @@ void rm_file_cluster_add(RmFile *host, RmFile *guest) {
     }
     guest->cluster = host->cluster;
     g_queue_push_tail(&host->cluster->files, guest);
+    host->cluster->num_inodes++;
     /* adjust cluster totals including bundled hardlinks */
     rm_file_foreach_hardlink(guest, (RmRFunc)rm_file_add_to_cluster_count, host->cluster);
 }
@@ -211,6 +212,7 @@ void rm_file_cluster_add(RmFile *host, RmFile *guest) {
 void rm_file_cluster_remove(RmFile *file) {
     rm_assert_gentle(file->cluster);
 
+    file->cluster->num_inodes--;
     /* adjust cluster totals including bundled hardlinks */
     rm_file_foreach_hardlink(file, (RmRFunc)rm_file_remove_from_cluster_count,
                              file->cluster);
