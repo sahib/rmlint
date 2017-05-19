@@ -179,47 +179,24 @@ static gint rm_file_foreach_hardlink(RmFile *f, RmRFunc func, gpointer user_data
     return result;
 }
 
-static void rm_file_add_to_cluster_count(RmFile *f, RmFileCluster *cluster) {
-    cluster->num_prefd += f->is_prefd;
-    cluster->num_new += f->is_new;
-    cluster->num_files += 1;
-}
-
-static void rm_file_remove_from_cluster_count(RmFile *f, RmFileCluster *cluster) {
-    cluster->num_prefd -= f->is_prefd;
-    cluster->num_new -= f->is_new;
-    cluster->num_files -= 1;
-}
-
 void rm_file_cluster_add(RmFile *host, RmFile *guest) {
     rm_assert_gentle(!guest->cluster || host == guest);
     if(!host->cluster) {
-        host->cluster = g_slice_new0(RmFileCluster);
-        /* note: technically not necessary (just re-zero's it)
-         * but still good practice in case someone refactors glib */
-        g_queue_init(&host->cluster->files);
+        host->cluster = g_queue_new();
         if(guest != host) {
             rm_file_cluster_add(host, host);
         }
     }
     guest->cluster = host->cluster;
-    g_queue_push_tail(&host->cluster->files, guest);
-    host->cluster->num_inodes++;
-    /* adjust cluster totals including bundled hardlinks */
-    rm_file_foreach_hardlink(guest, (RmRFunc)rm_file_add_to_cluster_count, host->cluster);
+    g_queue_push_tail(host->cluster, guest);
 }
 
 void rm_file_cluster_remove(RmFile *file) {
     rm_assert_gentle(file->cluster);
 
-    file->cluster->num_inodes--;
-    /* adjust cluster totals including bundled hardlinks */
-    rm_file_foreach_hardlink(file, (RmRFunc)rm_file_remove_from_cluster_count,
-                             file->cluster);
-
-    g_queue_remove(&file->cluster->files, file);
-    if(file->cluster->files.length == 0) {
-        g_slice_free(RmFileCluster, file->cluster);
+    g_queue_remove(file->cluster, file);
+    if(file->cluster->length == 0) {
+        g_queue_free(file->cluster);
     }
     file->cluster = NULL;
 }
@@ -230,8 +207,51 @@ gint rm_file_foreach(RmFile *f, RmRFunc func, gpointer user_data) {
     }
 
     gint result = 0;
-    for(GList *iter = f->cluster->files.head; iter; iter = iter->next) {
+    for(GList *iter = f->cluster->head; iter; iter = iter->next) {
         result += rm_file_foreach_hardlink(iter->data, func, user_data);
     }
     return result;
+}
+
+enum RmFileCountType {
+    RM_FILE_COUNT_FILES,
+    RM_FILE_COUNT_PREFD,
+    RM_FILE_COUNT_NPREFD,
+    RM_FILE_COUNT_NEW,
+};
+
+static gint rm_file_count(RmFile *file, gint type) {
+    switch(type) {
+    case RM_FILE_COUNT_FILES:
+        return 1;
+    case RM_FILE_COUNT_PREFD:
+        return file->is_prefd;
+    case RM_FILE_COUNT_NPREFD:
+        return !file->is_prefd;
+    case RM_FILE_COUNT_NEW:
+        return file->is_new;
+    default:
+        rm_assert_gentle(FALSE);
+        return 0;
+    }
+}
+
+gint rm_file_n_files(RmFile *file) {
+    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+                           GINT_TO_POINTER(RM_FILE_COUNT_FILES));
+}
+
+gint rm_file_n_new(RmFile *file) {
+    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+                           GINT_TO_POINTER(RM_FILE_COUNT_NEW));
+}
+
+gint rm_file_n_prefd(RmFile *file) {
+    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+                           GINT_TO_POINTER(RM_FILE_COUNT_PREFD));
+}
+
+gint rm_file_n_nprefd(RmFile *file) {
+    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+                           GINT_TO_POINTER(RM_FILE_COUNT_NPREFD));
 }

@@ -182,7 +182,7 @@ typedef struct RmFile {
     bool is_on_subvol_fs : 1;
 
     /* The pre-matched file cluster that this file belongs to (or NULL) */
-    struct RmFileCluster *cluster;
+    GQueue *cluster;
 
     /* pointer to hardlinks collection (or NULL); one list shared between hardlink twin
      * set */
@@ -267,38 +267,22 @@ typedef struct RmFile {
 #define RM_FILE_HARDLINK_HEAD(file) \
     (file->hardlinks ? (RmFile *)file->hardlinks->head->data : NULL)
 
-#define RM_FILE_IS_CLUSTERED(file) \
-    (file->cluster && file != file->cluster.files->head->data)
+#define RM_FILE_IS_CLUSTERED(file) (file->cluster && file != file->cluster->head->data)
 
 /* for lint counting, we only count the first hardlink: */
 #define RM_FILE_IS_HARDLINK(file) (file->hardlinks && file != RM_FILE_HARDLINK_HEAD(file))
 
+#define RM_FILE_HARDLINK_COUNT(file) ((file->hardlinks) ? file->hardlinks->length - 1 : 0)
+
 #define RM_FILE_HAS_HARDLINKS(file) \
     (file->hardlinks && file == RM_FILE_HARDLINK_HEAD(file))
 
-/* structure for pre-matched duplicates (hardlinks or ext_cksum twins) */
-typedef struct RmFileCluster {
-    GQueue files;     /* files in the cluster (files may contain embedded hardlinks) */
-    guint num_files;  /* number of files (including embedded hardlinks) */
-    guint num_prefd;  /* number of "preferred" files in cluster */
-    guint num_new;    /* number of files newer than mtime cut-off */
-    guint num_inodes; /* number of distinct inodes in cluster */
-} RmFileCluster;
-
 #define RM_FILE_CLUSTER_HEAD(file) \
-    ((file->cluster) ? (RmFile *)file->cluster->files.head->data : NULL)
-#define RM_FILE_N_NEW(file) (file->cluster ? file->cluster->num_new : file->is_new)
-#define RM_FILE_N_PREFD(file) (file->cluster ? file->cluster->num_prefd : file->is_prefd)
-#define RM_FILE_N_NPREFD(file)                                              \
-    (file->cluster ? file->cluster->files.length - file->cluster->num_prefd \
-                   : !file->is_prefd)
-#define RM_FILE_CLUSTER_SIZE(file) ((file->cluster) ? file->cluster->num_files : 1)
-#define RM_FILE_INODE_COUNT(file) ((file->cluster) ? file->cluster->num_inodes : 1)
+    ((file->cluster) ? (RmFile *)file->cluster->head->data : NULL)
+#define RM_FILE_INODE_COUNT(file) ((file->cluster) ? file->cluster->length : 1)
 
-#define RM_FILE_HAS_PREFD(file) (!!RM_FILE_N_PREFD(file))
-#define RM_FILE_HAS_NPREFD(file) (!!RM_FILE_N_NPREFD(file))
-
-#define RM_FILE_HARDLINK_COUNT(file) ((file->hardlinks) ? file->hardlinks->length - 1 : 0)
+#define RM_FILE_HAS_PREFD(file) (!!rm_file_n_prefd(file))
+#define RM_FILE_HAS_NPREFD(file) (!!rm_file_n_nprefd(file))
 
 /**
  * @brief Create a new RmFile handle.
@@ -329,6 +313,14 @@ void rm_file_cluster_remove(RmFile *file);
  * retval: sum of returned values from func()
  */
 gint rm_file_foreach(RmFile *f, RmRFunc func, gpointer user_data);
+
+/**
+ * @brief count number of files of various type including clustered files
+ */
+gint rm_file_n_files(RmFile *file);
+gint rm_file_n_new(RmFile *file);
+gint rm_file_n_prefd(RmFile *file);
+gint rm_file_n_nprefd(RmFile *file);
 
 /**
  * @brief Convert RmLintType to a human readable short string.

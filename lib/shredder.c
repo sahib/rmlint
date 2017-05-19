@@ -880,7 +880,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
                 shred_group->unique_basename = NULL;
             }
             if(file->cluster) {
-                for(GList *iter = file->cluster->files.head; iter; iter = iter->next) {
+                for(GList *iter = file->cluster->head; iter; iter = iter->next) {
                     if(rm_file_basenames_cmp(iter->data, shred_group->unique_basename) !=
                        0) {
                         shred_group->unique_basename = NULL;
@@ -891,10 +891,10 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         }
 
         /* update group counters */
-        shred_group->num_files += RM_FILE_CLUSTER_SIZE(file);
-        shred_group->n_pref += RM_FILE_N_PREFD(file);
-        shred_group->n_npref += RM_FILE_N_NPREFD(file);
-        shred_group->n_new += RM_FILE_N_NEW(file);
+        shred_group->num_files += rm_file_n_files(file);
+        shred_group->n_pref += rm_file_n_prefd(file);
+        shred_group->n_npref += rm_file_n_nprefd(file);
+        shred_group->n_new += rm_file_n_new(file);
         shred_group->n_clusters++;
         shred_group->n_inodes += RM_FILE_INODE_COUNT(file);
 
@@ -1462,7 +1462,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 
         while(file->cluster) {
             /* unbundle ext_cksum twins */
-            RmFile *last = file->cluster->files.tail->data;
+            RmFile *last = file->cluster->tail->data;
             rm_file_cluster_remove(last);
             if(last != file) {
                 g_queue_push_tail(group->held_files, last);
