@@ -977,8 +977,6 @@ static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
 
     session->cfg->progress_enabled = true;
 
-    /* Set verbosity to minimal */
-    rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
     return true;
 }
 
@@ -1523,9 +1521,15 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
         rm_assert_gentle_not_reached();
     }
+
 failure:
     if(error != NULL) {
         rm_cmd_on_error(NULL, NULL, session, &error);
+    }
+
+    if(cfg->progress_enabled) {
+        /* Set verbosity to minimal */
+        rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
     }
 
     g_option_context_free(option_parser);
