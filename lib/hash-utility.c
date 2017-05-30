@@ -191,7 +191,7 @@ int rm_hasher_main(int argc, const char **argv) {
     }
 
     if(tag.paths == NULL || tag.paths[0] == NULL) {
-        rm_log_error_line(_("No valid paths given."));
+        rm_log_error_line(_("No valid paths given"));
         exit(EXIT_FAILURE);
     }
 

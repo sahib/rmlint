@@ -453,17 +453,18 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
-static int rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
-    int paths_added = 0;
+static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
     char path_buf[PATH_MAX];
     char *tokbuf = NULL;
+    bool all_paths_read = true;
 
+    /* Still read all paths on errors, so the user knows all paths that failed */
     while(fgets(path_buf, PATH_MAX, stdin)) {
-        paths_added +=
+        all_paths_read &=
             rm_cfg_add_path(session->cfg, is_prefd, strtok_r(path_buf, "\n", &tokbuf));
     }
 
-    return paths_added;
+    return all_paths_read;
 }
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
@@ -1230,7 +1231,7 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 
 static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     bool is_prefd = false;
-    bool not_all_paths_read = false;
+    bool all_paths_valid = true;
 
     RmCfg *cfg = session->cfg;
 
@@ -1238,25 +1239,24 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
             /* option '-' means read paths from stdin */
-            rm_cmd_read_paths_from_stdin(session, is_prefd);
+            all_paths_valid &= rm_cmd_read_paths_from_stdin(session, is_prefd);
         } else if(strcmp(paths[i], "//") == 0) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
         } else {
-            not_all_paths_read |= rm_cfg_add_path(cfg, is_prefd, paths[i]);
+            all_paths_valid &= rm_cfg_add_path(cfg, is_prefd, paths[i]);
         }
     }
 
     g_strfreev(paths);
 
-    if(cfg->path_count == 0 && not_all_paths_read == false) {
+    if(cfg->path_count == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
-    } else if(cfg->path_count == 0 && not_all_paths_read) {
-        return false;
     }
 
-    return true;
+    /* Only return success if everything is fine. */
+    return all_paths_valid;
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
@@ -1516,11 +1516,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         error = g_error_new(RM_ERROR_QUARK, 0,
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
     } else if(!rm_cmd_set_paths(session, paths)) {
-        error = g_error_new(RM_ERROR_QUARK, 0, _("No valid paths given."));
+        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
-        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks.");
+        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
         rm_assert_gentle_not_reached();
     }
 failure:
