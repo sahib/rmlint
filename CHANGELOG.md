@@ -18,6 +18,9 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Fix wrong ordering when using -D without -k or -K.
 * Fix a space wasting bug that happened with -D and -c sh:link.
 * Fix a bug in treemerge that sometimes lead to directories not being detected (should be also slightly faster now)
+* Fix inconsistent handling of duplicate directories when using hardlinks, symlinks and reflinks.
+* Abort early if an invalid path has been given via commandline or stdin.
+* Do not silence errors while commandline parsing when using ``-g``.
 
 ### Added
 
@@ -28,6 +31,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * New option ``--honour-dir-layout (-j)`` that makes ``--merge-directories (-D)``
   also check if the directory layout is the same.
 * A new ``--equal`` option that works like the ``cmp`` utility, but supports directories.
+* Add a progress percentage to ``rmlint.sh`` for big runs.
 
 ### Changed
 
