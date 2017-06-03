@@ -53,6 +53,9 @@ def unpack(chart, data, bench_name, add_x_labels=True):
     for program in sorted(data['programs']):
         result = data['programs'][program]
 
+        if len(result["numbers"]) < n_runs:
+            continue
+
         points = []
         for key in [str(run + 1) for run in range(n_runs)] + ['average']:
             points.append(result['numbers'][key])

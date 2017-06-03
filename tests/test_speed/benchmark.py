@@ -291,6 +291,17 @@ class Rmlint222(Rmlint):
         return 'rmlint-v2.2.2'
 
 
+class Rmlint246(Rmlint):
+    script = 'rmlint-v2.4.6.sh'
+
+    def get_binary(self):
+        return 'rmlint/rmlint-v2.4.6'
+
+    def get_benchid(self):
+        return 'rmlint-v2.4.6'
+
+
+
 class Rmlint222Paranoid(Rmlint222):
     def get_options(self, paths):
         return '-pp ' + Rmlint222.get_options(self, paths)
@@ -669,6 +680,7 @@ def main():
         # RmlintSpot(),
         # RmlintSpotParanoid(),
         Rmlint222(),
+        Rmlint246(),
         Rmlint222Paranoid(),
         RmlintXXHash(),
         # RmlintSpooky(),
@@ -681,7 +693,7 @@ def main():
         # Actual competitors:
         Fdupes(),
         Rdfind(),
-        Dupd()
+        # Dupd()
     ]
 
     # Filter the `programs` list if necessary.

@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.5.0 Penetrating Pineapple] -- [unreleased]
+## [2.6.0 Penetrating Pineapple] -- 2017-06-03
 
 ### Fixed
 
