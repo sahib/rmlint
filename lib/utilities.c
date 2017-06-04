@@ -35,7 +35,7 @@
 /* Be safe: This header is not essential and might be missing on some systems.
  * We only include it here, because it fixes some recent warning...
  * */
-#ifdef HAVE_SYSMACROS_H
+#if HAVE_SYSMACROS_H
 # include <sys/sysmacros.h>
 #endif
 
