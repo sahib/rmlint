@@ -18,8 +18,8 @@ along with rmlint.  If not, see <http://www.gnu.org/licenses/>.
 
 Authors:
 
-- Christopher <sahib> Pahl 2010-2014 (https://github.com/sahib)
-- Daniel <SeeSpotRun> T.   2014-2014 (https://github.com/SeeSpotRun)
+- Christopher <sahib> Pahl 2010-2017 (https://github.com/sahib)
+- Daniel <SeeSpotRun> T.   2014-2017 (https://github.com/SeeSpotRun)
 """
 
 # This is the python remover utility shipped inside the rmlint binary.
