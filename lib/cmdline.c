@@ -1195,6 +1195,8 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
                                    _UNUSED GError **error) {
 	rm_cmd_parse_merge_directories(NULL, NULL, session, error);
     session->cfg->run_equal_mode = true;
+    session->cfg->ignore_hidden = false;
+
     rm_fmt_clear(session->formats);
     rm_fmt_add(session->formats, "_equal", "stdout");
     return true;
