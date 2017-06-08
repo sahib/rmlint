@@ -12,8 +12,7 @@ def run_shell_script(shell, sh_path, *args):
     return subprocess.check_output([
             os.path.join("/bin", shell),
             sh_path,
-            *args,
-        ],
+        ] + list(args),
         shell=False
     ).decode("utf-8")
 
