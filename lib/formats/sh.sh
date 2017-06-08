@@ -291,9 +291,9 @@ fi
 
 if [ ! -z $DO_DRY_RUN  ]
 then
-    echo $COL_YELLOW "# ////////////////////////////////////////////////////////////" $COL_RESET
-    echo $COL_YELLOW "# ///" $COL_RESET "This is only a dry run; nothing will be modified! " $COL_YELLOW "///" $COL_RESET
-    echo $COL_YELLOW "# ////////////////////////////////////////////////////////////" $COL_RESET
+    echo "#$COL_YELLOW ////////////////////////////////////////////////////////////" $COL_RESET
+    echo "#$COL_YELLOW ///" $COL_RESET "This is only a dry run; nothing will be modified! " $COL_YELLOW "///" $COL_RESET
+    echo "#$COL_YELLOW ////////////////////////////////////////////////////////////" $COL_RESET
     echo
 fi
 

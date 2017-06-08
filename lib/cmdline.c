@@ -1193,8 +1193,10 @@ static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
 static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
                                    _UNUSED const gchar *x, RmSession *session,
                                    _UNUSED GError **error) {
-	rm_cmd_parse_merge_directories(NULL, NULL, session, error);
+    rm_cmd_parse_merge_directories(NULL, NULL, session, error);
     session->cfg->run_equal_mode = true;
+
+    /* See issue #233; partial hidden needs to be disabled */
     session->cfg->partial_hidden = false;
     session->cfg->ignore_hidden = false;
 

@@ -100,3 +100,17 @@ def test_dir_and_file():
         head, *data, footer = run_rmlint(
             '--equal', path_a, path_b
         )
+
+
+# Regression test for Issue #233
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_equal_hidden_dirs():
+    path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
+    path_b = os.path.dirname(create_file('xxx', '.dir_b/.x'))
+
+    # This should fail since we should not mix directories with files,
+    # even if they have the same content.
+    with assert_exit_code(0):
+        head, *data, footer = run_rmlint(
+            '--equal', path_a, path_b
+        )
