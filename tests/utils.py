@@ -297,5 +297,5 @@ def usual_teardown_func():
         # Allow teardown to be called more than once:
         try:
             shutil.rmtree(path=TESTDIR_NAME)
-        except FileNotFoundError:
+        except OSError:
             pass
