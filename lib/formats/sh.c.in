@@ -63,7 +63,7 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "                                               \n"
     "if [ $PROGRESS_CURR -le $PROGRESS_TOTAL ]; then\n"
     "    print_progress_prefix                      \n"
-    "    echo $COL_BLUE 'Done!' $COL_RESET          \n"
+    "    echo \"${COL_BLUE}Done!${COL_RESET}\"      \n"
     "fi                                             \n"
     "                                               \n"
     "if [ -z $DO_REMOVE ] && [ -z $DO_DRY_RUN ]     \n"

@@ -472,7 +472,7 @@ class Script(GObject.Object):
         flags = Gio.SubprocessFlags
 
         self._process = Gio.Subprocess.new(
-            [self.script_file, '-d', '-x', '-p', '-n' if dry_run else ''],
+            [self.script_file, '-d', '-x', '-q', '-p', '-n' if dry_run else ''],
             flags.STDERR_SILENCE | flags.STDOUT_PIPE
         )
         self._stream = None
@@ -493,7 +493,7 @@ class Script(GObject.Object):
 
     def _report_line(self, line):
         """Postprocess and signal the receival of a single line."""
-        if not line:
+        if not line or line.strip().startswith("#"):
             return
 
         line_split = line.split(':', maxsplit=1)
@@ -504,9 +504,6 @@ class Script(GObject.Object):
         prefix, path = line_split
         prefix = _strip_ascii_colors(prefix)
         path = _strip_ascii_colors(path)
-
-
-        print(repr(prefix), repr(path))
 
         self.emit('line-read', prefix.strip(), path.strip())
 
