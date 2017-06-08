@@ -3,8 +3,8 @@ install:
     - sudo apt-get update
     - sudo apt-get install python3-sphinx python3-nose gettext python3-setuptools
     - sudo apt-get install libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev
-    - sudo apt-get install python3-pip
-    - sudo pip install -r test-requirements.txt
+    - sudo apt-get install python3-setuptools
+    - sudo easy_install $(cat test-requirements.txt)
 
 compiler:
   - clang
