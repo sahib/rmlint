@@ -114,3 +114,17 @@ def test_equal_hidden_dirs():
         head, *data, footer = run_rmlint(
             '--equal', path_a, path_b
         )
+
+
+# Regression test for Issue #234
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_equal_empty_files_or_other_lint():
+    path_a = create_file('', 'x')
+    path_b = create_file('', 'y')
+
+    # This should fail since we should not mix directories with files,
+    # even if they have the same content.
+    with assert_exit_code(0):
+        head, *data, footer = run_rmlint(
+            '--equal', path_a, path_b
+        )
