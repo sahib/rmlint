@@ -537,10 +537,20 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
     if(inode_cluster->length > 1) {
         /* there is a cluster of inode matches */
 
-        /* remove path doubles */
-        session->total_filtered_files -=
-            rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
-                                         session->tables->unique_paths_table);
+        /* remove path doubles.
+         * Special case for --equal; consider this:
+         * $ rmlint --equal link_to_xyz other_link_to_xyz
+         *
+         * Two symbolic links to the same file should be seen as equal.
+         * Normally rmlint will use realpath() to resolve explicitly given symlinks
+         * and remove the paths double later on here. Disable for --equal therefore.
+         * */
+        if(!session->cfg->run_equal_mode) {
+            session->total_filtered_files -=
+                rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
+                                             session->tables->unique_paths_table);
+        }
+
         /* clear the hashtable ready for the next cluster */
         g_hash_table_remove_all(session->tables->unique_paths_table);
     }
