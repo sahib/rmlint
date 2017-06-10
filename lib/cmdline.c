@@ -1276,6 +1276,25 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     return true;
 }
 
+static char * rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
+    RmCfg *cfg = session->cfg;
+    if(cfg->full_argv0_path == NULL) {
+        /* Note: this check will only work on linux! */
+        char exe_path[PATH_MAX] = {0};
+        if(readlink("/proc/self/exe", exe_path, sizeof(exe_path)) != -1) {
+            return g_strdup(exe_path);
+        }
+
+        if(strchr(argv[0], '/')) {
+            return realpath(argv[0], NULL);
+        }
+
+        /* More checks might be added here in future. */
+    }
+
+    return NULL;
+}
+
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     RmCfg *cfg = session->cfg;
@@ -1428,7 +1447,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto failure;
     }
 
-	cfg->full_argv0_path = realpath(argv[0], NULL);
+    /* Attempt to find out path to own executable.
+     * This is used in the shell script to call the executable
+     * for special modes like --btrfs-clone or --equal.
+     * We want to make sure the installed version has this
+     * */
+	cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
 
     ////////////////////
     // OPTION PARSING //
