@@ -9,13 +9,16 @@ def test_simple():
     create_file('xxx', 'not_empty/a')
     create_file('', 'empty_but_with_file/a')
     create_dirs('really_empty')
-    head, *data, footer = run_rmlint('-T "none +ed"')
+    head, *data, footer = run_rmlint('-T "none +ed +ef" -S a')
 
-    assert footer['total_files'] == 2
+    assert footer['total_files'] == 3
     assert footer['duplicates'] == 0
     assert footer['total_lint_size'] == 0
-    assert len(data) == 1
+    assert len(data) == 2
     assert data[0]['size'] == 0
+    assert data[0]['type'] == "emptydir"
+    assert data[1]['size'] == 0
+    assert data[1]['type'] == "emptyfile"
 
 
 @with_setup(usual_setup_func, usual_teardown_func)

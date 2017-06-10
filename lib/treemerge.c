@@ -237,8 +237,8 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
         case FTS_NS:
         case FTS_SLNONE:
         case FTS_DEFAULT:
-            /* Save this path as countable file */
-            if(ent->fts_statp->st_size > 0) {
+            /* Save this path as countable file, but only if  */
+            if(!(session->cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
                 rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
             }
         case FTS_D:

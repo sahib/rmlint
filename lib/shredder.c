@@ -332,6 +332,7 @@ typedef struct RmShredTag {
     (group->session->cfg->must_match_untagged || group->session->cfg->keep_all_tagged)
 #define NEEDS_NEW(group) (group->session->cfg->min_mtime)
 
+// TODO: Why true all the time?! that was supposed to be only needed for paranoid + treemerge.
 #define NEEDS_SHADOW_HASH(cfg)                                         \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
 /* Performance is faster with shadow hash, probably due to hash collisions in
@@ -1065,7 +1066,11 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
 
     rm_assert_gentle(file);
     rm_assert_gentle(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
-    rm_assert_gentle(file->file_size > 0);
+
+    /* Create an empty checksum for empty files */
+    if(file->file_size == 0) {
+        file->digest = rm_digest_new(cfg->checksum_type, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
+    }
 
     if(!(*group)) {
         /* create RmShredGroup using first file in size group as template*/

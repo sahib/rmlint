@@ -119,12 +119,8 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
     if(file_type == RM_LINT_TYPE_UNKNOWN) {
         RmLintType gid_check;
         /* see if we can find a lint type */
-        if(statp->st_size == 0) {
-            if(!cfg->find_emptyfiles) {
-                return;
-            } else {
-                file_type = RM_LINT_TYPE_EMPTY_FILE;
-            }
+        if(statp->st_size == 0 && cfg->find_emptyfiles) {
+            file_type = RM_LINT_TYPE_EMPTY_FILE;
         } else if(cfg->permissions && access(path, cfg->permissions) == -1) {
             /* bad permissions; ignore file */
             trav_session->session->ignored_files++;

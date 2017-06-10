@@ -116,6 +116,19 @@ def test_deep_simple():
     assert len(data) == 2
 
 
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_dirs_with_empty_files_only():
+    create_file('', 'a/empty')
+    create_file('', 'b/empty')
+    head, *data, footer = run_rmlint('-pp -D -S a -T df,dd')
+
+    assert len(data) == 2
+    assert data[0]['path'].endswith('a')
+    assert data[0]['type'] == "duplicate_dir"
+    assert data[1]['path'].endswith('b')
+    assert data[1]['type'] == "duplicate_dir"
+
+
 def create_nested(root, letters):
     summed = []
     for letter in letters:
