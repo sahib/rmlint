@@ -24,9 +24,6 @@ def assert_exit_code(status_code):
         # No exception? status_code should be fine.
         assert status_code == 0
 
-# test: dir with file a and file a
-# test: no arguments
-# test: 1 argument
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_equal_files():
@@ -34,10 +31,16 @@ def test_equal_files():
     path_b = create_file('1234', 'b')
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint('--equal', path_a, path_b)
+        head, *data, footer = run_rmlint(
+            '--equal', path_a, path_b,
+            use_default_dir=False
+        )
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint('-pp', '--equal', path_a, path_b)
+        head, *data, footer = run_rmlint(
+            '-pp', '--equal', path_a, path_b,
+            use_default_dir=False
+        )
 
     # If --equal finds that both files are not equal,
     # it would return 1 as exit code which would cause
@@ -47,30 +50,48 @@ def test_equal_files():
 
     path_c = create_file('1234', 'c')
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint('--equal', path_a, path_b, path_c)
+        head, *data, footer = run_rmlint(
+            '--equal', path_a, path_b, path_c,
+            use_default_dir=False
+        )
 
     path_d = create_file('diff', 'd')
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint('--equal', path_a, path_b, path_d, path_c)
+        head, *data, footer = run_rmlint(
+            '--equal', path_a, path_b, path_d, path_c,
+            use_default_dir=False
+        )
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_no_arguments():
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint('--equal')
+        head, *data, footer = run_rmlint(
+            '--equal',
+            use_default_dir=False
+        )
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_one_arguments():
     path = create_file('1234', 'a')
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint('--equal', path)
+        head, *data, footer = run_rmlint(
+            '--equal', path,
+            use_default_dir=False
+        )
 
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint('--equal', path, "//")
+        head, *data, footer = run_rmlint(
+            '--equal', path, "//",
+            use_default_dir=False
+        )
 
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint('--equal', "//", path)
+        head, *data, footer = run_rmlint(
+            '--equal', "//", path,
+            use_default_dir=False
+        )
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -80,12 +101,14 @@ def test_equal_directories():
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '--equal', path_a, path_b
+            '--equal', path_a, path_b,
+            use_default_dir=False
         )
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '-pp', '--equal', path_a, path_b
+            '-pp', '--equal', path_a, path_b,
+            use_default_dir=False
         )
 
 
@@ -98,7 +121,8 @@ def test_dir_and_file():
     # even if they have the same content.
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
-            '--equal', path_a, path_b
+            '--equal', path_a, path_b,
+            use_default_dir=False,
         )
 
 
@@ -112,7 +136,8 @@ def test_equal_hidden_dirs():
     # even if they have the same content.
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '--equal', path_a, path_b
+            '--equal', path_a, path_b,
+            use_default_dir=False,
         )
 
 
@@ -126,5 +151,6 @@ def test_equal_empty_files_or_other_lint():
     # even if they have the same content.
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '--equal', path_a, path_b
+            '--equal', path_a, path_b,
+            use_default_dir=False,
         )
