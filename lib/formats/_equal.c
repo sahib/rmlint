@@ -49,6 +49,12 @@ typedef struct RmFmtHandlerEqual {
 //  ACTUAL CALLBACKS   //
 /////////////////////////
 
+static void rm_fmt_report_failure(RmFmtHandlerEqual *self, RmSession *session) {
+    session->equal_exit_code = EXIT_FAILURE;
+    self->mismatch_found = true;
+    rm_session_abort();
+}
+
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
     GHashTable *input_paths = g_hash_table_new(g_str_hash, g_str_equal);
 
@@ -72,6 +78,7 @@ static void rm_fmt_elem(
 
     /*  No need to check anymore, it's not equal. */
     if(self->mismatch_found) {
+        rm_fmt_report_failure(self, session);
         return;
     }
 
@@ -79,7 +86,7 @@ static void rm_fmt_elem(
         /* We do not want to handle unique files here.
          * If it is unique, it will be not equal...
          * */
-        self->mismatch_found = true;
+        rm_fmt_report_failure(self, session);
         return;
     }
 
@@ -101,8 +108,7 @@ static void rm_fmt_elem(
         if(!strncmp(checksum, self->last_checksum, cksum_bytes)) {
             session->equal_exit_code = EXIT_SUCCESS;
         } else {
-            session->equal_exit_code = EXIT_FAILURE;
-            self->mismatch_found = true;
+            rm_fmt_report_failure(self, session);
             rm_log_debug_line(
                     "First differing items:\n\t%s (%s)\n\tlast checksum: (%s)",
                     file_path, checksum, self->last_checksum
