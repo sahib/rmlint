@@ -619,6 +619,7 @@ conf.env.Append(CFLAGS=[
     '-Wmissing-include-dirs',
     '-Wuninitialized',
     '-Wstrict-prototypes',
+    '-Wno-implicit-fallthrough'
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))

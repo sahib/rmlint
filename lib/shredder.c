@@ -330,13 +330,14 @@ typedef struct RmShredTag {
     (group->session->cfg->must_match_tagged || group->session->cfg->keep_all_untagged)
 #define NEEDS_NPREF(group) \
     (group->session->cfg->must_match_untagged || group->session->cfg->keep_all_tagged)
-#define NEEDS_NEW(group) (group->session->cfg->min_mtime)
+#define NEEDS_NEW(group) \
+    (group->session->cfg->min_mtime)
 
-// TODO: Why true all the time?! that was supposed to be only needed for paranoid + treemerge.
+/* There does not seem to be an performance advance here,
+ * but for paranoid mode it's useful to have a checksum in the json output.
+ * */
 #define NEEDS_SHADOW_HASH(cfg)                                         \
     (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
-/* Performance is faster with shadow hash, probably due to hash collisions in
- * large RmShredGroups */
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
