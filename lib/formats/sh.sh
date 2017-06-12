@@ -112,17 +112,12 @@ handle_bad_user_and_group_id() {
 check_for_equality() {
     # Use the more lightweight builtin `cmp` for regular files:
     if [ -f "$1" ]; then
-        if cmp "$1" "$2"; then
-            return 0
-        fi
-    else
-        if $RMLINT_BINARY -p --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"; then
-            return 0
-        fi
+        return $(cmp -s "$1" "$2")
     fi
 
-    echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
-    return 1
+    # Fallback to `rmlint --equal` for directories:
+    $RMLINT_BINARY -p --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"
+    return $?
 }
 
 original_check() {
@@ -146,7 +141,9 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        return $(check_for_equality "$1" "$2")
+        if [ -n $(check_for_equality "$1" "$2")]; then
+            echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
+        fi
     fi
 }
 
