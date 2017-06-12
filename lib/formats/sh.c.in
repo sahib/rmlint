@@ -241,9 +241,31 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
     g_strfreev(order_vec);
 }
 
+static char *rm_fmt_sh_get_extra_equal_args(RmSession *session) {
+    RmCfg *cfg = session->cfg;
+    GString *buf = g_string_new(NULL);
+
+    if(cfg->see_symlinks == false) {
+        if(cfg->follow_symlinks) {
+            g_string_append(buf, " --followlinks");
+        } else {
+            g_string_append(buf, " ---no-followlinks");
+        }
+    }
+
+    if(cfg->find_hardlinked_dupes == false) {
+        g_string_append(buf, " --no-hardlinked");
+    }
+
+    if(cfg->honour_dir_layout == true) {
+        g_string_append(buf, " --honour-dir-layout");
+    }
+
+    return g_string_free(buf, false);
+}
+
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
-    char *script_header = NULL;
 
     self->line_count = 0;
     self->session = session;
@@ -276,19 +298,22 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         }
     }
 
+    char *equal_extra_args = rm_fmt_sh_get_extra_equal_args(session);
+
     /* Fill in all placeholders in the script template */
     fprintf(
         out, SH_SCRIPT_TEMPLATE_HEAD,
         session->cfg->iwd,
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
-		(session->cfg->full_argv0_path) ? (session->cfg->full_argv0_path) : "$(which rmlint)",
+        (session->cfg->full_argv0_path) ? (session->cfg->full_argv0_path) : "$(which rmlint)",
+        equal_extra_args,
         rm_util_get_username(),
         rm_util_get_groupname(),
         (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "unknown_commandline"
     );
 
-    g_free(script_header);
+    g_free(equal_extra_args);
 }
 
 static char *rm_fmt_sh_escape_path(char *path) {

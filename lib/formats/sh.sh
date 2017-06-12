@@ -9,6 +9,10 @@ PROGRESS_TOTAL=
 
 RMLINT_BINARY="%s"
 
+# In special cases --equal needs special args to mimic
+# the behaviour that lead to finding the duplicates below.
+RMLINT_EQUAL_EXTRA_ARGS="%s"
+
 USER='%s'
 GROUP='%s'
 
@@ -126,7 +130,7 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if $RMLINT_BINARY -p --equal "$1" "$2"; then
+        if $RMLINT_BINARY -p --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"; then
             return 0
         else
             echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET

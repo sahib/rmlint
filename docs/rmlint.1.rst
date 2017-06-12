@@ -219,20 +219,20 @@ General Options
     should be placed at the end, ie ``rmlint --gui [options]`` when calling
     it from commandline.
 
-:``--hash``:
+:``--hash [paths...]``:
 
     Make ``rmlint`` work as a multi-threaded file hash utility, similar to the
     popular ``md5sum`` or ``sha1sum`` utilities, but faster and with more algorithms.
     A set of paths given on the commandline or from *stdin* is hashed using one
     of the available hash algorithms.  Use ``rmlint --hash -h`` to see options.
 
-:``--equal``:
+:``--equal [paths...]``:
 
     Check if the paths given on the commandline all have equal content. If all
     paths are equal and no other error happened, rmlint will exit with an exit
     code 0. Otherwise it will exit with a nonzero exit code. All other options
     can be used as normal, but note that no other formatters (``sh``, ``csv``
-    etc.) will be executed by default.
+    etc.) will be executed by default. At least two paths need to be passed.
 
     Note: This even works for directories and also in combination with paranoid
     mode (pass ``-pp`` for byte comparison); remember that rmlint does not care
