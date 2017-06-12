@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.6.1 Penetrating Pineapple] -- 2017-06-13
+
+### Fixed
+
+* Fix build-error on macOS due to wrong usage of #ifdef.
+* Fix a bug in treemerge that sometimes counted hardlinks more than once.
+* Fix copyright year notice all over the source code.
+* Fix --equal to allow hidden files, files counting as other lint and empty files.
+* Fix --equal to allow path doubles so passing symlinks to the same file still yields a 0.
+  Due to those fixes the paranoia mode of ``rmlint.sh`` should run smoother (again) now.
+* Use a more sophisticated strategy to find the path to the own binary and fallback to ``$(which rmlint)``.
+* Workaround the bash bug that did not allow huge functions by bringing back the old approach without a function.
+
+### Changed
+
+* It is now possible to treat empty files as duplicates when specifying "--size 0".
+* Use the `cmp` builtin to compare regular in the shell script files again, since it's faster.
+* Abort early in ``--equal`` if an mismatch has been encountered.
+* Test the shell script more thoroughly to avoid release troubles.
+
 ## [2.6.0 Penetrating Pineapple] -- 2017-06-03
 
 ### Fixed
