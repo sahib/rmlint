@@ -44,7 +44,7 @@ print_progress_prefix() {
         if [ $((PROGRESS_TOTAL)) -gt 0 ]; then
             PROGRESS_PERC=$((PROGRESS_CURR * 100 / PROGRESS_TOTAL))
         fi
-        printf "$COL_BLUE[% 4d%%]$COL_RESET " $PROGRESS_PERC
+        printf "$COL_BLUE[% 3d%%]$COL_RESET " $PROGRESS_PERC
         PROGRESS_CURR=$((PROGRESS_CURR+1))
     fi
 }
@@ -109,6 +109,22 @@ handle_bad_user_and_group_id() {
 # DUPLICATE HANDLER FUNCTIONS #
 ###############################
 
+check_for_equality() {
+    # Use the more lightweight builtin `cmp` for regular files:
+    if [ -f "$1" ]; then
+        if cmp "$1" "$2"; then
+            return 0
+        fi
+    else
+        if $RMLINT_BINARY -p --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"; then
+            return 0
+        fi
+    fi
+
+    echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
+    return 1
+}
+
 original_check() {
     if [ ! -e "$2" ]; then
         echo $COL_RED "^^^^^^ Error: original has disappeared - cancelling....." $COL_RESET
@@ -130,12 +146,7 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if $RMLINT_BINARY -p --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"; then
-            return 0
-        else
-            echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
-            return 1
-        fi
+        return $(check_for_equality "$1" "$2")
     fi
 }
 
