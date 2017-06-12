@@ -43,7 +43,8 @@ void rm_cfg_set_default(RmCfg *cfg) {
 
     /* Traversal options */
     cfg->depth = PATH_MAX / 2;
-    cfg->minsize = 0;
+    cfg->limits_specified = true;
+    cfg->minsize = 1;
     cfg->maxsize = G_MAXUINT64;
 
     /* Lint Types */

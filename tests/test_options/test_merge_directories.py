@@ -120,13 +120,25 @@ def test_deep_simple():
 def test_dirs_with_empty_files_only():
     create_file('', 'a/empty')
     create_file('', 'b/empty')
-    head, *data, footer = run_rmlint('-pp -D -S a -T df,dd')
+    head, *data, footer = run_rmlint('-pp -D -S a -T df,dd --size 0')
 
     assert len(data) == 2
     assert data[0]['path'].endswith('a')
     assert data[0]['type'] == "duplicate_dir"
     assert data[1]['path'].endswith('b')
     assert data[1]['type'] == "duplicate_dir"
+
+    head, *data, footer = run_rmlint('-pp -D -S a -T df,dd')
+    assert len(data) == 0
+
+    head, *data, footer = run_rmlint('-pp -D -S a --size 0')
+    assert len(data) == 2
+
+    data.sort(key=lambda elem: elem["path"])
+    assert data[0]['path'].endswith('a/empty')
+    assert data[0]['type'] == "emptyfile"
+    assert data[1]['path'].endswith('b/empty')
+    assert data[1]['type'] == "emptyfile"
 
 
 def create_nested(root, letters):

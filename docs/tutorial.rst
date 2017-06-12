@@ -101,14 +101,15 @@ Limit files by size using ``--size``
    $ rmlint -s 4K
    # only check files smaller than 1234 bytes:
    $ rmlint -s 0-1234
+   # Find empty files and handle them as duplicates:
+   $ rmlint -T df --size 0-1
 
 Valid units include:
 
 |  K,M,G,T,P for powers of 1000
 |  KB, MB, GB etc for powers of 1024
 
-If no units are given, ``rmlint`` assumes bytes.
-
+If no units are given, ``rmlint`` will assume bytes.
 
 Limit duplicate matching according to basename
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

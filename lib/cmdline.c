@@ -1201,6 +1201,10 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
     session->cfg->partial_hidden = false;
     session->cfg->ignore_hidden = false;
 
+    /* See issue #234 fore more discussion on this */
+    session->cfg->limits_specified = true;
+    session->cfg->minsize = 0;
+
     rm_fmt_clear(session->formats);
     rm_fmt_add(session->formats, "_equal", "stdout");
     return true;
@@ -1452,7 +1456,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
      * for special modes like --btrfs-clone or --equal.
      * We want to make sure the installed version has this
      * */
-	cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
+    cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
 
     ////////////////////
     // OPTION PARSING //
@@ -1627,30 +1631,30 @@ int rm_cmd_main(RmSession *session) {
     if(cfg->merge_directories) {
         rm_assert_gentle(cfg->cache_file_structs);
 
-		/* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
-		 * on two dupicate directories which is likely not a valid assumption.
+        /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
+         * on two dupicate directories which is likely not a valid assumption.
          * Emit a warning if the raw -D is used in conjunction with that.
          * */
-		const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
-		const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
-		if(
+        const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
+        const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
+        if(
             cfg->honour_dir_layout == false && (
                 (handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
                 clone_key != NULL
             )
         ) {
-			rm_log_error_line(_("Using -D together with -c sh:clone is currently not possible. Sorry."));
+            rm_log_error_line(_("Using -D together with -c sh:clone is currently not possible. Sorry."));
             rm_log_error_line(_("Either do not use -D, or attempt to run again with -Dj."));
-			return EXIT_FAILURE;
-		}
+            return EXIT_FAILURE;
+        }
 
         session->dir_merger = rm_tm_new(session);
     }
 
-	if(session->total_files < 2 && session->cfg->run_equal_mode) {
-		rm_log_warning_line(_("Not enough files for --equal (need at least two to compare)"));
-		return EXIT_FAILURE;
-	}
+    if(session->total_files < 2 && session->cfg->run_equal_mode) {
+        rm_log_warning_line(_("Not enough files for --equal (need at least two to compare)"));
+        return EXIT_FAILURE;
+    }
 
     if(session->total_files >= 1) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
@@ -1690,9 +1694,9 @@ int rm_cmd_main(RmSession *session) {
         exit_state = EXIT_FAILURE;
     }
 
-	if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode)  {
-		return session->equal_exit_code;
-	}
+    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode)  {
+        return session->equal_exit_code;
+    }
 
     return exit_state;
 }

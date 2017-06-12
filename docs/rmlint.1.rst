@@ -258,20 +258,28 @@ General Options
 Traversal Options
 -----------------
 
-:``-s --size=range`` (**default\:** *all*):
+:``-s --size=range`` (**default\:** "1"):
 
-    Only consider files in a certain size range.
+    Only consider files as duplicates in a certain size range.
     The format of `range` is `min-max`, where both ends can be specified
     as a number with an optional multiplier. The available multipliers are:
 
     - *C* (1^1), *W* (2^1), B (512^1), *K* (1000^1), KB (1024^1), *M* (1000^2), *MB* (1024^2), *G* (1000^3), *GB* (1024^3),
     - *T* (1000^4), *TB* (1024^4), *P* (1000^5), *PB* (1024^5), *E* (1000^6), *EB* (1024^6)
 
-    The size format is about the same as `dd(1)` uses. Example: **"100KB-2M"**.
+    The size format is about the same as `dd(1)` uses. A valid example would be: **"100KB-2M"**.
+    This limits duplicates to a range from 100 Kilobyte to 2 Megabyte.
 
     It's also possible to specify only one size. In this case the size is
-    interpreted as *"bigger than this size"*. If you want to to filter for files
-    *up to this size* you can add a ``-`` in front (``-s -1M``).
+    interpreted as *"bigger or equal"*. If you want to to filter for files
+    *up to this size* you can add a ``-`` in front (``-s -1M`` == ``-s 0-1M``).
+
+    **NOTE:** The default excludes empty files from the duplicate search.
+    Normally these are treated specially by ``rmlint`` by handling them as
+    *other lint*. If you want to include empty files as duplicates you should
+    lower the limit to zero:
+
+    ``$ rmlint -T df --size 0``
 
 :``-d --max-depth=depth`` (**default\:** *INF*):
 
