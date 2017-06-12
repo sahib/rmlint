@@ -456,7 +456,7 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
     /* The file value is not really used, but we need some non-null value */
     g_hash_table_add(directory->hash_set, file->digest);
 
-    directory->dupe_count += 1 + RM_FILE_HARDLINK_COUNT(file);
+    directory->dupe_count += 1;
     directory->prefd_files += file->is_prefd;
 }
 
