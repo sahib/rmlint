@@ -28,6 +28,9 @@ DO_CLONE_READONLY=
 # Set to true on -q
 DO_SHOW_PROGRESS=true
 
+# Set to true on -c
+DO_DELETE_EMPTY_DIRS=
+
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
@@ -229,6 +232,14 @@ remove_cmd() {
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             rm -rf "$1"
+
+            if [ ! -z "$DO_DELETE_EMPTY_DIRS" ]; then
+                DIR=$(dirname "$1")
+                while [ ! "$(ls -A $DIR)" ]; do
+                    rmdir "$DIR"
+                    DIR=$(dirname "$DIR")
+                done
+            fi
         fi
     fi
 }
@@ -282,7 +293,7 @@ EOF
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxnrpq" OPTION
+while getopts "dhxnrpqc" OPTION
 do
   case $OPTION in
      h)
@@ -305,6 +316,9 @@ do
        ;;
      p)
        DO_PARANOID_CHECK=true
+       ;;
+     c)
+       DO_DELETE_EMPTY_DIRS=true
        ;;
      q)
        DO_SHOW_PROGRESS=
