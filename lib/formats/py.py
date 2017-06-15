@@ -24,7 +24,7 @@ Authors:
 
 # This is the python remover utility shipped inside the rmlint binary.
 # The 200 lines source presented below is meant to be clean and hackable.
-# It is intented to be used for corner cases where the built-in sh formatter
+# It is intended to be used for corner cases where the built-in sh formatter
 # is not enough or as an alternative to it. By default it works the same.
 
 # Python2 compat:
@@ -94,7 +94,7 @@ def handle_empty_dir(path, **kwargs):
     os.rmdir(path)
 
 
-def handle_empy_file(path, **kwargs):
+def handle_empty_file(path, **kwargs):
     os.remove(path)
 
 
@@ -127,7 +127,7 @@ OPERATIONS = {
     "duplicate_file": handle_duplicate_file,
     "unfinished_cksum": handle_unfinished_cksum,
     "emptydir": handle_empty_dir,
-    "emptyfile": handle_empy_file,
+    "emptyfile": handle_empty_file,
     "nonstripped": handle_nonstripped,
     "badlink": handle_badlink,
     "baduid": handle_baduid,
