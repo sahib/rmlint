@@ -24,6 +24,10 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Abort early in ``--equal`` if an mismatch has been encountered.
 * Test the shell script more thoroughly to avoid release troubles.
 
+### Added
+
+* Add a new ``-c`` switch to ``rmlint.sh`` that cleans up empty directories while running the script.
+
 ## [2.6.0 Penetrating Pineapple] -- 2017-06-03
 
 ### Fixed

@@ -287,6 +287,8 @@ OPTIONS:
   -p   Recheck that files are still identical before removing duplicates.
   -r   Allow btrfs-clone to clone to read-only snapshots. (requires sudo)
   -n   Do not perform any modifications, just print what would be done. (implies -d and -x)
+  -c   Clean up empty directories while deleting duplicates.
+  -q   Do not show progress.
 EOF
 }
 
