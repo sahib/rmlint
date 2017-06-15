@@ -78,12 +78,14 @@ def original_check(path, original, be_paranoid=True):
 
 
 def handle_duplicate_dir(path, original, **kwargs):
-    shutil.rmtree(path)
+    if not args.dry_run:
+        shutil.rmtree(path)
 
 
 def handle_duplicate_file(path, original, args, **kwargs):
     if original_check(path, original['path'], be_paranoid=args.paranoid):
-        os.remove(path)
+        if not args.dry_run:
+            os.remove(path)
 
 
 def handle_unfinished_cksum(path, **kwargs):
@@ -91,19 +93,23 @@ def handle_unfinished_cksum(path, **kwargs):
 
 
 def handle_empty_dir(path, **kwargs):
-    os.rmdir(path)
+    if not args.dry_run:
+        os.rmdir(path)
 
 
 def handle_empty_file(path, **kwargs):
-    os.remove(path)
+    if not args.dry_run:
+        os.remove(path)
 
 
 def handle_nonstripped(path, **kwargs):
-    subprocess.call(["strip", "--strip-debug", path])
+    if not args.dry_run:
+        subprocess.call(["strip", "--strip-debug", path])
 
 
 def handle_badlink(path, **kwargs):
-    os.remove(path)
+    if not args.dry_run:
+        os.remove(path)
 
 
 CURRENT_UID = os.geteuid()
@@ -111,15 +117,18 @@ CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
 
 
 def handle_baduid(path, **kwargs):
-    os.chmod(path, CURRENT_UID, -1)
+    if not args.dry_run:
+        os.chmod(path, CURRENT_UID, -1)
 
 
 def handle_badgid(path, **kwargs):
-    os.chmod(path, -1, CURRENT_GID)
+    if not args.dry_run:
+        os.chmod(path, -1, CURRENT_GID)
 
 
 def handle_badugid(path, **kwargs):
-    os.chmod(path, CURRENT_UID, CURRENT_GID)
+    if not args.dry_run:
+        os.chmod(path, CURRENT_UID, CURRENT_GID)
 
 
 OPERATIONS = {
@@ -177,8 +186,7 @@ def main(args, header, data, footer):
             # Do not handle originals.
             continue
 
-        if not args.dry_run:
-            exec_operation(item, original=last_original_item, args=args)
+        exec_operation(item, original=last_original_item, args=args)
 
         print('{c[blue]}#{c[reset]} Handling ({t} -> {v}): {p}'.format(
             c=COLORS, t=item['type'], v=MESSAGES[item['type']], p=item['path'])
