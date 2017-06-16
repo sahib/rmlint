@@ -199,8 +199,8 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        'json_docs', metavar='json_doc', type=open, nargs='*',
-        help='A json output of rmlint to handle (can be given many times)'
+        'json_docs', metavar='json_doc', nargs='*', default=['.rmlint.json'],
+        help='A json output of rmlint to handle (can be given multiple times)'
     )
     parser.add_argument(
         '-n', '--dry-run', action='store_true',
@@ -215,22 +215,21 @@ if __name__ == '__main__':
         help='Do an extra byte-by-byte compare before deleting duplicates'
     )
 
-    try:
-        args = parser.parse_args()
-    except OSError as err:
-        print(err)
-        sys.exit(-1)
+    args = parser.parse_args()
 
-    if not args.json_docs:
-        # None given on the commandline
+    json_docus = []
+    for doc in args.json_docs:
         try:
-            args.json_docs.append(open('.rmlint.json', 'r'))
-        except OSError as err:
-            print('Cannot load default json document: ', str(err), file=sys.stderr)
-            sys.exit(-2)
+            with open(doc) as f:
+                j = json.load(f)
+            json_docus.append(j)
+        except IOError as err:      # Cannot open file
+            print(err, file=sys.stderr)
+            sys.exit(-1)
+        except ValueError as err:   # File is not valid JSON
+            print('{}: {}'.format(err, doc), file=sys.stderr)
+            sys.exit(-1)
 
-    json_docus = [json.load(doc) for doc in args.json_docs]
-    json_elems = [item for sublist in json_docus for item in sublist]
 
     try:
         if not args.no_ask and not args.dry_run:
