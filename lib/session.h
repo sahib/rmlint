@@ -65,9 +65,6 @@ typedef struct RmSession {
     /* Table of mountpoints used in the system */
     struct RmMountTable *mounts;
 
-    /* Output formatting control */
-    struct RmFmtTable *formats;
-
     /* Treemerging for -D */
     struct RmTreeMerger *dir_merger;
 
@@ -117,26 +114,11 @@ typedef struct RmSession {
     RmOff hash_seed1;
     RmOff hash_seed2;
 
-    /* count used for determining the verbosity level */
-    int verbosity_count;
-
-    /* count used for determining the paranoia level */
-    int paranoia_count;
-
-    /* count for -o and -O; initialized to -1 */
-    int output_cnt[2];
-
-    /* true if a cmdline parse error happened */
-    bool cmdline_parse_error;
-
     /* true once shredder finished running */
     bool shredder_finished;
 
     /* true once traverse finished running */
     bool traverse_finished;
-
-    /* Version of the linux kernel (0 on other operating systems) */
-    int kernel_version[2];
 
     /*  When run with --equal this holds the exit code for rmlint
      *  (the exit code is determined by the _equal formatter) */

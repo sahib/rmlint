@@ -673,7 +673,7 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
         session->total_filtered_files += buffer->files;
     }
     session->shred_bytes_remaining += buffer->bytes;
-    rm_fmt_set_state(session->formats, (tag->after_preprocess)
+    rm_fmt_set_state(session->cfg->formats, (tag->after_preprocess)
                                            ? RM_PROGRESS_STATE_SHREDDER
                                            : RM_PROGRESS_STATE_PREPROCESS);
 
@@ -1285,7 +1285,7 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     /* Hand it over to the printing module */
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        rm_fmt_write(file, session->formats, group->length);
+        rm_fmt_write(file, session->cfg->formats, group->length);
     }
 }
 
@@ -1415,12 +1415,12 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
 
     /* Update statistics */
     if(group->status == RM_SHRED_GROUP_FINISHING) {
-        rm_fmt_lock_state(tag->session->formats);
+        rm_fmt_lock_state(tag->session->cfg->formats);
         {
             tag->session->dup_group_counter++;
             g_queue_foreach(group->held_files, (GFunc)rm_shred_dupe_totals, tag->session);
         }
-        rm_fmt_unlock_state(tag->session->formats);
+        rm_fmt_unlock_state(tag->session->cfg->formats);
     }
 
     gboolean treemerge = cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING;
@@ -1735,7 +1735,7 @@ void rm_shred_run(RmSession *session) {
                                (RmHasherCallback)rm_shred_hash_callback,
                                &tag);
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SHREDDER);
 
     session->shred_bytes_total = session->shred_bytes_remaining;
     rm_mds_start(session->mds);
@@ -1745,7 +1745,7 @@ void rm_shred_run(RmSession *session) {
     rm_hasher_free(tag.hasher, TRUE);
 
     session->shredder_finished = TRUE;
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SHREDDER);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SHREDDER);
 
     /* This should not block, or at least only very short. */
     g_thread_pool_free(tag.result_pool, FALSE, TRUE);

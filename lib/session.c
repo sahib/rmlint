@@ -42,16 +42,16 @@ void rm_session_read_kernel_version(RmSession *session) {
         return;
     }
 
-    if(sscanf(buf.release, "%d.%d.*", &session->kernel_version[0],
-              &session->kernel_version[1]) == EOF) {
-        session->kernel_version[0] = -1;
-        session->kernel_version[1] = -1;
+    if(sscanf(buf.release, "%d.%d.*", &session->cfg->kernel_version[0],
+              &session->cfg->kernel_version[1]) == EOF) {
+        session->cfg->kernel_version[0] = -1;
+        session->cfg->kernel_version[1] = -1;
         return;
     }
 
     rm_log_debug_line("Linux kernel version is %d.%d.",
-                      session->kernel_version[0],
-                      session->kernel_version[1]);
+                      session->cfg->kernel_version[0],
+                      session->cfg->kernel_version[1]);
 }
 #else
 void rm_session_read_kernel_version(RmSession *session) {
@@ -60,8 +60,8 @@ void rm_session_read_kernel_version(RmSession *session) {
 #endif
 
 bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
-    int found_major = session->kernel_version[0];
-    int found_minor = session->kernel_version[1];
+    int found_major = session->cfg->kernel_version[0];
+    int found_minor = session->cfg->kernel_version[1];
 
     /* Could not read kernel version: Assume failure on our side. */
     if(found_major <= 0 && found_minor <= 0) {
@@ -82,13 +82,13 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 
     session->cfg = cfg;
     session->tables = rm_file_tables_new(session);
-    session->formats = rm_fmt_open(session);
+    session->cfg->formats = rm_fmt_open(session);
     session->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
 
-    session->verbosity_count = 2;
-    session->paranoia_count = 0;
-    session->output_cnt[0] = -1;
-    session->output_cnt[1] = -1;
+    session->cfg->verbosity_count = 2;
+    session->cfg->paranoia_count = 0;
+    session->cfg->output_cnt[0] = -1;
+    session->cfg->output_cnt[1] = -1;
 
     session->offsets_read = 0;
     session->offset_fragments = 0;
@@ -113,7 +113,7 @@ void rm_session_clear(RmSession *session) {
 
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
-    rm_fmt_close(session->formats);
+    rm_fmt_close(session->cfg->formats);
     g_ptr_array_free(session->pattern_cache, TRUE);
 
     if(session->mounts) {

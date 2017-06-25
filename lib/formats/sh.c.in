@@ -269,22 +269,22 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 
     self->line_count = 0;
     self->session = session;
-    self->user_cmd = rm_fmt_get_config_value(session->formats, "sh", "cmd");
+    self->user_cmd = rm_fmt_get_config_value(session->cfg->formats, "sh", "cmd");
 
-    const char *handler_cfg = rm_fmt_get_config_value(session->formats, "sh", "handler");
+    const char *handler_cfg = rm_fmt_get_config_value(session->cfg->formats, "sh", "handler");
     if(handler_cfg != NULL) {
         /* user specified handlers */
         rm_sh_parse_handlers(self, handler_cfg);
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "clone") != NULL) {
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "clone") != NULL) {
         /* Preset: try clone, then reflinks, then symlinks then hardlinks */
         rm_sh_parse_handlers(self, "clone,reflink,hardlink,symlink");
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "link") != NULL) {
         /* Preset: try reflinks, then symlinks then hardlinks */
         rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "hardlink") != NULL) {
         /* Preset: try symlinks before using hardlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "symlink") != NULL) {
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "symlink") != NULL) {
         /* Preset: only do hardlinks */
         rm_sh_parse_handlers(self, "symlink");
     } else {
@@ -424,7 +424,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
     g_byte_array_free(self->order, true);
 
-    if(rm_fmt_is_stream(session->formats, parent)) {
+    if(rm_fmt_is_stream(session->cfg->formats, parent)) {
         /* You will have a hard time deleting standard streams. */
         return;
     }

@@ -493,7 +493,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
         strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
     }
 
-    if(!rm_fmt_add(session->formats, format_name, full_path)) {
+    if(!rm_fmt_add(session->cfg->formats, format_name, full_path)) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Adding -o %s as output failed"), pair);
         return false;
     }
@@ -530,14 +530,14 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair,
     }
 
     char *formatter = g_strndup(pair, domain - pair);
-    if(!rm_fmt_is_valid_key(session->formats, formatter, key)) {
+    if(!rm_fmt_is_valid_key(session->cfg->formats, formatter, key)) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key `%s' for formatter `%s'"),
                     key, formatter);
         g_free(key);
         g_free(value);
         result = false;
     } else {
-        rm_fmt_set_config_value(session->formats, formatter, key, value);
+        rm_fmt_set_config_value(session->cfg->formats, formatter, key, value);
     }
 
     g_free(formatter);
@@ -835,10 +835,10 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         return false;
     }
 
-    rm_fmt_add(session->formats, "stamp", timestamp_path);
+    rm_fmt_add(session->cfg->formats, "stamp", timestamp_path);
     if(!plain) {
         /* Enable iso8601 timestamp output */
-        rm_fmt_set_config_value(session->formats, "stamp", g_strdup("iso8601"),
+        rm_fmt_set_config_value(session->cfg->formats, "stamp", g_strdup("iso8601"),
                                 g_strdup("true"));
     }
 
@@ -889,7 +889,7 @@ static void rm_cmd_on_error(_UNUSED GOptionContext *context, _UNUSED GOptionGrou
     if(error != NULL) {
         rm_log_error_line("%s.", (*error)->message);
         g_clear_error(error);
-        session->cmdline_parse_error = true;
+        session->cfg->cmdline_parse_error = true;
     }
 }
 
@@ -913,16 +913,16 @@ static gboolean rm_cmd_parse_algorithm(_UNUSED const char *option_name,
 static gboolean rm_cmd_parse_small_output(_UNUSED const char *option_name,
                                           const gchar *output_pair, RmSession *session,
                                           _UNUSED GError **error) {
-    session->output_cnt[0] = MAX(session->output_cnt[0], 0);
-    session->output_cnt[0] += rm_cmd_parse_output_pair(session, output_pair, error);
+    session->cfg->output_cnt[0] = MAX(session->cfg->output_cnt[0], 0);
+    session->cfg->output_cnt[0] += rm_cmd_parse_output_pair(session, output_pair, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_large_output(_UNUSED const char *option_name,
                                           const gchar *output_pair, RmSession *session,
                                           _UNUSED GError **error) {
-    session->output_cnt[1] = MAX(session->output_cnt[1], 0);
-    session->output_cnt[1] += rm_cmd_parse_output_pair(session, output_pair, error);
+    session->cfg->output_cnt[1] = MAX(session->cfg->output_cnt[1], 0);
+    session->cfg->output_cnt[1] += rm_cmd_parse_output_pair(session, output_pair, error);
     return true;
 }
 
@@ -971,9 +971,9 @@ static gboolean rm_cmd_parse_clamp_top(_UNUSED const char *option_name, const gc
 static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
                                       _UNUSED const gchar *value, RmSession *session,
                                       _UNUSED GError **error) {
-    rm_fmt_clear(session->formats);
-    rm_fmt_add(session->formats, "progressbar", "stdout");
-    rm_fmt_add(session->formats, "summary", "stdout");
+    rm_fmt_clear(session->cfg->formats);
+    rm_fmt_add(session->cfg->formats, "progressbar", "stdout");
+    rm_fmt_add(session->cfg->formats, "summary", "stdout");
 
     session->cfg->progress_enabled = true;
 
@@ -981,52 +981,52 @@ static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
 }
 
 static void rm_cmd_set_default_outputs(RmSession *session) {
-    rm_fmt_add(session->formats, "pretty", "stdout");
-    rm_fmt_add(session->formats, "summary", "stdout");
+    rm_fmt_add(session->cfg->formats, "pretty", "stdout");
+    rm_fmt_add(session->cfg->formats, "summary", "stdout");
 
     if(session->cfg->replay) {
-        rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
-        rm_fmt_add(session->formats, "json", "rmlint.replay.json");
+        rm_fmt_add(session->cfg->formats, "sh", "rmlint.replay.sh");
+        rm_fmt_add(session->cfg->formats, "json", "rmlint.replay.json");
     } else {
-        rm_fmt_add(session->formats, "sh", "rmlint.sh");
-        rm_fmt_add(session->formats, "json", "rmlint.json");
+        rm_fmt_add(session->cfg->formats, "sh", "rmlint.sh");
+        rm_fmt_add(session->cfg->formats, "json", "rmlint.json");
     }
 }
 
 static gboolean rm_cmd_parse_no_progress(_UNUSED const char *option_name,
                                          _UNUSED const gchar *value, RmSession *session,
                                          _UNUSED GError **error) {
-    rm_fmt_clear(session->formats);
+    rm_fmt_clear(session->cfg->formats);
     rm_cmd_set_default_outputs(session);
-    rm_cmd_set_verbosity_from_cnt(session->cfg, session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, session->cfg->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_loud(_UNUSED const char *option_name,
                                   _UNUSED const gchar *count, RmSession *session,
                                   _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->cfg->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_quiet(_UNUSED const char *option_name,
                                    _UNUSED const gchar *count, RmSession *session,
                                    _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, --session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(session->cfg, --session->cfg->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_paranoid(_UNUSED const char *option_name,
                                       _UNUSED const gchar *count, RmSession *session,
                                       _UNUSED GError **error) {
-    rm_cmd_set_paranoia_from_cnt(session->cfg, ++session->paranoia_count, error);
+    rm_cmd_set_paranoia_from_cnt(session->cfg, ++session->cfg->paranoia_count, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_less_paranoid(_UNUSED const char *option_name,
                                            _UNUSED const gchar *count, RmSession *session,
                                            _UNUSED GError **error) {
-    rm_cmd_set_paranoia_from_cnt(session->cfg, --session->paranoia_count, error);
+    rm_cmd_set_paranoia_from_cnt(session->cfg, --session->cfg->paranoia_count, error);
     return true;
 }
 
@@ -1205,8 +1205,8 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
     session->cfg->limits_specified = true;
     session->cfg->minsize = 0;
 
-    rm_fmt_clear(session->formats);
-    rm_fmt_add(session->formats, "_equal", "stdout");
+    rm_fmt_clear(session->cfg->formats);
+    rm_fmt_add(session->cfg->formats, "_equal", "stdout");
     return true;
 }
 
@@ -1268,12 +1268,12 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
-    if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
+    if(session->cfg->output_cnt[0] >= 0 && session->cfg->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifiyng both -o and -O is not allowed"));
         return false;
-    } else if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0 &&
-              !rm_fmt_len(session->formats)) {
+    } else if(session->cfg->output_cnt[0] < 0 && session->cfg->output_cnt[1] < 0 &&
+              !rm_fmt_len(session->cfg->formats)) {
         rm_cmd_set_default_outputs(session);
     }
 
@@ -1439,7 +1439,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* clang-format on */
 
     /* Initialize default verbosity */
-    rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(cfg, session->cfg->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot set current working directory"));
@@ -1503,7 +1503,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     if(clone) {
         /* should not get here */
         rm_cmd_btrfs_clone_usage();
-        session->cmdline_parse_error = TRUE;
+        session->cfg->cmdline_parse_error = TRUE;
     }
 
     /* Silent fixes of invalid numeric input */
@@ -1523,12 +1523,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     if(cfg->progress_enabled) {
-        if(!rm_fmt_has_formatter(session->formats, "sh")) {
-            rm_fmt_add(session->formats, "sh", "rmlint.sh");
+        if(!rm_fmt_has_formatter(session->cfg->formats, "sh")) {
+            rm_fmt_add(session->cfg->formats, "sh", "rmlint.sh");
         }
 
-        if(!rm_fmt_has_formatter(session->formats, "json")) {
-            rm_fmt_add(session->formats, "json", "rmlint.json");
+        if(!rm_fmt_has_formatter(session->cfg->formats, "json")) {
+            rm_fmt_add(session->cfg->formats, "json", "rmlint.json");
         }
     }
 
@@ -1569,7 +1569,7 @@ failure:
     }
 
     g_option_context_free(option_parser);
-    return !(session->cmdline_parse_error);
+    return !(session->cfg->cmdline_parse_error);
 }
 
 static int rm_cmd_replay_main(RmSession *session) {
@@ -1596,9 +1596,9 @@ static int rm_cmd_replay_main(RmSession *session) {
     }
 
     rm_parrot_cage_close(&cage);
-    rm_fmt_flush(session->formats);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+    rm_fmt_flush(session->cfg->formats);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SUMMARY);
 
     return EXIT_SUCCESS;
 }
@@ -1607,13 +1607,13 @@ int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
     RmCfg *cfg = session->cfg;
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_INIT);
 
     if(session->cfg->replay) {
         return rm_cmd_replay_main(session);
     }
 
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
 
     if(cfg->list_mounts) {
         session->mounts = rm_mounts_table_new(cfg->fake_fiemap);
@@ -1639,8 +1639,9 @@ int rm_cmd_main(RmSession *session) {
          * Emit a warning if the raw -D is used in conjunction with that.
          * */
         const char *handler_key =
-            rm_fmt_get_config_value(session->formats, "sh", "handler");
-        const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
+            rm_fmt_get_config_value(session->cfg->formats, "sh", "handler");
+        const char *clone_key =
+            rm_fmt_get_config_value(session->cfg->formats, "sh", "clone");
         if(cfg->honour_dir_layout == false &&
            ((handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
             clone_key != NULL)) {
@@ -1661,7 +1662,7 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->total_files >= 1) {
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
+        rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
         if(cfg->find_duplicates || cfg->merge_directories) {
@@ -1676,13 +1677,13 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(cfg->merge_directories) {
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
+        rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_MERGE);
         rm_tm_finish(session->dir_merger);
     }
 
-    rm_fmt_flush(session->formats);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+    rm_fmt_flush(session->cfg->formats);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SUMMARY);
 
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line("BUG: Number of remaining bytes is %" LLU

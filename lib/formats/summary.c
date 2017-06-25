@@ -69,8 +69,8 @@ static void rm_fmt_prog(RmSession *session,
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 
-    if(rm_fmt_has_formatter(session->formats, "pretty") &&
-       rm_fmt_has_formatter(session->formats, "sh")) {
+    if(rm_fmt_has_formatter(session->cfg->formats, "pretty") &&
+       rm_fmt_has_formatter(session->cfg->formats, "sh")) {
         ARROW fprintf(out, _("Note: Please use the saved script below for removal, not "
                              "the above output."));
         fprintf(out, "\n");
@@ -112,7 +112,7 @@ static void rm_fmt_prog(RmSession *session,
     GHashTableIter iter;
     char *path = NULL;
     RmFmtHandler *handler = NULL;
-    rm_fmt_get_pair_iter(session->formats, &iter);
+    rm_fmt_get_pair_iter(session->cfg->formats, &iter);
 
     while(g_hash_table_iter_next(&iter, (gpointer *)&path, (gpointer *)&handler)) {
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};

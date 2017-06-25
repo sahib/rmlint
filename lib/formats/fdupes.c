@@ -84,9 +84,9 @@ static void rm_fmt_prog(RmSession *session,
     if(state == RM_PROGRESS_STATE_INIT) {
         session->cfg->cache_file_structs = true;
         self->omit_first_line =
-            (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
+            (rm_fmt_get_config_value(session->cfg->formats, "fdupes", "omitfirst") != NULL);
         self->use_same_line =
-            (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
+            (rm_fmt_get_config_value(session->cfg->formats, "fdupes", "sameline") != NULL);
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {

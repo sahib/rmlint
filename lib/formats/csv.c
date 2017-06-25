@@ -42,7 +42,7 @@ typedef struct RmFmtHandlerCSV {
 
 static void rm_fmt_head(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
                         FILE *out) {
-    if(rm_fmt_get_config_value(session->formats, "csv", "no_header")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "csv", "no_header")) {
         return;
     }
 

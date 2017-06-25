@@ -179,11 +179,11 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
     self->id_set = g_hash_table_new(NULL, NULL);
 
-    if(rm_fmt_get_config_value(session->formats, "json", "oneline")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "json", "oneline")) {
         self->pretty = false;
     }
 
-    if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
+    if(!rm_fmt_get_config_value(session->cfg->formats, "json", "no_header")) {
         rm_fmt_json_open(self, out);
         {
             rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
@@ -214,7 +214,7 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
-    if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "json", "no_footer")) {
         fprintf(out, "{}");
     } else {
         rm_fmt_json_open(self, out);
@@ -254,7 +254,7 @@ static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
 
 static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
-    if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "json", "no_body")) {
         return;
     }
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE &&

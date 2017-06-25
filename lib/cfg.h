@@ -151,6 +151,25 @@ typedef struct RmCfg {
      * (or directories)
      */
     gboolean run_equal_mode;
+
+    /* Output formatting control */
+    struct RmFmtTable *formats;
+
+    /* count used for determining the verbosity level */
+    int verbosity_count;
+
+    /* count used for determining the paranoia level */
+    int paranoia_count;
+
+    /* count for -o and -O; initialized to -1 */
+    int output_cnt[2];
+
+    /* true if a cmdline parse error happened */
+    bool cmdline_parse_error;
+
+    /* Version of the linux kernel (0 on other operating systems) */
+    int kernel_version[2];
+
 } RmCfg;
 
 /**

@@ -360,19 +360,19 @@ static void rm_fmt_prog(RmSession *session,
     if(state == RM_PROGRESS_STATE_INIT) {
         /* Do initializiation here */
         const char *update_interval_str =
-            rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
+            rm_fmt_get_config_value(session->cfg->formats, "progressbar", "update_interval");
 
         rm_running_mean_init(&self->read_diff_mean, 10);
         rm_running_mean_init(&self->eta_mean, 50);
         self->last_shred_bytes_remaining = 0;
 
         self->plain = true;
-        if(rm_fmt_get_config_value(session->formats, "progressbar", "fancy") != NULL) {
+        if(rm_fmt_get_config_value(session->cfg->formats, "progressbar", "fancy") != NULL) {
             self->plain = false;
         }
 
         self->use_unicode_glyphs = true;
-        if(rm_fmt_get_config_value(session->formats, "progressbar", "ascii") != NULL) {
+        if(rm_fmt_get_config_value(session->cfg->formats, "progressbar", "ascii") != NULL) {
             self->use_unicode_glyphs = false;
         }
 
