@@ -39,7 +39,6 @@ import filecmp
 import argparse
 import subprocess
 
-
 USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
 COLORS = {
     'red':    "\x1b[31;01m" if USE_COLOR else "",
@@ -144,18 +143,6 @@ OPERATIONS = {
     "badugid": handle_badugid,
 }
 
-MESSAGES = {
-    "duplicate_dir": "removing tree",
-    "duplicate_file": "removing",
-    "unfinished_cksum": "checking",
-    "emptydir": "removing",
-    "emptyfile": "removing",
-    "nonstripped": "stripping",
-    "badlink": "removing",
-    "baduid": "changing uid",
-    "badgid": "changing gid",
-    "badugid": "changing uid & gid",
-}
 
 
 def exec_operation(item, original=None, args=None):
@@ -163,7 +150,7 @@ def exec_operation(item, original=None, args=None):
         OPERATIONS[item['type']](item['path'], original=original, item=item, args=args)
     except OSError as err:
         print(
-            '{c[red]}#{c[reset]} Error on `{item[path]}`:\n{c[red]}#{c[reset]}    {err}'.format(
+            '{c[red]}#{c[reset]} {err}'.format(
                 item=item, err=err, c=COLORS
             ),
             file=sys.stderr
@@ -186,49 +173,63 @@ def main(args, data):
         print('\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
         sys.stdin.read(1)
 
+    MESSAGES = {
+        'duplicate_dir':    '{c[yellow]}Deleting duplicate directory'.format(c=COLORS),
+        'duplicate_file':   '{c[yellow]}Deleting duplicate:'.format(c=COLORS),
+        "unfinished_cksum": "checking",
+        'emptydir':         '{c[green]}Deleting empty directory:'.format(c=COLORS),
+        'emptyfile':        '{c[green]}Deleting empty file:'.format(c=COLORS),
+        'nonstripped':      '{c[green]}Stripping debug symbols:'.format(c=COLORS),
+        'badlink':          '{c[green]}Deleting bad symlink:'.format(c=COLORS),
+        'baduid':           '{c[green]}chown'.format(c=COLORS),
+        'badgid':           '{c[green]}chgrp'.format(c=COLORS),
+        'badugid':          '{c[green]}chown'.format(c=COLORS),
+    }
+
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
-            print(
-                "\n{c[green]}#{c[reset]} Deleting twins of {item[path]} ".format(
-                    item=item, c=COLORS
-                )
+            print('{c[blue]}[{prog:3}%]{c[reset]} {c[green]}Keeping original:   {c[reset]}{path}'.format(
+                prog=item['progress'], path=item['path'], c=COLORS)
             )
             last_original_item = item
 
             # Do not handle originals.
             continue
 
-        exec_operation(item, original=last_original_item, args=args)
-
-        print('{c[blue]}#{c[reset]} Handling ({t} -> {v}): {p}'.format(
-            c=COLORS, t=item['type'], v=MESSAGES[item['type']], p=item['path'])
+        print('{c[blue]}[{prog:3}%]{c[reset]} {v}{c[reset]} {p}'.format(
+            c=COLORS,
+            prog=item['progress'],
+            v=MESSAGES[item['type']],
+            p=item['path'],
+            )
         )
+        exec_operation(item, original=last_original_item, args=args)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Handle the files stored in rmlints json output'
+        description='Handle the files in a JSON output of rmlint.'
     )
 
     parser.add_argument(
         'json_docs', metavar='json_doc', nargs='*', default=['.rmlint.json'],
-        help='A json output of rmlint to handle (can be given multiple times)'
+        help='A JSON output of rmlint to handle (can be given multiple times)'
     )
     parser.add_argument(
         '-n', '--dry-run', action='store_true',
-        help='Only print what would be done.'
+        help='Do not perform any modifications, just print what would be done. ' +
+        '(implies -d)'
     )
     parser.add_argument(
         '-d', '--no-ask', action='store_true', default=False,
-        help='ask for confirmation before running (does nothing for -n)'
+        help='Do not ask for confirmation before running.'
     )
     parser.add_argument(
         '-p', '--paranoid', action='store_true', default=False,
-        help='Do an extra byte-by-byte compare before deleting duplicates'
+        help='Recheck that files are still identical before removing duplicates.'
     )
 
     args = parser.parse_args()
-
     json_docus = []
     for doc in args.json_docs:
         try:
@@ -249,9 +250,9 @@ if __name__ == '__main__':
 
         if args.dry_run:
             print(
-                '\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
+                '\n{c[green]}#{c[reset]} This was a dry run. Nothing was modified.'.format(
                     c=COLORS
                 )
             )
     except KeyboardInterrupt:
-        print('canceled.')
+        print('\ncanceled.')
