@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "checksum.h"
+#include "config.h"
 #include "pathtricia.h"
 #include "utilities.h"
 

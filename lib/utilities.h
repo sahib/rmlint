@@ -1,5 +1,4 @@
-/**
-* This file is part of rmlint.
+/* This file is part of rmlint.
 *
 *  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -34,9 +33,6 @@
 #include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
-
-/* Pat(h)tricia Trie implementation */
-#include "pathtricia.h"
 
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
