@@ -1280,7 +1280,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     return true;
 }
 
-static char * rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
+static char *rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
     RmCfg *cfg = session->cfg;
     if(cfg->full_argv0_path == NULL) {
         /* Note: this check will only work on linux! */
@@ -1518,7 +1518,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     if(cfg->honour_dir_layout && !cfg->merge_directories) {
-        rm_log_warning_line(_("--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
+        rm_log_warning_line(_(
+            "--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
     }
 
     if(cfg->progress_enabled) {
@@ -1548,7 +1549,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         error = g_error_new(RM_ERROR_QUARK, 0,
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
     } else if(!rm_cmd_set_paths(session, paths)) {
-        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
+        error =
+            g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
@@ -1618,7 +1620,7 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->mounts == NULL) {
-       rm_log_debug_line("No mount table created.");
+        rm_log_debug_line("No mount table created.");
     }
 
     session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
@@ -1631,20 +1633,21 @@ int rm_cmd_main(RmSession *session) {
     if(cfg->merge_directories) {
         rm_assert_gentle(cfg->cache_file_structs);
 
-        /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
+        /* Currently we cannot use -D and the cloning on btrfs, since this assumes the
+         * same layout
          * on two dupicate directories which is likely not a valid assumption.
          * Emit a warning if the raw -D is used in conjunction with that.
          * */
-        const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
+        const char *handler_key =
+            rm_fmt_get_config_value(session->formats, "sh", "handler");
         const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
-        if(
-            cfg->honour_dir_layout == false && (
-                (handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
-                clone_key != NULL
-            )
-        ) {
-            rm_log_error_line(_("Using -D together with -c sh:clone is currently not possible. Sorry."));
-            rm_log_error_line(_("Either do not use -D, or attempt to run again with -Dj."));
+        if(cfg->honour_dir_layout == false &&
+           ((handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
+            clone_key != NULL)) {
+            rm_log_error_line(_(
+                "Using -D together with -c sh:clone is currently not possible. Sorry."));
+            rm_log_error_line(
+                _("Either do not use -D, or attempt to run again with -Dj."));
             return EXIT_FAILURE;
         }
 
@@ -1652,7 +1655,8 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->total_files < 2 && session->cfg->run_equal_mode) {
-        rm_log_warning_line(_("Not enough files for --equal (need at least two to compare)"));
+        rm_log_warning_line(
+            _("Not enough files for --equal (need at least two to compare)"));
         return EXIT_FAILURE;
     }
 
@@ -1694,7 +1698,7 @@ int rm_cmd_main(RmSession *session) {
         exit_state = EXIT_FAILURE;
     }
 
-    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode)  {
+    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode) {
         return session->equal_exit_code;
     }
 

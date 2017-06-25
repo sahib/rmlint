@@ -99,8 +99,8 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->timer_since_proc_start = g_timer_new();
     g_timer_start(session->timer_since_proc_start);
 
-	/* Assume that files are not equal */
-	session->equal_exit_code = EXIT_FAILURE;
+    /* Assume that files are not equal */
+    session->equal_exit_code = EXIT_FAILURE;
 }
 
 void rm_session_clear(RmSession *session) {
