@@ -13,6 +13,12 @@ On every commit, those tests are additionally run on `TravisCI`_.
 
 .. _`TravisCI`: https://travis-ci.org/sahib/rmlint
 
+Prerequisites
+~~~~~~~~~~~~~
+``python>=3.0``
+``nose>=1.3.7``: https://nose.readthedocs.io/en/latest/
+``parameterized>=0.6.1``: https://pypi.python.org/pypi/parameterized
+
 Control Variables
 ~~~~~~~~~~~~~~~~~
 
@@ -30,11 +36,11 @@ variables which are:
   and check for errors between the runs. *(slow)*.
 - ``RM_TS_SLEEP``: Waits a long time before executing a command. Useful for
   starting the testcase and manually running `rmlint` on the priorly generated
-  testdir. 
+  testdir.
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 - ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
 
-Additionally slow tests can be omitted with by appending ``-a '!slow'`` to 
+Additionally slow tests can be omitted with by appending ``-a '!slow'`` to
 the commandline. More information on this syntax can be found on the `nosetest
 documentation`_.
 
@@ -112,8 +118,8 @@ Rules
           return
 
 * Regressions in ``rmlint`` should get their own testcase so they do not
-  appear again. 
-* Slow tests can be marked with a slow attribute: 
+  appear again.
+* Slow tests can be marked with a slow attribute:
 
   .. code-block:: python
 
