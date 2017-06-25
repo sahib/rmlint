@@ -170,9 +170,21 @@ def exec_operation(item, original=None, args=None):
         )
 
 
-def main(args, header, data, footer):
+def main(args, data):
     seen_cksums = set()
     last_original_item = None
+
+    # Process header and footer, if present
+    header, footer = [], []
+    if data[0].get('description'):
+        header = data.pop(0)
+    if data[-1].get('total_files'):
+        footer = data.pop(-1)
+    # TODO: Print header and footer data here before asking for confirmation
+
+    if not args.no_ask and not args.dry_run:
+        print('\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
+        sys.stdin.read(1)
 
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
@@ -232,12 +244,8 @@ if __name__ == '__main__':
 
 
     try:
-        if not args.no_ask and not args.dry_run:
-            print('\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
-            sys.stdin.read(1)
-
         for json_doc in json_docus:
-            main(args, json_doc[0], json_doc[1:-1], json_doc[-1])
+            main(args, json_doc)
 
         if args.dry_run:
             print(
