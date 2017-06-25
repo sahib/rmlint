@@ -191,13 +191,16 @@ typedef struct RmCfg {
 void rm_cfg_set_default(RmCfg *cfg);
 
 /**
- * @brief check and add a path to cfg->paths.
- */
-guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
-
-/**
  * @brief free all data associated with cfg->paths.
  */
 void rm_cfg_free_paths(RmCfg *cfg);
+
+/**
+ * @brief Parse all arguments specified in argc/argv and set the aprop. cfg
+ *
+ * @return false on parse error (running makes no sense then)
+ */
+bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg);
+
 
 #endif /* end of include guard */

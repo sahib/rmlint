@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cmdline.h"
 #include "formats.h"
 #include "preprocess.h"
 #include "shredder.h"
