@@ -290,7 +290,7 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
  * sortcriteria spec, so that the returned string will
  * consist only of single letters.
  */
-char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
+char *rm_pp_compile_patterns(RmCfg *cfg, const char *sortcrit, GError **error) {
     /* Total of encountered patterns */
     int pattern_count = 0;
 
@@ -322,7 +322,7 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
         if(regex != NULL) {
             if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
                 /* Append to already compiled patterns */
-                g_ptr_array_add(session->pattern_cache, regex);
+                g_ptr_array_add(cfg->pattern_cache, regex);
                 pattern_count++;
             } else if(pattern_count != -1) {
                 g_set_error(error, RM_ERROR_QUARK, 0,
@@ -403,7 +403,7 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
         return sign * SIGN_DIFF(a->path_index, b->path_index);
     case 'x': {
         int cmp = rm_pp_cmp_by_regex(
-            g_ptr_array_index(session->pattern_cache, *regex_cursor), *regex_cursor,
+            g_ptr_array_index(session->cfg->pattern_cache, *regex_cursor), *regex_cursor,
             (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
             (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
         (*regex_cursor)++;
@@ -411,7 +411,7 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
     }
     case 'r': {
         int cmp = rm_pp_cmp_by_regex(
-            g_ptr_array_index(session->pattern_cache, *regex_cursor), *regex_cursor,
+            g_ptr_array_index(session->cfg->pattern_cache, *regex_cursor), *regex_cursor,
             (RmPatternBitmask *)&a->pattern_bitmask_path, a_path,
             (RmPatternBitmask *)&b->pattern_bitmask_path, b_path);
         (*regex_cursor)++;
@@ -438,7 +438,7 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     RETURN_IF_NONZERO(SIGN_DIFF(b->is_prefd, a->is_prefd))
 
     /* Only fill in path if we have a pattern in sort_criteria */
-    bool path_needed = (session->pattern_cache->len > 0);
+    bool path_needed = (session->cfg->pattern_cache->len > 0);
     RM_DEFINE_PATH_IF_NEEDED(a, path_needed);
     RM_DEFINE_PATH_IF_NEEDED(b, path_needed);
 

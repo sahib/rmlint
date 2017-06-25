@@ -74,9 +74,6 @@ typedef struct RmSession {
     /* Disk Scheduler */
     struct _RmMDS *mds;
 
-    /* Cache of already compiled GRegex patterns */
-    GPtrArray *pattern_cache;
-
     /* Counters for printing useful statistics */
     volatile gint total_files;
     volatile gint ignored_files;
@@ -109,10 +106,6 @@ typedef struct RmSession {
     RmOff offset_fragments;
     RmOff offsets_read;
     RmOff offset_fails;
-
-    /* Daniels paranoia */
-    RmOff hash_seed1;
-    RmOff hash_seed2;
 
     /* true once shredder finished running */
     bool shredder_finished;
@@ -161,7 +154,7 @@ bool rm_session_was_aborted(void);
  *
  * @return True if the kernel is recent enough.
  */
-bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
+bool rm_session_check_kernel_version(RmCfg *cfg, int major, int minor);
 
 /**
  * @brief Trigger the main method of rmlint.

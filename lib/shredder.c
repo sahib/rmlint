@@ -1550,8 +1550,8 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
         file->digest = rm_digest_new(cfg->checksum_type,
-                                     main->session->hash_seed1,
-                                     main->session->hash_seed2,
+                                     cfg->hash_seed1,
+                                     cfg->hash_seed2,
                                      0,
                                      NEEDS_SHADOW_HASH(cfg));
     }

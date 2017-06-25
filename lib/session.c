@@ -62,9 +62,9 @@ void rm_session_read_kernel_version(RmSession *session) {
 }
 #endif
 
-bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
-    int found_major = session->cfg->kernel_version[0];
-    int found_minor = session->cfg->kernel_version[1];
+bool rm_session_check_kernel_version(RmCfg *cfg, int major, int minor) {
+    int found_major = cfg->kernel_version[0];
+    int found_minor = cfg->kernel_version[1];
 
     /* Could not read kernel version: Assume failure on our side. */
     if(found_major <= 0 && found_minor <= 0) {
@@ -86,7 +86,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->cfg = cfg;
     session->tables = rm_file_tables_new(session);
     session->cfg->formats = rm_fmt_open(session);
-    session->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
+    session->cfg->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
 
     session->cfg->verbosity_count = 2;
     session->cfg->paranoia_count = 0;
@@ -116,8 +116,8 @@ void rm_session_clear(RmSession *session) {
 
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
-    rm_fmt_close(session->cfg->formats);
-    g_ptr_array_free(session->pattern_cache, TRUE);
+    rm_fmt_close(cfg->formats);
+    g_ptr_array_free(cfg->pattern_cache, TRUE);
 
     if(session->mounts) {
         rm_mounts_table_destroy(session->mounts);
@@ -202,7 +202,7 @@ int rm_session_main(RmSession *session) {
 
     rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_INIT);
 
-    if(session->cfg->replay) {
+    if(cfg->replay) {
         return rm_session_replay_main(session);
     }
 

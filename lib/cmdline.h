@@ -34,6 +34,6 @@
  *
  * @return false on parse error (running makes no sense then)
  */
-bool rm_cmd_parse_args(int argc, char **argv, RmSession *session);
+bool rm_cmd_parse_args(int argc, char **argv, RmCfg *cfg);
 
 #endif

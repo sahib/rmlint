@@ -308,10 +308,10 @@ static void rm_cmd_btrfs_clone(const char *source, const char *dest,
 #endif
 }
 
-static int rm_cmd_maybe_btrfs_clone(RmSession *session, int argc, const char **argv) {
+static int rm_cmd_maybe_btrfs_clone(RmCfg *cfg, int argc, const char **argv) {
     if(argc > 0 && g_strcmp0("--btrfs-clone", argv[1]) == 0) {
         /* treat as a btrfs clone subcommand... */
-        if(!rm_session_check_kernel_version(session, 4, 2)) {
+        if(!rm_session_check_kernel_version(cfg, 4, 2)) {
             rm_log_warning_line("This needs at least linux >= 4.2.");
         } else if(argc == 5 && g_strcmp0("-r", argv[2]) == 0) {
             /* -r option for deduping read-only snapshots */
@@ -431,14 +431,14 @@ static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff 
 
 static gboolean rm_cmd_parse_limit_sizes(_UNUSED const char *option_name,
                                          const gchar *range_spec,
-                                         RmSession *session,
+                                         RmCfg *cfg,
                                          GError **error) {
-    if(!rm_cmd_size_range_string_to_bytes(range_spec, &session->cfg->minsize,
-                                          &session->cfg->maxsize, error)) {
+    if(!rm_cmd_size_range_string_to_bytes(range_spec, &cfg->minsize,
+                                          &cfg->maxsize, error)) {
         g_prefix_error(error, _("cannot parse --size: "));
         return false;
     } else {
-        session->cfg->limits_specified = true;
+        cfg->limits_specified = true;
         return true;
     }
 }
@@ -450,7 +450,7 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
 
-static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
+static bool rm_cmd_read_paths_from_stdin(RmCfg *cfg, bool is_prefd) {
     char path_buf[PATH_MAX];
     char *tokbuf = NULL;
     bool all_paths_read = true;
@@ -458,15 +458,15 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
     /* Still read all paths on errors, so the user knows all paths that failed */
     while(fgets(path_buf, PATH_MAX, stdin)) {
         all_paths_read &=
-            rm_cfg_add_path(session->cfg, is_prefd, strtok_r(path_buf, "\n", &tokbuf));
+            rm_cfg_add_path(cfg, is_prefd, strtok_r(path_buf, "\n", &tokbuf));
     }
 
     return all_paths_read;
 }
 
-static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
+static bool rm_cmd_parse_output_pair(RmCfg *cfg, const char *pair,
                                      GError **error) {
-    rm_assert_gentle(session);
+    rm_assert_gentle(cfg);
     rm_assert_gentle(pair);
 
     char *separator = strchr(pair, ':');
@@ -490,7 +490,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
         strncpy(format_name, pair, MIN((long)sizeof(format_name), separator - pair));
     }
 
-    if(!rm_fmt_add(session->cfg->formats, format_name, full_path)) {
+    if(!rm_fmt_add(cfg->formats, format_name, full_path)) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Adding -o %s as output failed"), pair);
         return false;
     }
@@ -498,7 +498,7 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
     return true;
 }
 
-static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair,
+static bool rm_cmd_parse_config_pair(RmCfg *cfg, const char *pair,
                                      GError **error) {
     char *domain = strchr(pair, ':');
     if(domain == NULL) {
@@ -527,14 +527,14 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair,
     }
 
     char *formatter = g_strndup(pair, domain - pair);
-    if(!rm_fmt_is_valid_key(session->cfg->formats, formatter, key)) {
+    if(!rm_fmt_is_valid_key(cfg->formats, formatter, key)) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key `%s' for formatter `%s'"),
                     key, formatter);
         g_free(key);
         g_free(value);
         result = false;
     } else {
-        rm_fmt_set_config_value(session->cfg->formats, formatter, key, value);
+        rm_fmt_set_config_value(cfg->formats, formatter, key, value);
     }
 
     g_free(formatter);
@@ -544,9 +544,9 @@ static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair,
 
 static gboolean rm_cmd_parse_config(_UNUSED const char *option_name,
                                     const char *pair,
-                                    RmSession *session,
+                                    RmCfg *cfg,
                                     _UNUSED GError **error) {
-    return rm_cmd_parse_config_pair(session, pair, error);
+    return rm_cmd_parse_config_pair(cfg, pair, error);
 }
 
 static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
@@ -584,25 +584,25 @@ static RmOff rm_cmd_parse_clamp_offset(const char *string, GError **error) {
     return offset;
 }
 
-static void rm_cmd_parse_clamp_option(RmSession *session, const char *string,
+static void rm_cmd_parse_clamp_option(RmCfg *cfg, const char *string,
                                       bool start_or_end, GError **error) {
     if(strchr(string, '.') || g_str_has_suffix(string, "%")) {
         gdouble factor = rm_cmd_parse_clamp_factor(string, error);
         if(start_or_end) {
-            session->cfg->use_absolute_start_offset = false;
-            session->cfg->skip_start_factor = factor;
+            cfg->use_absolute_start_offset = false;
+            cfg->skip_start_factor = factor;
         } else {
-            session->cfg->use_absolute_end_offset = false;
-            session->cfg->skip_end_factor = factor;
+            cfg->use_absolute_end_offset = false;
+            cfg->skip_end_factor = factor;
         }
     } else {
         RmOff offset = rm_cmd_parse_clamp_offset(string, error);
         if(start_or_end) {
-            session->cfg->use_absolute_start_offset = true;
-            session->cfg->skip_start_offset = offset;
+            cfg->use_absolute_start_offset = true;
+            cfg->skip_start_offset = offset;
         } else {
-            session->cfg->use_absolute_end_offset = true;
-            session->cfg->skip_end_offset = offset;
+            cfg->use_absolute_end_offset = true;
+            cfg->skip_end_offset = offset;
         }
     }
 }
@@ -643,9 +643,8 @@ static char rm_cmd_find_lint_types_sep(const char *lint_string) {
 
 static gboolean rm_cmd_parse_lint_types(_UNUSED const char *option_name,
                                         const char *lint_string,
-                                        RmSession *session,
+                                        RmCfg *cfg,
                                         _UNUSED GError **error) {
-    RmCfg *cfg = session->cfg;
 
     RmLintTypeOption option_table[] = {
         {.names = NAMES{"all", 0},
@@ -749,11 +748,11 @@ static bool rm_cmd_timestamp_is_plain(const char *stamp) {
 }
 
 static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name,
-                                       const gchar *string, RmSession *session,
+                                       const gchar *string, RmCfg *cfg,
                                        GError **error) {
     gdouble result = 0;
     bool plain = rm_cmd_timestamp_is_plain(string);
-    session->cfg->filter_mtime = false;
+    cfg->filter_mtime = false;
 
     if(plain) {
         /* timespec might include sub-second fraction */
@@ -778,7 +777,7 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name,
     }
 
     /* Some sort of success. */
-    session->cfg->filter_mtime = true;
+    cfg->filter_mtime = true;
 
     time_t now = time(NULL);
     if((time_t)result > now) {
@@ -799,25 +798,25 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name,
     }
 
     /* Remember our result */
-    session->cfg->min_mtime = result;
+    cfg->min_mtime = result;
     return true;
 }
 
 static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
                                             const gchar *timestamp_path,
-                                            RmSession *session, GError **error) {
+                                            RmCfg *cfg, GError **error) {
     bool plain = true, success = false;
     FILE *stamp_file = fopen(timestamp_path, "r");
 
     /* Assume failure */
-    session->cfg->filter_mtime = false;
+    cfg->filter_mtime = false;
 
     if(stamp_file) {
         char stamp_buf[1024];
         memset(stamp_buf, 0, sizeof(stamp_buf));
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            success = rm_cmd_parse_timestamp(option_name, g_strstrip(stamp_buf), session,
+            success = rm_cmd_parse_timestamp(option_name, g_strstrip(stamp_buf), cfg,
                                              error);
             plain = rm_cmd_timestamp_is_plain(stamp_buf);
         }
@@ -832,10 +831,10 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         return false;
     }
 
-    rm_fmt_add(session->cfg->formats, "stamp", timestamp_path);
+    rm_fmt_add(cfg->formats, "stamp", timestamp_path);
     if(!plain) {
         /* Enable iso8601 timestamp output */
-        rm_fmt_set_config_value(session->cfg->formats, "stamp", g_strdup("iso8601"),
+        rm_fmt_set_config_value(cfg->formats, "stamp", g_strdup("iso8601"),
                                 g_strdup("true"));
     }
 
@@ -882,44 +881,43 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
 }
 
 static void rm_cmd_on_error(_UNUSED GOptionContext *context, _UNUSED GOptionGroup *group,
-                            RmSession *session, GError **error) {
+                            RmCfg *cfg, GError **error) {
     if(error != NULL) {
         rm_log_error_line("%s.", (*error)->message);
         g_clear_error(error);
-        session->cfg->cmdline_parse_error = true;
+        cfg->cmdline_parse_error = true;
     }
 }
 
 static gboolean rm_cmd_parse_algorithm(_UNUSED const char *option_name,
                                        const gchar *value,
-                                       RmSession *session,
+                                       RmCfg *cfg,
                                        GError **error) {
-    RmCfg *cfg = session->cfg;
     cfg->checksum_type = rm_string_to_digest_type(value);
 
     if(cfg->checksum_type == RM_DIGEST_UNKNOWN) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Unknown hash algorithm: '%s'"), value);
         return false;
     } else if(cfg->checksum_type == RM_DIGEST_BASTARD) {
-        session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
-        session->hash_seed2 = GPOINTER_TO_UINT(&session);
+        cfg->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(cfg));
+        cfg->hash_seed2 = GPOINTER_TO_UINT(&cfg);
     }
     return true;
 }
 
 static gboolean rm_cmd_parse_small_output(_UNUSED const char *option_name,
-                                          const gchar *output_pair, RmSession *session,
+                                          const gchar *output_pair, RmCfg *cfg,
                                           _UNUSED GError **error) {
-    session->cfg->output_cnt[0] = MAX(session->cfg->output_cnt[0], 0);
-    session->cfg->output_cnt[0] += rm_cmd_parse_output_pair(session, output_pair, error);
+    cfg->output_cnt[0] = MAX(cfg->output_cnt[0], 0);
+    cfg->output_cnt[0] += rm_cmd_parse_output_pair(cfg, output_pair, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_large_output(_UNUSED const char *option_name,
-                                          const gchar *output_pair, RmSession *session,
+                                          const gchar *output_pair, RmCfg *cfg,
                                           _UNUSED GError **error) {
-    session->cfg->output_cnt[1] = MAX(session->cfg->output_cnt[1], 0);
-    session->cfg->output_cnt[1] += rm_cmd_parse_output_pair(session, output_pair, error);
+    cfg->output_cnt[1] = MAX(cfg->output_cnt[1], 0);
+    cfg->output_cnt[1] += rm_cmd_parse_output_pair(cfg, output_pair, error);
     return true;
 }
 
@@ -936,101 +934,100 @@ static gboolean rm_cmd_parse_mem(const gchar *size_spec, GError **error, RmOff *
 }
 
 static gboolean rm_cmd_parse_limit_mem(_UNUSED const char *option_name,
-                                       const gchar *size_spec, RmSession *session,
+                                       const gchar *size_spec, RmCfg *cfg,
                                        GError **error) {
-    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
+    return (rm_cmd_parse_mem(size_spec, error, &cfg->total_mem));
 }
 
 static gboolean rm_cmd_parse_sweep_size(_UNUSED const char *option_name,
-                                        const gchar *size_spec, RmSession *session,
+                                        const gchar *size_spec, RmCfg *cfg,
                                         GError **error) {
-    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_size));
+    return (rm_cmd_parse_mem(size_spec, error, &cfg->sweep_size));
 }
 
 static gboolean rm_cmd_parse_sweep_count(_UNUSED const char *option_name,
-                                         const gchar *size_spec, RmSession *session,
+                                         const gchar *size_spec, RmCfg *cfg,
                                          GError **error) {
-    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->sweep_count));
+    return (rm_cmd_parse_mem(size_spec, error, &cfg->sweep_count));
 }
 
 static gboolean rm_cmd_parse_clamp_low(_UNUSED const char *option_name, const gchar *spec,
-                                       RmSession *session, _UNUSED GError **error) {
-    rm_cmd_parse_clamp_option(session, spec, true, error);
+                                       RmCfg *cfg, _UNUSED GError **error) {
+    rm_cmd_parse_clamp_option(cfg, spec, true, error);
     return (error && *error == NULL);
 }
 
 static gboolean rm_cmd_parse_clamp_top(_UNUSED const char *option_name, const gchar *spec,
-                                       RmSession *session, _UNUSED GError **error) {
-    rm_cmd_parse_clamp_option(session, spec, false, error);
+                                       RmCfg *cfg, _UNUSED GError **error) {
+    rm_cmd_parse_clamp_option(cfg, spec, false, error);
     return (error && *error == NULL);
 }
 
 static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
-                                      _UNUSED const gchar *value, RmSession *session,
+                                      _UNUSED const gchar *value, RmCfg *cfg,
                                       _UNUSED GError **error) {
-    rm_fmt_clear(session->cfg->formats);
-    rm_fmt_add(session->cfg->formats, "progressbar", "stdout");
-    rm_fmt_add(session->cfg->formats, "summary", "stdout");
+    rm_fmt_clear(cfg->formats);
+    rm_fmt_add(cfg->formats, "progressbar", "stdout");
+    rm_fmt_add(cfg->formats, "summary", "stdout");
 
-    session->cfg->progress_enabled = true;
+    cfg->progress_enabled = true;
 
     return true;
 }
 
-static void rm_cmd_set_default_outputs(RmSession *session) {
-    rm_fmt_add(session->cfg->formats, "pretty", "stdout");
-    rm_fmt_add(session->cfg->formats, "summary", "stdout");
+static void rm_cmd_set_default_outputs(RmCfg *cfg) {
+    rm_fmt_add(cfg->formats, "pretty", "stdout");
+    rm_fmt_add(cfg->formats, "summary", "stdout");
 
-    if(session->cfg->replay) {
-        rm_fmt_add(session->cfg->formats, "sh", "rmlint.replay.sh");
-        rm_fmt_add(session->cfg->formats, "json", "rmlint.replay.json");
+    if(cfg->replay) {
+        rm_fmt_add(cfg->formats, "sh", "rmlint.replay.sh");
+        rm_fmt_add(cfg->formats, "json", "rmlint.replay.json");
     } else {
-        rm_fmt_add(session->cfg->formats, "sh", "rmlint.sh");
-        rm_fmt_add(session->cfg->formats, "json", "rmlint.json");
+        rm_fmt_add(cfg->formats, "sh", "rmlint.sh");
+        rm_fmt_add(cfg->formats, "json", "rmlint.json");
     }
 }
 
 static gboolean rm_cmd_parse_no_progress(_UNUSED const char *option_name,
-                                         _UNUSED const gchar *value, RmSession *session,
+                                         _UNUSED const gchar *value, RmCfg *cfg,
                                          _UNUSED GError **error) {
-    rm_fmt_clear(session->cfg->formats);
-    rm_cmd_set_default_outputs(session);
-    rm_cmd_set_verbosity_from_cnt(session->cfg, session->cfg->verbosity_count);
+    rm_fmt_clear(cfg->formats);
+    rm_cmd_set_default_outputs(cfg);
+    rm_cmd_set_verbosity_from_cnt(cfg, cfg->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_loud(_UNUSED const char *option_name,
-                                  _UNUSED const gchar *count, RmSession *session,
+                                  _UNUSED const gchar *count, RmCfg *cfg,
                                   _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->cfg->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(cfg, ++cfg->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_quiet(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *count, RmSession *session,
+                                   _UNUSED const gchar *count, RmCfg *cfg,
                                    _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, --session->cfg->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(cfg, --cfg->verbosity_count);
     return true;
 }
 
 static gboolean rm_cmd_parse_paranoid(_UNUSED const char *option_name,
-                                      _UNUSED const gchar *count, RmSession *session,
+                                      _UNUSED const gchar *count, RmCfg *cfg,
                                       _UNUSED GError **error) {
-    rm_cmd_set_paranoia_from_cnt(session->cfg, ++session->cfg->paranoia_count, error);
+    rm_cmd_set_paranoia_from_cnt(cfg, ++cfg->paranoia_count, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_less_paranoid(_UNUSED const char *option_name,
-                                           _UNUSED const gchar *count, RmSession *session,
+                                           _UNUSED const gchar *count, RmCfg *cfg,
                                            _UNUSED GError **error) {
-    rm_cmd_set_paranoia_from_cnt(session->cfg, --session->cfg->paranoia_count, error);
+    rm_cmd_set_paranoia_from_cnt(cfg, --cfg->paranoia_count, error);
     return true;
 }
 
 static gboolean rm_cmd_parse_partial_hidden(_UNUSED const char *option_name,
                                             _UNUSED const gchar *count,
-                                            RmSession *session, _UNUSED GError **error) {
-    RmCfg *cfg = session->cfg;
+                                            RmCfg *cfg, _UNUSED GError **error) {
     cfg->ignore_hidden = false;
     cfg->partial_hidden = true;
 
@@ -1038,9 +1035,8 @@ static gboolean rm_cmd_parse_partial_hidden(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_see_symlinks(_UNUSED const char *option_name,
-                                          _UNUSED const gchar *count, RmSession *session,
+                                          _UNUSED const gchar *count, RmCfg *cfg,
                                           _UNUSED GError **error) {
-    RmCfg *cfg = session->cfg;
     cfg->see_symlinks = true;
     cfg->follow_symlinks = false;
 
@@ -1049,8 +1045,7 @@ static gboolean rm_cmd_parse_see_symlinks(_UNUSED const char *option_name,
 
 static gboolean rm_cmd_parse_follow_symlinks(_UNUSED const char *option_name,
                                              _UNUSED const gchar *count,
-                                             RmSession *session, _UNUSED GError **error) {
-    RmCfg *cfg = session->cfg;
+                                             RmCfg *cfg, _UNUSED GError **error) {
     cfg->see_symlinks = false;
     cfg->follow_symlinks = true;
 
@@ -1059,9 +1054,8 @@ static gboolean rm_cmd_parse_follow_symlinks(_UNUSED const char *option_name,
 
 static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
                                                _UNUSED const gchar *count,
-                                               RmSession *session,
+                                               RmCfg *cfg,
                                                _UNUSED GError **error) {
-    RmCfg *cfg = session->cfg;
     cfg->ignore_hidden = true;
     cfg->partial_hidden = false;
 
@@ -1070,9 +1064,8 @@ static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
 
 static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
                                                _UNUSED const gchar *_,
-                                               RmSession *session,
+                                               RmCfg *cfg,
                                                _UNUSED GError **error) {
-    RmCfg *cfg = session->cfg;
     cfg->merge_directories = true;
 
     /* Pull in some options for convinience,
@@ -1082,7 +1075,7 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
      */
     cfg->follow_symlinks = false;
     cfg->see_symlinks = true;
-    rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
+    rm_cmd_parse_partial_hidden(NULL, NULL, cfg, error);
 
     /* Keep RmFiles after shredder. */
     cfg->cache_file_structs = true;
@@ -1092,16 +1085,15 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
 
 static gboolean rm_cmd_parse_honour_dir_layout(_UNUSED const char *option_name,
                                                _UNUSED const gchar *_,
-                                               RmSession *session,
+                                               RmCfg *cfg,
                                                _UNUSED GError **error) {
-    session->cfg->honour_dir_layout = true;
+    cfg->honour_dir_layout = true;
     return true;
 }
 
 static gboolean rm_cmd_parse_permissions(_UNUSED const char *option_name,
-                                         const gchar *perms, RmSession *session,
+                                         const gchar *perms, RmCfg *cfg,
                                          GError **error) {
-    RmCfg *cfg = session->cfg;
 
     if(perms == NULL) {
         cfg->permissions = R_OK | W_OK;
@@ -1142,9 +1134,8 @@ static gboolean rm_cmd_check_lettervec(const char *option_name, const char *crit
 }
 
 static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
-                                    const gchar *criteria, RmSession *session,
+                                    const gchar *criteria, RmCfg *cfg,
                                     GError **error) {
-    RmCfg *cfg = session->cfg;
     if(!rm_cmd_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
         return false;
     }
@@ -1159,13 +1150,12 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
-                                    const gchar *criteria, RmSession *session,
+                                    const gchar *criteria, RmCfg *cfg,
                                     GError **error) {
-    RmCfg *cfg = session->cfg;
 
     g_free(cfg->sort_criteria);
 
-    cfg->sort_criteria = rm_pp_compile_patterns(session, criteria, error);
+    cfg->sort_criteria = rm_pp_compile_patterns(cfg, criteria, error);
 
     if(error && *error != NULL) {
         return false;
@@ -1180,30 +1170,30 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
-                                    _UNUSED const gchar *x, RmSession *session,
+                                    _UNUSED const gchar *x, RmCfg *cfg,
                                     _UNUSED GError **error) {
-    session->cfg->replay = true;
-    session->cfg->cache_file_structs = true;
+    cfg->replay = true;
+    cfg->cache_file_structs = true;
     return true;
 }
 
 static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED const gchar *x, RmCfg *cfg,
                                    _UNUSED GError **error) {
-    rm_cmd_parse_merge_directories(NULL, NULL, session, error);
-    rm_cmd_parse_lint_types(NULL, "df,dd", session, error);
-    session->cfg->run_equal_mode = true;
+    rm_cmd_parse_merge_directories(NULL, NULL, cfg, error);
+    rm_cmd_parse_lint_types(NULL, "df,dd", cfg, error);
+    cfg->run_equal_mode = true;
 
     /* See issue #233; partial hidden needs to be disabled */
-    session->cfg->partial_hidden = false;
-    session->cfg->ignore_hidden = false;
+    cfg->partial_hidden = false;
+    cfg->ignore_hidden = false;
 
     /* See issue #234 fore more discussion on this */
-    session->cfg->limits_specified = true;
-    session->cfg->minsize = 0;
+    cfg->limits_specified = true;
+    cfg->minsize = 0;
 
-    rm_fmt_clear(session->cfg->formats);
-    rm_fmt_add(session->cfg->formats, "_equal", "stdout");
+    rm_fmt_clear(cfg->formats);
+    rm_fmt_add(cfg->formats, "_equal", "stdout");
     return true;
 }
 
@@ -1234,17 +1224,15 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
     return true;
 }
 
-static bool rm_cmd_set_paths(RmSession *session, char **paths) {
+static bool rm_cmd_set_paths(RmCfg *cfg, char **paths) {
     bool is_prefd = false;
     bool all_paths_valid = true;
-
-    RmCfg *cfg = session->cfg;
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
             /* option '-' means read paths from stdin */
-            all_paths_valid &= rm_cmd_read_paths_from_stdin(session, is_prefd);
+            all_paths_valid &= rm_cmd_read_paths_from_stdin(cfg, is_prefd);
         } else if(strcmp(paths[i], "//") == 0) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
@@ -1257,28 +1245,28 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     if(cfg->path_count == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
-        rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
+        rm_cfg_add_path(cfg, is_prefd, cfg->iwd);
     }
 
     /* Only return success if everything is fine. */
     return all_paths_valid;
 }
 
-static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
-    if(session->cfg->output_cnt[0] >= 0 && session->cfg->output_cnt[1] >= 0) {
+static bool rm_cmd_set_outputs(RmCfg *cfg, GError **error) {
+    if(cfg->output_cnt[0] >= 0 && cfg->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifiyng both -o and -O is not allowed"));
         return false;
-    } else if(session->cfg->output_cnt[0] < 0 && session->cfg->output_cnt[1] < 0 &&
-              !rm_fmt_len(session->cfg->formats)) {
-        rm_cmd_set_default_outputs(session);
+    } else if(cfg->output_cnt[0] < 0 && cfg->output_cnt[1] < 0 &&
+              !rm_fmt_len(cfg->formats)) {
+        rm_cmd_set_default_outputs(cfg);
     }
 
     return true;
 }
 
-static char *rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
-    RmCfg *cfg = session->cfg;
+static char *rm_cmd_find_own_executable_path(RmCfg *cfg, char **argv) {
+
     if(cfg->full_argv0_path == NULL) {
         /* Note: this check will only work on linux! */
         char exe_path[PATH_MAX] = {0};
@@ -1297,8 +1285,7 @@ static char *rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
-bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
-    RmCfg *cfg = session->cfg;
+bool rm_cmd_parse_args(int argc, char **argv, RmCfg *cfg) {
     gboolean clone = FALSE;
 
     /* Handle --gui before all other processing,
@@ -1314,7 +1301,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         return false;
     }
 
-    if(rm_cmd_maybe_btrfs_clone(session, argc, (const char **)argv) == EXIT_FAILURE) {
+    if(rm_cmd_maybe_btrfs_clone(cfg, argc, (const char **)argv) == EXIT_FAILURE) {
         return false;
     }
 
@@ -1436,7 +1423,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* clang-format on */
 
     /* Initialize default verbosity */
-    rm_cmd_set_verbosity_from_cnt(cfg, session->cfg->verbosity_count);
+    rm_cmd_set_verbosity_from_cnt(cfg, cfg->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot set current working directory"));
@@ -1453,7 +1440,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
      * for special modes like --btrfs-clone or --equal.
      * We want to make sure the installed version has this
      * */
-    cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
+    cfg->full_argv0_path = rm_cmd_find_own_executable_path(cfg, argv);
 
     ////////////////////
     // OPTION PARSING //
@@ -1464,11 +1451,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     g_option_context_set_translation_domain(option_parser, RM_GETTEXT_PACKAGE);
 
     GOptionGroup *main_group =
-        g_option_group_new("rmlint", "main", "Most useful main options", session, NULL);
+        g_option_group_new("rmlint", "main", "Most useful main options", cfg, NULL);
     GOptionGroup *inversion_group = g_option_group_new(
-        "inversed", "inverted", "Options that enable defaults", session, NULL);
+        "inversed", "inverted", "Options that enable defaults", cfg, NULL);
     GOptionGroup *unusual_group =
-        g_option_group_new("unusual", "unusual", "Unusual options", session, NULL);
+        g_option_group_new("unusual", "unusual", "Unusual options", cfg, NULL);
 
     g_option_group_add_entries(main_group, main_option_entries);
     g_option_group_add_entries(main_group, inversed_option_entries);
@@ -1500,7 +1487,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     if(clone) {
         /* should not get here */
         rm_cmd_btrfs_clone_usage();
-        session->cfg->cmdline_parse_error = TRUE;
+        cfg->cmdline_parse_error = TRUE;
     }
 
     /* Silent fixes of invalid numeric input */
@@ -1520,12 +1507,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     if(cfg->progress_enabled) {
-        if(!rm_fmt_has_formatter(session->cfg->formats, "sh")) {
-            rm_fmt_add(session->cfg->formats, "sh", "rmlint.sh");
+        if(!rm_fmt_has_formatter(cfg->formats, "sh")) {
+            rm_fmt_add(cfg->formats, "sh", "rmlint.sh");
         }
 
-        if(!rm_fmt_has_formatter(session->cfg->formats, "json")) {
-            rm_fmt_add(session->cfg->formats, "json", "rmlint.json");
+        if(!rm_fmt_has_formatter(cfg->formats, "json")) {
+            rm_fmt_add(cfg->formats, "json", "rmlint.json");
         }
     }
 
@@ -1545,10 +1532,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(RM_ERROR_QUARK, 0,
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
-    } else if(!rm_cmd_set_paths(session, paths)) {
+    } else if(!rm_cmd_set_paths(cfg, paths)) {
         error =
             g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
-    } else if(!rm_cmd_set_outputs(session, &error)) {
+    } else if(!rm_cmd_set_outputs(cfg, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
         rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
@@ -1557,15 +1544,15 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
 failure:
     if(error != NULL) {
-        rm_cmd_on_error(NULL, NULL, session, &error);
+        rm_cmd_on_error(NULL, NULL, cfg, &error);
     }
 
     if(cfg->progress_enabled) {
         /* Set verbosity to minimal */
-        rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
+        rm_cmd_set_verbosity_from_cnt(cfg, 1);
     }
 
     g_option_context_free(option_parser);
-    return !(session->cfg->cmdline_parse_error);
+    return !(cfg->cmdline_parse_error);
 }
 

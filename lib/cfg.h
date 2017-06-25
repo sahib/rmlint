@@ -170,6 +170,13 @@ typedef struct RmCfg {
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];
 
+    /* Daniels paranoia */
+    RmOff hash_seed1;
+    RmOff hash_seed2;
+
+    /* Cache of already compiled GRegex patterns */
+    GPtrArray *pattern_cache;
+
 } RmCfg;
 
 /**

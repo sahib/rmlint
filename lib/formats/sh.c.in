@@ -90,7 +90,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     }
 
     /* Needs to have at least kernel 4.2 */
-    if(!rm_session_check_kernel_version(self->session, 4, 2)) {
+    if(!rm_session_check_kernel_version(self->session->cfg, 4, 2)) {
         return false;
     }
 
