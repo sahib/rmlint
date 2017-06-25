@@ -36,6 +36,11 @@
 #include "shredder.h"
 #include "traverse.h"
 
+#if HAVE_BTRFS_H
+#include <linux/btrfs.h>
+#include <sys/ioctl.h>
+#endif
+
 #if HAVE_UNAME
 #include "sys/utsname.h"
 
@@ -195,6 +200,88 @@ static int rm_session_replay_main(RmSession *session) {
     return EXIT_SUCCESS;
 }
 
+static int rm_session_btrfs_clone_main(RmCfg *cfg) {
+    g_assert(cfg->btrfs_source);
+    g_assert(cfg->btrfs_dest);
+
+#if HAVE_BTRFS_H
+    struct {
+        struct btrfs_ioctl_same_args args;
+        struct btrfs_ioctl_same_extent_info info;
+    } extent_same;
+    memset(&extent_same, 0, sizeof(extent_same));
+
+    int source_fd = rm_sys_open(cfg->btrfs_source, O_RDONLY);
+    if(source_fd < 0) {
+        rm_log_error_line(_("btrfs clone: failed to open source file"));
+        return EXIT_FAILURE;
+    }
+
+    extent_same.info.fd = rm_sys_open(cfg->btrfs_dest, cfg->btrfs_readonly ? O_RDONLY : O_RDWR);
+    if(extent_same.info.fd < 0) {
+        rm_log_error_line(_("btrfs clone: error %i: failed to open dest file.%s"),
+                          errno,
+                          cfg->btrfs_readonly ? "" : _("\n\t(if target is a read-only snapshot "
+                                                "then -r option is required)"));
+        rm_sys_close(source_fd);
+        return EXIT_FAILURE;
+    }
+
+    struct stat source_stat;
+    fstat(source_fd, &source_stat);
+
+    guint64 bytes_deduped = 0;
+    gint64 bytes_remaining = source_stat.st_size;
+    int ret = 0;
+    while(bytes_deduped < (guint64)source_stat.st_size && ret == 0 &&
+          extent_same.info.status == 0 && bytes_remaining) {
+        extent_same.args.dest_count = 1;
+        extent_same.args.logical_offset = bytes_deduped;
+        extent_same.info.logical_offset = bytes_deduped;
+
+        /* BTRFS_IOC_FILE_EXTENT_SAME has an internal limit at 16MB */
+        extent_same.args.length = MIN(16 * 1024 * 1024, bytes_remaining);
+        if(extent_same.args.length == 0) {
+            extent_same.args.length = bytes_remaining;
+        }
+
+        ret = ioctl(source_fd, BTRFS_IOC_FILE_EXTENT_SAME, &extent_same);
+        if(ret == 0 && extent_same.info.status == 0) {
+            bytes_deduped += extent_same.info.bytes_deduped;
+            bytes_remaining -= extent_same.info.bytes_deduped;
+        }
+    }
+
+    rm_sys_close(source_fd);
+    rm_sys_close(extent_same.info.fd);
+
+    if(ret >= 0) {
+        return EXIT_SUCCESS;
+    }
+
+    if(ret < 0) {
+        ret = errno;
+        rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"), ret,
+                          strerror(ret));
+    } else if(extent_same.info.status == -22 && cfg->btrfs_readonly && getuid()) {
+        rm_log_error_line(_("Need to run as root user to clone to a read-only snapshot"));
+    } else if(extent_same.info.status < 0) {
+        rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
+                          extent_same.info.status, cfg->btrfs_dest);
+    } else if(bytes_remaining > 0) {
+        rm_log_info_line(_("Files don't match - not cloned"));
+    }
+
+#else
+    (void)source;
+    (void)dest;
+    (void)read_only;
+    rm_log_error_line(_("rmlint was not compiled with btrfs support."))
+#endif
+
+    return EXIT_FAILURE;
+}
+
 
 int rm_session_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
@@ -204,6 +291,10 @@ int rm_session_main(RmSession *session) {
 
     if(cfg->replay) {
         return rm_session_replay_main(session);
+    }
+
+    if(cfg->btrfs_clone) {
+        return rm_session_btrfs_clone_main(cfg);
     }
 
     rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
