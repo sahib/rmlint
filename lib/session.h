@@ -163,6 +163,14 @@ bool rm_session_was_aborted(void);
  */
 bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
 
+/**
+ * @brief Trigger the main method of rmlint.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_main(RmSession *session);
+
+
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
  *
@@ -181,5 +189,6 @@ bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
 #define MAYBE_RESET(o, s) MAYBE_COLOR(o, s, RESET)
 #define MAYBE_GREEN(o, s) MAYBE_COLOR(o, s, GREEN)
 #define MAYBE_BLUE(o, s) MAYBE_COLOR(o, s, BLUE)
+
 
 #endif /* end of include guard */

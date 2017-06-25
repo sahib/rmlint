@@ -36,11 +36,4 @@
  */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session);
 
-/**
- * @brief Trigger the main method of rmlint.
- *
- * @return exit_status for exit()
- */
-int rm_cmd_main(RmSession *session);
-
 #endif

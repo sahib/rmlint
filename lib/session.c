@@ -29,8 +29,11 @@
 
 #include "config.h"
 #include "formats.h"
+#include "md-scheduler.h"
 #include "preprocess.h"
+#include "replay.h"
 #include "session.h"
+#include "shredder.h"
 #include "traverse.h"
 
 #if HAVE_UNAME
@@ -159,4 +162,139 @@ bool rm_session_was_aborted() {
     }
 
     return rc;
+}
+
+static int rm_session_replay_main(RmSession *session) {
+    /* User chose to replay some json files. */
+    RmParrotCage cage;
+    rm_parrot_cage_open(&cage, session);
+
+    bool one_valid_json = false;
+    RmCfg *cfg = session->cfg;
+
+    for(GSList *iter = cfg->json_paths; iter; iter = iter->next) {
+        RmPath *jsonpath = iter->data;
+
+        if(!rm_parrot_cage_load(&cage, jsonpath->path, jsonpath->is_prefd)) {
+            rm_log_warning_line("Loading %s failed.", jsonpath->path);
+        } else {
+            one_valid_json = true;
+        }
+    }
+
+    if(!one_valid_json) {
+        rm_log_error_line(_("No valid .json files given, aborting."));
+        return EXIT_FAILURE;
+    }
+
+    rm_parrot_cage_close(&cage);
+    rm_fmt_flush(session->cfg->formats);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SUMMARY);
+
+    return EXIT_SUCCESS;
+}
+
+
+int rm_session_main(RmSession *session) {
+    int exit_state = EXIT_SUCCESS;
+    RmCfg *cfg = session->cfg;
+
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_INIT);
+
+    if(session->cfg->replay) {
+        return rm_session_replay_main(session);
+    }
+
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
+
+    if(cfg->list_mounts) {
+        session->mounts = rm_mounts_table_new(cfg->fake_fiemap);
+    }
+
+    if(session->mounts == NULL) {
+        rm_log_debug_line("No mount table created.");
+    }
+
+    session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
+
+    rm_traverse_tree(session);
+
+    rm_log_debug_line("List build finished at %.3f with %d files",
+                      g_timer_elapsed(session->timer, NULL), session->total_files);
+
+    if(cfg->merge_directories) {
+        rm_assert_gentle(cfg->cache_file_structs);
+
+        /* Currently we cannot use -D and the cloning on btrfs, since this assumes the
+         * same layout
+         * on two dupicate directories which is likely not a valid assumption.
+         * Emit a warning if the raw -D is used in conjunction with that.
+         * */
+        const char *handler_key =
+            rm_fmt_get_config_value(session->cfg->formats, "sh", "handler");
+        const char *clone_key =
+            rm_fmt_get_config_value(session->cfg->formats, "sh", "clone");
+        if(cfg->honour_dir_layout == false &&
+           ((handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
+            clone_key != NULL)) {
+            rm_log_error_line(_(
+                "Using -D together with -c sh:clone is currently not possible. Sorry."));
+            rm_log_error_line(
+                _("Either do not use -D, or attempt to run again with -Dj."));
+            return EXIT_FAILURE;
+        }
+
+        session->dir_merger = rm_tm_new(session);
+    }
+
+    if(session->total_files < 2 && session->cfg->run_equal_mode) {
+        rm_log_warning_line(
+            _("Not enough files for --equal (need at least two to compare)"));
+        return EXIT_FAILURE;
+    }
+
+    if(session->total_files >= 1) {
+        rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PREPROCESS);
+        rm_preprocess(session);
+
+        if(cfg->find_duplicates || cfg->merge_directories) {
+            rm_shred_run(session);
+
+            rm_log_debug_line("Dupe search finished at time %.3f",
+                              g_timer_elapsed(session->timer, NULL));
+        } else {
+            /* Clear leftovers */
+            rm_file_tables_clear(session);
+        }
+    }
+
+    if(cfg->merge_directories) {
+        rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_MERGE);
+        rm_tm_finish(session->dir_merger);
+    }
+
+    rm_fmt_flush(session->cfg->formats);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SUMMARY);
+
+    if(session->shred_bytes_remaining != 0) {
+        rm_log_error_line("BUG: Number of remaining bytes is %" LLU
+                          " (not 0). Please report this.",
+                          session->shred_bytes_remaining);
+        exit_state = EXIT_FAILURE;
+    }
+
+    if(session->shred_files_remaining != 0) {
+        rm_log_error_line("BUG: Number of remaining files is %" LLU
+                          " (not 0). Please report this.",
+                          session->shred_files_remaining);
+        exit_state = EXIT_FAILURE;
+    }
+
+    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode) {
+        return session->equal_exit_code;
+    }
+
+    return exit_state;
 }
