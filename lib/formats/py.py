@@ -44,11 +44,11 @@ CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
 
 USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
 COLORS = {
-    'red':    "\x1b[31;01m" if USE_COLOR else "",
-    'yellow': "\x1b[33;01m" if USE_COLOR else "",
+    'red':    "\x1b[0;31m" if USE_COLOR else "",
+    'blue':   "\x1b[1;34m" if USE_COLOR else "",
+    'green':  "\x1b[0;32m" if USE_COLOR else "",
+    'yellow': "\x1b[0;33m" if USE_COLOR else "",
     'reset':  "\x1b[0m" if USE_COLOR else "",
-    'green':  "\x1b[32;01m" if USE_COLOR else "",
-    'blue':   "\x1b[34;01m" if USE_COLOR else ""
 }
 
 
@@ -149,7 +149,7 @@ def exec_operation(item, original=None, args=None):
         OPERATIONS[item['type']](item['path'], original=original, item=item, args=args)
     except OSError as err:
         print(
-            '{c[red]}#{c[reset]} {err}'.format(
+            '{c[red]}# {err}{c[reset]}'.format(
                 item=item, err=err, c=COLORS
             ),
             file=sys.stderr
@@ -169,7 +169,12 @@ def main(args, data):
     # TODO: Print header and footer data here before asking for confirmation
 
     if not args.no_ask and not args.dry_run:
-        print('\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
+        print('rmlint was executed in the following way:\n',
+            header.get('args'),
+            '\n\nPress Enter to continue and perform modifications, '
+            'or CTRL-C to exit.'
+            '\nExecute this script with -d to disable this message.',
+            file=sys.stderr)
         sys.stdin.read(1)
 
     MESSAGES = {
@@ -187,7 +192,8 @@ def main(args, data):
 
     for item in data:
         if item['type'].startswith('duplicate_') and item['is_original']:
-            print('{c[blue]}[{prog:3}%]{c[reset]} {c[green]}Keeping original:   {c[reset]}{path}'.format(
+            print('{c[blue]}[{prog:3}%]{c[reset]} '
+                '{c[green]}Keeping original:   {c[reset]}{path}'.format(
                 prog=item['progress'], path=item['path'], c=COLORS)
             )
             last_original_item = item
@@ -203,6 +209,8 @@ def main(args, data):
             )
         )
         exec_operation(item, original=last_original_item, args=args)
+
+    print('{c[blue]}[100%] Done!{c[reset]}'.format(c=COLORS))
 
 
 if __name__ == '__main__':
@@ -250,8 +258,8 @@ if __name__ == '__main__':
             print('{}: {}'.format(err, doc), file=sys.stderr)
             sys.exit(-1)
 
-
     try:
+        print('# This is a dry run. Nothing will be modified.')
         for json_doc in json_docus:
             main(args, json_doc)
 
