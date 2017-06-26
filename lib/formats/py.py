@@ -39,6 +39,9 @@ import filecmp
 import argparse
 import subprocess
 
+CURRENT_UID = os.geteuid()
+CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
+
 USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
 COLORS = {
     'red':    "\x1b[31;01m" if USE_COLOR else "",
@@ -111,23 +114,19 @@ def handle_badlink(path, **kwargs):
         os.remove(path)
 
 
-CURRENT_UID = os.geteuid()
-CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
-
-
 def handle_baduid(path, **kwargs):
     if not args.dry_run:
-        os.chmod(path, CURRENT_UID, -1)
+        os.chown(path, kwargs['args'].user, -1)
 
 
 def handle_badgid(path, **kwargs):
     if not args.dry_run:
-        os.chmod(path, -1, CURRENT_GID)
+        os.chown(path, -1, kwargs['args'].group)
 
 
 def handle_badugid(path, **kwargs):
     if not args.dry_run:
-        os.chmod(path, CURRENT_UID, CURRENT_GID)
+        os.chown(path, kwargs['args'].user, kwargs['args'].group)
 
 
 OPERATIONS = {
@@ -181,9 +180,9 @@ def main(args, data):
         'emptyfile':        '{c[green]}Deleting empty file:'.format(c=COLORS),
         'nonstripped':      '{c[green]}Stripping debug symbols:'.format(c=COLORS),
         'badlink':          '{c[green]}Deleting bad symlink:'.format(c=COLORS),
-        'baduid':           '{c[green]}chown'.format(c=COLORS),
-        'badgid':           '{c[green]}chgrp'.format(c=COLORS),
-        'badugid':          '{c[green]}chown'.format(c=COLORS),
+        'baduid':           '{c[green]}chown {u}'.format(c=COLORS, u=args.user),
+        'badgid':           '{c[green]}chgrp {g}'.format(c=COLORS, g=args.group),
+        'badugid':          '{c[green]}chown {u}:{g}'.format(c=COLORS, u=args.user, g=args.group),
     }
 
     for item in data:
@@ -227,6 +226,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '-p', '--paranoid', action='store_true', default=False,
         help='Recheck that files are still identical before removing duplicates.'
+    )
+    parser.add_argument(
+        '-u', '--user', type=int, default=CURRENT_UID,
+        help='Numerical uid for chown operations'
+    )
+    parser.add_argument(
+        '-g', '--group', type=int, default=CURRENT_GID,
+        help='Numerical gid for chgrp operations'
     )
 
     args = parser.parse_args()
