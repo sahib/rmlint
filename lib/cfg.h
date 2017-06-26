@@ -203,5 +203,4 @@ void rm_cfg_clear(RmCfg *cfg);
  */
 bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg);
 
-
 #endif /* end of include guard */

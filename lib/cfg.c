@@ -329,7 +329,6 @@ static void rm_cfg_btrfs_clone_usage(void) {
 }
 
 static void rm_cfg_maybe_btrfs_clone(RmCfg *cfg, int argc, char **argv) {
-
     if(argc > 0 && g_strcmp0("--btrfs-clone", argv[1]) == 0) {
         /* btrfs clone subcommand... */
         cfg->btrfs_clone = TRUE;
@@ -338,7 +337,6 @@ static void rm_cfg_maybe_btrfs_clone(RmCfg *cfg, int argc, char **argv) {
             rm_log_warning_line("This needs at least linux >= 4.2.");
             cfg->cmdline_parse_error = TRUE;
         } else {
-
             if(argc >= 4) {
                 cfg->btrfs_source = argv[argc - 2];
                 cfg->btrfs_dest = argv[argc - 1];
@@ -462,8 +460,8 @@ static gboolean rm_cfg_parse_limit_sizes(_UNUSED const char *option_name,
                                          const gchar *range_spec,
                                          RmCfg *cfg,
                                          GError **error) {
-    if(!rm_cfg_size_range_string_to_bytes(range_spec, &cfg->minsize,
-                                          &cfg->maxsize, error)) {
+    if(!rm_cfg_size_range_string_to_bytes(range_spec, &cfg->minsize, &cfg->maxsize,
+                                          error)) {
         g_prefix_error(error, _("cannot parse --size: "));
         return false;
     } else {
@@ -493,8 +491,7 @@ static bool rm_cfg_read_paths_from_stdin(RmCfg *cfg, bool is_prefd) {
     return all_paths_read;
 }
 
-static bool rm_cfg_parse_output_pair(RmCfg *cfg, const char *pair,
-                                     GError **error) {
+static bool rm_cfg_parse_output_pair(RmCfg *cfg, const char *pair, GError **error) {
     rm_assert_gentle(cfg);
     rm_assert_gentle(pair);
 
@@ -527,8 +524,7 @@ static bool rm_cfg_parse_output_pair(RmCfg *cfg, const char *pair,
     return true;
 }
 
-static bool rm_cfg_parse_config_pair(RmCfg *cfg, const char *pair,
-                                     GError **error) {
+static bool rm_cfg_parse_config_pair(RmCfg *cfg, const char *pair, GError **error) {
     char *domain = strchr(pair, ':');
     if(domain == NULL) {
         g_set_error(error, RM_ERROR_QUARK, 0,
@@ -613,8 +609,8 @@ static RmOff rm_cfg_parse_clamp_offset(const char *string, GError **error) {
     return offset;
 }
 
-static void rm_cfg_parse_clamp_option(RmCfg *cfg, const char *string,
-                                      bool start_or_end, GError **error) {
+static void rm_cfg_parse_clamp_option(RmCfg *cfg, const char *string, bool start_or_end,
+                                      GError **error) {
     if(strchr(string, '.') || g_str_has_suffix(string, "%")) {
         gdouble factor = rm_cfg_parse_clamp_factor(string, error);
         if(start_or_end) {
@@ -674,7 +670,6 @@ static gboolean rm_cfg_parse_lint_types(_UNUSED const char *option_name,
                                         const char *lint_string,
                                         RmCfg *cfg,
                                         _UNUSED GError **error) {
-
     RmLintTypeOption option_table[] = {
         {.names = NAMES{"all", 0},
          .enable = OPTS{&cfg->find_badids, &cfg->find_badlinks, &cfg->find_emptydirs,
@@ -777,8 +772,7 @@ static bool rm_cfg_timestamp_is_plain(const char *stamp) {
 }
 
 static gboolean rm_cfg_parse_timestamp(_UNUSED const char *option_name,
-                                       const gchar *string, RmCfg *cfg,
-                                       GError **error) {
+                                       const gchar *string, RmCfg *cfg, GError **error) {
     gdouble result = 0;
     bool plain = rm_cfg_timestamp_is_plain(string);
     cfg->filter_mtime = false;
@@ -832,8 +826,8 @@ static gboolean rm_cfg_parse_timestamp(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cfg_parse_timestamp_file(const char *option_name,
-                                            const gchar *timestamp_path,
-                                            RmCfg *cfg, GError **error) {
+                                            const gchar *timestamp_path, RmCfg *cfg,
+                                            GError **error) {
     bool plain = true, success = false;
     FILE *stamp_file = fopen(timestamp_path, "r");
 
@@ -845,8 +839,8 @@ static gboolean rm_cfg_parse_timestamp_file(const char *option_name,
         memset(stamp_buf, 0, sizeof(stamp_buf));
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            success = rm_cfg_parse_timestamp(option_name, g_strstrip(stamp_buf), cfg,
-                                             error);
+            success =
+                rm_cfg_parse_timestamp(option_name, g_strstrip(stamp_buf), cfg, error);
             plain = rm_cfg_timestamp_is_plain(stamp_buf);
         }
 
@@ -1055,8 +1049,8 @@ static gboolean rm_cfg_parse_less_paranoid(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cfg_parse_partial_hidden(_UNUSED const char *option_name,
-                                            _UNUSED const gchar *count,
-                                            RmCfg *cfg, _UNUSED GError **error) {
+                                            _UNUSED const gchar *count, RmCfg *cfg,
+                                            _UNUSED GError **error) {
     cfg->ignore_hidden = false;
     cfg->partial_hidden = true;
 
@@ -1073,8 +1067,8 @@ static gboolean rm_cfg_parse_see_symlinks(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cfg_parse_follow_symlinks(_UNUSED const char *option_name,
-                                             _UNUSED const gchar *count,
-                                             RmCfg *cfg, _UNUSED GError **error) {
+                                             _UNUSED const gchar *count, RmCfg *cfg,
+                                             _UNUSED GError **error) {
     cfg->see_symlinks = false;
     cfg->follow_symlinks = true;
 
@@ -1121,9 +1115,7 @@ static gboolean rm_cfg_parse_honour_dir_layout(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cfg_parse_permissions(_UNUSED const char *option_name,
-                                         const gchar *perms, RmCfg *cfg,
-                                         GError **error) {
-
+                                         const gchar *perms, RmCfg *cfg, GError **error) {
     if(perms == NULL) {
         cfg->permissions = R_OK | W_OK;
     } else {
@@ -1163,8 +1155,7 @@ static gboolean rm_cfg_check_lettervec(const char *option_name, const char *crit
 }
 
 static gboolean rm_cfg_parse_sortby(_UNUSED const char *option_name,
-                                    const gchar *criteria, RmCfg *cfg,
-                                    GError **error) {
+                                    const gchar *criteria, RmCfg *cfg, GError **error) {
     if(!rm_cfg_check_lettervec(option_name, criteria, "moanspMOANSP", error)) {
         return false;
     }
@@ -1179,9 +1170,7 @@ static gboolean rm_cfg_parse_sortby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cfg_parse_rankby(_UNUSED const char *option_name,
-                                    const gchar *criteria, RmCfg *cfg,
-                                    GError **error) {
-
+                                    const gchar *criteria, RmCfg *cfg, GError **error) {
     g_free(cfg->sort_criteria);
 
     cfg->sort_criteria = rm_pp_compile_patterns(cfg, criteria, error);
@@ -1295,7 +1284,6 @@ static bool rm_cfg_set_outputs(RmCfg *cfg, GError **error) {
 }
 
 static char *rm_cfg_find_own_executable_path(RmCfg *cfg, char **argv) {
-
     if(cfg->full_argv0_path == NULL) {
         /* Note: this check will only work on linux! */
         char exe_path[PATH_MAX] = {0};
@@ -1313,19 +1301,15 @@ static char *rm_cfg_find_own_executable_path(RmCfg *cfg, char **argv) {
     return NULL;
 }
 
-
 void rm_cfg_init(RmCfg *cfg) {
-
     rm_cfg_set_default(cfg);
 
     rm_trie_init(&cfg->file_trie);
 
     cfg->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
-
 }
 
 void rm_cfg_clear(RmCfg *cfg) {
-
     rm_fmt_close(cfg->formats);
 
     g_free(cfg->sort_criteria);
@@ -1342,12 +1326,10 @@ void rm_cfg_clear(RmCfg *cfg) {
     rm_trie_destroy(&cfg->file_trie);
 
     memset(cfg, 0, sizeof(RmCfg));
-
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
-
     /* Handle --gui before all other processing,
      * since we need to pass other args to the python interpreter.
      * This is not possible with GOption alone.

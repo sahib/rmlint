@@ -110,7 +110,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 }
 
 void rm_session_clear(RmSession *session) {
-
     rm_cfg_clear(session->cfg);
 
     g_timer_destroy(session->timer_since_proc_start);
@@ -125,7 +124,6 @@ void rm_session_clear(RmSession *session) {
     if(session->dir_merger) {
         rm_tm_destroy(session->dir_merger);
     }
-
 }
 
 volatile int SESSION_ABORTED;
@@ -206,12 +204,14 @@ static int rm_session_btrfs_clone_main(RmCfg *cfg) {
         return EXIT_FAILURE;
     }
 
-    extent_same.info.fd = rm_sys_open(cfg->btrfs_dest, cfg->btrfs_readonly ? O_RDONLY : O_RDWR);
+    extent_same.info.fd =
+        rm_sys_open(cfg->btrfs_dest, cfg->btrfs_readonly ? O_RDONLY : O_RDWR);
     if(extent_same.info.fd < 0) {
-        rm_log_error_line(_("btrfs clone: error %i: failed to open dest file.%s"),
-                          errno,
-                          cfg->btrfs_readonly ? "" : _("\n\t(if target is a read-only snapshot "
-                                                "then -r option is required)"));
+        rm_log_error_line(
+            _("btrfs clone: error %i: failed to open dest file.%s"),
+            errno,
+            cfg->btrfs_readonly ? "" : _("\n\t(if target is a read-only snapshot "
+                                         "then -r option is required)"));
         rm_sys_close(source_fd);
         return EXIT_FAILURE;
     }
@@ -270,7 +270,6 @@ static int rm_session_btrfs_clone_main(RmCfg *cfg) {
 
     return EXIT_FAILURE;
 }
-
 
 int rm_session_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
