@@ -37,14 +37,8 @@
 #include "treemerge.h"
 #include "utilities.h"
 
-static void rm_path_free(RmPath *rmpath) {
-    free(rmpath->path);
-    g_slice_free(RmPath, rmpath);
-}
-
-/* Options not specified by commandline get a default option -
- * this is usually called before rm_cfg_parse_args */
-void rm_cfg_set_default(RmCfg *cfg) {
+/* Set all options to defaults */
+static void rm_cfg_set_default(RmCfg *cfg) {
     /* Set everything to 0 at first,
      * only non-null options are listed below.
      */
@@ -93,9 +87,19 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->skip_end_offset = 0;
     cfg->mtime_window = -1;
 
-    rm_trie_init(&cfg->file_trie);
+    cfg->verbosity_count = 2;
+    cfg->paranoia_count = 0;
+    cfg->output_cnt[0] = -1;
+    cfg->output_cnt[1] = -1;
 }
 
+/*
+ * For paths passed to rmlint from command line (or stdin), order is
+ * important.  This procedure creates a new RmPath, which contains the
+ * path and additional positional information, and adds it to cfg->paths.
+ * In the special case of --replay, json paths are instead stored
+ * in cfg->json_paths.
+ */
 static guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = 0;
 
@@ -111,6 +115,10 @@ static guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
         return 0;
     }
 
+    /* calling realpath(path, NULL) uses malloc to allocate a buffer of up to
+     * PATH_MAX bytes to hold the resolved pathname (deallocate buffer using
+     * free()).
+     */
     char *real_path = realpath(path, NULL);
     if(real_path == NULL) {
         rm_log_warning_line(_("Can't get real path for directory or file \"%s\": %s"),
@@ -133,11 +141,9 @@ static guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     return 1;
 }
 
-void rm_cfg_free_paths(RmCfg *cfg) {
-    g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
-    cfg->paths = NULL;
-    g_slist_free_full(cfg->json_paths, (GDestroyNotify)rm_path_free);
-    cfg->json_paths = NULL;
+static void rm_path_free(RmPath *rmpath) {
+    free(rmpath->path);
+    g_slice_free(RmPath, rmpath);
 }
 
 static void rm_cfg_show_version(void) {
@@ -1305,6 +1311,38 @@ static char *rm_cfg_find_own_executable_path(RmCfg *cfg, char **argv) {
     }
 
     return NULL;
+}
+
+
+void rm_cfg_init(RmCfg *cfg) {
+
+    rm_cfg_set_default(cfg);
+
+    rm_trie_init(&cfg->file_trie);
+
+    cfg->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
+
+}
+
+void rm_cfg_clear(RmCfg *cfg) {
+
+    rm_fmt_close(cfg->formats);
+
+    g_free(cfg->sort_criteria);
+
+    g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
+    g_slist_free_full(cfg->json_paths, (GDestroyNotify)rm_path_free);
+
+    g_free(cfg->joined_argv);
+    g_free(cfg->full_argv0_path);
+    g_free(cfg->iwd);
+
+    g_ptr_array_free(cfg->pattern_cache, TRUE);
+
+    rm_trie_destroy(&cfg->file_trie);
+
+    memset(cfg, 0, sizeof(RmCfg));
+
 }
 
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */

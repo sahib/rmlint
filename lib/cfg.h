@@ -187,14 +187,14 @@ typedef struct RmCfg {
 } RmCfg;
 
 /**
- * @brief Reset RmCfg to default cfg and all other vars to 0.
+ * @brief initialise RmCfg child structures and set all cfg values to defaults.
  */
-void rm_cfg_set_default(RmCfg *cfg);
+void rm_cfg_init(RmCfg *cfg);
 
 /**
- * @brief free all data associated with cfg->paths.
+ * @brief free all resources allocated under cfg (but not cfg itself).
  */
-void rm_cfg_free_paths(RmCfg *cfg);
+void rm_cfg_clear(RmCfg *cfg);
 
 /**
  * @brief Parse all arguments specified in argc/argv and set the aprop. cfg

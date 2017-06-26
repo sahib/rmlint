@@ -89,14 +89,12 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->timer = g_timer_new();
 
     session->cfg = cfg;
-    session->tables = rm_file_tables_new(session);
-    session->cfg->formats = rm_fmt_open(session);
-    session->cfg->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
+    rm_cfg_init(cfg);
 
-    session->cfg->verbosity_count = 2;
-    session->cfg->paranoia_count = 0;
-    session->cfg->output_cnt[0] = -1;
-    session->cfg->output_cnt[1] = -1;
+    /* TODO: move this into rm_cfg_init(): */
+    cfg->formats = rm_fmt_open(session);
+
+    session->tables = rm_file_tables_new(session);
 
     session->offsets_read = 0;
     session->offset_fragments = 0;
@@ -112,17 +110,13 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 }
 
 void rm_session_clear(RmSession *session) {
-    RmCfg *cfg = session->cfg;
 
-    rm_cfg_free_paths(cfg);
+    rm_cfg_clear(session->cfg);
 
     g_timer_destroy(session->timer_since_proc_start);
-    g_free(cfg->sort_criteria);
 
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
-    rm_fmt_close(cfg->formats);
-    g_ptr_array_free(cfg->pattern_cache, TRUE);
 
     if(session->mounts) {
         rm_mounts_table_destroy(session->mounts);
@@ -132,11 +126,6 @@ void rm_session_clear(RmSession *session) {
         rm_tm_destroy(session->dir_merger);
     }
 
-    g_free(cfg->joined_argv);
-    g_free(cfg->full_argv0_path);
-    g_free(cfg->iwd);
-
-    rm_trie_destroy(&cfg->file_trie);
 }
 
 volatile int SESSION_ABORTED;

@@ -105,8 +105,6 @@ int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
     RmCfg cfg;
-    rm_cfg_set_default(&cfg);
-
     RmSession session;
     rm_session_init(&session, &cfg);
 
@@ -137,5 +135,6 @@ int main(int argc, const char **argv) {
     }
 
     rm_session_clear(&session);
+
     return exit_state;
 }
