@@ -109,18 +109,16 @@ static void rm_fmt_prog(RmSession *session,
     g_free(elapsed_time);
 
     bool first_print_flag = true;
-    GHashTableIter iter;
-    char *path = NULL;
-    RmFmtHandler *handler = NULL;
-    rm_fmt_get_pair_iter(session->cfg->formats, &iter);
 
-    while(g_hash_table_iter_next(&iter, (gpointer *)&path, (gpointer *)&handler)) {
+    for (GList *iter = session->cfg->formats->handlers.head; iter; iter = iter->next) {
+        RmFmtHandler *handler = iter->data;
+
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};
         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);
-        bool forbidden_found = false;
 
+        bool forbidden_found = false;
         for(gsize i = 0; i < forbidden_len; i++) {
-            if(g_strcmp0(forbidden[i], path) == 0) {
+            if(g_strcmp0(forbidden[i], handler->path) == 0) {
                 forbidden_found = true;
                 break;
             }
@@ -131,7 +129,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         /* Check if the file really exists, so we can print it for sure */
-        if(access(path, R_OK) == -1) {
+        if(access(handler->path, R_OK) == -1) {
             continue;
         }
 
@@ -141,8 +139,8 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         fprintf(out, _("Wrote a %s%s%s file to: %s%s%s\n"), MAYBE_BLUE(out, session),
-                handler->name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session), path,
-                MAYBE_RESET(out, session));
+                handler->name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session),
+                handler->path, MAYBE_RESET(out, session));
     }
 }
 

@@ -51,13 +51,29 @@ typedef enum RmFmtProgressState {
 
 /* Container and API-endpoint for individual RmFmtHandlers */
 typedef struct RmFmtTable {
+
+    /* maps handler name to RmFmtHandler struct defined in formats/???.c
+     * e.g. "progressbar" maps to formats/progress.c/PROGRESS_HANDLER_IMPL */
     GHashTable *name_to_handler;
-    GHashTable *path_to_handler;
-    GHashTable *handler_to_file;
-    GHashTable *handler_set;
+
+    /* set of output paths (used to check whether a path is an output). */
+    GHashTable *paths;
+
+    /* set of handler names (used to check whether a specific handler is in play). */
+    GHashTable *active_handler_names;
+
+    /* map of maps; maps formatter name to a hashtable of key-value pairs */
     GHashTable *config;
-    GQueue *handler_order;
+
+    /* list of all active handlers (in order)*/
+    GQueue handlers;
+
+    /* lock to prevent simultaneous access to various session->counters */
+    /* TODO: move to new RmCounters struct somewhere... */
     GRecMutex state_mtx;
+
+    /* the RmLint session megalith */
+    /* TODO: make formats independent of this */
     RmSession *session;
 
     /* Group of RmFiles that will be cached until exit */
@@ -115,6 +131,8 @@ typedef struct RmFmtHandler {
      * --config fmt:key.
      */
     const char *valid_keys[32];
+
+    FILE *file;
 } RmFmtHandler;
 
 ////////////////////
@@ -229,16 +247,6 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
  * @return true if it is.
  */
 bool rm_fmt_is_a_output(RmFmtTable *self, const char *path);
-
-/**
- * @brief Initialize a GHashTableIter with the pairs of registerd
- * paths/handlers.
- *
- * Call g_hash_table_iter_next() to retrieve the values.
- *
- * Key is the path, value the handler name.
- */
-void rm_fmt_get_pair_iter(RmFmtTable *self, GHashTableIter *iter);
 
 /**
  * @brief Lock the state mutex.
