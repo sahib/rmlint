@@ -62,10 +62,10 @@ typedef struct RmFmtTable {
     /* set of handler names (used to check whether a specific handler is in play). */
     GHashTable *active_handler_names;
 
-    /* map of maps; maps formatter name to a hashtable of key-value pairs */
+    /* map of maps; key is formatter name, value is a hashtable of key-value pairs */
     GHashTable *config;
 
-    /* list of all active handlers (in order)*/
+    /* list of all active handlers (in order) */
     GQueue handlers;
 
     /* lock to prevent simultaneous access to various session->counters */

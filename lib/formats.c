@@ -184,17 +184,11 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_mutex_init(&handler->print_mtx);
 }
 
-#define RM_FMT_FOR_EACH_HANDLER_BEGIN(self)                            \
-    for(GList *iter = self->handlers.head; iter; iter = iter->next) {  \
-        RmFmtHandler *handler = iter->data;                            \
-        FILE *file = handler->file;
-
-#define RM_FMT_FOR_EACH_HANDLER_END }
-
 #define RM_FMT_CALLBACK(func, ...)                               \
     if(func) {                                                   \
         g_mutex_lock(&handler->print_mtx);                       \
         {                                                        \
+            FILE *file = handler->file;                          \
             if(!handler->was_initialized && handler->head) {     \
                 if(handler->head) {                              \
                     handler->head(self->session, handler, file); \
@@ -279,10 +273,10 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
 }
 
 static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
-    RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
+    for (GList *iter = self->handlers.head; iter; iter = iter->next) {
+        RmFmtHandler *handler = iter->data;
         RM_FMT_CALLBACK(handler->elem, result);
     }
-    RM_FMT_FOR_EACH_HANDLER_END
 }
 
 static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
@@ -343,6 +337,10 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
     return 0;
 }
 
+static void rm_fmt_write_group(RmFmtGroup *group, RmFmtTable *self) {
+    g_queue_foreach(&group->files, (GFunc)rm_fmt_write_impl, self);
+}
+
 void rm_fmt_flush(RmFmtTable *self) {
     RmCfg *cfg = self->session->cfg;
     if(!cfg->cache_file_structs) {
@@ -353,10 +351,7 @@ void rm_fmt_flush(RmFmtTable *self) {
         g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
     }
 
-    for(GList *iter = self->groups.head; iter; iter = iter->next) {
-        RmFmtGroup *group = iter->data;
-        g_queue_foreach(&group->files, (GFunc)rm_fmt_write_impl, self);
-    }
+    g_queue_foreach(&self->groups, (GFunc)rm_fmt_write_group, self);
 }
 
 void rm_fmt_close(RmFmtTable *self) {
@@ -367,12 +362,12 @@ void rm_fmt_close(RmFmtTable *self) {
 
     g_queue_clear(&self->groups);
 
-    RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
+    for (GList *iter = self->handlers.head; iter; iter = iter->next) {
+        RmFmtHandler *handler = iter->data;
         RM_FMT_CALLBACK(handler->foot);
-        fclose(file);
+        fclose(handler->file);
         g_mutex_clear(&handler->print_mtx);
     }
-    RM_FMT_FOR_EACH_HANDLER_END
 
     g_hash_table_unref(self->name_to_handler);
     g_hash_table_unref(self->paths);
@@ -414,10 +409,10 @@ void rm_fmt_unlock_state(RmFmtTable *self) {
 void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
     rm_fmt_lock_state(self);
     {
-        RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
+        for (GList *iter = self->handlers.head; iter; iter = iter->next) {
+            RmFmtHandler *handler = iter->data;
             RM_FMT_CALLBACK(handler->prog, state);
         }
-        RM_FMT_FOR_EACH_HANDLER_END
     }
     rm_fmt_unlock_state(self);
 }
