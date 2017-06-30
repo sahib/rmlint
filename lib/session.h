@@ -74,38 +74,11 @@ typedef struct RmSession {
     /* Disk Scheduler */
     struct _RmMDS *mds;
 
-    /* Counters for printing useful statistics */
-    volatile gint total_files;
-    volatile gint ignored_files;
-    volatile gint ignored_folders;
-
-    RmOff total_filtered_files;
-    RmOff total_lint_size;
-    RmOff shred_bytes_remaining;
-    RmOff shred_bytes_total;
-    RmOff shred_files_remaining;
-    RmOff shred_bytes_after_preprocess;
-    RmOff dup_counter;
-    RmOff dup_group_counter;
-    RmOff other_lint_cnt;
-
-    RmOff duplicate_bytes;
-    RmOff unique_bytes;
-    RmOff original_bytes;
-    RmOff shred_bytes_read;
-
-    GTimer *timer_since_proc_start;
-
     /* flag indicating if rmlint was aborted early */
     volatile gint aborted;
 
     /* timer used for debugging and profiling messages */
     GTimer *timer;
-
-    /* Debugging counters */
-    RmOff offset_fragments;
-    RmOff offsets_read;
-    RmOff offset_fails;
 
     /* true once shredder finished running */
     bool shredder_finished;

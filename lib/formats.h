@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "counters.h"
 #include "file.h"
 #include "session.h"
 

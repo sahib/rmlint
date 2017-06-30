@@ -399,21 +399,19 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
     }
 }
 
-static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
-    RmSession *session = cage->session;
-
-    session->total_files += 1;
+static void rm_parrot_update_stats(RmFile *file) {
+    rm_counter_add_unlocked(RM_COUNTER_TOTAL_FILES, 1);
     if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        session->dup_group_counter += file->is_original;
+        rm_counter_add_unlocked(RM_COUNTER_DUP_GROUP_COUNTER, file->is_original);
         if(!file->is_original) {
-            session->dup_counter += 1;
+            rm_counter_add_unlocked(RM_COUNTER_DUP_COUNTER, 1);
 
             if(!RM_FILE_IS_HARDLINK(file)) {
-                session->total_lint_size += file->actual_file_size;
+                rm_counter_add(RM_COUNTER_TOTAL_LINT_SIZE, file->actual_file_size);
             }
         }
     } else {
-        session->other_lint_cnt += 1;
+        rm_counter_add_unlocked(RM_COUNTER_OTHER_LINT_CNT, 1);
     }
 }
 
@@ -457,7 +455,7 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
 
         RM_DEFINE_PATH(file);
 
-        rm_parrot_update_stats(cage, file);
+        rm_parrot_update_stats(file);
         rm_fmt_write(file, cage->session->cfg->formats, group->length);
     }
 }

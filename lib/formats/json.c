@@ -223,17 +223,23 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "progress", 100); /* Footer is always last. */
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "total_files", session->total_files);
+            rm_fmt_json_key_int(out, "total_files",
+                                rm_counter_get(RM_COUNTER_TOTAL_FILES));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "ignored_files", session->ignored_files);
+            rm_fmt_json_key_int(out, "ignored_files",
+                                rm_counter_get(RM_COUNTER_IGNORED_FILES));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "ignored_folders", session->ignored_folders);
+            rm_fmt_json_key_int(out, "ignored_folders",
+                                rm_counter_get(RM_COUNTER_IGNORED_FOLDERS));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "duplicates", session->dup_counter);
+            rm_fmt_json_key_int(out, "duplicates",
+                                rm_counter_get(RM_COUNTER_DUP_COUNTER));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "duplicate_sets", session->dup_group_counter);
+            rm_fmt_json_key_int(out, "duplicate_sets",
+                                rm_counter_get(RM_COUNTER_DUP_GROUP_COUNTER));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "total_lint_size", session->total_lint_size);
+            rm_fmt_json_key_int(out, "total_lint_size",
+                                rm_counter_get(RM_COUNTER_TOTAL_LINT_SIZE));
         }
         if(self->pretty) {
             fprintf(out, "\n}");
@@ -280,11 +286,14 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
         rm_fmt_json_sep(self, out);
 
         gdouble progress = 0;
-        if(session->shred_bytes_after_preprocess) {
-            progress = CLAMP(100 -
-                      100 * ((gdouble)session->shred_bytes_remaining /
-                             (gdouble)session->shred_bytes_after_preprocess),
-                      0, 100);
+        RmCounter bytes_after_preprocess =
+            rm_counter_get(RM_COUNTER_SHRED_BYTES_AFTER_PREPROCESS);
+        if(bytes_after_preprocess) {
+            progress = CLAMP(
+                100 -
+                    100 * ((gdouble)rm_counter_get(RM_COUNTER_SHRED_BYTES_REMAINING) /
+                           (gdouble)bytes_after_preprocess),
+                0, 100);
         }
         rm_fmt_json_key_int(out, "progress", progress);
         rm_fmt_json_sep(self, out);

@@ -48,9 +48,9 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%d%s", MAYBE_RED(out, session), session->total_files,
-                      MAYBE_RESET(out, session));
+    if(rm_counter_get(RM_COUNTER_TOTAL_FILES) <= 1) {
+        ARROW fprintf(out, "%s%" RM_COUNTER_FORMAT "%s", MAYBE_RED(out, session),
+                      rm_counter_get(RM_COUNTER_TOTAL_FILES), MAYBE_RESET(out, session));
         fprintf(out, _(" file(s) after investigation, nothing to search through.\n"));
         return;
     }
@@ -77,32 +77,35 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     char numbers[3][512];
-    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session),
-             session->total_files, MAYBE_RESET(out, session));
-    snprintf(numbers[1], sizeof(numbers[1]), "%s%" LLU "%s", MAYBE_RED(out, session),
-             session->dup_counter, MAYBE_RESET(out, session));
+    snprintf(numbers[0], sizeof(numbers[0]), "%s%" RM_COUNTER_FORMAT "%s",
+             MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_TOTAL_FILES),
+             MAYBE_RESET(out, session));
+    snprintf(numbers[1], sizeof(numbers[1]), "%s%" RM_COUNTER_FORMAT "%s",
+             MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_DUP_COUNTER),
+             MAYBE_RESET(out, session));
     snprintf(numbers[2], sizeof(numbers[2]), "%s%" LLU "%s", MAYBE_RED(out, session),
-             session->dup_group_counter, MAYBE_RESET(out, session));
+             rm_counter_get(RM_COUNTER_DUP_GROUP_COUNTER), MAYBE_RESET(out, session));
 
     ARROW fprintf(out, _("In total %s files, whereof %s are duplicates in %s groups.\n"),
                   numbers[0], numbers[1], numbers[2]);
 
     /* log10(2 ** 64) + 2 = 21; */
     char size_string_buf[22] = {0};
-    rm_util_size_to_human_readable(session->total_lint_size, size_string_buf,
-                                   sizeof(size_string_buf));
+    rm_util_size_to_human_readable(rm_counter_get(RM_COUNTER_TOTAL_LINT_SIZE),
+                                   size_string_buf, sizeof(size_string_buf));
 
     ARROW fprintf(out, _("This equals %s%s%s of duplicates which could be removed.\n"),
                   MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session));
 
-    if(session->other_lint_cnt > 0) {
+    if(rm_counter_get(RM_COUNTER_OTHER_LINT_CNT) > 0) {
         ARROW fprintf(out, "%s%" LLU "%s ", MAYBE_RED(out, session),
-                      session->other_lint_cnt, MAYBE_RESET(out, session));
+                      rm_counter_get(RM_COUNTER_OTHER_LINT_CNT),
+                      MAYBE_RESET(out, session));
 
         fprintf(out, _("other suspicious item(s) found, which may vary in size.\n"));
     }
 
-    gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
+    gfloat elapsed = g_timer_elapsed(session->timer, NULL);
     char *elapsed_time = rm_format_elapsed_time(elapsed, 3);
     ARROW fprintf(out, _("Scanning took in total %s%s%s. Is that good enough?\n"),
                   MAYBE_RED(out, session), elapsed_time, MAYBE_RESET(out, session));

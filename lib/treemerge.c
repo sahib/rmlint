@@ -864,8 +864,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
         if(file_list->length >= 2) {
             /* If no separate duplicate files are requested, we can stop here */
             if(self->session->cfg->find_duplicates == false) {
-                self->session->dup_group_counter -= 1;
-                self->session->dup_counter -= file_list->length - 1;
+                rm_counter_add(RM_COUNTER_DUP_GROUP_COUNTER, -1);
+                rm_counter_add(RM_COUNTER_DUP_COUNTER, -(file_list->length - 1));
             } else {
                 rm_shred_group_find_original(self->session, file_list,
                                              RM_SHRED_GROUP_FINISHING);

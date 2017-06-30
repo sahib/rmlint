@@ -85,8 +85,11 @@ bool rm_session_check_kernel_version(RmCfg *cfg, int major, int minor) {
 }
 
 void rm_session_init(RmSession *session, RmCfg *cfg) {
+
+    rm_counter_session_init();
+
     memset(session, 0, sizeof(RmSession));
-    session->timer = g_timer_new();
+    session->timer = g_timer_new();  // also starts timer
 
     session->cfg = cfg;
     rm_cfg_init(cfg);
@@ -96,14 +99,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 
     session->tables = rm_file_tables_new(session);
 
-    session->offsets_read = 0;
-    session->offset_fragments = 0;
-    session->offset_fails = 0;
-
     rm_session_read_kernel_version(session);
-
-    session->timer_since_proc_start = g_timer_new();
-    g_timer_start(session->timer_since_proc_start);
 
     /* Assume that files are not equal */
     session->equal_exit_code = EXIT_FAILURE;
@@ -111,8 +107,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 
 void rm_session_clear(RmSession *session) {
     rm_cfg_clear(session->cfg);
-
-    g_timer_destroy(session->timer_since_proc_start);
 
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
@@ -124,6 +118,7 @@ void rm_session_clear(RmSession *session) {
     if(session->dir_merger) {
         rm_tm_destroy(session->dir_merger);
     }
+
 }
 
 volatile int SESSION_ABORTED;
@@ -299,8 +294,9 @@ int rm_session_main(RmSession *session) {
 
     rm_traverse_tree(session);
 
-    rm_log_debug_line("List build finished at %.3f with %d files",
-                      g_timer_elapsed(session->timer, NULL), session->total_files);
+    rm_log_debug_line("List build finished at %.3f with %" RM_COUNTER_FORMAT " files",
+                      g_timer_elapsed(session->timer, NULL),
+                      rm_counter_get(RM_COUNTER_TOTAL_FILES));
 
     if(cfg->merge_directories) {
         rm_assert_gentle(cfg->cache_file_structs);
@@ -327,13 +323,13 @@ int rm_session_main(RmSession *session) {
         session->dir_merger = rm_tm_new(session);
     }
 
-    if(session->total_files < 2 && session->cfg->run_equal_mode) {
+    if(rm_counter_get(RM_COUNTER_TOTAL_FILES) < 2 && session->cfg->run_equal_mode) {
         rm_log_warning_line(
             _("Not enough files for --equal (need at least two to compare)"));
         return EXIT_FAILURE;
     }
 
-    if(session->total_files >= 1) {
+    if(rm_counter_get(RM_COUNTER_TOTAL_FILES) >= 1) {
         rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
@@ -357,17 +353,17 @@ int rm_session_main(RmSession *session) {
     rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_SUMMARY);
 
-    if(session->shred_bytes_remaining != 0) {
-        rm_log_error_line("BUG: Number of remaining bytes is %" LLU
+    if(rm_counter_get(RM_COUNTER_SHRED_BYTES_REMAINING) != 0) {
+        rm_log_error_line("BUG: Number of remaining bytes is %" RM_COUNTER_FORMAT
                           " (not 0). Please report this.",
-                          session->shred_bytes_remaining);
+                          rm_counter_get(RM_COUNTER_SHRED_BYTES_REMAINING));
         exit_state = EXIT_FAILURE;
     }
 
-    if(session->shred_files_remaining != 0) {
-        rm_log_error_line("BUG: Number of remaining files is %" LLU
+    if(rm_counter_get(RM_COUNTER_SHRED_FILES_REMAINING) != 0) {
+        rm_log_error_line("BUG: Number of remaining files is %" RM_COUNTER_FORMAT
                           " (not 0). Please report this.",
-                          session->shred_files_remaining);
+                          rm_counter_get(RM_COUNTER_SHRED_FILES_REMAINING));
         exit_state = EXIT_FAILURE;
     }
 

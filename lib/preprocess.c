@@ -545,9 +545,9 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
          * and remove the paths double later on here. Disable for --equal therefore.
          * */
         if(!session->cfg->run_equal_mode) {
-            session->total_filtered_files -=
-                rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
-                                             session->tables->unique_paths_table);
+            rm_counter_add_unlocked(RM_COUNTER_TOTAL_FILTERED_FILES,
+                -rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
+                                              session->tables->unique_paths_table));
         }
 
         /* clear the hashtable ready for the next cluster */
@@ -555,8 +555,10 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
     }
 
     /* process and remove other lint */
-    session->total_filtered_files -= rm_util_queue_foreach_remove(
-        inode_cluster, (RmRFunc)rm_pp_handle_other_lint, (RmSession *)session);
+    rm_counter_add_unlocked(
+        RM_COUNTER_TOTAL_FILTERED_FILES,
+        -rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_handle_other_lint,
+                                      (RmSession *)session));
 
     if(inode_cluster->length > 1) {
         /* bundle or free the non-head files */
@@ -571,8 +573,10 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
          * no effort eaither way); rm_pp_handle_hardlink will either free or bundle
          * the hardlinks depending on value of headfile->hardlinks.is_head.
          */
-        session->total_filtered_files -= rm_util_queue_foreach_remove(
-            inode_cluster, (RmRFunc)rm_pp_handle_hardlink, headfile);
+        rm_counter_add_unlocked(
+            RM_COUNTER_TOTAL_FILTERED_FILES,
+            -rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_handle_hardlink,
+                                          headfile));
     }
 
     /* update counters */
@@ -639,13 +643,14 @@ void rm_preprocess(RmSession *session) {
     RmFileTables *tables = session->tables;
     GQueue *all_files = tables->all_files;
 
-    session->total_filtered_files = session->total_files;
+    RmCounter total_files = rm_counter_get(RM_COUNTER_TOTAL_FILES);
+    rm_counter_set(RM_COUNTER_TOTAL_FILTERED_FILES, total_files);
 
     /* initial sort by size */
     g_queue_sort(all_files, (GCompareDataFunc)rm_file_cmp_full, session);
-    rm_log_debug_line("initial size sort finished at time %.3f; sorted %d files",
-                      g_timer_elapsed(session->timer, NULL),
-                      session->total_files);
+    rm_log_debug_line(
+        "initial size sort finished at time %.3f; sorted %" RM_COUNTER_FORMAT " files",
+        g_timer_elapsed(session->timer, NULL), total_files);
 
     /* split into file size groups; for each size, remove path doubles and bundle
      * hardlinks */
@@ -685,13 +690,13 @@ void rm_preprocess(RmSession *session) {
         current_size_file = file;
     }
 
-    session->other_lint_cnt += rm_pp_handler_other_lint(session);
+    rm_counter_add(RM_COUNTER_OTHER_LINT_CNT, rm_pp_handler_other_lint(session));
 
     rm_log_debug_line(
         "path doubles removal/hardlink bundling/other lint finished at %.3f; removed "
         "%u "
-        "of %d",
-        g_timer_elapsed(session->timer, NULL), removed, session->total_files);
+        "of %" RM_COUNTER_FORMAT,
+        g_timer_elapsed(session->timer, NULL), removed, total_files);
 
     rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PREPROCESS);
 }
