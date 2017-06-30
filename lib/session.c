@@ -89,7 +89,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     rm_counter_session_init();
 
     memset(session, 0, sizeof(RmSession));
-    session->timer = g_timer_new();  // also starts timer
 
     session->cfg = cfg;
     rm_cfg_init(cfg);
@@ -108,7 +107,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 void rm_session_clear(RmSession *session) {
     rm_cfg_clear(session->cfg);
 
-    g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
 
     if(session->mounts) {
@@ -118,6 +116,8 @@ void rm_session_clear(RmSession *session) {
     if(session->dir_merger) {
         rm_tm_destroy(session->dir_merger);
     }
+
+    rm_counter_session_free();
 
 }
 
@@ -295,7 +295,7 @@ int rm_session_main(RmSession *session) {
     rm_traverse_tree(session);
 
     rm_log_debug_line("List build finished at %.3f with %" RM_COUNTER_FORMAT " files",
-                      g_timer_elapsed(session->timer, NULL),
+                      rm_counter_elapsed_time(),
                       rm_counter_get(RM_COUNTER_TOTAL_FILES));
 
     if(cfg->merge_directories) {
@@ -337,7 +337,7 @@ int rm_session_main(RmSession *session) {
             rm_shred_run(session);
 
             rm_log_debug_line("Dupe search finished at time %.3f",
-                              g_timer_elapsed(session->timer, NULL));
+                              rm_counter_elapsed_time());
         } else {
             /* Clear leftovers */
             rm_file_tables_clear(session);

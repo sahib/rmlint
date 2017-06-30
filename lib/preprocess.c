@@ -650,7 +650,7 @@ void rm_preprocess(RmSession *session) {
     g_queue_sort(all_files, (GCompareDataFunc)rm_file_cmp_full, session);
     rm_log_debug_line(
         "initial size sort finished at time %.3f; sorted %" RM_COUNTER_FORMAT " files",
-        g_timer_elapsed(session->timer, NULL), total_files);
+        rm_counter_elapsed_time(), total_files);
 
     /* split into file size groups; for each size, remove path doubles and bundle
      * hardlinks */
@@ -696,7 +696,7 @@ void rm_preprocess(RmSession *session) {
         "path doubles removal/hardlink bundling/other lint finished at %.3f; removed "
         "%u "
         "of %" RM_COUNTER_FORMAT,
-        g_timer_elapsed(session->timer, NULL), removed, total_files);
+        rm_counter_elapsed_time(), removed, total_files);
 
     rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_PREPROCESS);
 }

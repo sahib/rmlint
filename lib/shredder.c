@@ -1181,7 +1181,7 @@ static void rm_shred_preprocess_input(RmShredTag *main) {
     g_slist_free(tables->size_groups);
     tables->size_groups = NULL;
     rm_log_debug_line("...done at time %.3f; removed %u of %" RM_COUNTER_FORMAT,
-                      g_timer_elapsed(session->timer, NULL), removed,
+                      rm_counter_elapsed_time(), removed,
                       rm_counter_get(RM_COUNTER_TOTAL_FILTERED_FILES));
 }
 

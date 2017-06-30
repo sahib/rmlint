@@ -34,10 +34,29 @@ typedef struct RmCounterStruct {
  **/
 static RmCounterStruct rm_counters[RM_COUNTER_LAST];
 
+/**
+ * global session timer
+ **/
+GTimer *rm_counter_session_timer = NULL;
+
+
 void rm_counter_session_init(void) {
+    rm_counter_session_timer = g_timer_new();
+
     for(gint i = 0; i < RM_COUNTER_LAST; i++) {
         rm_counters[i].value = 0;
     }
+}
+
+void rm_counter_session_free(void) {
+    for(gint i = 0; i < RM_COUNTER_LAST; i++) {
+        rm_counters[i].value = 0;
+    }
+    g_timer_destroy(rm_counter_session_timer);
+}
+
+gdouble rm_counter_elapsed_time(void) {
+    return g_timer_elapsed(rm_counter_session_timer, NULL);
 }
 
 RmCounter rm_counter_add_and_get_unlocked(RmCounterID counter, RmCounter increment) {

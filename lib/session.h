@@ -77,9 +77,6 @@ typedef struct RmSession {
     /* flag indicating if rmlint was aborted early */
     volatile gint aborted;
 
-    /* timer used for debugging and profiling messages */
-    GTimer *timer;
-
     /* true once shredder finished running */
     bool shredder_finished;
 

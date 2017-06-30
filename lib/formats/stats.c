@@ -105,9 +105,7 @@ static void rm_fmt_prog(RmSession *session,
             MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_OTHER_LINT_CNT),
             MAYBE_RESET(out, session));
 
-    gfloat elapsed = g_timer_elapsed(session->timer, NULL);
-
-    char *elapsed_time = rm_format_elapsed_time(elapsed, 5);
+    char *elapsed_time = rm_format_elapsed_time(rm_counter_elapsed_time(), 5);
     fprintf(
             out,
             _("%s%15s%s of time spent scanning\n"),

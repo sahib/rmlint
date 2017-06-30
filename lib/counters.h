@@ -66,14 +66,42 @@ typedef enum RmCounterID {
  **/
 void rm_counter_session_init(void);
 
-RmCounter rm_counter_add_and_get_unlocked(RmCounterID counter, RmCounter increment);
+/**
+ * @brief free resources allocated by rm_counter_session_init()
+ **/
+void rm_counter_session_free(void);
 
+/**
+ * @brief return elapsed time in seconds since rm_counter_session_init()
+ **/
+gdouble rm_counter_elapsed_time(void);
+
+/**
+ * @brief add increment to the specified counter and return the new value
+ * @param counter the counter ID
+ * @param increment the amount to add to counter
+ **/
 RmCounter rm_counter_add_and_get(RmCounterID counter, RmCounter increment);
 
-void rm_counter_set_unlocked(RmCounterID counter, RmCounter value);
+/**
+ * @brief same as rm_counter_add_and_get but not threadsafe
+ **/
+RmCounter rm_counter_add_and_get_unlocked(RmCounterID counter, RmCounter increment);
 
+/**
+ * @brief set the specified counter's value
+ * @param counter the counter ID
+ * @param value the new value
+ **/
 void rm_counter_set(RmCounterID counter, RmCounter value);
 
+/**
+ * @brief same as rm_counter_set but not threadsafe
+ **/
+void rm_counter_set_unlocked(RmCounterID counter, RmCounter value);
+
+
+/** convenience macros **/
 #define rm_counter_add(counter, increment) \
     ((void)rm_counter_add_and_get(counter, increment))
 
