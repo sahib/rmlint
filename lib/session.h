@@ -134,6 +134,13 @@ bool rm_session_check_kernel_version(RmCfg *cfg, int major, int minor);
 int rm_session_main(RmSession *session);
 
 /**
+ * @brief Run rmlint in GUI mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_gui_main(int argc, const char **argv);
+
+/**
  * @brief Trigger rmlint in --replay mode.
  *
  * @return exit_status for exit()

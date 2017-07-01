@@ -178,6 +178,9 @@ typedef struct RmCfg {
     /* Cache of already compiled GRegex patterns */
     GPtrArray *pattern_cache;
 
+    /* run in GUI mode */
+    bool run_gui;
+
     /* for --btrfs-clone option */
     bool btrfs_clone;
     char *btrfs_source;
