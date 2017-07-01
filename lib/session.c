@@ -151,7 +151,7 @@ bool rm_session_was_aborted() {
     return rc;
 }
 
-static int rm_session_replay_main(RmSession *session) {
+int rm_session_replay_main(RmSession *session) {
     /* User chose to replay some json files. */
     RmParrotCage cage;
     rm_parrot_cage_open(&cage, session);
@@ -182,7 +182,7 @@ static int rm_session_replay_main(RmSession *session) {
     return EXIT_SUCCESS;
 }
 
-static int rm_session_btrfs_clone_main(RmCfg *cfg) {
+int rm_session_btrfs_clone_main(RmCfg *cfg) {
     g_assert(cfg->btrfs_source);
     g_assert(cfg->btrfs_dest);
 
@@ -268,19 +268,10 @@ static int rm_session_btrfs_clone_main(RmCfg *cfg) {
 
 int rm_session_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
+
     RmCfg *cfg = session->cfg;
-
-    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_INIT);
-
-    if(cfg->replay) {
-        return rm_session_replay_main(session);
-    }
-
-    if(cfg->btrfs_clone) {
-        return rm_session_btrfs_clone_main(cfg);
-    }
-
-    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
+    rm_fmt_set_state(cfg->formats, RM_PROGRESS_STATE_INIT);
+    rm_fmt_set_state(cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
 
     if(cfg->list_mounts) {
         session->mounts = rm_mounts_table_new(cfg->fake_fiemap);

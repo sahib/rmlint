@@ -133,6 +133,20 @@ bool rm_session_check_kernel_version(RmCfg *cfg, int major, int minor);
  */
 int rm_session_main(RmSession *session);
 
+/**
+ * @brief Trigger rmlint in --replay mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_replay_main(RmSession *session);
+
+/**
+ * @brief Trigger rmlint in --btrfs-clone mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_btrfs_clone_main(RmCfg *cfg);
+
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
  *

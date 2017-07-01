@@ -130,8 +130,15 @@ int main(int argc, const char **argv) {
 
     /* Parse commandline */
     if(rm_cfg_parse_args(argc, (char **)argv, &cfg) != 0) {
-        /* Do all the real work */
-        exit_state = rm_session_main(&session);
+
+        /* Run the appropriate session type */
+        if(cfg.replay) {
+            exit_state = rm_session_replay_main(&session);
+        } else if (cfg.btrfs_clone) {
+            exit_state = rm_session_btrfs_clone_main(&cfg);
+        } else {
+            exit_state = rm_session_main(&session);
+        }
     }
 
     rm_session_clear(&session);
