@@ -274,24 +274,38 @@ int rm_session_replay_main(RmSession *session) {
 }
 
 int rm_session_btrfs_clone_main(RmCfg *cfg) {
-    g_assert(cfg->btrfs_source);
-    g_assert(cfg->btrfs_dest);
+
+    if (cfg->path_count != 2) {
+        rm_log_error(_("Usage: rmlint --btrfs-clone [-r] [-v|V] source dest\n"));
+        return EXIT_FAILURE;
+    }
+
+    if(!rm_session_check_kernel_version(cfg, 4, 2)) {
+        rm_log_warning_line("This needs at least linux >= 4.2.");
+        return EXIT_FAILURE;
+    }
 
 #if HAVE_BTRFS_H
+
+    g_assert(cfg->paths);
+    RmPath *dest = cfg->paths->data;
+    g_assert(cfg->paths->next);
+    RmPath *source = cfg->paths->next->data;
+
     struct {
         struct btrfs_ioctl_same_args args;
         struct btrfs_ioctl_same_extent_info info;
     } extent_same;
     memset(&extent_same, 0, sizeof(extent_same));
 
-    int source_fd = rm_sys_open(cfg->btrfs_source, O_RDONLY);
+    int source_fd = rm_sys_open(source->path, O_RDONLY);
     if(source_fd < 0) {
         rm_log_error_line(_("btrfs clone: failed to open source file"));
         return EXIT_FAILURE;
     }
 
     extent_same.info.fd =
-        rm_sys_open(cfg->btrfs_dest, cfg->btrfs_readonly ? O_RDONLY : O_RDWR);
+        rm_sys_open(dest->path, cfg->btrfs_readonly ? O_RDONLY : O_RDWR);
     if(extent_same.info.fd < 0) {
         rm_log_error_line(
             _("btrfs clone: error %i: failed to open dest file.%s"),
@@ -342,7 +356,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
         rm_log_error_line(_("Need to run as root user to clone to a read-only snapshot"));
     } else if(extent_same.info.status < 0) {
         rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
-                          extent_same.info.status, cfg->btrfs_dest);
+                          extent_same.info.status, dest->path);
     } else if(bytes_remaining > 0) {
         rm_log_info_line(_("Files don't match - not cloned"));
     }

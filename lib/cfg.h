@@ -183,8 +183,6 @@ typedef struct RmCfg {
 
     /* for --btrfs-clone option */
     bool btrfs_clone;
-    char *btrfs_source;
-    char *btrfs_dest;
     bool btrfs_readonly;
 
 } RmCfg;

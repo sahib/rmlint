@@ -221,38 +221,6 @@ static int rm_cfg_maybe_switch_to_hasher(int argc, const char **argv) {
     return EXIT_SUCCESS;
 }
 
-static void rm_cfg_btrfs_clone_usage(void) {
-    rm_log_error(_("Usage: rmlint --btrfs-clone [-r] source dest\n"));
-}
-
-static void rm_cfg_maybe_btrfs_clone(RmCfg *cfg, int argc, char **argv) {
-    if(argc > 0 && g_strcmp0("--btrfs-clone", argv[1]) == 0) {
-        /* btrfs clone subcommand... */
-        cfg->btrfs_clone = TRUE;
-
-        if(!rm_session_check_kernel_version(cfg, 4, 2)) {
-            rm_log_warning_line("This needs at least linux >= 4.2.");
-            cfg->cmdline_parse_error = TRUE;
-        } else {
-            if(argc >= 4) {
-                cfg->btrfs_source = argv[argc - 2];
-                cfg->btrfs_dest = argv[argc - 1];
-            }
-
-            if(argc == 5 && g_strcmp0("-r", argv[2]) == 0) {
-                /* -r option for deduping read-only snapshots */
-                /* TODO: add check for root user permissions */
-                cfg->btrfs_readonly = TRUE;
-                return;
-            } else if(argc != 4) {
-                /* malformed command */
-                rm_cfg_btrfs_clone_usage();
-                cfg->cmdline_parse_error = TRUE;
-            }
-        }
-    }
-}
-
 /* clang-format off */
 static const struct FormatSpec {
     const char *id;
@@ -1237,11 +1205,6 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
         return false;
     }
 
-    rm_cfg_maybe_btrfs_clone(cfg, argc, argv);
-    if(cfg->btrfs_clone) {
-        return (!cfg->cmdline_parse_error);
-    }
-
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
 
@@ -1300,6 +1263,8 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
         {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
+        {"btrfs-clone"              , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_clone              , _("Clone extents from source to dest, if extents match")                  , NULL}     ,
+        {"btrfs-readonly"           , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_readonly           , _("(btrfs-clone option) also clone to read-only snapshots (needs root)")  , NULL}     ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cfg_show_manpage , _("Show the manpage")            , NULL} ,
@@ -1307,7 +1272,6 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
         /* Dummy option for --help output only: */
         {"gui"         , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("If installed, start the optional gui with all following args")                 , NULL} ,
         {"hash"        , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL} ,
-        {"btrfs-clone" , 0 , 0 , G_OPTION_ARG_NONE , &cfg->btrfs_clone , _("Clone extents from source to dest, if extents match")               , NULL} ,
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING , 0 , 0 , G_OPTION_ARG_FILENAME_ARRAY , &paths , ""   , NULL}   ,
@@ -1419,12 +1383,6 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
 
     if(!g_option_context_parse(option_parser, &argc, &argv, &error)) {
         goto failure;
-    }
-
-    if(cfg->btrfs_clone) {
-        /* should not get here */
-        rm_cfg_btrfs_clone_usage();
-        cfg->cmdline_parse_error = TRUE;
     }
 
     /* Silent fixes of invalid numeric input */
