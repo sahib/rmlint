@@ -328,23 +328,18 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
         extent_same.args.logical_offset = bytes_deduped;
         extent_same.info.logical_offset = bytes_deduped;
 
-        /* BTRFS_IOC_FILE_EXTENT_SAME has an internal limit at 16MB */
-        extent_same.args.length = MIN(16 * 1024 * 1024, bytes_remaining);
-        if(extent_same.args.length == 0) {
-            extent_same.args.length = bytes_remaining;
-        }
+        /* try to dedupe the rest of the file */
+        extent_same.args.length = bytes_remaining;
 
         ret = ioctl(source_fd, BTRFS_IOC_FILE_EXTENT_SAME, &extent_same);
-        if(ret == 0 && extent_same.info.status == 0) {
-            bytes_deduped += extent_same.info.bytes_deduped;
-            bytes_remaining -= extent_same.info.bytes_deduped;
-        }
+        bytes_deduped += extent_same.info.bytes_deduped;
+        bytes_remaining -= extent_same.info.bytes_deduped;
     }
 
     rm_sys_close(source_fd);
     rm_sys_close(extent_same.info.fd);
 
-    if(ret >= 0) {
+    if(ret >= 0 && bytes_remaining==0) {
         return EXIT_SUCCESS;
     }
 
@@ -357,8 +352,10 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
     } else if(extent_same.info.status < 0) {
         rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
                           extent_same.info.status, dest->path);
-    } else if(bytes_remaining > 0) {
+    } else if(bytes_deduped == 0) {
         rm_log_info_line(_("Files don't match - not cloned"));
+    } else if (bytes_remaining > 0) {
+        rm_log_info_line(_("Only first %lu bytes cloned - files not fully identical"), bytes_deduped);
     }
 
 #else
