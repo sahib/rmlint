@@ -273,6 +273,9 @@ int rm_session_replay_main(RmSession *session) {
     return EXIT_SUCCESS;
 }
 
+/**
+ * *********** btrfs clone session main ************
+ **/
 int rm_session_btrfs_clone_main(RmCfg *cfg) {
 
     if (cfg->path_count != 2) {
@@ -285,12 +288,16 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
         return EXIT_FAILURE;
     }
 
+    /* TODO: if kernel version >= 4.5 then use IOCTL-FIDEDUPERANGE
+     * http://man7.org/linux/man-pages/man2/ioctl_fideduperange.2.html
+     */
 #if HAVE_BTRFS_H
 
     g_assert(cfg->paths);
     RmPath *dest = cfg->paths->data;
     g_assert(cfg->paths->next);
     RmPath *source = cfg->paths->next->data;
+    rm_log_debug_line("Cloning %s -> %s", source->path, dest->path);
 
     struct {
         struct btrfs_ioctl_same_args args;
@@ -334,6 +341,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
         ret = ioctl(source_fd, BTRFS_IOC_FILE_EXTENT_SAME, &extent_same);
         bytes_deduped += extent_same.info.bytes_deduped;
         bytes_remaining -= extent_same.info.bytes_deduped;
+        rm_log_debug_line("deduped %lu bytes...", bytes_deduped);
     }
 
     rm_sys_close(source_fd);
