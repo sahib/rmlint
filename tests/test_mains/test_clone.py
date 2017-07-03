@@ -70,13 +70,13 @@ def test_equal_files():
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
             '--btrfs-clone', path_a, path_b,
-            use_default_dir=False
+            use_default_dir=False, with_json=False
         )
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
             '--btrfs-clone', path_a, '//', path_b,
-            use_default_dir=False
+            use_default_dir=False, with_json=False
         )
 
 @needs_btrfs
@@ -88,7 +88,7 @@ def test_different_files():
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
             '--btrfs-clone', path_a, path_b,
-            use_default_dir=False
+            use_default_dir=False, with_json=False
         )
 
 @needs_btrfs
@@ -101,7 +101,7 @@ def test_bad_arguments():
         with assert_exit_code(1):
             head, *data, footer = run_rmlint(
                 '--btrfs-clone', paths,
-                use_default_dir=False
+                use_default_dir=False, with_json=False
             )
 
 
@@ -114,7 +114,7 @@ def test_directories():
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
             '--btrfs-clone', path_a, path_b,
-            use_default_dir=False
+            use_default_dir=False, with_json=False
         )
 
 @needs_btrfs
@@ -128,11 +128,11 @@ def test_clone_works():
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
             '--btrfs-clone', path_a, path_b,
-            use_default_dir=False
+            use_default_dir=False, with_json=False
         )
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
             '--is-clone', path_a, path_b,
-            use_default_dir=False
+            use_default_dir=False, with_json=False
         )
