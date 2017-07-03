@@ -188,6 +188,9 @@ typedef struct RmCfg {
     /* for --is-clone option */
     bool is_clone;
 
+    /* for --hash option */
+    bool hash;
+
 } RmCfg;
 
 /**

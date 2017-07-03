@@ -130,6 +130,7 @@ int rm_hasher_main(int argc, const char **argv) {
     tag.digest_type = RM_DEFAULT_DIGEST;
     gint threads = 8;
     gint64 buffer_mbytes = 256;
+    gint ignored = 0;
 
     ////////////// Option Parsing ///////////////
 
@@ -141,6 +142,7 @@ int rm_hasher_main(int argc, const char **argv) {
         {"multihash"      , 'm'  , 0                      , G_OPTION_ARG_NONE            , &tag.print_multihash                  , _("Print hash as self identifying multihash")                                      , NULL}       ,
         {"buffer-mbytes"  , 'b'  , 0                      , G_OPTION_ARG_INT64           , &buffer_mbytes                        , _("Megabytes read buffer [256 MB]")                                                , "MB"}       ,
         {"ignore-order"   , 'i'  , G_OPTION_FLAG_REVERSE  , G_OPTION_ARG_NONE            , &tag.print_in_order                   , _("Print hashes in order completed, not in order entered (reduces memory usage)")  , NULL}       ,
+        {"hash"           , 0    , G_OPTION_FLAG_HIDDEN   , G_OPTION_ARG_NONE            , &ignored                              , _("Dummy arg to trigger hash utility")                                             , NULL}       ,
         {""               , 0    , 0                      , G_OPTION_ARG_FILENAME_ARRAY  , &tag.paths                            , _("Space-separated list of files")                                                 , "[FILE…]"}  ,
         {NULL             , 0    , 0                      , 0                            , NULL                                  , NULL                                                                               , NULL}};
 

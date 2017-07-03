@@ -210,16 +210,6 @@ static void rm_cfg_show_manpage(void) {
     exit(0);
 }
 
-static int rm_cfg_maybe_switch_to_hasher(int argc, const char **argv) {
-    for(int i = 0; i < argc; i++) {
-        if(g_strcmp0("--hash", argv[i]) == 0) {
-            argv[i] = argv[0];
-            exit(rm_hasher_main(argc - i, &argv[i]));
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
 
 /* clang-format off */
 static const struct FormatSpec {
@@ -1199,10 +1189,9 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
     if(g_strv_contains((const gchar * const *)argv, "--gui")) {
         cfg->run_gui = TRUE;
         return true;
-    }
-
-    if(rm_cfg_maybe_switch_to_hasher(argc, (const char **)argv) == EXIT_FAILURE) {
-        return false;
+    } else if(g_strv_contains((const gchar * const *)argv, "--hash")) {
+        cfg->hash = TRUE;
+        return true;
     }
 
     /* List of paths we got passed (or NULL) */
