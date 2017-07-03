@@ -116,3 +116,23 @@ def test_directories():
             '--btrfs-clone', path_a, path_b,
             use_default_dir=False
         )
+
+@needs_btrfs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_clone_works():
+
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1' * 100000, 'a')
+    path_b = create_file('1' * 100000, 'b')
+
+    with assert_exit_code(0):
+        head, *data, footer = run_rmlint(
+            '--btrfs-clone', path_a, path_b,
+            use_default_dir=False
+        )
+
+    with assert_exit_code(0):
+        head, *data, footer = run_rmlint(
+            '--is-clone', path_a, path_b,
+            use_default_dir=False
+        )
