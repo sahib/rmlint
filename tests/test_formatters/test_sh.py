@@ -141,7 +141,7 @@ def test_hardlink_duplicate_directories(shell):
 
     sh_path = os.path.join(TESTDIR_NAME, "result.sh")
     header, *data, footer = run_rmlint(
-        "-D -S a -c sh:link -o sh:{}".format(sh_path),
+        "-D -S a -c sh:hardlink -o sh:{}".format(sh_path),
     )
     assert len(data) == 2
     assert data[0]["path"].endswith("dir_a")
