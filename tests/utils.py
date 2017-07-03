@@ -254,7 +254,14 @@ def run_rmlint(*args, force_no_pendantic=False, **kwargs):
 
 
 def create_dirs(path):
-    os.makedirs(os.path.join(TESTDIR_NAME, path))
+    full_path = os.path.join(TESTDIR_NAME, path)
+
+    try:
+        os.makedirs(full_path)
+    except OSError:
+        pass
+
+    return full_path
 
 
 def create_link(path, target, symlink=False):
