@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PROGRESS_CURR=0
-PROGRESS_TOTAL=                            
+PROGRESS_TOTAL=
 
 # This file was autowritten by rmlint
 # rmlint was executed from: %s
@@ -48,7 +48,11 @@ print_progress_prefix() {
             PROGRESS_PERC=$((PROGRESS_CURR * 100 / PROGRESS_TOTAL))
         fi
         printf "$COL_BLUE[% 3d%%]$COL_RESET " $PROGRESS_PERC
-        PROGRESS_CURR=$((PROGRESS_CURR+1))
+        if [ $# -eq "1" ]; then
+            PROGRESS_CURR=$((PROGRESS_CURR+$1))
+        else
+            PROGRESS_CURR=$((PROGRESS_CURR+1))
+        fi
     fi
 }
 
@@ -235,7 +239,9 @@ remove_cmd() {
 
             if [ ! -z "$DO_DELETE_EMPTY_DIRS" ]; then
                 DIR=$(dirname "$1")
-                while [ ! "$(ls -A $DIR)" ]; do
+                while [ ! "$(ls -A "$DIR")" ]; do
+                    print_progress_prefix 0
+                    echo "${COL_GREEN}Deleting resulting empty dir: ${COL_RESET}" "$DIR"
                     rmdir "$DIR"
                     DIR=$(dirname "$DIR")
                 done
