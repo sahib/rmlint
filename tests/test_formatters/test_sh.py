@@ -237,11 +237,14 @@ def test_cleanup_emptydirs(shell):
     create_file('xxx', 'dir1/a')
 
     # create some ugly dir names
-    names = 'escape me [please?]', 'let\'s nest/a level/[or two]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
+    names = [ 'escape me [please?]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона',
+            'let\'s nest',
+            'let\'s nest/a level',
+            'let\'s nest/a level/[or two]' ]
     for dirname in names:
         create_file('xxx', '{}/b'.format(dirname))
 
-    head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    head, *data, footer = run_rmlint('-S a -T df -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3 * len(names)
