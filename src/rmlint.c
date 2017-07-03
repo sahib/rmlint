@@ -136,6 +136,8 @@ int main(int argc, const char **argv) {
             exit_state = rm_session_replay_main(&session);
         } else if (cfg.btrfs_clone) {
             exit_state = rm_session_btrfs_clone_main(&cfg);
+        } else if (cfg.is_clone) {
+            exit_state = rm_session_is_clone_main(&cfg);
         } else if(cfg.run_gui) {
             exit_state = rm_session_gui_main(argc, argv);
         } else {

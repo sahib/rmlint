@@ -1264,6 +1264,7 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
         {"btrfs-clone"              , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_clone              , _("Clone extents from source to dest, if extents match")                  , NULL}     ,
+        {"is-clone"                 , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_clone                 , _("Test if two files are already clones")                                 , NULL}     ,
         {"btrfs-readonly"           , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_readonly           , _("(btrfs-clone option) also clone to read-only snapshots (needs root)")  , NULL}     ,
 
         /* Callback */

@@ -154,6 +154,13 @@ int rm_session_replay_main(RmSession *session);
  */
 int rm_session_btrfs_clone_main(RmCfg *cfg);
 
+/**
+ * @brief Trigger rmlint in --is-clone mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_is_clone_main(RmCfg *cfg);
+
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
  *

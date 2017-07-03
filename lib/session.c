@@ -376,6 +376,31 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
     return EXIT_FAILURE;
 }
 
+/**
+ * *********** `rmlint --is-clone` session main ************
+ **/
+int rm_session_is_clone_main(RmCfg *cfg) {
+
+    if (cfg->path_count != 2) {
+        rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
+        return EXIT_FAILURE;
+    }
+
+    g_assert(cfg->paths);
+    RmPath *a = cfg->paths->data;
+    g_assert(cfg->paths->next);
+    RmPath *b = cfg->paths->next->data;
+    rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
+
+    if(rm_offsets_match(a->path, b->path)) {
+        rm_log_debug_line("Offsets match");
+        return EXIT_SUCCESS;
+    }
+
+    rm_log_debug_line("Offsets don't match");
+    return EXIT_FAILURE;
+}
+
 int rm_session_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
 
