@@ -230,3 +230,29 @@ def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
         assert data[1]["is_original"] is False
 
     _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
+
+@with_setup(usual_setup_func, usual_teardown_func)
+@parameterized([("sh", ), ("bash", ), ("dash", )])
+def test_cleanup_emptydirs(shell):
+    create_file('xxx', 'dir1/a')
+
+    # create some ugly dir names
+    names = 'escape me [please?]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
+    for dirname in names:
+        create_file('xxx', '{}/b'.format(dirname))
+
+    head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+
+    assert footer['duplicate_sets'] == 1
+    assert footer['total_lint_size'] == 3 * len(names)
+    assert footer['total_files'] == 1 + len(names)
+    assert footer['duplicates'] == len(names)
+
+    # run rmlint.sh with -c option (should clean up empty dirs after deleting 'b' files).
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    text = run_shell_script(shell, sh_path, "-dc")
+
+    assert os.path.exists(os.path.join(TESTDIR_NAME, 'dir1/a'))
+
+    for dirname in names:
+        assert (not os.path.exists(os.path.join(TESTDIR_NAME, dirname)))
