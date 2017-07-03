@@ -237,7 +237,7 @@ def test_cleanup_emptydirs(shell):
     create_file('xxx', 'dir1/a')
 
     # create some ugly dir names
-    names = 'escape me [please?]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
+    names = 'escape me [please?]', 'let\'s nest/a level/[or two]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
     for dirname in names:
         create_file('xxx', '{}/b'.format(dirname))
 
