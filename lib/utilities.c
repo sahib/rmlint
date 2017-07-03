@@ -1007,6 +1007,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
 
+    fsync(fd);
+
     while(!done) {
         /* read in one extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);

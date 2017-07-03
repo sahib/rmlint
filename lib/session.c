@@ -323,6 +323,10 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
         return EXIT_FAILURE;
     }
 
+    /* fsync's needed to flush extent mapping */
+    fsync(source_fd);
+    fsync(extent_same.info.fd);
+
     struct stat source_stat;
     fstat(source_fd, &source_stat);
 
