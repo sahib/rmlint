@@ -29,7 +29,6 @@
 
 #include "../lib/api.h"
 #include "../lib/config.h"
-#include "../lib/hash-utility.h"
 
 #if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
@@ -141,8 +140,6 @@ int main(int argc, const char **argv) {
             exit_state = rm_session_is_clone_main(&cfg);
         } else if(cfg.run_gui) {
             exit_state = rm_session_gui_main(argc, argv);
-        } else if(cfg.hash) {
-            exit_state = rm_hasher_main(argc, argv);
         } else {
             exit_state = rm_session_main(&session);
         }

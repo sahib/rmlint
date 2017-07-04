@@ -512,7 +512,8 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     target_bytes = target_pages * tag->page_size;
 
     /* test if cost-effective to read the whole file */
-    if(group->hash_offset + target_bytes + (balanced_bytes) >= group->file_size) {
+    if(group->hash_offset + target_bytes + (balanced_bytes) >= group->file_size ||
+        tag->session->cfg->hash) {
         group->next_offset = group->file_size;
         file->fadvise_requested = 1;
     } else {
@@ -766,7 +767,8 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 }
 
 static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
-    return 1 && (group->num_files >= 2)
+    return group->session->cfg->hash || (
+           (group->num_files >= 2)
            /* it takes 2 to tango */
            && (group->n_pref > 0 || !NEEDS_PREF(group))
            /* we have at least one file from preferred path, or we don't care */
@@ -774,8 +776,9 @@ static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
            /* we have at least one file from non-pref path, or we don't care */
            && (group->n_new > 0 || !NEEDS_NEW(group))
            /* we have at least one file newer than cfg->min_mtime, or we don't care */
-           && (!group->unique_basename || !group->session->cfg->unmatched_basenames);
-    /* we have more than one unique basename, or we don't care */
+           && (!group->unique_basename || !group->session->cfg->unmatched_basenames)
+           /* we have more than one unique basename, or we don't care */
+           );
 }
 
 /* call unlocked; should be no contention issues since group is finished */
@@ -822,7 +825,7 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
     if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group) &&
        group->hash_offset < group->file_size &&
        (group->n_clusters > 1 ||
-        (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
+        (group->n_inodes == 1 && (group->session->cfg->merge_directories || group->session->cfg->hash)))) {
         /* group can go active */
         group->status = RM_SHRED_GROUP_START_HASHING;
     }

@@ -143,6 +143,9 @@ RmFmtTable *rm_fmt_open(RmSession *session) {
     extern RmFmtHandler *EQUAL_HANDLER;
     rm_fmt_register(self, EQUAL_HANDLER);
 
+    extern RmFmtHandler *HASH_HANDLER;
+    rm_fmt_register(self, HASH_HANDLER);
+
     return self;
 }
 

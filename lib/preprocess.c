@@ -101,6 +101,8 @@ static gint rm_file_cmp_full(const RmFile *file_a, const RmFile *file_b,
 
 static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
                               const RmSession *session) {
+    RETURN_IF_NONZERO(session->cfg->hash);
+
     gint result = rm_file_cmp(file_a, file_b);
     RETURN_IF_NONZERO(result);
 

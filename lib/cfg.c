@@ -31,7 +31,6 @@
 
 #include "cfg.h"
 #include "formats.h"
-#include "hash-utility.h"
 #include "preprocess.h"
 #include "traverse.h"
 #include "treemerge.h"
@@ -1189,9 +1188,6 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
     if(g_strv_contains((const gchar * const *)argv, "--gui")) {
         cfg->run_gui = TRUE;
         return true;
-    } else if(g_strv_contains((const gchar * const *)argv, "--hash")) {
-        cfg->hash = TRUE;
-        return true;
     }
 
     /* List of paths we got passed (or NULL) */
@@ -1255,13 +1251,13 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
         {"btrfs-clone"              , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_clone              , _("Clone extents from source to dest, if extents match")                  , NULL}     ,
         {"is-clone"                 , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_clone                 , _("Test if two files are already clones")                                 , NULL}     ,
         {"btrfs-readonly"           , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_readonly           , _("(btrfs-clone option) also clone to read-only snapshots (needs root)")  , NULL}     ,
+        {"hash"                     , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->hash                     , _("Calculate checksums (`rmlint --hash -a sha1 x` is like  `sha1sum x`")  , NULL}     ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cfg_show_manpage , _("Show the manpage")            , NULL} ,
         {"version"  , 0   , EMPTY , G_OPTION_ARG_CALLBACK , rm_cfg_show_version , _("Show the version & features") , NULL} ,
         /* Dummy option for --help output only: */
         {"gui"         , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("If installed, start the optional gui with all following args")                 , NULL} ,
-        {"hash"        , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL} ,
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING , 0 , 0 , G_OPTION_ARG_FILENAME_ARRAY , &paths , ""   , NULL}   ,
@@ -1399,6 +1395,11 @@ bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
         if(!rm_fmt_has_formatter(cfg->formats, "json")) {
             rm_fmt_add(cfg->formats, "json", "rmlint.json");
         }
+    }
+
+    if(cfg->hash) {
+        rm_fmt_clear(cfg->formats);
+        rm_fmt_add(cfg->formats, "hash", "stdout");
     }
 
     /* Overwrite color if we do not print to a terminal directly */
