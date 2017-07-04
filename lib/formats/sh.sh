@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PROGRESS_CURR=0
-PROGRESS_TOTAL=
+PROGRESS_TOTAL="                            "
 
 # This file was autowritten by rmlint
 # rmlint was executed from: %s
