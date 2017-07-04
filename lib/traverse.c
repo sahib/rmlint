@@ -58,10 +58,14 @@ static RmTravSession *rm_traverse_session_new(RmSession *session) {
 }
 
 static void rm_traverse_session_free(RmTravSession *trav_session) {
-    rm_log_debug_line("Found %d files, ignored %d hidden files and %d hidden folders",
-                      trav_session->session->total_files,
-                      trav_session->session->ignored_files,
-                      trav_session->session->ignored_folders);
+    rm_log_debug_line("Found %" RM_COUNTER_FORMAT
+                      " files,"
+                      " ignored %" RM_COUNTER_FORMAT
+                      " hidden files"
+                      " and %" RM_COUNTER_FORMAT " hidden folders",
+                      rm_counter_get(RM_COUNTER_TOTAL_FILES),
+                      rm_counter_get(RM_COUNTER_IGNORED_FILES),
+                      rm_counter_get(RM_COUNTER_IGNORED_FOLDERS));
 
     rm_userlist_destroy(trav_session->userlist);
 
@@ -110,7 +114,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
     RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
 
-    if(rm_fmt_is_a_output(session->formats, path)) {
+    if(rm_fmt_is_a_output(session->cfg->formats, path)) {
         /* ignore files which are rmlint outputs */
         return;
     }
@@ -123,7 +127,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
             file_type = RM_LINT_TYPE_EMPTY_FILE;
         } else if(cfg->permissions && access(path, cfg->permissions) == -1) {
             /* bad permissions; ignore file */
-            trav_session->session->ignored_files++;
+            rm_counter_add(RM_COUNTER_IGNORED_FILES, 1);
             return;
         } else if(cfg->find_badids &&
                   (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
@@ -140,7 +144,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
                 } else {
                     /* A file in an evil fs. Ignore. */
-                    trav_session->session->ignored_files++;
+                    rm_counter_add(RM_COUNTER_IGNORED_FILES, 1);
                     return;
                 }
             } else {
@@ -160,8 +164,8 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
 
         rm_file_list_insert_file(file, session);
 
-        g_atomic_int_add(&trav_session->session->total_files, 1);
-        rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
+        rm_counter_add(RM_COUNTER_TOTAL_FILES, 1);
+        rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
             if(cfg->clear_xattr_fields) {
@@ -279,9 +283,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
             if(p->fts_info == FTS_D) {
                 fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
-                g_atomic_int_inc(&trav_session->session->ignored_folders);
+                rm_counter_add(RM_COUNTER_IGNORED_FOLDERS, 1);
             } else {
-                g_atomic_int_inc(&trav_session->session->ignored_files);
+                rm_counter_add(RM_COUNTER_IGNORED_FILES, 1);
             }
 
             clear_emptydir_flags = true; /* flag current dir as not empty */
@@ -436,7 +440,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     fts_close(ftsp);
 
     // rm_file_list_insert_queue(, session);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
 
 done:
     rm_mds_device_ref(buffer->disk, -1);
@@ -500,5 +504,5 @@ void rm_traverse_tree(RmSession *session) {
     rm_traverse_session_free(trav_session);
 
     session->traverse_finished = TRUE;
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
+    rm_fmt_set_state(session->cfg->formats, RM_PROGRESS_STATE_TRAVERSE);
 }

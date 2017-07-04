@@ -107,7 +107,7 @@ def parse_arguments(root_logger):
     )
 
     try:
-        parser.parse_args()
+        parser.parse_args([ arg for arg in sys.argv if not arg=="--gui" ])
     except GLib.Error as err:
         root_logger.error(str(err))
         return None

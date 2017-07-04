@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.
  * We only include it here, because it fixes some recent warning...
@@ -1006,6 +1007,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
 
+    fsync(fd);
+
     while(!done) {
         /* read in one extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
@@ -1093,16 +1096,55 @@ bool rm_offsets_match(char *path1, char *path2) {
         return FALSE;
     }
 
-    RmOff file1_offset_next = 0;
-    RmOff file2_offset_next = 0;
+    RmStat stat1;
+    int stat_state = rm_sys_stat(path1, &stat1);
+    if(stat_state == -1) {
+        rm_log_perrorf("Unable to stat file %s", path1);
+        return FALSE;
+    }
+
+    RmStat stat2;
+    stat_state = rm_sys_stat(path2, &stat2);
+    if(stat_state == -1) {
+        rm_log_perrorf("Unable to stat file %s", path2);
+        return FALSE;
+    }
+
+    if (stat1.st_size != stat2.st_size) {
+        rm_log_debug_line("Files have different sizes: %lu <> %lu", stat1.st_size, stat2.st_size);
+        return FALSE;
+    }
+
     RmOff file_offset_current = 0;
-    while(!result &&
-          (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-           rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
-          file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
-        if(file1_offset_next == file_offset_current) {
+    while(!result && !rm_session_was_aborted()) {
+        RmOff file1_offset_next = 0;
+        RmOff file2_offset_next = 0;
+        RmOff file1_offset = rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next);
+        RmOff file2_offset = rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next);
+
+        if(file1_offset != file2_offset) {
+            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu", file_offset_current, file1_offset, file2_offset);
+            break;
+        }
+        if (file1_offset_next != file2_offset_next) {
+            rm_log_debug_line("Next offsets differ after %lu: %lu <> %lu", file_offset_current, file1_offset_next, file2_offset_next);
+            break;
+        }
+
+        rm_log_debug_line("Offset: %lu, next: %lu", file_offset_current, file1_offset_next);
+
+        if(file1_offset_next >= (RmOff)stat1.st_size) {
             /* phew, we got to the end */
             result = TRUE;
+        }
+
+        if(file1_offset_next==0) {
+            rm_log_debug_line("Can't determine whether files are clones (maybe inline extents?)");
+            break;
+        }
+
+        if(file1_offset_next==file_offset_current) {
+            rm_log_debug_line("rm_offsets_match() giving up: file1_offset_next==file_offset_current");
             break;
         }
         file_offset_current = file1_offset_next;

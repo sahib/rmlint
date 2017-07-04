@@ -105,8 +105,6 @@ int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
 
     RmCfg cfg;
-    rm_cfg_set_default(&cfg);
-
     RmSession session;
     rm_session_init(&session, &cfg);
 
@@ -131,11 +129,23 @@ int main(int argc, const char **argv) {
 #endif
 
     /* Parse commandline */
-    if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
-        /* Do all the real work */
-        exit_state = rm_cmd_main(&session);
+    if(rm_cfg_parse_args(argc, (char **)argv, &cfg) != 0) {
+
+        /* Run the appropriate session type */
+        if(cfg.replay) {
+            exit_state = rm_session_replay_main(&session);
+        } else if (cfg.btrfs_clone) {
+            exit_state = rm_session_btrfs_clone_main(&cfg);
+        } else if (cfg.is_clone) {
+            exit_state = rm_session_is_clone_main(&cfg);
+        } else if(cfg.run_gui) {
+            exit_state = rm_session_gui_main(argc, argv);
+        } else {
+            exit_state = rm_session_main(&session);
+        }
     }
 
     rm_session_clear(&session);
+
     return exit_state;
 }

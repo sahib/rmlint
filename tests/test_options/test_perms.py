@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 from nose import with_setup
+from nose.plugins.skip import SkipTest
 from tests.utils import *
 
 import stat
@@ -28,7 +29,7 @@ def test_combinations():
     # This test does not work when run as root.
     # root can read the files anyways.
     if runs_as_root():
-        return
+        raise SkipTest("Can't run permissions tests as root")
 
     # Generate all combinations of 'rwx' in a fun way:
     rwx = set(

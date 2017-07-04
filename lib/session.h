@@ -65,9 +65,6 @@ typedef struct RmSession {
     /* Table of mountpoints used in the system */
     struct RmMountTable *mounts;
 
-    /* Output formatting control */
-    struct RmFmtTable *formats;
-
     /* Treemerging for -D */
     struct RmTreeMerger *dir_merger;
 
@@ -77,57 +74,8 @@ typedef struct RmSession {
     /* Disk Scheduler */
     struct _RmMDS *mds;
 
-    /* Cache of already compiled GRegex patterns */
-    GPtrArray *pattern_cache;
-
-    /* Counters for printing useful statistics */
-    volatile gint total_files;
-    volatile gint ignored_files;
-    volatile gint ignored_folders;
-
-    RmOff total_filtered_files;
-    RmOff total_lint_size;
-    RmOff shred_bytes_remaining;
-    RmOff shred_bytes_total;
-    RmOff shred_files_remaining;
-    RmOff shred_bytes_after_preprocess;
-    RmOff dup_counter;
-    RmOff dup_group_counter;
-    RmOff other_lint_cnt;
-
-    RmOff duplicate_bytes;
-    RmOff unique_bytes;
-    RmOff original_bytes;
-    RmOff shred_bytes_read;
-
-    GTimer *timer_since_proc_start;
-
     /* flag indicating if rmlint was aborted early */
     volatile gint aborted;
-
-    /* timer used for debugging and profiling messages */
-    GTimer *timer;
-
-    /* Debugging counters */
-    RmOff offset_fragments;
-    RmOff offsets_read;
-    RmOff offset_fails;
-
-    /* Daniels paranoia */
-    RmOff hash_seed1;
-    RmOff hash_seed2;
-
-    /* count used for determining the verbosity level */
-    int verbosity_count;
-
-    /* count used for determining the paranoia level */
-    int paranoia_count;
-
-    /* count for -o and -O; initialized to -1 */
-    int output_cnt[2];
-
-    /* true if a cmdline parse error happened */
-    bool cmdline_parse_error;
 
     /* true once shredder finished running */
     bool shredder_finished;
@@ -135,12 +83,9 @@ typedef struct RmSession {
     /* true once traverse finished running */
     bool traverse_finished;
 
-    /* Version of the linux kernel (0 on other operating systems) */
-    int kernel_version[2];
-
-	/*  When run with --equal this holds the exit code for rmlint
-	 *  (the exit code is determined by the _equal formatter) */
-	int equal_exit_code;
+    /*  When run with --equal this holds the exit code for rmlint
+     *  (the exit code is determined by the _equal formatter) */
+    int equal_exit_code;
 } RmSession;
 
 /**
@@ -179,7 +124,42 @@ bool rm_session_was_aborted(void);
  *
  * @return True if the kernel is recent enough.
  */
-bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
+bool rm_session_check_kernel_version(RmCfg *cfg, int major, int minor);
+
+/**
+ * @brief Trigger the main method of rmlint.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_main(RmSession *session);
+
+/**
+ * @brief Run rmlint in GUI mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_gui_main(int argc, const char **argv);
+
+/**
+ * @brief Trigger rmlint in --replay mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_replay_main(RmSession *session);
+
+/**
+ * @brief Trigger rmlint in --btrfs-clone mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_btrfs_clone_main(RmCfg *cfg);
+
+/**
+ * @brief Trigger rmlint in --is-clone mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_is_clone_main(RmCfg *cfg);
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option

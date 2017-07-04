@@ -70,6 +70,13 @@
         rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
     }}                                                                                   \
 
+#define rm_log_perrorf(message, ...)                                                     \
+    if(errno) {{                                                                         \
+        char *msg = g_strdup_printf (message, __VA_ARGS__);                              \
+        rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, msg, g_strerror(errno));  \
+        g_free(msg);                                                                     \
+    }}                                                                                   \
+
 #define _UNUSED G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
 #define LLI G_GINT64_FORMAT
@@ -161,7 +168,7 @@ typedef guint64 RmOff;
         rm_log_error_line("     Will try to continue in 2 seconds. Expect crashes.");         \
         g_usleep(2 * 1000 * 1000);                                                            \
     }}
-    
+
 
 #define RM_NOT_REACHED (0)
 #define rm_assert_gentle_not_reached() rm_assert_gentle(RM_NOT_REACHED)

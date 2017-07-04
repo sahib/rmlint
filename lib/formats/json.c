@@ -179,11 +179,11 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
     self->id_set = g_hash_table_new(NULL, NULL);
 
-    if(rm_fmt_get_config_value(session->formats, "json", "oneline")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "json", "oneline")) {
         self->pretty = false;
     }
 
-    if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
+    if(!rm_fmt_get_config_value(session->cfg->formats, "json", "no_header")) {
         rm_fmt_json_open(self, out);
         {
             rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
@@ -200,11 +200,11 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "checksum_type",
                             rm_digest_type_to_string(session->cfg->checksum_type));
-            if(session->hash_seed1 && session->hash_seed2) {
+            if(session->cfg->hash_seed1 && session->cfg->hash_seed2) {
                 rm_fmt_json_sep(self, out);
-                rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
+                rm_fmt_json_key_int(out, "hash_seed1", session->cfg->hash_seed1);
                 rm_fmt_json_sep(self, out);
-                rm_fmt_json_key_int(out, "hash_seed2", session->hash_seed2);
+                rm_fmt_json_key_int(out, "hash_seed2", session->cfg->hash_seed2);
             }
         }
         rm_fmt_json_close(self, out);
@@ -214,7 +214,7 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
-    if(rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "json", "no_footer")) {
         fprintf(out, "{}");
     } else {
         rm_fmt_json_open(self, out);
@@ -223,17 +223,23 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key_int(out, "progress", 100); /* Footer is always last. */
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "total_files", session->total_files);
+            rm_fmt_json_key_int(out, "total_files",
+                                rm_counter_get(RM_COUNTER_TOTAL_FILES));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "ignored_files", session->ignored_files);
+            rm_fmt_json_key_int(out, "ignored_files",
+                                rm_counter_get(RM_COUNTER_IGNORED_FILES));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "ignored_folders", session->ignored_folders);
+            rm_fmt_json_key_int(out, "ignored_folders",
+                                rm_counter_get(RM_COUNTER_IGNORED_FOLDERS));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "duplicates", session->dup_counter);
+            rm_fmt_json_key_int(out, "duplicates",
+                                rm_counter_get(RM_COUNTER_DUP_COUNTER));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "duplicate_sets", session->dup_group_counter);
+            rm_fmt_json_key_int(out, "duplicate_sets",
+                                rm_counter_get(RM_COUNTER_DUP_GROUP_COUNTER));
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "total_lint_size", session->total_lint_size);
+            rm_fmt_json_key_int(out, "total_lint_size",
+                                rm_counter_get(RM_COUNTER_TOTAL_LINT_SIZE));
         }
         if(self->pretty) {
             fprintf(out, "\n}");
@@ -254,7 +260,7 @@ static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
 
 static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out,
                         RmFile *file) {
-    if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "json", "no_body")) {
         return;
     }
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE &&
@@ -280,11 +286,14 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
         rm_fmt_json_sep(self, out);
 
         gdouble progress = 0;
-        if(session->shred_bytes_after_preprocess) {
-            progress = CLAMP(100 -
-                      100 * ((gdouble)session->shred_bytes_remaining /
-                             (gdouble)session->shred_bytes_after_preprocess),
-                      0, 100);
+        RmCounter bytes_after_preprocess =
+            rm_counter_get(RM_COUNTER_SHRED_BYTES_AFTER_PREPROCESS);
+        if(bytes_after_preprocess) {
+            progress = CLAMP(
+                100 -
+                    100 * ((gdouble)rm_counter_get(RM_COUNTER_SHRED_BYTES_REMAINING) /
+                           (gdouble)bytes_after_preprocess),
+                0, 100);
         }
         rm_fmt_json_key_int(out, "progress", progress);
         rm_fmt_json_sep(self, out);
