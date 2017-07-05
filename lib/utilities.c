@@ -270,6 +270,21 @@ gpointer rm_util_slist_pop(GSList **list, GMutex *lock) {
     return result;
 }
 
+gboolean rm_util_strv_contains(const gchar * const *strv, const gchar *str) {
+    if(!strv || !str) {
+        return FALSE;
+    }
+
+    while(*strv) {
+        if (g_str_equal (str, *strv)) {
+            return TRUE;
+        }
+        strv++;
+    }
+    return FALSE;
+}
+
+
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {

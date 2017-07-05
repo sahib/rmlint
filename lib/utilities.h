@@ -302,6 +302,11 @@ gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_dat
 gpointer rm_util_slist_pop(GSList **list, GMutex *lock);
 
 /**
+* @brief Checks if strv contains str . strv must not be NULL.
+*/
+gboolean rm_util_strv_contains(const gchar * const *strv, const gchar *str);
+
+/**
  * @brief Return a pointer to the extension part of the file or NULL if none.
  *
  * @return: a pointer >= basename or NULL.

@@ -1184,7 +1184,7 @@ void rm_cfg_clear(RmCfg *cfg) {
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg) {
 
-    if(g_strv_contains((const gchar * const *)argv, "--gui")) {
+    if(rm_util_strv_contains((const gchar * const *)argv, "--gui")) {
         cfg->run_gui = TRUE;
         return true;
     }
