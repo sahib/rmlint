@@ -371,6 +371,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
     }
 
 #else
+    (void)cfg;
     rm_log_error_line(_("rmlint was not compiled with btrfs support."))
 #endif
 
