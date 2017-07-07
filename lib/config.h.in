@@ -33,11 +33,9 @@
 #define RM_MANPAGE_USE_PAGER (1)
 
 /* Might come in useful */
-#define RM_CHECK_VERSION(X,Y,Z) (0  \
-    || X <= RM_VERSION_MAJOR        \
-    || Y <= RM_VERSION_MINOR        \
-    || Z <= RM_VERSION_MICRO        \
-)
+#define RM_CHECK_VERSION(X,Y,Z)  (X < RM_VERSION_MAJOR || (   \
+        X == RM_VERSION_MAJOR && (Y < RM_VERSION_MINOR || (   \
+        Y == RM_VERSION_MINOR && Z <= RM_VERSION_MICRO))))
 
 /* These colors should only be used with the rm_log_* macros below */
 #define RED    "\x1b[31;01m"
