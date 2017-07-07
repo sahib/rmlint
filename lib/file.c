@@ -27,7 +27,6 @@
 #include "utilities.h"
 
 #include <string.h>
-#include <string.h>
 #include <sys/file.h>
 #include <unistd.h>
 
@@ -78,7 +77,8 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
             self->file_size = actual_file_size * cfg->skip_end_factor;
         }
 
-        /* Check if the actual slice the file will be > 0; we don't want empty files in shredder */
+        /* Check if the actual slice the file will be > 0; we don't want empty files in
+         * shredder */
         if((self->file_size - start_seek) == 0 && actual_file_size != 0) {
             return NULL;
         }

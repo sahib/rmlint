@@ -48,7 +48,8 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(session->duplicate_bytes == 0 && session->shred_bytes_read == 0) {
+    if(rm_counter_get(RM_COUNTER_DUPLICATE_BYTES) == 0 &&
+       rm_counter_get(RM_COUNTER_SHRED_BYTES_READ) == 0) {
         fprintf(out, _("No shred stats.\n"));
         return;
     }
@@ -71,34 +72,40 @@ static void rm_fmt_prog(RmSession *session,
     ARROW fprintf(out, _("%sDuplicate finding stats (includes hardlinks):%s\n\n"),
                   MAYBE_BLUE(out, session), MAYBE_RESET(out, session));
 
-    rm_util_size_to_human_readable(session->original_bytes, numbers, sizeof(numbers));
+    rm_util_size_to_human_readable(rm_counter_get(RM_COUNTER_ORIGINAL_BYTES), numbers,
+                                   sizeof(numbers));
     fprintf(out, _("%s%15s%s bytes of originals\n"), MAYBE_RED(out, session), numbers,
             MAYBE_RESET(out, session));
 
-    rm_util_size_to_human_readable(session->duplicate_bytes, numbers, sizeof(numbers));
+    rm_util_size_to_human_readable(rm_counter_get(RM_COUNTER_DUPLICATE_BYTES), numbers,
+                                   sizeof(numbers));
     fprintf(out, _("%s%15s%s bytes of duplicates\n"), MAYBE_RED(out, session), numbers,
             MAYBE_RESET(out, session));
 
-    rm_util_size_to_human_readable(session->unique_bytes, numbers, sizeof(numbers));
+    rm_util_size_to_human_readable(rm_counter_get(RM_COUNTER_UNIQUE_BYTES), numbers,
+                                   sizeof(numbers));
     fprintf(out, _("%s%15s%s bytes of non-duplicates\n"), MAYBE_RED(out, session),
             numbers, MAYBE_RESET(out, session));
 
-    rm_util_size_to_human_readable(session->shred_bytes_read, numbers, sizeof(numbers));
+    rm_util_size_to_human_readable(rm_counter_get(RM_COUNTER_SHRED_BYTES_READ), numbers,
+                                   sizeof(numbers));
     fprintf(out, _("%s%15s%s bytes of files data actually read\n"),
             MAYBE_RED(out, session), numbers, MAYBE_RESET(out, session));
 
-    fprintf(out, _("%s%15d%s Files in total\n"), MAYBE_RED(out, session),
-            session->total_files, MAYBE_RESET(out, session));
-    fprintf(out, _("%s%15ld%s Duplicate files\n"), MAYBE_RED(out, session),
-            (long)session->dup_counter, MAYBE_RESET(out, session));
-    fprintf(out, _("%s%15ld%s Groups in total\n"), MAYBE_RED(out, session),
-            (long)session->dup_group_counter, MAYBE_RESET(out, session));
-    fprintf(out, _("%s%15ld%s Other lint items\n"), MAYBE_RED(out, session),
-            (long)session->other_lint_cnt, MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15" RM_COUNTER_FORMAT "%s Files in total\n"),
+            MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_TOTAL_FILES),
+            MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15" RM_COUNTER_FORMAT "%s Duplicate files\n"),
+            MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_DUP_COUNTER),
+            MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15" RM_COUNTER_FORMAT "%s Groups in total\n"),
+            MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_DUP_GROUP_COUNTER),
+            MAYBE_RESET(out, session));
+    fprintf(out, _("%s%15" RM_COUNTER_FORMAT "%s Other lint items\n"),
+            MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_OTHER_LINT_CNT),
+            MAYBE_RESET(out, session));
 
-    gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
-
-    char *elapsed_time = rm_format_elapsed_time(elapsed, 5);
+    char *elapsed_time = rm_format_elapsed_time(rm_counter_elapsed_time(), 5);
     fprintf(
             out,
             _("%s%15s%s of time spent scanning\n"),
@@ -108,14 +115,16 @@ static void rm_fmt_prog(RmSession *session,
 
     char eff_total[64] = "NaN";
     char eff_dupes[64] = "NaN";
-    if(session->shred_bytes_read != 0) {
-        gfloat efficiency = 100 * (0 + session->duplicate_bytes +
-                                   session->original_bytes + session->unique_bytes) /
-                            session->shred_bytes_read;
+    if(rm_counter_get(RM_COUNTER_SHRED_BYTES_READ) != 0) {
+        gfloat efficiency = 100 * (0 + rm_counter_get(RM_COUNTER_DUPLICATE_BYTES) +
+                                   rm_counter_get(RM_COUNTER_ORIGINAL_BYTES) +
+                                   rm_counter_get(RM_COUNTER_UNIQUE_BYTES)) /
+                            rm_counter_get(RM_COUNTER_SHRED_BYTES_READ);
 
         snprintf(eff_total, sizeof(eff_total), "%.0f%%", efficiency);
-        efficiency = 100 * (0 + session->duplicate_bytes + session->original_bytes) /
-                     session->shred_bytes_read;
+        efficiency = 100 * (0 + rm_counter_get(RM_COUNTER_DUPLICATE_BYTES) +
+                            rm_counter_get(RM_COUNTER_ORIGINAL_BYTES)) /
+                     rm_counter_get(RM_COUNTER_SHRED_BYTES_READ);
         snprintf(eff_dupes, sizeof(eff_dupes), "%.1f%%", efficiency);
     }
 

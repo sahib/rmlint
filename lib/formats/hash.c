@@ -30,62 +30,46 @@
 #include <stdio.h>
 #include <string.h>
 
-#define CSV_SEP ","
-#define CSV_QUOTE "\""
-#define CSV_FORMAT \
-    "%s" CSV_SEP "" CSV_QUOTE "%s" CSV_QUOTE "" CSV_SEP "%" LLU "" CSV_SEP "%s\n"
-
-typedef struct RmFmtHandlerCSV {
+typedef struct RmFmtHandlerHash {
     /* must be first */
     RmFmtHandler parent;
 } RmFmtHandlerProgress;
 
-static void rm_fmt_head(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
-                        FILE *out) {
-    if(rm_fmt_get_config_value(session->cfg->formats, "csv", "no_header")) {
-        return;
+static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out) {
+    if(rm_fmt_get_config_value(session->cfg->formats, "hash", "header")) {
+        fprintf(out, "%s    %s\n", rm_digest_type_to_string(session->cfg->checksum_type),
+                "path");
     }
-
-    fprintf(out, "%s%s%s%s%s%s%s\n", "type", CSV_SEP, "path", CSV_SEP, "size", CSV_SEP,
-            "checksum");
 }
 
 static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
                         FILE *out, RmFile *file) {
-    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE &&
-       (!file->digest || !session->cfg->write_unfinished)) {
+    if(!file->digest) {
         /* unique file with no partial checksum */
         return;
     }
 
     char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
     memset(checksum_str, '0', sizeof(checksum_str));
+    rm_digest_hexstring(file->digest, checksum_str);
+    /* make sure we have a trailing null */
     checksum_str[sizeof(checksum_str) - 1] = 0;
 
-    if(file->digest) {
-        rm_digest_hexstring(file->digest, checksum_str);
-    }
-
-    /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
     RM_DEFINE_PATH(file);
-    char *clean_path = rm_util_strsub(file_path, CSV_QUOTE, CSV_QUOTE "" CSV_QUOTE);
 
-    fprintf(out, CSV_FORMAT, rm_file_lint_type_to_string(file->lint_type), clean_path,
-            file->actual_file_size, checksum_str);
-
-    g_free(clean_path);
+    fprintf(out, "%s %s\n", checksum_str, file_path);
 }
 
-static RmFmtHandlerProgress CSV_HANDLER_IMPL = {
+static RmFmtHandlerProgress HASH_HANDLER_IMPL = {
     /* Initialize parent */
     .parent = {
-        .size = sizeof(CSV_HANDLER_IMPL),
-        .name = "csv",
+        .size = sizeof(HASH_HANDLER_IMPL),
+        .name = "hash",
         .head = rm_fmt_head,
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = NULL,
-        .valid_keys = {"no_header", NULL},
+        .valid_keys = {"header", NULL},
     }};
 
-RmFmtHandler *CSV_HANDLER = (RmFmtHandler *)&CSV_HANDLER_IMPL;
+RmFmtHandler *HASH_HANDLER = (RmFmtHandler *)&HASH_HANDLER_IMPL;

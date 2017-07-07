@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 from nose import with_setup
+from nose.plugins.skip import SkipTest
 from tests.utils import *
 
 
@@ -265,7 +266,7 @@ def mount_bind_teardown_func():
 @with_setup(usual_setup_func, mount_bind_teardown_func)
 def test_mount_binds():
     if not runs_as_root():
-        return
+        raise SkipTest("Can't test bind mounts: not running as root")
 
     create_file('xxx', 'a/b/1')
     create_file('xxx', 'c/2')

@@ -48,9 +48,9 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(session->total_files <= 1) {
-        ARROW fprintf(out, "%s%d%s", MAYBE_RED(out, session), session->total_files,
-                      MAYBE_RESET(out, session));
+    if(rm_counter_get(RM_COUNTER_TOTAL_FILES) <= 1) {
+        ARROW fprintf(out, "%s%" RM_COUNTER_FORMAT "%s", MAYBE_RED(out, session),
+                      rm_counter_get(RM_COUNTER_TOTAL_FILES), MAYBE_RESET(out, session));
         fprintf(out, _(" file(s) after investigation, nothing to search through.\n"));
         return;
     }
@@ -69,58 +69,58 @@ static void rm_fmt_prog(RmSession *session,
         ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
     }
 
-    if(rm_fmt_has_formatter(session->formats, "pretty") &&
-       rm_fmt_has_formatter(session->formats, "sh")) {
+    if(rm_fmt_has_formatter(session->cfg->formats, "pretty") &&
+       rm_fmt_has_formatter(session->cfg->formats, "sh")) {
         ARROW fprintf(out, _("Note: Please use the saved script below for removal, not "
                              "the above output."));
         fprintf(out, "\n");
     }
 
     char numbers[3][512];
-    snprintf(numbers[0], sizeof(numbers[0]), "%s%d%s", MAYBE_RED(out, session),
-             session->total_files, MAYBE_RESET(out, session));
-    snprintf(numbers[1], sizeof(numbers[1]), "%s%" LLU "%s", MAYBE_RED(out, session),
-             session->dup_counter, MAYBE_RESET(out, session));
+    snprintf(numbers[0], sizeof(numbers[0]), "%s%" RM_COUNTER_FORMAT "%s",
+             MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_TOTAL_FILES),
+             MAYBE_RESET(out, session));
+    snprintf(numbers[1], sizeof(numbers[1]), "%s%" RM_COUNTER_FORMAT "%s",
+             MAYBE_RED(out, session), rm_counter_get(RM_COUNTER_DUP_COUNTER),
+             MAYBE_RESET(out, session));
     snprintf(numbers[2], sizeof(numbers[2]), "%s%" LLU "%s", MAYBE_RED(out, session),
-             session->dup_group_counter, MAYBE_RESET(out, session));
+             rm_counter_get(RM_COUNTER_DUP_GROUP_COUNTER), MAYBE_RESET(out, session));
 
     ARROW fprintf(out, _("In total %s files, whereof %s are duplicates in %s groups.\n"),
                   numbers[0], numbers[1], numbers[2]);
 
     /* log10(2 ** 64) + 2 = 21; */
     char size_string_buf[22] = {0};
-    rm_util_size_to_human_readable(session->total_lint_size, size_string_buf,
-                                   sizeof(size_string_buf));
+    rm_util_size_to_human_readable(rm_counter_get(RM_COUNTER_TOTAL_LINT_SIZE),
+                                   size_string_buf, sizeof(size_string_buf));
 
     ARROW fprintf(out, _("This equals %s%s%s of duplicates which could be removed.\n"),
                   MAYBE_RED(out, session), size_string_buf, MAYBE_RESET(out, session));
 
-    if(session->other_lint_cnt > 0) {
+    if(rm_counter_get(RM_COUNTER_OTHER_LINT_CNT) > 0) {
         ARROW fprintf(out, "%s%" LLU "%s ", MAYBE_RED(out, session),
-                      session->other_lint_cnt, MAYBE_RESET(out, session));
+                      rm_counter_get(RM_COUNTER_OTHER_LINT_CNT),
+                      MAYBE_RESET(out, session));
 
         fprintf(out, _("other suspicious item(s) found, which may vary in size.\n"));
     }
 
-    gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
-    char *elapsed_time = rm_format_elapsed_time(elapsed, 3);
+    char *elapsed_time = rm_format_elapsed_time(rm_counter_elapsed_time(), 3);
     ARROW fprintf(out, _("Scanning took in total %s%s%s. Is that good enough?\n"),
                   MAYBE_RED(out, session), elapsed_time, MAYBE_RESET(out, session));
     g_free(elapsed_time);
 
     bool first_print_flag = true;
-    GHashTableIter iter;
-    char *path = NULL;
-    RmFmtHandler *handler = NULL;
-    rm_fmt_get_pair_iter(session->formats, &iter);
 
-    while(g_hash_table_iter_next(&iter, (gpointer *)&path, (gpointer *)&handler)) {
+    for(GList *iter = session->cfg->formats->handlers.head; iter; iter = iter->next) {
+        RmFmtHandler *handler = iter->data;
+
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};
         gsize forbidden_len = sizeof(forbidden) / sizeof(forbidden[0]);
-        bool forbidden_found = false;
 
+        bool forbidden_found = false;
         for(gsize i = 0; i < forbidden_len; i++) {
-            if(g_strcmp0(forbidden[i], path) == 0) {
+            if(g_strcmp0(forbidden[i], handler->path) == 0) {
                 forbidden_found = true;
                 break;
             }
@@ -131,7 +131,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         /* Check if the file really exists, so we can print it for sure */
-        if(access(path, R_OK) == -1) {
+        if(access(handler->path, R_OK) == -1) {
             continue;
         }
 
@@ -141,8 +141,8 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         fprintf(out, _("Wrote a %s%s%s file to: %s%s%s\n"), MAYBE_BLUE(out, session),
-                handler->name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session), path,
-                MAYBE_RESET(out, session));
+                handler->name, MAYBE_RESET(out, session), MAYBE_GREEN(out, session),
+                handler->path, MAYBE_RESET(out, session));
     }
 }
 

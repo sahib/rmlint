@@ -204,7 +204,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    if(cksum_hex_str == NULL || strcmp(cksum_hex_str, "")==0) {
+    if(cksum_hex_str == NULL || strcmp(cksum_hex_str, "") == 0) {
         return FALSE;
     }
 

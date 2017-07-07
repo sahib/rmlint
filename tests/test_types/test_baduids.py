@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 from nose import with_setup
+from nose.plugins.skip import SkipTest
 from tests.utils import *
 
 import subprocess
@@ -27,7 +28,7 @@ def exec_cmds(cmds):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_bad_ids():
     if not runs_as_root():
-        return
+        raise SkipTest("Can't test bad ID's: not running as root")
 
     exec_cmds([
         'groupadd {g}',

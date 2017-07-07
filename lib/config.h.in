@@ -20,24 +20,22 @@
 #define HAVE_BTRFS_H       ({HAVE_BTRFS_H})
 #define HAVE_FACCESSAT     ({HAVE_FACCESSAT})
 #define HAVE_UNAME         ({HAVE_UNAME})
-#define HAVE_SYSMACROS_H    ({HAVE_SYSMACROS_H})
+#define HAVE_SYSMACROS_H   ({HAVE_SYSMACROS_H})
 
-#define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B
-#define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
-#define RM_VERSION_MAJOR {VERSION_MAJOR}
-#define RM_VERSION_MINOR {VERSION_MINOR}
-#define RM_VERSION_PATCH {VERSION_PATCH}
-#define RM_VERSION_NAME  "{VERSION_NAME}"
+#define RM_DEFAULT_DIGEST       RM_DIGEST_BLAKE2B
+#define RM_VERSION              "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
+#define RM_VERSION_MAJOR        {VERSION_MAJOR}
+#define RM_VERSION_MINOR        {VERSION_MINOR}
+#define RM_VERSION_PATCH        {VERSION_PATCH}
+#define RM_VERSION_NAME         "{VERSION_NAME}"
 #define RM_VERSION_GIT_REVISION "{VERSION_GIT_REVISION}"
 
 #define RM_MANPAGE_USE_PAGER (1)
 
 /* Might come in useful */
-#define RM_CHECK_VERSION(X,Y,Z) (0  \
-    || X <= RM_VERSION_MAJOR        \
-    || Y <= RM_VERSION_MINOR        \
-    || Z <= RM_VERSION_MICRO        \
-)
+#define RM_CHECK_VERSION(X,Y,Z)  (X < RM_VERSION_MAJOR || (   \
+        X == RM_VERSION_MAJOR && (Y < RM_VERSION_MINOR || (   \
+        Y == RM_VERSION_MINOR && Z <= RM_VERSION_MICRO))))
 
 /* These colors should only be used with the rm_log_* macros below */
 #define RED    "\x1b[31;01m"
@@ -56,19 +54,24 @@
 # endif
 #endif
 
-#define rm_log_debug(...) \
-    g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define rm_log_info(...) \
-    g_log("rmlint", G_LOG_LEVEL_INFO, __VA_ARGS__)
-#define rm_log_warning(...) \
-    g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
-#define rm_log_error(...) \
-    g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+#define rm_log_debug(...)   g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define rm_log_info(...)    g_log("rmlint", G_LOG_LEVEL_INFO, __VA_ARGS__)
+#define rm_log_warning(...) g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
+#define rm_log_error(...)   g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
 
 #define rm_log_perror(message)                                                           \
     if(errno) {{                                                                         \
         rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
     }}                                                                                   \
+
+#define rm_log_perrorf(message, ...)                                    \
+    if(errno) {{                                                        \
+        int _errsv = errno;                                         \
+        char *msg = g_strdup_printf(message, __VA_ARGS__);          \
+        rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, msg, \
+                          g_strerror(_errsv));                      \
+        g_free(msg);                                                \
+    }}
 
 #define _UNUSED G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
@@ -161,7 +164,7 @@ typedef guint64 RmOff;
         rm_log_error_line("     Will try to continue in 2 seconds. Expect crashes.");         \
         g_usleep(2 * 1000 * 1000);                                                            \
     }}
-    
+
 
 #define RM_NOT_REACHED (0)
 #define rm_assert_gentle_not_reached() rm_assert_gentle(RM_NOT_REACHED)

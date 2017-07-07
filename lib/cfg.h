@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "checksum.h"
+#include "config.h"
 #include "pathtricia.h"
 #include "utilities.h"
 
@@ -111,8 +112,8 @@ typedef struct RmCfg {
     /* working dir rmlint called from */
     char *iwd;
 
-	/* Path to the rmlint binary of this run */
-	char *full_argv0_path;
+    /* Path to the rmlint binary of this run */
+    char *full_argv0_path;
 
     /* the full command line */
     char *joined_argv;
@@ -146,26 +147,67 @@ typedef struct RmCfg {
      */
     gboolean cache_file_structs;
 
-	/* Instead of running in duplicate detection mode,
-	 * check if the passed arguments are equal files
-	 * (or directories)
-	 */
-	gboolean run_equal_mode;
+    /* Instead of running in duplicate detection mode,
+     * check if the passed arguments are equal files
+     * (or directories)
+     */
+    gboolean run_equal_mode;
+
+    /* Output formatting control */
+    struct RmFmtTable *formats;
+
+    /* count used for determining the verbosity level */
+    int verbosity_count;
+
+    /* count used for determining the paranoia level */
+    int paranoia_count;
+
+    /* count for -o and -O; initialized to -1 */
+    int output_cnt[2];
+
+    /* true if a cmdline parse error happened */
+    bool cmdline_parse_error;
+
+    /* Version of the linux kernel (0 on other operating systems) */
+    int kernel_version[2];
+
+    /* Daniels paranoia */
+    RmOff hash_seed1;
+    RmOff hash_seed2;
+
+    /* Cache of already compiled GRegex patterns */
+    GPtrArray *pattern_cache;
+
+    /* run in GUI mode */
+    bool run_gui;
+
+    /* for --btrfs-clone option */
+    bool btrfs_clone;
+    bool btrfs_readonly;
+
+    /* for --is-clone option */
+    bool is_clone;
+
+    /* for --hash option */
+    bool hash;
+
 } RmCfg;
 
 /**
- * @brief Reset RmCfg to default cfg and all other vars to 0.
+ * @brief initialise RmCfg child structures and set all cfg values to defaults.
  */
-void rm_cfg_set_default(RmCfg *cfg);
+void rm_cfg_init(RmCfg *cfg);
 
 /**
- * @brief check and add a path to cfg->paths.
+ * @brief free all resources allocated under cfg (but not cfg itself).
  */
-guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
+void rm_cfg_clear(RmCfg *cfg);
 
 /**
- * @brief free all data associated with cfg->paths.
+ * @brief Parse all arguments specified in argc/argv and set the aprop. cfg
+ *
+ * @return false on parse error (running makes no sense then)
  */
-void rm_cfg_free_paths(RmCfg *cfg);
+bool rm_cfg_parse_args(int argc, char **argv, RmCfg *cfg);
 
 #endif /* end of include guard */

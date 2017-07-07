@@ -65,13 +65,16 @@ static const char *SH_SCRIPT_TEMPLATE_FOOT =
     "then                                           \n"
     "  echo \"Deleting script \" \"$0\"             \n"
     "  %s '%s';                                     \n"
-    "fi                                             \n"
-    ;
+    "fi                                             \n";
 
-typedef bool (* RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped);
+typedef bool (*RmShOrderEmitFunc)(RmFmtHandlerShScript *self, char **out, RmFile *file,
+                                  char *dupe_path, char *orig_path, char *dupe_escaped,
+                                  char *orig_escaped);
 
-
-static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
+static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out,
+                                    _UNUSED RmFile *file, _UNUSED char *dupe_path,
+                                    _UNUSED char *orig_path, char *dupe_escaped,
+                                    char *orig_escaped) {
     if(self->user_cmd == NULL || !self->allow_user_cmd) {
         return false;
     }
@@ -80,27 +83,28 @@ static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _UNU
     return true;
 }
 
-static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped) {
+static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmFile *file,
+                                     char *dupe_path, char *orig_path, char *dupe_escaped,
+                                     char *orig_escaped) {
     if(!self->allow_clone || self->session->mounts == NULL) {
         return false;
     }
 
-    if (!rm_mounts_can_reflink(self->session->mounts, file->dev, self->last_original->dev) ) {
+    if(!rm_mounts_can_reflink(self->session->mounts, file->dev,
+                              self->last_original->dev)) {
         return false;
     }
 
     /* Needs to have at least kernel 4.2 */
-    if(!rm_session_check_kernel_version(self->session, 4, 2)) {
+    if(!rm_session_check_kernel_version(self->session->cfg, 4, 2)) {
         return false;
     }
 
     bool offsets_match = rm_offsets_match(dupe_path, orig_path);
-    char *reflink_type = g_hash_table_lookup(
-            self->session->mounts->reflinkfs_table,
-            GUINT_TO_POINTER(file->dev)
-    );
+    char *reflink_type = g_hash_table_lookup(self->session->mounts->reflinkfs_table,
+                                             GUINT_TO_POINTER(file->dev));
 
-    if (offsets_match) {
+    if(offsets_match) {
         *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
     } else if(!g_strcmp0("btrfs", reflink_type)) {
         *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
@@ -111,16 +115,19 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     return true;
 }
 
-static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped) {
+static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out,
+                                       RmFile *file, char *dupe_path, char *orig_path,
+                                       char *dupe_escaped, char *orig_escaped) {
     if(!self->allow_reflink || self->session->mounts == NULL) {
         return false;
     }
 
-    if(!rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
+    if(!rm_mounts_can_reflink(self->session->mounts, self->last_original->dev,
+                              file->dev)) {
         return false;
     }
 
-    if (rm_offsets_match(dupe_path, orig_path)) {
+    if(rm_offsets_match(dupe_path, orig_path)) {
         *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
         *out = g_strdup_printf("cp_reflink '%s' '%s'", dupe_escaped, orig_escaped);
@@ -128,7 +135,10 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
     return true;
 }
 
-static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
+static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out,
+                                       _UNUSED RmFile *file, _UNUSED char *dupe_path,
+                                       _UNUSED char *orig_path, char *dupe_escaped,
+                                       char *orig_escaped) {
     if(!self->allow_symlink) {
         return false;
     }
@@ -137,12 +147,15 @@ static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, _
     return true;
 }
 
-static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
+static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out,
+                                        _UNUSED RmFile *file, _UNUSED char *dupe_path,
+                                        _UNUSED char *orig_path, char *dupe_escaped,
+                                        char *orig_escaped) {
     if(!self->allow_hardlink || self->last_original->dev != file->dev) {
         return false;
     }
 
-    if (self->last_original && RM_FILE_HARDLINK_HEAD(file) == self->last_original) {
+    if(self->last_original && RM_FILE_HARDLINK_HEAD(file) == self->last_original) {
         *out = g_strdup_printf("skip_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
         *out = g_strdup_printf("cp_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
@@ -150,7 +163,10 @@ static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, 
     return true;
 }
 
-static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
+static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out,
+                                      _UNUSED RmFile *file, _UNUSED char *dupe_path,
+                                      _UNUSED char *orig_path, char *dupe_escaped,
+                                      char *orig_escaped) {
     if(!self->allow_remove) {
         return false;
     }
@@ -269,23 +285,24 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
 
     self->line_count = 0;
     self->session = session;
-    self->user_cmd = rm_fmt_get_config_value(session->formats, "sh", "cmd");
+    self->user_cmd = rm_fmt_get_config_value(session->cfg->formats, "sh", "cmd");
 
-    const char *handler_cfg = rm_fmt_get_config_value(session->formats, "sh", "handler");
+    const char *handler_cfg =
+        rm_fmt_get_config_value(session->cfg->formats, "sh", "handler");
     if(handler_cfg != NULL) {
         /* user specified handlers */
         rm_sh_parse_handlers(self, handler_cfg);
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "clone") != NULL) {
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "clone") != NULL) {
         /* Preset: try clone, then reflinks, then symlinks then hardlinks */
         rm_sh_parse_handlers(self, "clone,reflink,hardlink,symlink");
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
-        /* Preset: try reflinks, then symlinks then hardlinks */
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "link") != NULL) {
+        /* Preset: try reflinks, then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
-        /* Preset: try symlinks before using hardlinks */
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "hardlink") != NULL) {
+        /* Preset: try hardlinks before using symlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");
-    } else if(rm_fmt_get_config_value(session->formats, "sh", "symlink") != NULL) {
-        /* Preset: only do hardlinks */
+    } else if(rm_fmt_get_config_value(session->cfg->formats, "sh", "symlink") != NULL) {
+        /* Preset: only do symlinks */
         rm_sh_parse_handlers(self, "symlink");
     } else {
         /* Default: remove the file */
@@ -360,7 +377,9 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
                 continue;
             }
 
-            if(func(self, &prefix, file, file_path, last_original_path, file_escaped, orig_escaped) && prefix) {
+            if(func(self, &prefix, file, file_path, last_original_path, file_escaped,
+                    orig_escaped) &&
+               prefix) {
                 break;
             }
         }
@@ -376,7 +395,8 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
     g_free(file_escaped);
 }
 
-static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out, RmFile *file) {
+static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
+                        FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         return;
@@ -424,7 +444,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
     g_byte_array_free(self->order, true);
 
-    if(rm_fmt_is_stream(session->formats, parent)) {
+    if(rm_fmt_is_stream(session->cfg->formats, parent)) {
         /* You will have a hard time deleting standard streams. */
         return;
     }
@@ -440,8 +460,9 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
 
         /* Go to the exact write position */
         if(fseek(out, offset, SEEK_SET) != -1) {
-            if(fprintf(out, "%"LLU, self->line_count) < 0) {
-                rm_log_perror("writing total progress failed; there will be no proress bar");
+            if(fprintf(out, "%" LLU, self->line_count) < 0) {
+                rm_log_perror(
+                    "writing total progress failed; there will be no proress bar");
             }
         } else {
             rm_log_perror("Seeking in script failed; there will be no progress bar");
@@ -465,4 +486,4 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
     .line_count = 0
 };
 
-RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *) &SH_SCRIPT_HANDLER_IMPL;
+RmFmtHandler *SH_SCRIPT_HANDLER = (RmFmtHandler *)&SH_SCRIPT_HANDLER_IMPL;

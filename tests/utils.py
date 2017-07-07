@@ -64,7 +64,7 @@ def has_feature(feature):
     ).decode('utf-8')
 
 
-def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, directly_return_output=False, use_shell=False):
+def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, with_json=True, directly_return_output=False, use_shell=False):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -88,9 +88,12 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, 
 
     cmd += [
         './rmlint', target_dir, '-V',
-    ] + shlex.split(' '.join(args)) + [
+    ] + shlex.split(' '.join(args))
+
+    if with_json:
+        cmd += [
         '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
-    ]
+        ]
 
     for idx, output in enumerate(outputs or []):
         cmd.append('-o')
@@ -254,7 +257,14 @@ def run_rmlint(*args, force_no_pendantic=False, **kwargs):
 
 
 def create_dirs(path):
-    os.makedirs(os.path.join(TESTDIR_NAME, path))
+    full_path = os.path.join(TESTDIR_NAME, path)
+
+    try:
+        os.makedirs(full_path)
+    except OSError:
+        pass
+
+    return full_path
 
 
 def create_link(path, target, symlink=False):

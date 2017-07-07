@@ -1,5 +1,4 @@
-/**
-* This file is part of rmlint.
+/* This file is part of rmlint.
 *
 *  rmlint is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -34,9 +33,6 @@
 #include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
-
-/* Pat(h)tricia Trie implementation */
-#include "pathtricia.h"
 
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
@@ -304,6 +300,11 @@ gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_dat
 * has NULL as its data.
 */
 gpointer rm_util_slist_pop(GSList **list, GMutex *lock);
+
+/**
+* @brief Checks if strv contains str . strv must not be NULL.
+*/
+gboolean rm_util_strv_contains(const gchar *const *strv, const gchar *str);
 
 /**
  * @brief Return a pointer to the extension part of the file or NULL if none.

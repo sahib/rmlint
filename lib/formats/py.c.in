@@ -24,8 +24,8 @@
  */
 
 #include "../formats.h"
-#include "../utilities.h"
 #include "../preprocess.h"
+#include "../utilities.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -62,7 +62,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     }
 
     self->json_out = fopen(".rmlint.json", "w");
-    if(self->json_out == NULL)  {
+    if(self->json_out == NULL) {
         return;
     }
 
@@ -112,4 +112,4 @@ static RmFmtHandlerPy PY_HANDLER_IMPL = {
     }
 };
 
-RmFmtHandler *PY_HANDLER = (RmFmtHandler *) &PY_HANDLER_IMPL;
+RmFmtHandler *PY_HANDLER = (RmFmtHandler *)&PY_HANDLER_IMPL;
