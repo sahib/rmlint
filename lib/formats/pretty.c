@@ -41,17 +41,18 @@ static const char *RM_LINT_TYPE_TO_DESCRIPTION[] =
      [RM_LINT_TYPE_DUPE_CANDIDATE] = N_("Duplicate(s)"),
      [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate Directorie(s)")};
 
-static const char *RM_LINT_TYPE_TO_COMMAND[] =
-    {[RM_LINT_TYPE_UNKNOWN] = "",
-     [RM_LINT_TYPE_BADLINK] = "rm",
-     [RM_LINT_TYPE_EMPTY_DIR] = "rmdir",
-     [RM_LINT_TYPE_NONSTRIPPED] = "strip --strip-debug",
-     [RM_LINT_TYPE_BADUID] = "chown %s",
-     [RM_LINT_TYPE_BADGID] = "chgrp %s",
-     [RM_LINT_TYPE_BADUGID] = "chown %s:%s",
-     [RM_LINT_TYPE_EMPTY_FILE] = "rm",
-     [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
-     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "rm -rf"};
+static const char *RM_LINT_TYPE_TO_COMMAND[] = {[RM_LINT_TYPE_UNKNOWN] = "",
+                                                [RM_LINT_TYPE_BADLINK] = "rm",
+                                                [RM_LINT_TYPE_EMPTY_DIR] = "rmdir",
+                                                [RM_LINT_TYPE_NONSTRIPPED] =
+                                                    "strip --strip-debug",
+                                                [RM_LINT_TYPE_BADUID] = "chown %s",
+                                                [RM_LINT_TYPE_BADGID] = "chgrp %s",
+                                                [RM_LINT_TYPE_BADUGID] = "chown %s:%s",
+                                                [RM_LINT_TYPE_EMPTY_FILE] = "rm",
+                                                [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
+                                                [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] =
+                                                    "rm -rf"};
 
 static const char *rm_fmt_command_color(RmSession *session, RmFile *file, FILE *out) {
     switch(file->lint_type) {

@@ -269,14 +269,14 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
 
     new_handler_copy->file = file_handle;
     g_hash_table_add(self->paths, new_handler_copy->path);
-    g_hash_table_add(self->active_handler_names, (char*)new_handler_copy->name);
+    g_hash_table_add(self->active_handler_names, (char *)new_handler_copy->name);
     g_queue_push_tail(&self->handlers, new_handler_copy);
 
     return true;
 }
 
 static void rm_fmt_write_impl(RmFile *result, RmFmtTable *self) {
-    for (GList *iter = self->handlers.head; iter; iter = iter->next) {
+    for(GList *iter = self->handlers.head; iter; iter = iter->next) {
         RmFmtHandler *handler = iter->data;
         RM_FMT_CALLBACK(handler->elem, result);
     }
@@ -365,7 +365,7 @@ void rm_fmt_close(RmFmtTable *self) {
 
     g_queue_clear(&self->groups);
 
-    for (GList *iter = self->handlers.head; iter; iter = iter->next) {
+    for(GList *iter = self->handlers.head; iter; iter = iter->next) {
         RmFmtHandler *handler = iter->data;
         RM_FMT_CALLBACK(handler->foot);
         fclose(handler->file);
@@ -412,7 +412,7 @@ void rm_fmt_unlock_state(RmFmtTable *self) {
 void rm_fmt_set_state(RmFmtTable *self, RmFmtProgressState state) {
     rm_fmt_lock_state(self);
     {
-        for (GList *iter = self->handlers.head; iter; iter = iter->next) {
+        for(GList *iter = self->handlers.head; iter; iter = iter->next) {
             RmFmtHandler *handler = iter->data;
             RM_FMT_CALLBACK(handler->prog, state);
         }

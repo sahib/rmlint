@@ -111,13 +111,11 @@ static gdouble rm_fmt_progress_calculated_eta(RmFmtHandlerProgress *self,
     return rm_running_mean_get(&self->eta_mean);
 }
 
-static void rm_fmt_progress_format_text(
-        RmSession *session,
-        RmFmtHandlerProgress *self,
-        int max_len,
-        gdouble elapsed_sec,
-        FILE *out
-    ) {
+static void rm_fmt_progress_format_text(RmSession *session,
+                                        RmFmtHandlerProgress *self,
+                                        int max_len,
+                                        gdouble elapsed_sec,
+                                        FILE *out) {
     /* This is very ugly, but more or less required since we need to translate
      * the text to different languages and still determine the right textlength.
      */
@@ -346,6 +344,7 @@ static void rm_fmt_prog(RmSession *session,
                         FILE *out,
                         RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
+    RmCfg *cfg = session->cfg;
 
     bool force_draw = false;
 
@@ -358,7 +357,7 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(session->cfg->replay) {
+    if(cfg->replay) {
         /* Makes not much sense to print a progressbar with --replay */
         return;
     }
@@ -366,19 +365,19 @@ static void rm_fmt_prog(RmSession *session,
     if(state == RM_PROGRESS_STATE_INIT) {
         /* Do initializiation here */
         const char *update_interval_str =
-            rm_fmt_get_config_value(session->cfg->formats, "progressbar", "update_interval");
+            rm_fmt_get_config_value(cfg->formats, "progressbar", "update_interval");
 
         rm_running_mean_init(&self->read_diff_mean, 10);
         rm_running_mean_init(&self->eta_mean, 50);
         self->last_shred_bytes_remaining = 0;
 
         self->plain = true;
-        if(rm_fmt_get_config_value(session->cfg->formats, "progressbar", "fancy") != NULL) {
+        if(rm_fmt_get_config_value(cfg->formats, "progressbar", "fancy") != NULL) {
             self->plain = false;
         }
 
         self->use_unicode_glyphs = true;
-        if(rm_fmt_get_config_value(session->cfg->formats, "progressbar", "ascii") != NULL) {
+        if(rm_fmt_get_config_value(cfg->formats, "progressbar", "ascii") != NULL) {
             self->use_unicode_glyphs = false;
         }
 

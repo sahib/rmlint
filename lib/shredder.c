@@ -767,18 +767,22 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 }
 
 static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
-    return group->session->cfg->hash || (
-           (group->num_files >= 2)
-           /* it takes 2 to tango */
-           && (group->n_pref > 0 || !NEEDS_PREF(group))
-           /* we have at least one file from preferred path, or we don't care */
-           && (group->n_npref > 0 || !NEEDS_NPREF(group))
-           /* we have at least one file from non-pref path, or we don't care */
-           && (group->n_new > 0 || !NEEDS_NEW(group))
-           /* we have at least one file newer than cfg->min_mtime, or we don't care */
-           && (!group->unique_basename || !group->session->cfg->unmatched_basenames)
-           /* we have more than one unique basename, or we don't care */
-           );
+    return group->session->cfg->hash ||
+           ((group->num_files >= 2)
+            /* it takes 2 to tango */
+            &&
+            (group->n_pref > 0 || !NEEDS_PREF(group))
+            /* we have at least one file from preferred path, or we don't care */
+            &&
+            (group->n_npref > 0 || !NEEDS_NPREF(group))
+            /* we have at least one file from non-pref path, or we don't care */
+            &&
+            (group->n_new > 0 || !NEEDS_NEW(group))
+            /* we have at least one file newer than cfg->min_mtime, or we don't care */
+            &&
+            (!group->unique_basename || !group->session->cfg->unmatched_basenames)
+            /* we have more than one unique basename, or we don't care */
+            );
 }
 
 /* call unlocked; should be no contention issues since group is finished */
@@ -825,7 +829,8 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
     if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group) &&
        group->hash_offset < group->file_size &&
        (group->n_clusters > 1 ||
-        (group->n_inodes == 1 && (group->session->cfg->merge_directories || group->session->cfg->hash)))) {
+        (group->n_inodes == 1 &&
+         (group->session->cfg->merge_directories || group->session->cfg->hash)))) {
         /* group can go active */
         group->status = RM_SHRED_GROUP_START_HASHING;
     }
@@ -1072,9 +1077,9 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     RM_DEFINE_PATH(file);
 
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
-    file->disk = rm_mds_device_get(session->mds, file_path, (cfg->fake_pathindex_as_disk)
-                                                                ? file->path_index + 1
-                                                                : file->dev);
+    file->disk = rm_mds_device_get(
+        session->mds, file_path,
+        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : file->dev);
     rm_mds_device_ref(file->disk, 1);
 
     rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
@@ -1413,7 +1418,8 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
         rm_fmt_unlock_state(tag->session->cfg->formats);
     }
 
-    gboolean treemerge = cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING;
+    gboolean treemerge =
+        cfg->merge_directories && group->status == RM_SHRED_GROUP_FINISHING;
     for(GList *iter = group->held_files->head; iter; iter = iter->next) {
         /* link file to its (shared) digest */
         RmFile *file = iter->data;

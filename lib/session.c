@@ -118,7 +118,6 @@ void rm_session_clear(RmSession *session) {
     }
 
     rm_counter_session_free();
-
 }
 
 volatile int SESSION_ABORTED;
@@ -241,7 +240,6 @@ int rm_session_gui_main(int argc, const char **argv) {
     return EXIT_SUCCESS;
 }
 
-
 int rm_session_replay_main(RmSession *session) {
     /* User chose to replay some json files. */
     RmParrotCage cage;
@@ -277,8 +275,7 @@ int rm_session_replay_main(RmSession *session) {
  * *********** btrfs clone session main ************
  **/
 int rm_session_btrfs_clone_main(RmCfg *cfg) {
-
-    if (cfg->path_count != 2) {
+    if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --btrfs-clone [-r] [-v|V] source dest\n"));
         return EXIT_FAILURE;
     }
@@ -351,7 +348,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
     rm_sys_close(source_fd);
     rm_sys_close(extent_same.info.fd);
 
-    if(ret >= 0 && bytes_remaining==0) {
+    if(ret >= 0 && bytes_remaining == 0) {
         return EXIT_SUCCESS;
     }
 
@@ -366,8 +363,9 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
                           extent_same.info.status, dest->path);
     } else if(bytes_deduped == 0) {
         rm_log_info_line(_("Files don't match - not cloned"));
-    } else if (bytes_remaining > 0) {
-        rm_log_info_line(_("Only first %lu bytes cloned - files not fully identical"), bytes_deduped);
+    } else if(bytes_remaining > 0) {
+        rm_log_info_line(_("Only first %lu bytes cloned - files not fully identical"),
+                         bytes_deduped);
     }
 
 #else
@@ -383,7 +381,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
  **/
 int rm_session_is_clone_main(RmCfg *cfg) {
 
-    if (cfg->path_count != 2) {
+    if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
         return EXIT_FAILURE;
     }

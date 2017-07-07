@@ -548,8 +548,9 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
          * */
         if(!session->cfg->run_equal_mode) {
             rm_counter_add_unlocked(RM_COUNTER_TOTAL_FILTERED_FILES,
-                -rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
-                                              session->tables->unique_paths_table));
+                                    -rm_util_queue_foreach_remove(
+                                        inode_cluster, (RmRFunc)rm_pp_check_path_double,
+                                        session->tables->unique_paths_table));
         }
 
         /* clear the hashtable ready for the next cluster */

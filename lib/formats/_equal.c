@@ -24,8 +24,8 @@
  */
 
 #include "../formats.h"
-#include "../utilities.h"
 #include "../preprocess.h"
+#include "../utilities.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -68,12 +68,10 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, _UNUSED FILE *
     self->input_paths = input_paths;
 }
 
-static void rm_fmt_elem(
-    RmSession *session,
-    RmFmtHandler *self_ref,
-    _UNUSED FILE *out,
-    RmFile *file
-) {
+static void rm_fmt_elem(RmSession *session,
+                        RmFmtHandler *self_ref,
+                        _UNUSED FILE *out,
+                        RmFile *file) {
     RmFmtHandlerEqual *self = (RmFmtHandlerEqual *)self_ref;
 
     /*  No need to check anymore, it's not equal. */
@@ -109,10 +107,8 @@ static void rm_fmt_elem(
             session->equal_exit_code = EXIT_SUCCESS;
         } else {
             rm_fmt_report_failure(self, session);
-            rm_log_debug_line(
-                    "First differing items:\n\t%s (%s)\n\tlast checksum: (%s)",
-                    file_path, checksum, self->last_checksum
-            );
+            rm_log_debug_line("First differing items:\n\t%s (%s)\n\tlast checksum: (%s)",
+                              file_path, checksum, self->last_checksum);
         }
         g_free(self->last_checksum);
     }
@@ -120,10 +116,9 @@ static void rm_fmt_elem(
     self->last_checksum = checksum;
 }
 
-static void rm_fmt_foot(
-        _UNUSED RmSession *session,
-        RmFmtHandler *parent,
-        _UNUSED FILE *out) {
+static void rm_fmt_foot(_UNUSED RmSession *session,
+                        RmFmtHandler *parent,
+                        _UNUSED FILE *out) {
     RmFmtHandlerEqual *self = (RmFmtHandlerEqual *)parent;
     g_hash_table_unref(self->input_paths);
     g_free(self->last_checksum);
@@ -144,4 +139,4 @@ static RmFmtHandlerEqual EQUAL_HANDLE_IMPL = {
     .mismatch_found = false
 };
 
-RmFmtHandler *EQUAL_HANDLER = (RmFmtHandler *) &EQUAL_HANDLE_IMPL;
+RmFmtHandler *EQUAL_HANDLER = (RmFmtHandler *)&EQUAL_HANDLE_IMPL;

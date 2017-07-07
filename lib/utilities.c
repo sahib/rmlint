@@ -41,9 +41,9 @@
 #endif
 
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <grp.h>
 #include <pwd.h>
@@ -270,20 +270,19 @@ gpointer rm_util_slist_pop(GSList **list, GMutex *lock) {
     return result;
 }
 
-gboolean rm_util_strv_contains(const gchar * const *strv, const gchar *str) {
+gboolean rm_util_strv_contains(const gchar *const *strv, const gchar *str) {
     if(!strv || !str) {
         return FALSE;
     }
 
     while(*strv) {
-        if (g_str_equal (str, *strv)) {
+        if(g_str_equal(str, *strv)) {
             return TRUE;
         }
         strv++;
     }
     return FALSE;
 }
-
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
  * to RmFile->filter types                                            */
@@ -1125,8 +1124,9 @@ bool rm_offsets_match(char *path1, char *path2) {
         return FALSE;
     }
 
-    if (stat1.st_size != stat2.st_size) {
-        rm_log_debug_line("Files have different sizes: %lu <> %lu", stat1.st_size, stat2.st_size);
+    if(stat1.st_size != stat2.st_size) {
+        rm_log_debug_line("Files have different sizes: %lu <> %lu", stat1.st_size,
+                          stat2.st_size);
         return FALSE;
     }
 
@@ -1134,32 +1134,39 @@ bool rm_offsets_match(char *path1, char *path2) {
     while(!result && !rm_session_was_aborted()) {
         RmOff file1_offset_next = 0;
         RmOff file2_offset_next = 0;
-        RmOff file1_offset = rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next);
-        RmOff file2_offset = rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next);
+        RmOff file1_offset =
+            rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next);
+        RmOff file2_offset =
+            rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next);
 
         if(file1_offset != file2_offset) {
-            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu", file_offset_current, file1_offset, file2_offset);
+            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu",
+                              file_offset_current, file1_offset, file2_offset);
             break;
         }
-        if (file1_offset_next != file2_offset_next) {
-            rm_log_debug_line("Next offsets differ after %lu: %lu <> %lu", file_offset_current, file1_offset_next, file2_offset_next);
+        if(file1_offset_next != file2_offset_next) {
+            rm_log_debug_line("Next offsets differ after %lu: %lu <> %lu",
+                              file_offset_current, file1_offset_next, file2_offset_next);
             break;
         }
 
-        rm_log_debug_line("Offset: %lu, next: %lu", file_offset_current, file1_offset_next);
+        rm_log_debug_line("Offset: %lu, next: %lu", file_offset_current,
+                          file1_offset_next);
 
         if(file1_offset_next >= (RmOff)stat1.st_size) {
             /* phew, we got to the end */
             result = TRUE;
         }
 
-        if(file1_offset_next==0) {
-            rm_log_debug_line("Can't determine whether files are clones (maybe inline extents?)");
+        if(file1_offset_next == 0) {
+            rm_log_debug_line(
+                "Can't determine whether files are clones (maybe inline extents?)");
             break;
         }
 
-        if(file1_offset_next==file_offset_current) {
-            rm_log_debug_line("rm_offsets_match() giving up: file1_offset_next==file_offset_current");
+        if(file1_offset_next == file_offset_current) {
+            rm_log_debug_line(
+                "rm_offsets_match() giving up: file1_offset_next==file_offset_current");
             break;
         }
         file_offset_current = file1_offset_next;

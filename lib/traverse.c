@@ -484,10 +484,10 @@ void rm_traverse_tree(RmSession *session) {
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
-            buffer->disk =
-                rm_mds_device_get(mds, rmpath->path, (cfg->fake_pathindex_as_disk)
-                                                         ? rmpath->idx + 1
-                                                         : buffer->stat_buf.st_dev);
+            buffer->disk = rm_mds_device_get(mds, rmpath->path,
+                                             (cfg->fake_pathindex_as_disk)
+                                                 ? rmpath->idx + 1
+                                                 : buffer->stat_buf.st_dev);
             rm_mds_device_ref(buffer->disk, 1);
             rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, rmpath->path,
                              buffer);

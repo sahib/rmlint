@@ -20,14 +20,14 @@
 #define HAVE_BTRFS_H       ({HAVE_BTRFS_H})
 #define HAVE_FACCESSAT     ({HAVE_FACCESSAT})
 #define HAVE_UNAME         ({HAVE_UNAME})
-#define HAVE_SYSMACROS_H    ({HAVE_SYSMACROS_H})
+#define HAVE_SYSMACROS_H   ({HAVE_SYSMACROS_H})
 
-#define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B
-#define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
-#define RM_VERSION_MAJOR {VERSION_MAJOR}
-#define RM_VERSION_MINOR {VERSION_MINOR}
-#define RM_VERSION_PATCH {VERSION_PATCH}
-#define RM_VERSION_NAME  "{VERSION_NAME}"
+#define RM_DEFAULT_DIGEST       RM_DIGEST_BLAKE2B
+#define RM_VERSION              "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
+#define RM_VERSION_MAJOR        {VERSION_MAJOR}
+#define RM_VERSION_MINOR        {VERSION_MINOR}
+#define RM_VERSION_PATCH        {VERSION_PATCH}
+#define RM_VERSION_NAME         "{VERSION_NAME}"
 #define RM_VERSION_GIT_REVISION "{VERSION_GIT_REVISION}"
 
 #define RM_MANPAGE_USE_PAGER (1)
@@ -54,27 +54,24 @@
 # endif
 #endif
 
-#define rm_log_debug(...) \
-    g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define rm_log_info(...) \
-    g_log("rmlint", G_LOG_LEVEL_INFO, __VA_ARGS__)
-#define rm_log_warning(...) \
-    g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
-#define rm_log_error(...) \
-    g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+#define rm_log_debug(...)   g_log("rmlint", G_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define rm_log_info(...)    g_log("rmlint", G_LOG_LEVEL_INFO, __VA_ARGS__)
+#define rm_log_warning(...) g_log("rmlint", G_LOG_LEVEL_WARNING, __VA_ARGS__)
+#define rm_log_error(...)   g_log("rmlint", G_LOG_LEVEL_CRITICAL, __VA_ARGS__)
 
 #define rm_log_perror(message)                                                           \
     if(errno) {{                                                                         \
         rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
     }}                                                                                   \
 
-#define rm_log_perrorf(message, ...)                                                     \
-    if(errno) {{                                                                         \
-        int _errsv = errno;                                                              \
-        char *msg = g_strdup_printf (message, __VA_ARGS__);                              \
-        rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, msg, g_strerror(_errsv)); \
-        g_free(msg);                                                                     \
-    }}                                                                                   \
+#define rm_log_perrorf(message, ...)                                    \
+    if(errno) {{                                                        \
+        int _errsv = errno;                                         \
+        char *msg = g_strdup_printf(message, __VA_ARGS__);          \
+        rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, msg, \
+                          g_strerror(_errsv));                      \
+        g_free(msg);                                                \
+    }}
 
 #define _UNUSED G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT

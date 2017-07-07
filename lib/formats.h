@@ -52,7 +52,6 @@ typedef enum RmFmtProgressState {
 
 /* Container and API-endpoint for individual RmFmtHandlers */
 typedef struct RmFmtTable {
-
     /* maps handler name to RmFmtHandler struct defined in formats/???.c
      * e.g. "progressbar" maps to formats/progress.c/PROGRESS_HANDLER_IMPL */
     GHashTable *name_to_handler;

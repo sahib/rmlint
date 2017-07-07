@@ -112,7 +112,7 @@ static void rm_fmt_prog(RmSession *session,
 
     bool first_print_flag = true;
 
-    for (GList *iter = session->cfg->formats->handlers.head; iter; iter = iter->next) {
+    for(GList *iter = session->cfg->formats->handlers.head; iter; iter = iter->next) {
         RmFmtHandler *handler = iter->data;
 
         static const char *forbidden[] = {"stdout", "stderr", "stdin"};
