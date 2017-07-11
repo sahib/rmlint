@@ -259,15 +259,17 @@ if __name__ == '__main__':
             sys.exit(-1)
 
     try:
-        print('# This is a dry run. Nothing will be modified.')
+        if args.dry_run:
+            print('{c[green]}#{c[reset]} '
+                  'This is a dry run. Nothing will be modified.'.format(
+                    c=COLORS))
+
         for json_doc in json_docus:
             main(args, json_doc)
 
         if args.dry_run:
-            print(
-                '\n{c[green]}#{c[reset]} This was a dry run. Nothing was modified.'.format(
-                    c=COLORS
-                )
-            )
+            print('{c[green]}#{c[reset]} '
+                  'This was a dry run. Nothing was modified.'.format(
+                    c=COLORS))
     except KeyboardInterrupt:
         print('\ncanceled.')
