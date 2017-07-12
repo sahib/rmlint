@@ -57,20 +57,17 @@ def original_check(path, original, be_paranoid=True):
         stat_p, stat_o = os.stat(path), os.stat(original)
         if (stat_p.st_dev, stat_p.st_ino) == (stat_o.st_dev, stat_o.st_ino):
             print('{c[red]}Same inode; ignoring:{c[reset]} {o} <=> {p}'.format(
-                c=COLORS, o=original, p=path
-            ))
+                c=COLORS, o=original, p=path))
             return False
 
         if stat_p.st_size != stat_o.st_size:
-            print('{c[red]}Size differs; ignoring:{c[reset]} {o} <=> {p}'.format(
-                c=COLORS, o=original, p=path
-            ))
+            print('{c[red]}Size differs; ignoring:{c[reset]} '
+                  '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
 
         if be_paranoid and not filecmp.cmp(path, original):
-            print('{c[red]}Content differs; ignoring:{c[reset]} {o} <=> {p}'.format(
-                c=COLORS, o=original, p=path
-            ))
+            print('{c[red]}Content differs; ignoring:{c[reset]} '
+                  '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
 
         return True
@@ -143,17 +140,14 @@ OPERATIONS = {
 }
 
 
-
 def exec_operation(item, original=None, args=None):
     try:
-        OPERATIONS[item['type']](item['path'], original=original, item=item, args=args)
+        OPERATIONS[item['type']](
+            item['path'], original=original, item=item, args=args)
     except OSError as err:
-        print(
-            '{c[red]}# {err}{c[reset]}'.format(
-                item=item, err=err, c=COLORS
-            ),
-            file=sys.stderr
-        )
+        print('{c[red]}# {err}{c[reset]}'.format(
+            item=item, err=err, c=COLORS), file=sys.stderr)
+
 
 MESSAGES = {
     'duplicate_dir':    '{c[yellow]}Deleting duplicate directory:',
@@ -173,6 +167,7 @@ ORIGINAL_MESSAGES = {
     'duplicate_dir':    '{c[green]}Keeping original directory:  ',
 }
 
+
 def main(args, data):
     last_original_item = None
 
@@ -182,15 +177,14 @@ def main(args, data):
         header = data.pop(0)
     if data[-1].get('total_files'):
         footer = data.pop(-1)
-    # TODO: Print header and footer data here before asking for confirmation
 
     if not args.no_ask and not args.dry_run:
         print('rmlint was executed in the following way:\n',
-            header.get('args'),
-            '\n\nPress Enter to continue and perform modifications, '
-            'or CTRL-C to exit.'
-            '\nExecute this script with -d to disable this message.',
-            file=sys.stderr)
+              header.get('args'),
+              '\n\nPress Enter to continue and perform modifications, '
+              'or CTRL-C to exit.'
+              '\nExecute this script with -d to disable this message.',
+              file=sys.stderr)
         sys.stdin.read(1)
 
     for item in data:
@@ -205,7 +199,8 @@ def main(args, data):
             # Do not handle originals.
             continue
 
-        msg = MESSAGES[item['type']].format(c=COLORS, u=args.user, g=args.group)
+        msg = MESSAGES[item['type']].format(
+            c=COLORS, u=args.user, g=args.group)
         print('{prog}{v}{c[reset]} {path}'.format(
             c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
         exec_operation(item, original=last_original_item, args=args)
@@ -224,8 +219,8 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-n', '--dry-run', action='store_true',
-        help='Do not perform any modifications, just print what would be done. ' +
-        '(implies -d)'
+        help='Do not perform any modifications, just print what would be '
+             'done. (implies -d)'
     )
     parser.add_argument(
         '-d', '--no-ask', action='store_true', default=False,
@@ -233,7 +228,8 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-p', '--paranoid', action='store_true', default=False,
-        help='Recheck that files are still identical before removing duplicates.'
+        help='Recheck that files are still identical before removing '
+             'duplicates.'
     )
     parser.add_argument(
         '-u', '--user', type=int, default=CURRENT_UID,
