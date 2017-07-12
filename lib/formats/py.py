@@ -155,6 +155,23 @@ def exec_operation(item, original=None, args=None):
             file=sys.stderr
         )
 
+MESSAGES = {
+    'duplicate_dir':    '{c[yellow]}Deleting duplicate directory:',
+    'duplicate_file':   '{c[yellow]}Deleting duplicate:',
+    'unfinished_cksum': 'checking',
+    'emptydir':         '{c[green]}Deleting empty directory:',
+    'emptyfile':        '{c[green]}Deleting empty file:',
+    'nonstripped':      '{c[green]}Stripping debug symbols:',
+    'badlink':          '{c[green]}Deleting bad symlink:',
+    'baduid':           '{c[green]}chown {u}',
+    'badgid':           '{c[green]}chgrp {g}',
+    'badugid':          '{c[green]}chown {u}:{g}',
+}
+
+ORIGINAL_MESSAGES = {
+    'duplicate_file':   '{c[green]}Keeping original:  ',
+    'duplicate_dir':    '{c[green]}Keeping original directory:  ',
+}
 
 def main(args, data):
     seen_cksums = set()
@@ -177,37 +194,21 @@ def main(args, data):
             file=sys.stderr)
         sys.stdin.read(1)
 
-    MESSAGES = {
-        'duplicate_dir':    '{c[yellow]}Deleting duplicate directory'.format(c=COLORS),
-        'duplicate_file':   '{c[yellow]}Deleting duplicate:'.format(c=COLORS),
-        "unfinished_cksum": "checking",
-        'emptydir':         '{c[green]}Deleting empty directory:'.format(c=COLORS),
-        'emptyfile':        '{c[green]}Deleting empty file:'.format(c=COLORS),
-        'nonstripped':      '{c[green]}Stripping debug symbols:'.format(c=COLORS),
-        'badlink':          '{c[green]}Deleting bad symlink:'.format(c=COLORS),
-        'baduid':           '{c[green]}chown {u}'.format(c=COLORS, u=args.user),
-        'badgid':           '{c[green]}chgrp {g}'.format(c=COLORS, g=args.group),
-        'badugid':          '{c[green]}chown {u}:{g}'.format(c=COLORS, u=args.user, g=args.group),
-    }
-
     for item in data:
-        if item['type'].startswith('duplicate_') and item['is_original']:
-            print('{c[blue]}[{prog:3}%]{c[reset]} '
-                '{c[green]}Keeping original:   {c[reset]}{path}'.format(
-                prog=item['progress'], path=item['path'], c=COLORS)
-            )
-            last_original_item = item
+        progress_prefix = '{c[blue]}[{p:3}%]{c[reset]} '.format(
+            c=COLORS, p=item['progress'])
 
+        if item['is_original']:
+            msg = ORIGINAL_MESSAGES[item['type']].format(c=COLORS)
+            print('{prog}{v}{c[reset]} {path}'.format(
+                c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
+            last_original_item = item
             # Do not handle originals.
             continue
 
-        print('{c[blue]}[{prog:3}%]{c[reset]} {v}{c[reset]} {p}'.format(
-            c=COLORS,
-            prog=item['progress'],
-            v=MESSAGES[item['type']],
-            p=item['path'],
-            )
-        )
+        msg = MESSAGES[item['type']].format(c=COLORS, u=args.user, g=args.group)
+        print('{prog}{v}{c[reset]} {path}'.format(
+            c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
         exec_operation(item, original=last_original_item, args=args)
 
     print('{c[blue]}[100%] Done!{c[reset]}'.format(c=COLORS))
