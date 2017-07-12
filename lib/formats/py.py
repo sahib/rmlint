@@ -116,17 +116,17 @@ def handle_badlink(path, **kwargs):
 
 def handle_baduid(path, **kwargs):
     if not args.dry_run:
-        os.chown(path, kwargs['args'].user, -1)
+        os.chown(path, args.user, -1)
 
 
 def handle_badgid(path, **kwargs):
     if not args.dry_run:
-        os.chown(path, -1, kwargs['args'].group)
+        os.chown(path, -1, args.group)
 
 
 def handle_badugid(path, **kwargs):
     if not args.dry_run:
-        os.chown(path, kwargs['args'].user, kwargs['args'].group)
+        os.chown(path, args.user, args.group)
 
 
 OPERATIONS = {
@@ -174,7 +174,6 @@ ORIGINAL_MESSAGES = {
 }
 
 def main(args, data):
-    seen_cksums = set()
     last_original_item = None
 
     # Process header and footer, if present
@@ -220,7 +219,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        'json_docs', metavar='json_doc', nargs='*', default=['.rmlint.json'],
+        'json_files', metavar='json_file', nargs='*', default=['.rmlint.json'],
         help='A JSON output of rmlint to handle (can be given multiple times)'
     )
     parser.add_argument(
@@ -246,12 +245,12 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    json_docus = []
-    for doc in args.json_docs:
+    json_docs = []
+    for json_file in args.json_files:
         try:
-            with open(doc) as f:
+            with open(json_file) as f:
                 j = json.load(f)
-            json_docus.append(j)
+            json_docs.append(j)
         except IOError as err:      # Cannot open file
             print(err, file=sys.stderr)
             sys.exit(-1)
@@ -265,7 +264,7 @@ if __name__ == '__main__':
                   'This is a dry run. Nothing will be modified.'.format(
                     c=COLORS))
 
-        for json_doc in json_docus:
+        for json_doc in json_docs:
             main(args, json_doc)
 
         if args.dry_run:
