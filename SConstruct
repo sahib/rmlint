@@ -325,6 +325,15 @@ def check_btrfs_h(context):
     context.Result(rc)
     return rc
 
+def check_linux_fs_h(context):
+    rc = 1
+    if tests.CheckHeader(context, 'linux/fs.h'):
+        rc = 0
+
+    conf.env['HAVE_LINUX_FS_H'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
 
 def check_linux_limits(context):
     rc = 1
@@ -524,6 +533,7 @@ conf = Configure(env, custom_tests={
     'check_gettext': check_gettext,
     'check_linux_limits': check_linux_limits,
     'check_btrfs_h': check_btrfs_h,
+    'check_linux_fs_h': check_linux_fs_h,
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
     'check_sysmacro_h': check_sysmacro_h
@@ -639,6 +649,7 @@ conf.check_linux_limits()
 conf.check_posix_fadvise()
 conf.check_faccessat()
 conf.check_btrfs_h()
+conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
 

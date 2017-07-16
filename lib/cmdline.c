@@ -50,11 +50,6 @@
 #include "treemerge.h"
 #include "utilities.h"
 
-#if HAVE_BTRFS_H
-#include <linux/btrfs.h>
-#include <sys/ioctl.h>
-#endif
-
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);

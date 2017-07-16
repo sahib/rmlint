@@ -183,7 +183,7 @@ bool rm_session_check_kernel_version(int need_major, int need_minor);
  *
  * @return exit_status for exit()
  */
-int rm_session_btrfs_clone_main(RmSession *session);
+int rm_session_btrfs_clone_main(RmCfg *cfg);
 
 
 /* Maybe colors, for use outside of the rm_log macros,

@@ -134,7 +134,7 @@ int main(int argc, const char **argv) {
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
         if(cfg.btrfs_clone) {
-            exit_state = rm_session_btrfs_clone_main(&session);
+            exit_state = rm_session_btrfs_clone_main(&cfg);
         } else {
             exit_state = rm_cmd_main(&session);
         }
