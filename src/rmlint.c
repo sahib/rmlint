@@ -133,7 +133,11 @@ int main(int argc, const char **argv) {
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
-        exit_state = rm_cmd_main(&session);
+        if(cfg.btrfs_clone) {
+            exit_state = rm_session_btrfs_clone_main(&session);
+        } else {
+            exit_state = rm_cmd_main(&session);
+        }
     }
 
     rm_session_clear(&session);

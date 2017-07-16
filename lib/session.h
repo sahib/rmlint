@@ -138,9 +138,9 @@ typedef struct RmSession {
     /* Version of the linux kernel (0 on other operating systems) */
     int kernel_version[2];
 
-	/*  When run with --equal this holds the exit code for rmlint
-	 *  (the exit code is determined by the _equal formatter) */
-	int equal_exit_code;
+    /*  When run with --equal this holds the exit code for rmlint
+     *  (the exit code is determined by the _equal formatter) */
+    int equal_exit_code;
 } RmSession;
 
 /**
@@ -180,6 +180,14 @@ bool rm_session_was_aborted(void);
  * @return True if the kernel is recent enough.
  */
 bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
+
+/**
+ * @brief Trigger rmlint in --btrfs-clone mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_btrfs_clone_main(RmSession *session);
+
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
