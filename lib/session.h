@@ -135,9 +135,6 @@ typedef struct RmSession {
     /* true once traverse finished running */
     bool traverse_finished;
 
-    /* Version of the linux kernel (0 on other operating systems) */
-    int kernel_version[2];
-
     /*  When run with --equal this holds the exit code for rmlint
      *  (the exit code is determined by the _equal formatter) */
     int equal_exit_code;
@@ -179,7 +176,7 @@ bool rm_session_was_aborted(void);
  *
  * @return True if the kernel is recent enough.
  */
-bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
+bool rm_session_check_kernel_version(int need_major, int need_minor);
 
 /**
  * @brief Trigger rmlint in --btrfs-clone mode.

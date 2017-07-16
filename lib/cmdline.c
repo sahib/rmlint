@@ -1584,7 +1584,7 @@ int rm_cmd_main(RmSession *session) {
         exit_state = EXIT_FAILURE;
     }
 
-    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode)  {
+    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode) {
         return session->equal_exit_code;
     }
 

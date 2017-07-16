@@ -40,41 +40,39 @@
 
 #if HAVE_UNAME
 #include "sys/utsname.h"
-
-void rm_session_read_kernel_version(RmSession *session) {
-    struct utsname buf;
-    if(uname(&buf) == -1) {
-        return;
-    }
-
-    if(sscanf(buf.release, "%d.%d.*", &session->kernel_version[0],
-              &session->kernel_version[1]) == EOF) {
-        session->kernel_version[0] = -1;
-        session->kernel_version[1] = -1;
-        return;
-    }
-
-    rm_log_debug_line("Linux kernel version is %d.%d.",
-                      session->kernel_version[0],
-                      session->kernel_version[1]);
-}
-#else
-void rm_session_read_kernel_version(RmSession *session) {
-    (void)session;
-}
 #endif
 
-bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
-    int found_major = session->kernel_version[0];
-    int found_minor = session->kernel_version[1];
+static gpointer rm_session_read_kernel_version(_UNUSED gpointer arg) {
+    static int version[2] = {-1, -1};
+#if HAVE_UNAME
+    struct utsname buf;
+    if(uname(&buf) != -1 && sscanf(buf.release, "%d.%d.*", &version[0], &version[1]) != EOF) {
+        rm_log_debug_line("Linux kernel version is %d.%d.", version[0], version[1]);
+    } else {
+        rm_log_warning_line("Unable to read Linux kernel version");
+    }
+#else
+    rm_log_warning_line(
+        "rmlint was not compiled with ability to read Linux kernel version");
+#endif
+    return version;
+}
 
-    /* Could not read kernel version: Assume failure on our side. */
-    if(found_major <= 0 && found_minor <= 0) {
+
+bool rm_session_check_kernel_version(int need_major, int need_minor) {
+    static GOnce once = G_ONCE_INIT;
+    g_once (&once, rm_session_read_kernel_version, NULL);
+    int *version = once.retval;
+    int major = version[0];
+    int minor = version[1];
+
+    if(major < 0 && minor < 0) {
+        /* Could not read kernel version: Assume failure on our side. */
         return true;
     }
 
     /* Lower is bad. */
-    if(found_major < major || (found_major == major && found_minor < minor)) {
+    if(major < need_major || (major == need_major && minor < need_minor)) {
         return false;
     }
 
@@ -98,8 +96,6 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->offsets_read = 0;
     session->offset_fragments = 0;
     session->offset_fails = 0;
-
-    rm_session_read_kernel_version(session);
 
     session->timer_since_proc_start = g_timer_new();
     g_timer_start(session->timer_since_proc_start);
@@ -175,7 +171,7 @@ int rm_session_btrfs_clone_main(RmSession *session) {
         return EXIT_FAILURE;
     }
 
-    if(!rm_session_check_kernel_version(session, 4, 2)) {
+    if(!rm_session_check_kernel_version(4, 2)) {
         rm_log_warning_line("This needs at least linux >= 4.2.");
         return EXIT_FAILURE;
     }
