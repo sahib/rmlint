@@ -74,7 +74,7 @@ bool rm_session_check_kernel_version(RmSession *session, int major, int minor) {
     }
 
     /* Lower is bad. */
-    if(found_major < major || found_minor < minor) {
+    if(found_major < major || (found_major == major && found_minor < minor)) {
         return false;
     }
 
