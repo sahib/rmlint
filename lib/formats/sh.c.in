@@ -276,16 +276,16 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         /* user specified handlers */
         rm_sh_parse_handlers(self, handler_cfg);
     } else if(rm_fmt_get_config_value(session->formats, "sh", "clone") != NULL) {
-        /* Preset: try clone, then reflinks, then symlinks then hardlinks */
+        /* Preset: try clone, then reflinks, then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "clone,reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
-        /* Preset: try reflinks, then symlinks then hardlinks */
+        /* Preset: try reflinks, then then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
-        /* Preset: try symlinks before using hardlinks */
+        /* Preset: try hardlinks before using symlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "symlink") != NULL) {
-        /* Preset: only do hardlinks */
+        /* Preset: only do symlinks */
         rm_sh_parse_handlers(self, "symlink");
     } else {
         /* Default: remove the file */
