@@ -179,11 +179,11 @@ bool rm_session_was_aborted(void);
 bool rm_session_check_kernel_version(int need_major, int need_minor);
 
 /**
- * @brief Trigger rmlint in --btrfs-clone mode.
+ * @brief Trigger rmlint in --dedupe mode.
  *
  * @return exit_status for exit()
  */
-int rm_session_btrfs_clone_main(RmCfg *cfg);
+int rm_session_dedupe_main(RmCfg *cfg);
 
 
 /* Maybe colors, for use outside of the rm_log macros,

@@ -624,8 +624,8 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                             {"debugfs", 0},
                             {NULL, 0}};
 
-        /* btrfs and ocfs2 filesystems support reflinks for deduplication */
-        static const char *reflinkfs_types[] = {"btrfs", "ocfs2", NULL};
+        /* btrfs, ocfs2 and cfs filesystems support reflinks for deduplication */
+        static const char *reflinkfs_types[] = {"btrfs", "ocfs2", "xfs", NULL};
 
         const struct RmEvilFs *evilfs_found = NULL;
         for(int i = 0; evilfs_types[i].name && !evilfs_found; ++i) {

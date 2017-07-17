@@ -175,12 +175,12 @@ bool rm_session_was_aborted() {
     return rc;
 }
 /**
- * *********** btrfs clone session main ************
+ * *********** dedupe session main ************
  **/
-int rm_session_btrfs_clone_main(RmCfg *cfg) {
+int rm_session_dedupe_main(RmCfg *cfg) {
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
     if(cfg->path_count != 2) {
-        rm_log_error(_("Usage: rmlint --btrfs-clone [-r] [-v|V] source dest\n"));
+        rm_log_error(_("Usage: rmlint --dedupe [-r] [-v|V] source dest\n"));
         return EXIT_FAILURE;
     }
 
@@ -192,7 +192,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
 
     int source_fd = rm_sys_open(source->path, O_RDONLY);
     if(source_fd < 0) {
-        rm_log_error_line(_("btrfs clone: failed to open source file"));
+        rm_log_error_line(_("dedupe: failed to open source file"));
         return EXIT_FAILURE;
     }
 
@@ -251,13 +251,13 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
     memset(&dedupe, 0, sizeof(dedupe));
 
     dedupe.info._DEST_FD =
-        rm_sys_open(dest->path, cfg->btrfs_readonly ? O_RDONLY : O_RDWR);
+        rm_sys_open(dest->path, cfg->dedupe_readonly ? O_RDONLY : O_RDWR);
 
     if(dedupe.info._DEST_FD < 0) {
         rm_log_error_line(
-            _("btrfs clone: error %i: failed to open dest file.%s"),
+            _("dedupe: error %i: failed to open dest file.%s"),
             errno,
-            cfg->btrfs_readonly ? "" : _("\n\t(if target is a read-only snapshot "
+            cfg->dedupe_readonly ? "" : _("\n\t(if target is a read-only snapshot "
                                          "then -r option is required)"));
         rm_sys_close(source_fd);
         return EXIT_FAILURE;
@@ -303,9 +303,9 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
     }
 
     if(bytes_deduped == 0) {
-        rm_log_info_line(_("Files don't match - not cloned"));
+        rm_log_info_line(_("Files don't match - not deduped"));
     } else if(bytes_deduped < source_stat.st_size) {
-        rm_log_info_line(_("Only first %lu bytes cloned - files not fully identical"),
+        rm_log_info_line(_("Only first %lu bytes deduped - files not fully identical"),
                          bytes_deduped);
     }
 
@@ -332,7 +332,7 @@ int rm_session_btrfs_clone_main(RmCfg *cfg) {
 
 #else
     (void)cfg;
-    rm_log_error_line(_("rmlint was not compiled with btrfs support."))
+    rm_log_error_line(_("rmlint was not compiled with file cloning support."))
 #endif
 
     return EXIT_FAILURE;

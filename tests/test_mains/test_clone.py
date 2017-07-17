@@ -9,6 +9,7 @@ import psutil
 
 from tests.utils import *
 
+REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
 
 @contextmanager
 def assert_exit_code(status_code):
@@ -26,7 +27,7 @@ def assert_exit_code(status_code):
         assert status_code == 0
 
 
-def is_btrfs(path):
+def is_on_reflink_fs(path):
     parts = psutil.disk_partitions(all=True)
 
     # iterate up from `path` until mountpoint found
@@ -35,7 +36,7 @@ def is_btrfs(path):
         match = next((x for x in parts if x.mountpoint == p), None)
         if (match):
             print("{0} is {1} mounted at {2}".format(path, match.fstype, p))
-            return (match.fstype == 'btrfs')
+            return (match.fstype in REFLINK_CAPABLE_FILESYSTEMS)
 
         if (p == '/'):
             # probably should never get here...
@@ -44,23 +45,23 @@ def is_btrfs(path):
         p = os.path.dirname(p)
 
 
-# decorator for tests dependent on btrfs testdir
-def needs_btrfs(test):
+# decorator for tests dependent on reflink-capable testdir
+def needs_reflink_fs(test):
     def no_support(*args):
         raise SkipTest("btrfs not supported")
 
-    def not_btrfs(*args):
-        raise SkipTest("testdir is not on btrfs filesystem")
+    def not_reflink_fs(*args):
+        raise SkipTest("testdir is not on reflink-capable filesystem")
 
     if not has_feature('btrfs-support'):
         return make_decorator(test)(no_support)
-    elif not is_btrfs(TESTDIR_NAME):
-        return make_decorator(test)(not_btrfs)
+    elif not is_on_reflink_fs(TESTDIR_NAME):
+        return make_decorator(test)(not_reflink_fs)
     else:
         return test
 
 
-@needs_btrfs
+@needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_equal_files():
     path_a = create_file('1234', 'a')
@@ -68,7 +69,7 @@ def test_equal_files():
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '--btrfs-clone',
+            '--dedupe',
             path_a, path_b,
             use_default_dir=False,
             with_json=False,
@@ -76,13 +77,13 @@ def test_equal_files():
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '--btrfs-clone',
+            '--dedupe',
             path_a, '//', path_b,
             use_default_dir=False,
             with_json=False)
 
 
-@needs_btrfs
+@needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_different_files():
     path_a = create_file('1234', 'a')
@@ -90,14 +91,14 @@ def test_different_files():
 
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
-            '--btrfs-clone',
+            '--dedupe',
             path_a, path_b,
             use_default_dir=False,
             with_json=False,
             verbosity="")
 
 
-@needs_btrfs
+@needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_bad_arguments():
     path_a = create_file('1234', 'a')
@@ -110,14 +111,14 @@ def test_bad_arguments():
     ]:
         with assert_exit_code(1):
             head, *data, footer = run_rmlint(
-                '--btrfs-clone',
+                '--dedupe',
                 paths,
                 use_default_dir=False,
                 with_json=False,
                 verbosity="")
 
 
-@needs_btrfs
+@needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_directories():
     path_a = os.path.dirname(create_dirs('dir_a'))
@@ -125,7 +126,7 @@ def test_directories():
 
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
-            '--btrfs-clone',
+            '--dedupe',
             path_a, path_b,
             use_default_dir=False,
             with_json=False,

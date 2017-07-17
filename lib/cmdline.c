@@ -1106,6 +1106,22 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
     return true;
 }
 
+static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_warning_line("option --btrfs-clone is deprecated, use --dedupe");
+    session->cfg->dedupe = true;
+    return true;
+}
+
+static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_warning_line("option --btrfs-readonly is deprecated, use --dedupe-readonly");
+    session->cfg->dedupe_readonly = true;
+    return true;
+}
+
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -1269,8 +1285,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
-        {"btrfs-clone"              , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_clone              , _("Clone extents from source to dest, if extents match")                  , NULL}     ,
-        {"btrfs-readonly"           , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->btrfs_readonly           , _("(btrfs-clone option) also clone to read-only snapshots (needs root)")  , NULL}     ,
+        {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
+        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
@@ -1327,6 +1343,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
 
+    const GOptionEntry deprecated_option_entries[] = {
+        {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Deprecated, use --dedupe instead"                  , NULL},
+        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe-readonly instead"         , NULL}
+    };
+
     /* clang-format on */
 
     /* Initialize default verbosity */
@@ -1344,7 +1365,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Attempt to find out path to own executable.
      * This is used in the shell script to call the executable
-     * for special modes like --btrfs-clone or --equal.
+     * for special modes like --dedupe or --equal.
      * We want to make sure the installed version has this
      * */
     cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
@@ -1363,13 +1384,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         "inversed", "inverted", "Options that enable defaults", session, NULL);
     GOptionGroup *unusual_group =
         g_option_group_new("unusual", "unusual", "Unusual options", session, NULL);
+    GOptionGroup *deprecated_group =
+        g_option_group_new("deprecated", "deprecated", "Deprecated options", session, NULL);
 
     g_option_group_add_entries(main_group, main_option_entries);
     g_option_group_add_entries(main_group, inversed_option_entries);
     g_option_group_add_entries(main_group, unusual_option_entries);
+    g_option_group_add_entries(deprecated_group, deprecated_option_entries);
 
     g_option_context_add_group(option_parser, inversion_group);
     g_option_context_add_group(option_parser, unusual_group);
+    g_option_context_add_group(option_parser, deprecated_group);
     g_option_context_set_main_group(option_parser, main_group);
     g_option_context_set_summary(option_parser,
                                  _("rmlint finds space waste and other broken things on "

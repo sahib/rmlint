@@ -151,9 +151,9 @@ typedef struct RmCfg {
      * (or directories)
      */
     gboolean run_equal_mode;
-    /* for --btrfs-clone option */
-    bool btrfs_clone;
-    bool btrfs_readonly;
+    /* --dedupe options */
+    bool dedupe;
+    bool dedupe_readonly;
 
 } RmCfg;
 
