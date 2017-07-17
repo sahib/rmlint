@@ -1355,12 +1355,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(!rm_cmd_set_cwd(cfg)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot set current working directory"));
-        goto failure;
+        goto cleanup;
     }
 
     if(!rm_cmd_set_cmdline(cfg, argc, argv)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot join commandline"));
-        goto failure;
+        goto cleanup;
     }
 
     /* Attempt to find out path to own executable.
@@ -1413,7 +1413,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     g_option_group_set_error_hook(main_group, (GOptionErrorFunc)rm_cmd_on_error);
 
     if(!g_option_context_parse(option_parser, &argc, &argv, &error)) {
-        goto failure;
+        goto cleanup;
+    }
+
+    if(!rm_cmd_set_paths(session, paths)) {
+        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
+        goto cleanup;
+    }
+
+    if(cfg->dedupe) {
+        /* dedupe session; regular rmlint configs are ignored */
+        goto cleanup;
     }
 
     /* Silent fixes of invalid numeric input */
@@ -1457,8 +1467,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(RM_ERROR_QUARK, 0,
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
-    } else if(!rm_cmd_set_paths(session, paths)) {
-        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
@@ -1466,7 +1474,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         rm_assert_gentle_not_reached();
     }
 
-failure:
+cleanup:
     if(error != NULL) {
         rm_cmd_on_error(NULL, NULL, session, &error);
     }
