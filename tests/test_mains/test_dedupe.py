@@ -68,7 +68,7 @@ def test_equal_files():
     path_b = create_file('1234', 'b')
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,
@@ -76,7 +76,7 @@ def test_equal_files():
             verbosity="")
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--dedupe',
             path_a, '//', path_b,
             use_default_dir=False,
@@ -90,7 +90,7 @@ def test_different_files():
     path_b = create_file('4321', 'b')
 
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,
@@ -110,7 +110,7 @@ def test_bad_arguments():
             ' '.join((path_a, path_a + ".nonexistent"))
     ]:
         with assert_exit_code(1):
-            head, *data, footer = run_rmlint(
+            run_rmlint(
                 '--dedupe',
                 paths,
                 use_default_dir=False,
@@ -125,7 +125,7 @@ def test_directories():
     path_b = os.path.dirname(create_dirs('dir_b'))
 
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,

@@ -132,8 +132,11 @@ def run_rmlint_once(*args,
     if directly_return_output:
         return output
 
-    with open('/tmp/out.json', 'r') as f:
-        json_data = json.loads(f.read())
+    if with_json:
+        with open('/tmp/out.json', 'r') as f:
+            json_data = json.loads(f.read())
+    else:
+        json_data = []
 
     read_outputs = []
     for idx, output in enumerate(outputs or []):
