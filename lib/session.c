@@ -71,7 +71,6 @@ static gpointer rm_session_read_kernel_version(_UNUSED gpointer arg) {
     return version;
 }
 
-
 bool rm_session_check_kernel_version(int need_major, int need_minor) {
     static GOnce once = G_ONCE_INIT;
     g_once (&once, rm_session_read_kernel_version, NULL);
@@ -258,7 +257,7 @@ int rm_session_dedupe_main(RmCfg *cfg) {
             _("dedupe: error %i: failed to open dest file.%s"),
             errno,
             cfg->dedupe_readonly ? "" : _("\n\t(if target is a read-only snapshot "
-                                         "then -r option is required)"));
+                                          "then -r option is required)"));
         rm_sys_close(source_fd);
         return EXIT_FAILURE;
     }
@@ -338,7 +337,6 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     return EXIT_FAILURE;
 }
 
-
 /**
  * *********** `rmlint --is-reflink` session main ************
  **/
@@ -352,7 +350,7 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
      * EXIT_SUCCESS if clone confirmed
      * EXIT_FAILURE if definitely not clones
      */
-    if (cfg->path_count != 2) {
+    if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
         return EXIT_FAILURE;
     }
@@ -363,10 +361,21 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
     RmPath *b = cfg->paths->next->data;
     rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
 
-    if(rm_offsets_match(a->path, b->path)) {
-        rm_log_debug_line("Offsets match");
-        return EXIT_SUCCESS;
+    if (!rm_offsets_match(a->path, b->path)){
+        switch(errno) {
+        case EXIT_FAILURE:
+            rm_log_debug_line("Offsets differ");
+            break;
+        case ENODATA:
+            rm_log_debug_line("Can't read file offsets (maybe inline extents?)");
+            break;
+        default:
+            rm_log_perror("Error in rm_offsets_match()");
+            break;
+        }
+        return EXIT_FAILURE;
     }
 
-    return EXIT_FAILURE;
+    rm_log_debug_line("Offsets match");
+    return EXIT_SUCCESS;
 }

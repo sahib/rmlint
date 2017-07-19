@@ -410,6 +410,10 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 
 /**
  * @brief Test if two files have identical fiemaps.
+ * @retval true if match, false otherwise (and errno set).
+ * errno: EXIT_FAILURE if fiemaps differ,
+ *        ENODATA if file offsets can't be read,
+ *        errno if error encountered
  */
 bool rm_offsets_match(char *path1, char *path2);
 

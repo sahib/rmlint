@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.
  * We only include it here, because it fixes some recent warning...
@@ -1006,6 +1007,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
 
+    fsync(fd);
+
     while(!done) {
         /* read in one extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
@@ -1079,33 +1082,91 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 }
 
 bool rm_offsets_match(char *path1, char *path2) {
-    bool result = FALSE;
+
+    errno = 0;
+
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 == -1) {
-        rm_log_info_line("Error opening %s in rm_offsets_match", path1);
+        rm_log_perrorf("Error opening %s in rm_offsets_match", path1);
         return FALSE;
     }
 
     int fd2 = rm_sys_open(path2, O_RDONLY);
     if(fd2 == -1) {
-        rm_log_info_line("Error opening %s in rm_offsets_match", path2);
+        rm_log_perrorf("Error opening %s in rm_offsets_match", path2);
         rm_sys_close(fd1);
         return FALSE;
     }
 
-    RmOff file1_offset_next = 0;
-    RmOff file2_offset_next = 0;
-    RmOff file_offset_current = 0;
-    while(!result &&
-          (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-           rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
-          file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
-        if(file1_offset_next == file_offset_current) {
+    RmStat stat1;
+    int stat_state = rm_sys_stat(path1, &stat1);
+    if(stat_state == -1) {
+        rm_log_perrorf("Unable to stat file %s", path1);
+        return FALSE;
+    }
+
+    RmStat stat2;
+    stat_state = rm_sys_stat(path2, &stat2);
+    if(stat_state == -1) {
+        rm_log_perrorf("Unable to stat file %s", path2);
+        return FALSE;
+    }
+
+    if(stat1.st_size != stat2.st_size) {
+        rm_log_debug_line("Files have different sizes: %lu <> %lu", stat1.st_size,
+                          stat2.st_size);
+        errno = EINVAL;
+        return FALSE;
+    }
+
+    RmOff logical_current = 0;
+    bool result = FALSE;
+
+    while(!rm_session_was_aborted()) {
+        RmOff logical_next_1 = 0;
+        RmOff logical_next_2 = 0;
+        RmOff physical_1 =
+            rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
+        RmOff physical_2 =
+            rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
+
+        if(physical_1 != physical_2) {
+            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu",
+                              logical_current, physical_1, physical_2);
+            errno = EXIT_FAILURE;
+            break;
+        }
+        if(logical_next_1 != logical_next_2) {
+            rm_log_debug_line("Next offsets differ after %lu: %lu <> %lu",
+                              logical_current, logical_next_1, logical_next_2);
+            errno = EXIT_FAILURE;
+            break;
+        }
+
+        if(physical_1 == 0) {
+            rm_log_debug_line(
+                "Can't determine whether files are clones (maybe inline extents?)");
+            errno = ENODATA;
+            break;
+        }
+
+        rm_log_debug_line("Offsets match at logical=%lu, physical=%lu", logical_current,
+                          physical_1);
+
+        if(logical_next_1 == logical_current) {
+            rm_log_debug_line(
+                "rm_offsets_match() giving up: file1_offset_next==file_offset_current");
+            errno = EINVAL;
+            break;
+        }
+
+        if(logical_next_1 >= (RmOff)stat1.st_size) {
             /* phew, we got to the end */
             result = TRUE;
             break;
         }
-        file_offset_current = file1_offset_next;
+
+        logical_current = logical_next_1;
     }
 
     rm_sys_close(fd2);
@@ -1125,7 +1186,7 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
     return 0;
 }
 
-bool rm_offsets_match(char *path1, char *path2) {
+int rm_offsets_match(char *path1, char *path2) {
     return (path1 == path2);
 }
 
