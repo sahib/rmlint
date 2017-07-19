@@ -131,3 +131,36 @@ def test_directories():
             use_default_dir=False,
             with_json=False,
             verbosity="")
+
+
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_dedupe_works():
+
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1' * 100000, 'a')
+    path_b = create_file('1' * 100000, 'b')
+
+    with assert_exit_code(1):
+        run_rmlint(
+            '--is-reflink', path_a, path_b,
+            use_default_dir=False,
+            with_json=False,
+            verbosity=""
+        )
+
+    with assert_exit_code(0):
+        run_rmlint(
+            '--dedupe', path_a, path_b,
+            use_default_dir=False,
+            with_json=False,
+            verbosity=""
+        )
+
+    with assert_exit_code(0):
+        run_rmlint(
+            '--is-reflink', path_a, path_b,
+            use_default_dir=False,
+            with_json=False,
+            verbosity=""
+        )
