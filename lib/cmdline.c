@@ -1288,7 +1288,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
         /* COW filesystem deduplication support */
         {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
-        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
+        {"dedupe-readonly"          , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
         {"is-reflink"               , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_reflink               , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
 
         /* Callback */
