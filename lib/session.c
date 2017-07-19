@@ -338,3 +338,35 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     return EXIT_FAILURE;
 }
 
+
+/**
+ * *********** `rmlint --is-reflink` session main ************
+ **/
+int rm_session_is_reflink_main(RmCfg *cfg) {
+    /* the linux OS doesn't provide any easy way to check if two files are
+     * reflinks / clones (eg:
+     * https://unix.stackexchange.com/questions/263309/how-to-verify-a-file-copy-is-reflink-cow
+     *
+     * `rmlint --is-clone file_a file_b` provides this functionality rmlint.
+     * return values:
+     * EXIT_SUCCESS if clone confirmed
+     * EXIT_FAILURE if definitely not clones
+     */
+    if (cfg->path_count != 2) {
+        rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
+        return EXIT_FAILURE;
+    }
+
+    g_assert(cfg->paths);
+    RmPath *a = cfg->paths->data;
+    g_assert(cfg->paths->next);
+    RmPath *b = cfg->paths->next->data;
+    rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
+
+    if(rm_offsets_match(a->path, b->path)) {
+        rm_log_debug_line("Offsets match");
+        return EXIT_SUCCESS;
+    }
+
+    return EXIT_FAILURE;
+}

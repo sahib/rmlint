@@ -186,6 +186,13 @@ bool rm_session_check_kernel_version(int need_major, int need_minor);
 int rm_session_dedupe_main(RmCfg *cfg);
 
 
+/**
+ * @brief Trigger rmlint in --is-reflink mode.
+ *
+ * @return 0 if is reflink, 1 if not, ?? if can't tell
+ */
+int rm_session_is_reflink_main(RmCfg *cfg);
+
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option
  *

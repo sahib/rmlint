@@ -155,6 +155,9 @@ typedef struct RmCfg {
     bool dedupe;
     bool dedupe_readonly;
 
+    /* for --is-reflink option */
+    bool is_reflink;
+
 } RmCfg;
 
 /**
