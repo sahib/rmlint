@@ -1348,7 +1348,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     const GOptionEntry deprecated_option_entries[] = {
         {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Deprecated, use --dedupe instead"                  , NULL},
-        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe-readonly instead"         , NULL}
+        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe-readonly instead"         , NULL},
+        {NULL                       , 0    , HIDDEN              , 0                          , NULL                      , NULL                                                , NULL}
     };
 
     /* clang-format on */
