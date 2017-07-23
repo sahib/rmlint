@@ -249,7 +249,7 @@ static char *rm_fmt_sh_get_extra_equal_args(RmSession *session) {
         if(cfg->follow_symlinks) {
             g_string_append(buf, " --followlinks");
         } else {
-            g_string_append(buf, " ---no-followlinks");
+            g_string_append(buf, " --no-followlinks");
         }
     }
 

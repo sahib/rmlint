@@ -1272,8 +1272,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifiyng both -o and -O is not allowed"));
         return false;
-    } else if(session->output_cnt[0] < 0 && session->output_cnt[1] < 0 &&
-              !rm_fmt_len(session->formats)) {
+    } else if(session->output_cnt[0] < 0 && session->cfg->progress_enabled == false) {
         rm_cmd_set_default_outputs(session);
     }
 

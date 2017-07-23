@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PROGRESS_CURR=0
-PROGRESS_TOTAL=                            
+PROGRESS_TOTAL=0                           
 
 # This file was autowritten by rmlint
 # rmlint was executed from: %s
@@ -28,6 +28,9 @@ DO_CLONE_READONLY=
 # Set to true on -q
 DO_SHOW_PROGRESS=true
 
+# Set to true on -c
+DO_DELETE_EMPTY_DIRS=
+
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
@@ -45,7 +48,11 @@ print_progress_prefix() {
             PROGRESS_PERC=$((PROGRESS_CURR * 100 / PROGRESS_TOTAL))
         fi
         printf "$COL_BLUE[% 3d%%]$COL_RESET " $PROGRESS_PERC
-        PROGRESS_CURR=$((PROGRESS_CURR+1))
+        if [ $# -eq "1" ]; then
+            PROGRESS_CURR=$((PROGRESS_CURR+$1))
+        else
+            PROGRESS_CURR=$((PROGRESS_CURR+1))
+        fi
     fi
 }
 
@@ -110,14 +117,15 @@ handle_bad_user_and_group_id() {
 ###############################
 
 check_for_equality() {
-    # Use the more lightweight builtin `cmp` for regular files:
     if [ -f "$1" ]; then
-        return $(cmp -s "$1" "$2")
+        # Use the more lightweight builtin `cmp` for regular files:
+        cmp -s "$1" "$2"
+        echo $?
+    else
+        # Fallback to `rmlint --equal` for directories:
+        $RMLINT_BINARY -pp --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"
+        echo $?
     fi
-
-    # Fallback to `rmlint --equal` for directories:
-    $RMLINT_BINARY -p --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"
-    return $?
 }
 
 original_check() {
@@ -141,7 +149,7 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if [ -n $(check_for_equality "$1" "$2")]; then
+        if [ $(check_for_equality "$1" "$2") -ne 0 ]; then
             echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
         fi
     fi
@@ -228,6 +236,16 @@ remove_cmd() {
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             rm -rf "$1"
+
+            if [ ! -z "$DO_DELETE_EMPTY_DIRS" ]; then
+                DIR=$(dirname "$1")
+                while [ ! "$(ls -A "$DIR")" ]; do
+                    print_progress_prefix 0
+                    echo "${COL_GREEN}Deleting resulting empty dir: ${COL_RESET}" "$DIR"
+                    rmdir "$DIR"
+                    DIR=$(dirname "$DIR")
+                done
+            fi
         fi
     fi
 }
@@ -275,13 +293,15 @@ OPTIONS:
   -p   Recheck that files are still identical before removing duplicates.
   -r   Allow btrfs-clone to clone to read-only snapshots. (requires sudo)
   -n   Do not perform any modifications, just print what would be done. (implies -d and -x)
+  -c   Clean up empty directories while deleting duplicates.
+  -q   Do not show progress.
 EOF
 }
 
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxnrpq" OPTION
+while getopts "dhxnrpqc" OPTION
 do
   case $OPTION in
      h)
@@ -304,6 +324,9 @@ do
        ;;
      p)
        DO_PARANOID_CHECK=true
+       ;;
+     c)
+       DO_DELETE_EMPTY_DIRS=true
        ;;
      q)
        DO_SHOW_PROGRESS=

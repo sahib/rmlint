@@ -152,3 +152,110 @@ def test_hardlink_duplicate_directories(shell):
     full_dupe_a = os.path.join(TESTDIR_NAME, "dir_a/x")
     full_dupe_b = os.path.join(TESTDIR_NAME, "dir_b/x")
     assert os.stat(full_dupe_a).st_ino == os.stat(full_dupe_b).st_ino
+
+
+def _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data):
+    run_shell_script(shell, sh_path, "-dc")
+
+    if inverse_order:
+        assert not os.path.exists(data[1]["path"])
+        assert not os.path.exists(os.path.join(TESTDIR_NAME, "deep/a"))
+        assert os.path.exists(data[0]["path"])
+    else:
+        assert os.path.exists(data[0]["path"])
+        assert not os.path.exists(data[1]["path"])
+
+
+@parameterized([
+    ("sh", False), ("bash", False), ("dash", False),
+    ("sh", True), ("bash", True), ("dash", True)
+])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_remove_empty_dirs(shell, inverse_order):
+    create_file('xxx', 'deep/a/b/c/d/e/1')
+    create_file('xxx', 'deep/x/2')
+
+    sh_path = os.path.join(TESTDIR_NAME, "result.sh")
+    header, *data, footer = run_rmlint(
+        "-S {} -o sh:{}".format(
+            "A" if inverse_order else "a",
+            sh_path
+        ),
+    )
+
+    assert len(data) == 2
+
+    if inverse_order:
+        assert data[0]["path"].endswith("x/2")
+        assert data[0]["is_original"] is True
+        assert data[1]["path"].endswith("e/1")
+        assert data[1]["is_original"] is False
+    else:
+        assert data[0]["path"].endswith("e/1")
+        assert data[0]["is_original"] is True
+        assert data[1]["path"].endswith("x/2")
+        assert data[1]["is_original"] is False
+
+    _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
+
+
+@parameterized([
+    ("sh", False), ("bash", False), ("dash", False),
+    ("sh", True), ("bash", True), ("dash", True)
+])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
+    create_file('xxx', 'deep/a/b/c/d/e/1')
+    create_file('xxx', 'deep/x/1')
+
+    sh_path = os.path.join(TESTDIR_NAME, "result.sh")
+    header, *data, footer = run_rmlint(
+        "-S {} -Dj -o sh:{}".format(
+            "A" if inverse_order else "a",
+            sh_path
+        ),
+    )
+
+    assert len(data) == 2
+
+    if inverse_order:
+        assert data[0]["path"].endswith("x")
+        assert data[0]["is_original"] is True
+        assert data[1]["path"].endswith("e")
+        assert data[1]["is_original"] is False
+    else:
+        assert data[0]["path"].endswith("e")
+        assert data[0]["is_original"] is True
+        assert data[1]["path"].endswith("x")
+        assert data[1]["is_original"] is False
+
+    _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
+
+@with_setup(usual_setup_func, usual_teardown_func)
+@parameterized([("sh", ), ("bash", ), ("dash", )])
+def test_cleanup_emptydirs(shell):
+    create_file('xxx', 'dir1/a')
+
+    # create some ugly dir names
+    names = [ 'escape me [please?]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона',
+            'let\'s nest',
+            'let\'s nest/a level',
+            'let\'s nest/a level/[or two]' ]
+    for dirname in names:
+        create_file('xxx', '{}/b'.format(dirname))
+
+    head, *data, footer = run_rmlint('-S a -T df -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+
+    assert footer['duplicate_sets'] == 1
+    assert footer['total_lint_size'] == 3 * len(names)
+    assert footer['total_files'] == 1 + len(names)
+    assert footer['duplicates'] == len(names)
+
+    # run rmlint.sh with -c option (should clean up empty dirs after deleting 'b' files).
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    text = run_shell_script(shell, sh_path, "-dc")
+
+    assert os.path.exists(os.path.join(TESTDIR_NAME, 'dir1/a'))
+
+    for dirname in names:
+        assert (not os.path.exists(os.path.join(TESTDIR_NAME, dirname)))
