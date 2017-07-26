@@ -7,6 +7,7 @@
 *.mo
 rmlint
 rmlint.sh
+rmlint.json
 src/config.h
 docs/rmlint.1.gz
 docs/rmlint.1
