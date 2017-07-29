@@ -204,6 +204,7 @@ cp_reflink() {
 clone() {
     print_progress_prefix
     # clone $1 from $2's data
+    # note: no original_check() call because rmlint --dedupe takes care of this
     echo "${COL_YELLOW}Cloning to: ${COL_RESET}" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
