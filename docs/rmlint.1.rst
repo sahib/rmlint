@@ -159,8 +159,8 @@ General Options
     during ``rmlint``'s or its removal scripts run.
 
     IMPORTANT: Definition of equal: Two directories are considered equal by
-    ``rmlint`` if they contain the exact same data, no matter how are the files
-    contaning the data are named. Imagine that ``rmlint`` creates a long,
+    ``rmlint`` if they contain the exact same data, no matter how the files
+    containing the data are named. Imagine that ``rmlint`` creates a long,
     sorted stream out of the data found in the directory and compares this in
     a magic way. This means that the layout of the directory is not considered
     to be important by ``rmlint``. This might be surprising to some users, but
