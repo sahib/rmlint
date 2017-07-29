@@ -27,22 +27,25 @@ def assert_exit_code(status_code):
         assert status_code == 0
 
 
+def up(path):
+    while path:
+        yield path
+        if path == "/":
+            break
+        path = os.path.dirname(path)
+
 def is_on_reflink_fs(path):
     parts = psutil.disk_partitions(all=True)
 
     # iterate up from `path` until mountpoint found
-    p = path
-    while 1:
-        match = next((x for x in parts if x.mountpoint == p), None)
-        if (match):
-            print("{0} is {1} mounted at {2}".format(path, match.fstype, p))
-            return (match.fstype in REFLINK_CAPABLE_FILESYSTEMS)
+    for up_path in up(path):
+        for part in parts:
+            if up_path == part.mountpoint:
+                print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
+                return (part.fstype in REFLINK_CAPABLE_FILESYSTEMS)
 
-        if (p == '/'):
-            # probably should never get here...
-            print("no mountpoint found for {0}".format(path))
-            return False
-        p = os.path.dirname(p)
+    print("No mountpoint found for {0}", path)
+    return False
 
 
 # decorator for tests dependent on reflink-capable testdir
