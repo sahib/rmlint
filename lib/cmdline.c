@@ -1590,7 +1590,30 @@ int rm_cmd_main(RmSession *session) {
         return EXIT_FAILURE;
     }
 
+    /* some optimisations for rmlint --equal */
+    if(cfg->run_equal_mode && session->total_files == 2) {
+        /* check if the two files are hardlinks or reflinks or some such */
+        g_assert(cfg->paths);
+        RmPath *a = cfg->paths->data;
+        g_assert(cfg->paths->next);
+        RmPath *b = cfg->paths->next->data;
+        switch(rm_offsets_match(a->path, b->path)) {
+            case RM_OFFSETS_HARDLINK:
+            case RM_OFFSETS_MATCH:
+            case RM_OFFSETS_PATH_DOUBLE:
+            case RM_OFFSETS_SAME_FILE:
+                session->equal_exit_code = EXIT_SUCCESS;
+                cfg->find_duplicates = FALSE;
+                cfg->merge_directories = FALSE;
+                rm_log_debug_line("got match via rm_offsets_match");
+                break;
+            default:
+                break;
+        }
+    }
+
     if(session->total_files >= 1) {
+
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
