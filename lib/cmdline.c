@@ -1378,6 +1378,18 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     // OPTION PARSING //
     ////////////////////
 
+    /* TODO: move subcommands to separate option parser
+     * e.g.
+     * Usage:
+     * rmlint [options] <paths>...
+     * rmlint --subcommand [options]
+     * Subcommands (must be first arg):
+     *      --dedupe      Dedupe matching extents from source to dest (if filesystem supports)
+     *      --is-reflink  Test if two files are reflinks
+     *      --gui         Launch rmlint gui
+     * For help on subcommands use rmlint --<subcommand> --help
+     *
+     */
     option_parser = g_option_context_new(
         _("[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"));
     g_option_context_set_translation_domain(option_parser, RM_GETTEXT_PACKAGE);
