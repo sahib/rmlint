@@ -263,8 +263,15 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     }
 
     /* fsync's needed to flush extent mapping */
-    fsync(source_fd);
-    fsync(dedupe.info._DEST_FD);
+    if(fsync(source_fd) != 0) {
+        rm_log_warning_line("Error syncing source file %s: %s",
+                            source->path, strerror(errno));
+    }
+
+    if(fsync(dedupe.info._DEST_FD) != 0) {
+        rm_log_warning_line("Error syncing dest file %s: %s",
+                            dest->path, strerror(errno));
+    }
 
     int ret = 0;
     gint64 dedupe_chunk = max_dedupe_chunk;
