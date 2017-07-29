@@ -743,9 +743,16 @@ OTHER STAND-ALONE COMMANDS
 
 :``rmlint --is-reflink [-v|-V] <file1> <file2>``:
     Tests whether ``file1`` and ``file2`` are reflinks (reference same data).
-    Returns 0 if yes, 1 if no, or 61 (ENODATA) or another error number if the
-    files' fiemaps can't be read.
-
+    Return codes:
+        0: files are reflinks
+        1: files are not reflinks
+        3: not a regular file
+        4: file sizes differ
+        5: fiemaps can't be read
+        6: file1 and file2 are the same path
+        7: file1 and file2 are the same file under different mountpoints
+        8: files are hardlinks
+        9: other error encountered
 
 
 EXAMPLES

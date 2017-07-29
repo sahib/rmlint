@@ -363,7 +363,9 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
      * return values:
      * EXIT_SUCCESS if clone confirmed
      * EXIT_FAILURE if definitely not clones
+     * Other return values defined in utilities.h 'RmOffsetsMatchCode' enum
      */
+
     if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
         return EXIT_FAILURE;
@@ -375,21 +377,19 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
     RmPath *b = cfg->paths->next->data;
     rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
 
-    if(!rm_offsets_match(a->path, b->path)) {
-        switch(errno) {
-        case EXIT_FAILURE:
+    int result = rm_offsets_match(a->path, b->path);
+    switch(result) {
+        case RM_OFFSETS_DIFFER:
             rm_log_debug_line("Offsets differ");
             break;
-        case ENODATA:
+        case RM_OFFSETS_MATCH:
+            rm_log_debug_line("Offsets match");
+        case RM_OFFSETS_NO_DATA:
             rm_log_debug_line("Can't read file offsets (maybe inline extents?)");
             break;
         default:
-            rm_log_perror("Error in rm_offsets_match()");
             break;
-        }
-        return EXIT_FAILURE;
     }
 
-    rm_log_debug_line("Offsets match");
-    return EXIT_SUCCESS;
+    return result;
 }
