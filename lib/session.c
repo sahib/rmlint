@@ -59,7 +59,8 @@ static gpointer rm_session_read_kernel_version(_UNUSED gpointer arg) {
     static int version[2] = {-1, -1};
 #if HAVE_UNAME
     struct utsname buf;
-    if(uname(&buf) != -1 && sscanf(buf.release, "%d.%d.*", &version[0], &version[1]) != EOF) {
+    if(uname(&buf) != -1 &&
+       sscanf(buf.release, "%d.%d.*", &version[0], &version[1]) != EOF) {
         rm_log_debug_line("Linux kernel version is %d.%d.", version[0], version[1]);
     } else {
         rm_log_warning_line("Unable to read Linux kernel version");
@@ -73,7 +74,7 @@ static gpointer rm_session_read_kernel_version(_UNUSED gpointer arg) {
 
 bool rm_session_check_kernel_version(int need_major, int need_minor) {
     static GOnce once = G_ONCE_INIT;
-    g_once (&once, rm_session_read_kernel_version, NULL);
+    g_once(&once, rm_session_read_kernel_version, NULL);
     int *version = once.retval;
     int major = version[0];
     int minor = version[1];
@@ -203,6 +204,12 @@ int rm_session_dedupe_main(RmCfg *cfg) {
  * should work for ocfs2 and xfs as well as btrfs.  We should still support the older
  * btrfs ioctl so that this still works on Linux 4.2 to 4.4.  The two ioctl's are
  * identical apart from field names so we can use #define's to accommodate both. */
+
+/* TODO: test this on system running kernel 4.[2|3|4] ; if the c headers
+ * support FIDEDUPERANGE but kernel doesn't, then this will fail at runtime
+ * because the BTRFS_IOC_FILE_EXTENT_SAME is decided at compile time...
+ */
+
 /* clang-format off */
 #if HAVE_FIDEDUPERANGE
 # define _DEDUPE_IOCTL_NAME        "FIDEDUPERANGE"
@@ -368,7 +375,7 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
     RmPath *b = cfg->paths->next->data;
     rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
 
-    if (!rm_offsets_match(a->path, b->path)){
+    if(!rm_offsets_match(a->path, b->path)) {
         switch(errno) {
         case EXIT_FAILURE:
             rm_log_debug_line("Offsets differ");
