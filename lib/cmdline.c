@@ -50,11 +50,6 @@
 #include "treemerge.h"
 #include "utilities.h"
 
-#if HAVE_BTRFS_H
-#include <linux/btrfs.h>
-#include <sys/ioctl.h>
-#endif
-
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
@@ -230,105 +225,6 @@ static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
         }
     }
 
-    return EXIT_SUCCESS;
-}
-
-static void rm_cmd_btrfs_clone_usage(void) {
-    rm_log_error(_("Usage: rmlint --btrfs-clone [-r] source dest\n"));
-}
-
-static void rm_cmd_btrfs_clone(const char *source, const char *dest,
-                               const gboolean read_only) {
-#if HAVE_BTRFS_H
-    struct {
-        struct btrfs_ioctl_same_args args;
-        struct btrfs_ioctl_same_extent_info info;
-    } extent_same;
-    memset(&extent_same, 0, sizeof(extent_same));
-
-    int source_fd = rm_sys_open(source, O_RDONLY);
-    if(source_fd < 0) {
-        rm_log_error_line(_("btrfs clone: failed to open source file"));
-        return;
-    }
-
-    extent_same.info.fd = rm_sys_open(dest, read_only ? O_RDONLY : O_RDWR);
-    if(extent_same.info.fd < 0) {
-        rm_log_error_line(_("btrfs clone: error %i: failed to open dest file.%s"),
-                          errno,
-                          read_only ? "" : _("\n\t(if target is a read-only snapshot "
-                                             "then -r option is required)"));
-        rm_sys_close(source_fd);
-        return;
-    }
-
-    struct stat source_stat;
-    fstat(source_fd, &source_stat);
-
-    guint64 bytes_deduped = 0;
-    gint64 bytes_remaining = source_stat.st_size;
-    int ret = 0;
-    while(bytes_deduped < (guint64)source_stat.st_size && ret == 0 &&
-          extent_same.info.status == 0 && bytes_remaining) {
-        extent_same.args.dest_count = 1;
-        extent_same.args.logical_offset = bytes_deduped;
-        extent_same.info.logical_offset = bytes_deduped;
-
-        /* BTRFS_IOC_FILE_EXTENT_SAME has an internal limit at 16MB */
-        extent_same.args.length = MIN(16 * 1024 * 1024, bytes_remaining);
-        if(extent_same.args.length == 0) {
-            extent_same.args.length = bytes_remaining;
-        }
-
-        ret = ioctl(source_fd, BTRFS_IOC_FILE_EXTENT_SAME, &extent_same);
-        if(ret == 0 && extent_same.info.status == 0) {
-            bytes_deduped += extent_same.info.bytes_deduped;
-            bytes_remaining -= extent_same.info.bytes_deduped;
-        }
-    }
-
-    rm_sys_close(source_fd);
-    rm_sys_close(extent_same.info.fd);
-
-    if(ret < 0) {
-        ret = errno;
-        rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"), ret,
-                          strerror(ret));
-    } else if(extent_same.info.status == -22 && read_only && getuid()) {
-        rm_log_error_line(_("Need to run as root user to clone to a read-only snapshot"));
-    } else if(extent_same.info.status < 0) {
-        rm_log_error_line(_("BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"),
-                          extent_same.info.status, dest);
-    } else if(bytes_remaining > 0) {
-        rm_log_info_line(_("Files don't match - not cloned"));
-    }
-#else
-    (void)source;
-    (void)dest;
-    (void)read_only;
-    rm_log_error_line(_("rmlint was not compiled with btrfs support."))
-
-#endif
-}
-
-static int rm_cmd_maybe_btrfs_clone(RmSession *session, int argc, const char **argv) {
-    if(argc > 0 && g_strcmp0("--btrfs-clone", argv[1]) == 0) {
-        /* treat as a btrfs clone subcommand... */
-        if(!rm_session_check_kernel_version(session, 4, 2)) {
-            rm_log_warning_line("This needs at least linux >= 4.2.");
-        } else if(argc == 5 && g_strcmp0("-r", argv[2]) == 0) {
-            /* -r option for deduping read-only snapshots */
-            /* TODO: add check for root user permissions */
-            rm_cmd_btrfs_clone(argv[3], argv[4], TRUE);
-        } else if(argc == 4) {
-            rm_cmd_btrfs_clone(argv[2], argv[3], FALSE);
-        } else {
-            /* malformed command */
-            rm_cmd_btrfs_clone_usage();
-        }
-        /* return EXIT_FAILURE to indicate not to go ahead with main rmlint call */
-        return EXIT_FAILURE;
-    }
     return EXIT_SUCCESS;
 }
 
@@ -1210,6 +1106,22 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
     return true;
 }
 
+static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_warning_line("option --btrfs-clone is deprecated, use --dedupe");
+    session->cfg->dedupe = true;
+    return true;
+}
+
+static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_warning_line("option --btrfs-readonly is deprecated, use --dedupe-readonly");
+    session->cfg->dedupe_readonly = true;
+    return true;
+}
+
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -1301,7 +1213,6 @@ static char * rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
 /* Parse the commandline and set arguments in 'settings' (glob. var accordingly) */
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     RmCfg *cfg = session->cfg;
-    gboolean clone = FALSE;
 
     /* Handle --gui before all other processing,
      * since we need to pass other args to the python interpreter.
@@ -1313,10 +1224,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     if(rm_cmd_maybe_switch_to_hasher(argc, (const char **)argv) == EXIT_FAILURE) {
-        return false;
-    }
-
-    if(rm_cmd_maybe_btrfs_clone(session, argc, (const char **)argv) == EXIT_FAILURE) {
         return false;
     }
 
@@ -1351,7 +1258,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
         {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
 
-        /* Non-trvial switches */
+        /* Non-trivial switches */
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
         {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
         {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
@@ -1379,13 +1286,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
 
+        /* COW filesystem deduplication support */
+        {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
+        {"dedupe-readonly"          , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
+        {"is-reflink"               , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_reflink               , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
+
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
         {"version"  , 0   , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_version , _("Show the version & features") , NULL} ,
         /* Dummy option for --help output only: */
         {"gui"         , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("If installed, start the optional gui with all following args")                 , NULL},
-        {"hash"        , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL}                                            ,
-        {"btrfs-clone" , 0 , 0 , G_OPTION_ARG_NONE , &clone , _("Clone extents from source to dest, if extents match")                          , NULL} ,
+        {"hash"        , 0 , 0 , G_OPTION_ARG_NONE , NULL   , _("Work like sha1sum for all supported hash algorithms (see also --hash --help)") , NULL},
 
         /* Special case: accumulate leftover args (paths) in &paths */
         {G_OPTION_REMAINING , 0 , 0 , G_OPTION_ARG_FILENAME_ARRAY , &paths , ""   , NULL}   ,
@@ -1435,6 +1346,12 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
 
+    const GOptionEntry deprecated_option_entries[] = {
+        {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Deprecated, use --dedupe instead"                  , NULL},
+        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe-readonly instead"         , NULL},
+        {NULL                       , 0    , HIDDEN              , 0                          , NULL                      , NULL                                                , NULL}
+    };
+
     /* clang-format on */
 
     /* Initialize default verbosity */
@@ -1442,17 +1359,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(!rm_cmd_set_cwd(cfg)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot set current working directory"));
-        goto failure;
+        goto cleanup;
     }
 
     if(!rm_cmd_set_cmdline(cfg, argc, argv)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot join commandline"));
-        goto failure;
+        goto cleanup;
     }
 
     /* Attempt to find out path to own executable.
      * This is used in the shell script to call the executable
-     * for special modes like --btrfs-clone or --equal.
+     * for special modes like --dedupe or --equal.
      * We want to make sure the installed version has this
      * */
     cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
@@ -1461,6 +1378,18 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     // OPTION PARSING //
     ////////////////////
 
+    /* TODO: move subcommands to separate option parser
+     * e.g.
+     * Usage:
+     * rmlint [options] <paths>...
+     * rmlint --subcommand [options]
+     * Subcommands (must be first arg):
+     *      --dedupe      Dedupe matching extents from source to dest (if filesystem supports)
+     *      --is-reflink  Test if two files are reflinks
+     *      --gui         Launch rmlint gui
+     * For help on subcommands use rmlint --<subcommand> --help
+     *
+     */
     option_parser = g_option_context_new(
         _("[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"));
     g_option_context_set_translation_domain(option_parser, RM_GETTEXT_PACKAGE);
@@ -1471,13 +1400,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         "inversed", "inverted", "Options that enable defaults", session, NULL);
     GOptionGroup *unusual_group =
         g_option_group_new("unusual", "unusual", "Unusual options", session, NULL);
+    GOptionGroup *deprecated_group =
+        g_option_group_new("deprecated", "deprecated", "Deprecated options", session, NULL);
 
     g_option_group_add_entries(main_group, main_option_entries);
     g_option_group_add_entries(main_group, inversed_option_entries);
     g_option_group_add_entries(main_group, unusual_option_entries);
+    g_option_group_add_entries(deprecated_group, deprecated_option_entries);
 
     g_option_context_add_group(option_parser, inversion_group);
     g_option_context_add_group(option_parser, unusual_group);
+    g_option_context_add_group(option_parser, deprecated_group);
     g_option_context_set_main_group(option_parser, main_group);
     g_option_context_set_summary(option_parser,
                                  _("rmlint finds space waste and other broken things on "
@@ -1496,13 +1429,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     g_option_group_set_error_hook(main_group, (GOptionErrorFunc)rm_cmd_on_error);
 
     if(!g_option_context_parse(option_parser, &argc, &argv, &error)) {
-        goto failure;
+        goto cleanup;
     }
 
-    if(clone) {
-        /* should not get here */
-        rm_cmd_btrfs_clone_usage();
-        session->cmdline_parse_error = TRUE;
+    if(!rm_cmd_set_paths(session, paths)) {
+        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
+        goto cleanup;
+    }
+
+    if(cfg->dedupe) {
+        /* dedupe session; regular rmlint configs are ignored */
+        goto cleanup;
     }
 
     /* Silent fixes of invalid numeric input */
@@ -1546,8 +1483,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(cfg->skip_start_factor >= cfg->skip_end_factor) {
         error = g_error_new(RM_ERROR_QUARK, 0,
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
-    } else if(!rm_cmd_set_paths(session, paths)) {
-        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
@@ -1555,7 +1490,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         rm_assert_gentle_not_reached();
     }
 
-failure:
+cleanup:
     if(error != NULL) {
         rm_cmd_on_error(NULL, NULL, session, &error);
     }
@@ -1655,7 +1590,30 @@ int rm_cmd_main(RmSession *session) {
         return EXIT_FAILURE;
     }
 
+    /* some optimisations for rmlint --equal */
+    if(cfg->run_equal_mode && session->total_files == 2) {
+        /* check if the two files are hardlinks or reflinks or some such */
+        g_assert(cfg->paths);
+        RmPath *a = cfg->paths->data;
+        g_assert(cfg->paths->next);
+        RmPath *b = cfg->paths->next->data;
+        switch(rm_offsets_match(a->path, b->path)) {
+            case RM_OFFSETS_HARDLINK:
+            case RM_OFFSETS_MATCH:
+            case RM_OFFSETS_PATH_DOUBLE:
+            case RM_OFFSETS_SAME_FILE:
+                session->equal_exit_code = EXIT_SUCCESS;
+                cfg->find_duplicates = FALSE;
+                cfg->merge_directories = FALSE;
+                rm_log_debug_line("got match via rm_offsets_match");
+                break;
+            default:
+                break;
+        }
+    }
+
     if(session->total_files >= 1) {
+
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
@@ -1693,7 +1651,7 @@ int rm_cmd_main(RmSession *session) {
         exit_state = EXIT_FAILURE;
     }
 
-    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode)  {
+    if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode) {
         return session->equal_exit_code;
     }
 

@@ -250,46 +250,6 @@ General Options
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
     back all results to the end of the run before sorting and printing.
 
-    ``$ rmlint -y sN  # Sort groups by size (biggest last) and if tied by files in it (smallest last)``
-
-:``--gui``:
-
-    Start the optional graphical frontend to ``rmlint`` called ``Shredder``.
-    The frontend is supposed to be used by beginner level users and does not
-    offer all features of the commandline version.
-
-    This will only work when ``Shredder`` and its dependencies were installed.
-    See also: http://rmlint.readthedocs.org/en/latest/gui.html
-
-    The gui has its own set of options, see ``--gui --help`` for a list.  These
-    should be placed at the end, i.e. ``rmlint --gui [options]`` when calling
-    it from commandline.
-
-:``--hash [paths...]``:
-
-    Make ``rmlint`` work as a multi-threaded file hash utility, similar to the
-    popular ``md5sum`` or ``sha1sum`` utilities, but faster and with more
-    algorithms. A set of paths given on the commandline or from *stdin* is
-    hashed using one of the available hash algorithms.  Use ``rmlint --hash
-    --help`` to see the extended options.
-
-:``--equal [paths...]``:
-
-    Check if the paths given on the commandline all have equal content. If all
-    paths are equal and no other error happened, rmlint will exit with an exit
-    code 0. Otherwise it will exit with a nonzero exit code. All other options
-    can be used as normal, but note that no other formatters (``sh``, ``csv``
-    etc.) will be executed by default. At least two paths need to be passed.
-
-    Note: This even works for directories and also in combination with paranoid
-    mode (pass ``-pp`` for byte comparison); remember that rmlint does not care
-    about the layout of the directory, but only about the content of the files
-    in it. This is the main advantage of ``--equal`` over the ``cmp`` util
-    which will be faser when comparing files.
-
-    At least two paths need to be given to the commandline. If more than two paths
-    are given, all arguments must be equal.
-
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them.
@@ -731,6 +691,70 @@ FORMATTERS
     print newlines between files, only a space. Newlines are printed only between
     sets of duplicates.
 
+OTHER STAND-ALONE COMMANDS
+==========================
+
+:``rmlint --gui``:
+
+    Start the optional graphical frontend to ``rmlint`` called ``Shredder``.
+
+    This will only work when ``Shredder`` and its dependencies were installed.
+    See also: http://rmlint.readthedocs.org/en/latest/gui.html
+
+    The gui has its own set of options, see ``--gui --help`` for a list.  These
+    should be placed at the end, ie ``rmlint --gui [options]`` when calling
+    it from commandline.
+
+:``rmlint --hash [paths...]``:
+
+    Make ``rmlint`` work as a multi-threaded file hash utility, similar to the
+    popular ``md5sum`` or ``sha1sum`` utilities, but faster and with more algorithms.
+    A set of paths given on the commandline or from *stdin* is hashed using one
+    of the available hash algorithms.  Use ``rmlint --hash -h`` to see options.
+
+:``rmlint --equal [paths...]``:
+
+    Check if the paths given on the commandline all have equal content. If all
+    paths are equal and no other error happened, rmlint will exit with an exit
+    code 0. Otherwise it will exit with a nonzero exit code. All other options
+    can be used as normal, but note that no other formatters (``sh``, ``csv``
+    etc.) will be executed by default. At least two paths need to be passed.
+
+    Note: This even works for directories and also in combination with paranoid
+    mode (pass ``-pp`` for byte comparison); remember that rmlint does not care
+    about the layout of the directory, but only about the content of the files
+    in it. At least two paths need to be given to the commandline.
+
+    By default this will use hashing to compare the files and/or directories.
+
+:``rmlint --dedupe [-r] [-v|-V] <src> <dest>``:
+
+    If the filesystem supports files sharing physical storage between multiple
+    files, and if ``src`` and ``dest`` have same content, this command makes the
+    data in the ``src`` file appear the ``dest`` file by sharing the
+    underlying storage.
+
+    This command is similar to ``cp --reflink=always <src> <dest>``
+    except that it (a) checks that ``src`` and ``dest`` have identical data, and
+    it makes no changes to ``dest``'s metadata.
+
+    Running with ``-r`` option will enable deduplication of read-only [btrfs]
+    snapshots (requires root).
+
+:``rmlint --is-reflink [-v|-V] <file1> <file2>``:
+    Tests whether ``file1`` and ``file2`` are reflinks (reference same data).
+    Return codes:
+        0: files are reflinks
+        1: files are not reflinks
+        3: not a regular file
+        4: file sizes differ
+        5: fiemaps can't be read
+        6: file1 and file2 are the same path
+        7: file1 and file2 are the same file under different mountpoints
+        8: files are hardlinks
+        9: other error encountered
+
+
 EXAMPLES
 ========
 
@@ -799,7 +823,11 @@ This is a collection of common usecases and other tricks:
 
 * Compare if the directories a b c and are equal
 
-  ``$ rmlint --equal a b c; echo $?  # Will print 0 if they are equal``
+  ``$ rmlint --equal a b c && echo "Files are equal" || echo "Files are not equal"``
+
+* Test if two files are reflinks
+  ``rmlint --is-reflink a b && echo "Files are reflinks" || echo "Files are not reflinks"``.
+
 
 PROBLEMS
 ========

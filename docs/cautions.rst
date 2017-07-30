@@ -62,21 +62,22 @@ follows to move the files to */tmp*:
        fi
    }
 
-Another safe alternative, if your files are on a ``btrfs`` filesystem and you have linux
-kernel 4.2 or higher, is to reflink the duplicate to the original.  You can do this via
-``cp --reflink`` or using ``rmlint --btrfs-clone``:
+Another safe alternative, if your files are on a copy-on-write filesystem such
+as ``btrfs``, and you have linux kernel 4.2 or higher, is to use a deduplication
+utility such as ``duperemove`` or ``rmlint --dedupe``:
 
 .. code-block:: bash
 
-   $ cp --reflink=always original duplicate   # deletes duplicate and replaces it with reflink copy of original
-   $ rmlint --btrfs-clone original duplicate  # does and in-place clone
+   $ duperemove -dh original duplicate
+   $ rmlint --dedupe original duplicate
+
+Both of the above first verify (via the kernel)  that ``original`` and
+``duplicate`` are identical, then modifies ``duplicate`` to reference
+``original``'s data extents.  Note they do not change the mtime or other
+metadata of the duplicate (unlike hardlinks).
 
 If you pass ``-c sh:link`` to ``rmlint``, it will even check for you if your
 filesystem is capable of reflinks and emit the correct command conveniently.
-
-The second option is actually safer because it verifies (via the kernel) that the files
-are identical before creating the reflink.  Also it does not change the mtime or other
-metadata of the duplicate.
 
 You might think hardlinking as a safe alternative to deletion, but in fact hardlinking
 first deletes the duplicate and then creates a hardlink to the original in its place.
@@ -139,7 +140,7 @@ Dupe finders ``rdfind`` and ``dupd`` can also be tricked with the right combinat
    Deleted 1 files.
    $ ls -l dir/
    total 0
-   
+
    $ dupd scan --path /home/foo/a --path /home/foo/a
    Files scanned: 2
    Total duplicates: 2
@@ -210,8 +211,8 @@ Symlinks can make a real mess out of filesystem traversal:
    dir/link/link/file
    [snip]
    dir/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/link/file
-   
-   Set 1 of 1, preserve files [1 - 41, all]: 
+
+   Set 1 of 1, preserve files [1 - 41, all]:
 
 *Solution:*
 

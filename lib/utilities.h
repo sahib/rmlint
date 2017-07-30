@@ -38,6 +38,19 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
+/* return values for rm_offsets_match */
+typedef enum RmOffsetsMatchCode {
+    RM_OFFSETS_MATCH        = EXIT_SUCCESS,
+    RM_OFFSETS_DIFFER       = EXIT_FAILURE,
+    RM_OFFSETS_NOT_FILE     = 3,
+    RM_OFFSETS_WRONG_SIZE   = 4,
+    RM_OFFSETS_NO_DATA      = 5,
+    RM_OFFSETS_SAME_FILE    = 6,
+    RM_OFFSETS_PATH_DOUBLE  = 7,
+    RM_OFFSETS_HARDLINK     = 8,
+    RM_OFFSETS_ERROR        = 9,
+} RmOffsetsMatchCode;
+
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
 #else
@@ -410,8 +423,9 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 
 /**
  * @brief Test if two files have identical fiemaps.
+ * @retval see RmOffsetsMatchCode enum definition.
  */
-bool rm_offsets_match(char *path1, char *path2);
+RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //

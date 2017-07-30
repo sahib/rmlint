@@ -90,22 +90,14 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     }
 
     /* Needs to have at least kernel 4.2 */
-    if(!rm_session_check_kernel_version(self->session, 4, 2)) {
+    if(!rm_session_check_kernel_version(4, 2)) {
         return false;
     }
 
-    bool offsets_match = rm_offsets_match(dupe_path, orig_path);
-    char *reflink_type = g_hash_table_lookup(
-            self->session->mounts->reflinkfs_table,
-            GUINT_TO_POINTER(file->dev)
-    );
-
-    if (offsets_match) {
+    if (rm_offsets_match(dupe_path, orig_path)) {
         *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
-    } else if(!g_strcmp0("btrfs", reflink_type)) {
-        *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
-        return false;
+        *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
     }
 
     return true;
@@ -276,16 +268,16 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         /* user specified handlers */
         rm_sh_parse_handlers(self, handler_cfg);
     } else if(rm_fmt_get_config_value(session->formats, "sh", "clone") != NULL) {
-        /* Preset: try clone, then reflinks, then symlinks then hardlinks */
+        /* Preset: try clone, then reflinks, then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "clone,reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
-        /* Preset: try reflinks, then symlinks then hardlinks */
+        /* Preset: try reflinks, then then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
-        /* Preset: try symlinks before using hardlinks */
+        /* Preset: try hardlinks before using symlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "symlink") != NULL) {
-        /* Preset: only do hardlinks */
+        /* Preset: only do symlinks */
         rm_sh_parse_handlers(self, "symlink");
     } else {
         /* Default: remove the file */

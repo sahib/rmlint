@@ -111,8 +111,8 @@ typedef struct RmCfg {
     /* working dir rmlint called from */
     char *iwd;
 
-	/* Path to the rmlint binary of this run */
-	char *full_argv0_path;
+    /* Path to the rmlint binary of this run */
+    char *full_argv0_path;
 
     /* the full command line */
     char *joined_argv;
@@ -146,11 +146,18 @@ typedef struct RmCfg {
      */
     gboolean cache_file_structs;
 
-	/* Instead of running in duplicate detection mode,
-	 * check if the passed arguments are equal files
-	 * (or directories)
-	 */
-	gboolean run_equal_mode;
+    /* Instead of running in duplicate detection mode,
+     * check if the passed arguments are equal files
+     * (or directories)
+     */
+    gboolean run_equal_mode;
+    /* --dedupe options */
+    bool dedupe;
+    bool dedupe_readonly;
+
+    /* for --is-reflink option */
+    bool is_reflink;
+
 } RmCfg;
 
 /**

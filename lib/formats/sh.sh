@@ -204,12 +204,13 @@ cp_reflink() {
 clone() {
     print_progress_prefix
     # clone $1 from $2's data
+    # note: no original_check() call because rmlint --dedupe takes care of this
     echo "${COL_YELLOW}Cloning to: ${COL_RESET}" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            sudo $RMLINT_BINARY --btrfs-clone -r "$2" "$1"
+            sudo $RMLINT_BINARY --dedupe -r "$2" "$1"
         else
-            $RMLINT_BINARY --btrfs-clone "$2" "$1"
+            $RMLINT_BINARY --dedupe "$2" "$1"
         fi
     fi
 }
@@ -291,7 +292,7 @@ OPTIONS:
   -d   Do not ask before running.
   -x   Keep rmlint.sh; do not autodelete it.
   -p   Recheck that files are still identical before removing duplicates.
-  -r   Allow btrfs-clone to clone to read-only snapshots. (requires sudo)
+  -r   Allow deduplication of files on read-only btrfs snapshots. (requires sudo)
   -n   Do not perform any modifications, just print what would be done. (implies -d and -x)
   -c   Clean up empty directories while deleting duplicates.
   -q   Do not show progress.
