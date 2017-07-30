@@ -94,13 +94,27 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         return false;
     }
 
-    if (rm_offsets_match(dupe_path, orig_path)) {
+    int match = rm_offsets_match(dupe_path, orig_path);
+    switch(match) {
+    case RM_OFFSETS_MATCH:
         *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
-    } else {
+        return TRUE;
+    case RM_OFFSETS_SAME_FILE:
+    case RM_OFFSETS_NOT_FILE:
+    case RM_OFFSETS_WRONG_SIZE:
+    case RM_OFFSETS_PATH_DOUBLE:
+    case RM_OFFSETS_ERROR:
+        rm_log_warning_line("Unexpected return code %d from rm_offsets_match()", match);
+        return FALSE;
+    case RM_OFFSETS_HARDLINK:
+    case RM_OFFSETS_NO_DATA:
+    case RM_OFFSETS_DIFFER:
         *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
+        return TRUE;
+    default:
+        rm_assert_gentle_not_reached();
+        return FALSE;
     }
-
-    return true;
 }
 
 static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped) {
