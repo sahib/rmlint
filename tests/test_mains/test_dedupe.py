@@ -144,6 +144,7 @@ def test_dedupe_works():
     path_a = create_file('1' * 100000, 'a')
     path_b = create_file('1' * 100000, 'b')
 
+    # confirm that files are not reflinks
     with assert_exit_code(1):
         run_rmlint(
             '--is-reflink', path_a, path_b,
@@ -152,6 +153,7 @@ def test_dedupe_works():
             verbosity=""
         )
 
+    # reflink our files
     with assert_exit_code(0):
         run_rmlint(
             '--dedupe', path_a, path_b,
@@ -160,6 +162,7 @@ def test_dedupe_works():
             verbosity=""
         )
 
+    # confirm that they are now reflinks
     with assert_exit_code(0):
         run_rmlint(
             '--is-reflink', path_a, path_b,
@@ -167,3 +170,58 @@ def test_dedupe_works():
             with_json=False,
             verbosity=""
         )
+
+# count the number of line in a file which start with patterns[]
+def pattern_count(path, patterns):
+    counts = [0] * len(patterns)
+    f = open(path, 'r')
+    for line in f:
+        for i, pattern in enumerate(patterns):
+            if line.startswith(pattern):
+                counts[i] += 1
+    f.close()
+    return counts
+
+
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_clone_handler():
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1' * 100000, 'a')
+    path_b = create_file('1' * 100000, 'b')
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+
+    # generate rmlint.sh and check that it correctly selects files for cloning
+    with assert_exit_code(0):
+        run_rmlint(
+            '-S a -o sh:{p} -c sh:clone'.format(p=sh_path),
+            path_a, path_b,
+            use_default_dir=False,
+            with_json=False
+        )
+
+    # parse output file for expected clone command
+    counts = pattern_count(sh_path, ["clone '", "skip_reflink '"])
+    assert counts[0] == 1
+    assert counts[1] == 0
+
+    # now reflink the two files and check again
+    with assert_exit_code(0):
+        run_rmlint(
+            '--dedupe', path_a, path_b,
+            use_default_dir=False,
+            with_json=False,
+            verbosity=""
+        )
+    with assert_exit_code(0):
+        run_rmlint(
+            '-S a -o sh:{p} -c sh:clone'.format(p=sh_path),
+            path_a, path_b,
+            use_default_dir=False,
+            with_json=False
+        )
+
+    counts = pattern_count(sh_path, ["clone '", "skip_reflink '"])
+    assert counts[0] == 0
+    assert counts[1] == 1
