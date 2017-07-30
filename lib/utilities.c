@@ -1212,8 +1212,8 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
     return 0;
 }
 
-int rm_offsets_match(char *path1, char *path2) {
-    return (path1 == path2);
+RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
+    return (path1 == path2) ? RM_OFFSETS_MATCH : RM_OFFSETS_NO_DATA;
 }
 
 #endif
