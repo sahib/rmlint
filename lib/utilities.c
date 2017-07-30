@@ -1088,19 +1088,17 @@ static gboolean rm_util_is_path_double(char *path1, char *path2) {
             rm_util_parent_node(path1) == rm_util_parent_node(path2));
 }
 
-
 RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
-
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 == -1) {
         rm_log_perrorf("Error opening %s in rm_offsets_match", path1);
         return RM_OFFSETS_ERROR;
     }
 
-#define RM_RETURN(value)     \
-    {                        \
-        rm_sys_close(fd1);   \
-        return (value);      \
+#define RM_RETURN(value)   \
+    {                      \
+        rm_sys_close(fd1); \
+        return (value);    \
     }
 
     RmStat stat1;
@@ -1121,11 +1119,11 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
     }
 
 #undef RM_RETURN
-#define RM_RETURN(value)     \
-    {                        \
-        rm_sys_close(fd1);   \
-        rm_sys_close(fd2);   \
-        return (value);      \
+#define RM_RETURN(value)   \
+    {                      \
+        rm_sys_close(fd1); \
+        rm_sys_close(fd2); \
+        return (value);    \
     }
 
     RmStat stat2;
@@ -1147,9 +1145,9 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
 
     if(stat1.st_dev == stat2.st_dev && stat1.st_ino == stat2.st_ino) {
         /* hardlinks or maybe even same file */
-        if(strcmp(path1, path2)==0) {
+        if(strcmp(path1, path2) == 0) {
             RM_RETURN(RM_OFFSETS_SAME_FILE);
-        } else if (rm_util_is_path_double(path1, path2)) {
+        } else if(rm_util_is_path_double(path1, path2)) {
             RM_RETURN(RM_OFFSETS_PATH_DOUBLE);
         } else {
             RM_RETURN(RM_OFFSETS_HARDLINK);
@@ -1161,14 +1159,12 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
     while(!rm_session_was_aborted()) {
         RmOff logical_next_1 = 0;
         RmOff logical_next_2 = 0;
-        RmOff physical_1 =
-            rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
-        RmOff physical_2 =
-            rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
 
         if(physical_1 != physical_2) {
-            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu",
-                              logical_current, physical_1, physical_2);
+            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu", logical_current,
+                              physical_1, physical_2);
             RM_RETURN(RM_OFFSETS_DIFFER);
         }
         if(logical_next_1 != logical_next_2) {

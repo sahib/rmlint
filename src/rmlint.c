@@ -135,7 +135,7 @@ int main(int argc, const char **argv) {
         /* Do all the real work */
         if(cfg.dedupe) {
             exit_state = rm_session_dedupe_main(&cfg);
-        } else if (cfg.is_reflink) {
+        } else if(cfg.is_reflink) {
             exit_state = rm_session_is_reflink_main(&cfg);
         } else {
             exit_state = rm_cmd_main(&session);

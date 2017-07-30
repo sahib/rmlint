@@ -1552,7 +1552,7 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->mounts == NULL) {
-       rm_log_debug_line("No mount table created.");
+        rm_log_debug_line("No mount table created.");
     }
 
     session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
@@ -1598,17 +1598,17 @@ int rm_cmd_main(RmSession *session) {
         g_assert(cfg->paths->next);
         RmPath *b = cfg->paths->next->data;
         switch(rm_offsets_match(a->path, b->path)) {
-            case RM_OFFSETS_HARDLINK:
-            case RM_OFFSETS_MATCH:
-            case RM_OFFSETS_PATH_DOUBLE:
-            case RM_OFFSETS_SAME_FILE:
-                session->equal_exit_code = EXIT_SUCCESS;
-                cfg->find_duplicates = FALSE;
-                cfg->merge_directories = FALSE;
-                rm_log_debug_line("got match via rm_offsets_match");
-                break;
-            default:
-                break;
+        case RM_OFFSETS_HARDLINK:
+        case RM_OFFSETS_MATCH:
+        case RM_OFFSETS_PATH_DOUBLE:
+        case RM_OFFSETS_SAME_FILE:
+            session->equal_exit_code = EXIT_SUCCESS;
+            cfg->find_duplicates = FALSE;
+            cfg->merge_directories = FALSE;
+            rm_log_debug_line("got match via rm_offsets_match");
+            break;
+        default:
+            break;
         }
     }
 
