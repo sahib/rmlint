@@ -76,7 +76,7 @@
 #endif
 
 #if HAVE_BLKID
-#include <blkid.h>
+#include <blkid/blkid.h>
 #endif
 
 #if HAVE_JSON_GLIB
@@ -1102,6 +1102,33 @@ static gboolean rm_util_is_path_double(char *path1, char *path2) {
             rm_util_parent_node(path1) == rm_util_parent_node(path2));
 }
 
+/* test if two file paths are on the same device (even if on different
+ * mountpoints)
+ */
+static gboolean rm_util_same_device(const char *path1, const char *path2) {
+    const char *best1 = NULL;
+    const char *best2 = NULL;
+    int len1 = 0;
+    int len2 = 0;
+
+    GList *mounts = g_unix_mounts_get(NULL);
+    for(GList *iter = mounts; iter; iter = iter->next) {
+        GUnixMountEntry *mount = iter->data;
+        const char *mountpath = g_unix_mount_get_mount_path(mount);
+        int len = strlen(mountpath);
+        if (len > len1 && strncmp(mountpath, path1, len) == 0) {
+            best1 = g_unix_mount_get_device_path(mount);
+            len1 = len;
+        }
+        if (len > len2 && strncmp(mountpath, path2, len) == 0) {
+            best2 = g_unix_mount_get_device_path(mount);
+            len2 = len;
+        }
+    }
+    gboolean result = (best1 && best2 && strcmp(best1, best2)==0);
+    g_list_free_full(mounts, (GDestroyNotify)g_unix_mount_free);
+    return result;
+}
 RmLinkType rm_util_link_type(char *path1, char *path2) {
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 == -1) {
@@ -1165,6 +1192,14 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
             RM_RETURN(RM_LINK_PATH_DOUBLE);
         } else {
             RM_RETURN(RM_LINK_HARDLINK);
+        }
+    }
+
+    if(stat1.st_dev != stat2.st_dev) {
+        /* reflinks must be on same filesystem but not necessarily
+         * same st_dev (btrfs subvolumes have different st_dev's) */
+        if(!rm_util_same_device(path1, path2)) {
+            RM_RETURN(RM_LINK_XDEV);
         }
     }
 

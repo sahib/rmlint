@@ -48,8 +48,9 @@ typedef enum RmLinkType {
     RM_LINK_SAME_FILE       = 6,
     RM_LINK_PATH_DOUBLE     = 7,
     RM_LINK_HARDLINK        = 8,
-    RM_LINK_ERROR           = 9,
+    RM_LINK_XDEV            = 9,
     RM_LINK_SYMLINK         = 10,
+    RM_LINK_ERROR           = 11,
 } RmLinkType;
 
 
