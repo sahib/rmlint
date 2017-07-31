@@ -41,9 +41,9 @@
 #endif
 
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <grp.h>
 #include <pwd.h>
@@ -1116,16 +1116,16 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
         GUnixMountEntry *mount = iter->data;
         const char *mountpath = g_unix_mount_get_mount_path(mount);
         int len = strlen(mountpath);
-        if (len > len1 && strncmp(mountpath, path1, len) == 0) {
+        if(len > len1 && strncmp(mountpath, path1, len) == 0) {
             best1 = g_unix_mount_get_device_path(mount);
             len1 = len;
         }
-        if (len > len2 && strncmp(mountpath, path2, len) == 0) {
+        if(len > len2 && strncmp(mountpath, path2, len) == 0) {
             best2 = g_unix_mount_get_device_path(mount);
             len2 = len;
         }
     }
-    gboolean result = (best1 && best2 && strcmp(best1, best2)==0);
+    gboolean result = (best1 && best2 && strcmp(best1, best2) == 0);
     g_list_free_full(mounts, (GDestroyNotify)g_unix_mount_free);
     return result;
 }
