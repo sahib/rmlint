@@ -1597,11 +1597,11 @@ int rm_cmd_main(RmSession *session) {
         RmPath *a = cfg->paths->data;
         g_assert(cfg->paths->next);
         RmPath *b = cfg->paths->next->data;
-        switch(rm_offsets_match(a->path, b->path)) {
-        case RM_OFFSETS_HARDLINK:
-        case RM_OFFSETS_MATCH:
-        case RM_OFFSETS_PATH_DOUBLE:
-        case RM_OFFSETS_SAME_FILE:
+        switch(rm_util_link_type(a->path, b->path)) {
+        case RM_LINK_HARDLINK:
+        case RM_LINK_REFLINK:
+        case RM_LINK_PATH_DOUBLE:
+        case RM_LINK_SAME_FILE:
             session->equal_exit_code = EXIT_SUCCESS;
             cfg->find_duplicates = FALSE;
             cfg->merge_directories = FALSE;

@@ -1102,11 +1102,11 @@ static gboolean rm_util_is_path_double(char *path1, char *path2) {
             rm_util_parent_node(path1) == rm_util_parent_node(path2));
 }
 
-RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
+RmLinkType rm_util_link_type(char *path1, char *path2) {
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 == -1) {
         rm_log_perrorf("Error opening %s in rm_offsets_match", path1);
-        return RM_OFFSETS_ERROR;
+        return RM_LINK_ERROR;
     }
 
 #define RM_RETURN(value)   \
@@ -1119,17 +1119,17 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
     int stat_state = rm_sys_stat(path1, &stat1);
     if(stat_state == -1) {
         rm_log_perrorf("Unable to stat file %s", path1);
-        RM_RETURN(RM_OFFSETS_ERROR);
+        RM_RETURN(RM_LINK_ERROR);
     }
 
     if(!S_ISREG(stat1.st_mode)) {
-        RM_RETURN(RM_OFFSETS_NOT_FILE);
+        RM_RETURN(RM_LINK_NOT_FILE);
     }
 
     int fd2 = rm_sys_open(path2, O_RDONLY);
     if(fd2 == -1) {
         rm_log_perrorf("Error opening %s in rm_offsets_match", path2);
-        RM_RETURN(RM_OFFSETS_ERROR);
+        RM_RETURN(RM_LINK_ERROR);
     }
 
 #undef RM_RETURN
@@ -1144,27 +1144,27 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
     stat_state = rm_sys_stat(path2, &stat2);
     if(stat_state == -1) {
         rm_log_perrorf("Unable to stat file %s", path2);
-        RM_RETURN(RM_OFFSETS_ERROR);
+        RM_RETURN(RM_LINK_ERROR);
     }
 
     if(!S_ISREG(stat2.st_mode)) {
-        RM_RETURN(RM_OFFSETS_NOT_FILE);
+        RM_RETURN(RM_LINK_NOT_FILE);
     }
 
     if(stat1.st_size != stat2.st_size) {
         rm_log_debug_line("Files have different sizes: %lu <> %lu", stat1.st_size,
                           stat2.st_size);
-        RM_RETURN(RM_OFFSETS_WRONG_SIZE);
+        RM_RETURN(RM_LINK_WRONG_SIZE);
     }
 
     if(stat1.st_dev == stat2.st_dev && stat1.st_ino == stat2.st_ino) {
         /* hardlinks or maybe even same file */
         if(strcmp(path1, path2) == 0) {
-            RM_RETURN(RM_OFFSETS_SAME_FILE);
+            RM_RETURN(RM_LINK_SAME_FILE);
         } else if(rm_util_is_path_double(path1, path2)) {
-            RM_RETURN(RM_OFFSETS_PATH_DOUBLE);
+            RM_RETURN(RM_LINK_PATH_DOUBLE);
         } else {
-            RM_RETURN(RM_OFFSETS_HARDLINK);
+            RM_RETURN(RM_LINK_HARDLINK);
         }
     }
 
@@ -1181,18 +1181,18 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
         if(physical_1 != physical_2) {
             rm_log_debug_line("Files differ at offset %lu: %lu <> %lu", logical_current,
                               physical_1, physical_2);
-            RM_RETURN(RM_OFFSETS_DIFFER);
+            RM_RETURN(RM_LINK_NONE);
         }
         if(logical_next_1 != logical_next_2) {
             rm_log_debug_line("Next offsets differ after %lu: %lu <> %lu",
                               logical_current, logical_next_1, logical_next_2);
-            RM_RETURN(RM_OFFSETS_DIFFER);
+            RM_RETURN(RM_LINK_NONE);
         }
 
         if(physical_1 == 0) {
             rm_log_debug_line(
                 "Can't determine whether files are clones (maybe inline extents?)");
-            RM_RETURN(RM_OFFSETS_NO_DATA);
+            RM_RETURN(RM_LINK_MAYBE_REFLINK);
         }
 
         rm_log_debug_line("Offsets match at logical=%lu, physical=%lu", logical_current,
@@ -1201,20 +1201,20 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
         if(logical_next_1 == logical_current) {
             rm_log_debug_line(
                 "rm_offsets_match() giving up: file1_offset_next==file_offset_current");
-            RM_RETURN(RM_OFFSETS_NO_DATA)
+            RM_RETURN(RM_LINK_ERROR)
         }
 
         if(logical_next_1 >= (RmOff)stat1.st_size) {
             /* phew, we got to the end */
-            RM_RETURN(RM_OFFSETS_MATCH)
+            RM_RETURN(RM_LINK_REFLINK)
         }
 
         logical_current = logical_next_1;
     }
 
-    RM_RETURN(RM_OFFSETS_ERROR);
+    RM_RETURN(RM_LINK_ERROR);
 #else
-    RM_RETURN(RM_OFFSETS_NO_DATA);
+    RM_RETURN(RM_LINK_NO_DATA);
 #endif
 
 #undef RM_RETURN
