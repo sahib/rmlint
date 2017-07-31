@@ -1081,6 +1081,20 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
     return result;
 }
 
+#else /* Probably FreeBSD */
+
+RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
+                            _UNUSED RmOff *file_offset_next) {
+    return 0;
+}
+
+RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offset,
+                              _UNUSED RmOff *file_offset_next) {
+    return 0;
+}
+
+#endif
+
 static gboolean rm_util_is_path_double(char *path1, char *path2) {
     char *basename1 = rm_util_basename(path1);
     char *basename2 = rm_util_basename(path2);
@@ -1154,6 +1168,8 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
         }
     }
 
+#if HAVE_FIEMAP
+
     RmOff logical_current = 0;
 
     while(!rm_session_was_aborted()) {
@@ -1197,26 +1213,13 @@ RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
     }
 
     RM_RETURN(RM_OFFSETS_ERROR);
+#else
+    RM_RETURN(RM_OFFSETS_NO_DATA);
+#endif
+
 #undef RM_RETURN
 }
 
-#else /* Probably FreeBSD */
-
-RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
-                            _UNUSED RmOff *file_offset_next) {
-    return 0;
-}
-
-RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offset,
-                              _UNUSED RmOff *file_offset_next) {
-    return 0;
-}
-
-RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2) {
-    return (path1 == path2) ? RM_OFFSETS_MATCH : RM_OFFSETS_NO_DATA;
-}
-
-#endif
 
 /////////////////////////////////
 //  GTHREADPOOL WRAPPERS       //
