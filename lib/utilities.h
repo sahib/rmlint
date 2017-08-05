@@ -39,17 +39,20 @@
 #include "pathtricia.h"
 
 /* return values for rm_offsets_match */
-typedef enum RmOffsetsMatchCode {
-    RM_OFFSETS_MATCH        = EXIT_SUCCESS,
-    RM_OFFSETS_DIFFER       = EXIT_FAILURE,
-    RM_OFFSETS_NOT_FILE     = 3,
-    RM_OFFSETS_WRONG_SIZE   = 4,
-    RM_OFFSETS_NO_DATA      = 5,
-    RM_OFFSETS_SAME_FILE    = 6,
-    RM_OFFSETS_PATH_DOUBLE  = 7,
-    RM_OFFSETS_HARDLINK     = 8,
-    RM_OFFSETS_ERROR        = 9,
-} RmOffsetsMatchCode;
+typedef enum RmLinkType {
+    RM_LINK_REFLINK         = EXIT_SUCCESS,
+    RM_LINK_NONE            = EXIT_FAILURE,
+    RM_LINK_NOT_FILE        = 3,
+    RM_LINK_WRONG_SIZE      = 4,
+    RM_LINK_MAYBE_REFLINK   = 5,
+    RM_LINK_SAME_FILE       = 6,
+    RM_LINK_PATH_DOUBLE     = 7,
+    RM_LINK_HARDLINK        = 8,
+    RM_LINK_XDEV            = 9,
+    RM_LINK_SYMLINK         = 10,
+    RM_LINK_ERROR           = 11,
+} RmLinkType;
+
 
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
@@ -425,7 +428,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
  * @brief Test if two files have identical fiemaps.
  * @retval see RmOffsetsMatchCode enum definition.
  */
-RmOffsetsMatchCode rm_offsets_match(char *path1, char *path2);
+RmLinkType rm_util_link_type(char *path1, char *path2);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //

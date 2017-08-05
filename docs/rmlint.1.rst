@@ -752,7 +752,9 @@ OTHER STAND-ALONE COMMANDS
         6: file1 and file2 are the same path
         7: file1 and file2 are the same file under different mountpoints
         8: files are hardlinks
-        9: other error encountered
+        9: files are symlinks (TODO)
+        10: files are not on same device
+        11: other error encountered
 
 
 EXAMPLES

@@ -271,13 +271,13 @@ int rm_session_dedupe_main(RmCfg *cfg) {
 
     /* fsync's needed to flush extent mapping */
     if(fsync(source_fd) != 0) {
-        rm_log_warning_line("Error syncing source file %s: %s",
-                            source->path, strerror(errno));
+        rm_log_warning_line("Error syncing source file %s: %s", source->path,
+                            strerror(errno));
     }
 
     if(fsync(dedupe.info._DEST_FD) != 0) {
-        rm_log_warning_line("Error syncing dest file %s: %s",
-                            dest->path, strerror(errno));
+        rm_log_warning_line("Error syncing dest file %s: %s", dest->path,
+                            strerror(errno));
     }
 
     int ret = 0;
@@ -377,19 +377,19 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
     RmPath *b = cfg->paths->next->data;
     rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
 
-    int result = rm_offsets_match(a->path, b->path);
+    int result = rm_util_link_type(a->path, b->path);
     switch(result) {
-        case RM_OFFSETS_DIFFER:
-            rm_log_debug_line("Offsets differ");
-            break;
-        case RM_OFFSETS_MATCH:
-            rm_log_debug_line("Offsets match");
-        case RM_OFFSETS_NO_DATA:
-            rm_log_debug_line("Can't read file offsets (maybe inline extents?)");
-            break;
-        default:
-            break;
+    case RM_LINK_REFLINK:
+        rm_log_debug_line("Offsets match");
+        break;
+    case RM_LINK_NONE:
+        rm_log_debug_line("Offsets differ");
+        break;
+    case RM_LINK_MAYBE_REFLINK:
+        rm_log_debug_line("Can't read file offsets (maybe inline extents?)");
+        break;
+    default:
+        break;
     }
-
     return result;
 }
