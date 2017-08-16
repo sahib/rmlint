@@ -1383,6 +1383,32 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
 }
 
 
+static RmShredGroup *rm_shred_keep_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTag *tag) {
+    if(!tag->session->cfg->keep_hardlinked_dupes) {
+        return NULL;
+    }
+
+    if(group->status != RM_SHRED_GROUP_FINISHING) {
+        return NULL;
+    }
+
+    RmShredGroup *rejects = NULL;
+    RmFile *headfile = group->held_files->head->data;
+    for(GList *iter = group->held_files->head->next, *next = NULL; iter;
+        iter = next) {
+        next = iter->next;
+        RmFile *curr = iter->data;
+        if(headfile->inode == curr->inode && headfile->dev == curr->dev) {
+            if(!rejects) {
+                rejects = rm_shred_create_rejects(group, curr);
+            }
+            rm_shred_group_transfer(curr, group, rejects);
+        }
+    }
+
+    return rejects;
+}
+
 /* post-process a group:
  * decide which file(s) are originals
  * maybe split out mtime rejects (--mtime-window option)
@@ -1403,6 +1429,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     rm_shred_group_find_original(tag->session, group->held_files, group->status);
     rm_shred_group_postprocess(rm_shred_basename_rejects(group, tag), tag);
     rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag);
+    rm_shred_group_postprocess(rm_shred_keep_hardlink_rejects(group, tag), tag);
 
     /* re-check whether what is left of the group still meets all criteria */
     group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING

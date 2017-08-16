@@ -1283,6 +1283,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"honour-dir-layout"        , 'j'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(honour_dir_layout)        , _("Only find directories with same file layout")                          , NULL}     ,
         {"perms"                    , 'z'  , OPTIONAL  , G_OPTION_ARG_CALLBACK  , FUNC(permissions)              , _("Only use files with certain permissions")                              , "[RWX]+"} ,
         {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
+        {"keep-hardlinked"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->keep_hardlinked_dupes    , _("Keep hardlink that are linked to any original")                        , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
 

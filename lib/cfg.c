@@ -55,6 +55,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->find_badids = true;
     cfg->find_badlinks = true;
     cfg->find_hardlinked_dupes = true;
+    cfg->keep_hardlinked_dupes = false;
     cfg->build_fiemap = true;
     cfg->crossdev = true;
     cfg->list_mounts = true;

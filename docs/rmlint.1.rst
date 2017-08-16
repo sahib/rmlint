@@ -299,9 +299,20 @@ Traversal Options
 
 :``-l --hardlinked`` (**default**) / ``-L --no-hardlinked``:
 
-    Whether to report hardlinked files as duplicates.
-    Hardlinked files will not appear as space waste in the statistics, since
-    they do not allocate any extra space.
+    Whether to report hardlinked files as duplicates. If ``--no-hardlinked`` is given,
+    ``rmlint`` will filter all hardlinks to files it already knows of.
+
+    Note that hardlinked files will not appear as space waste in the
+    statistics, since they do not allocate any extra space if not all of them are removed.
+
+    Also look into ``--keep-hardlinked`` below.
+
+:``--keep-hardlinked`` (**default**: No.):
+
+    If set, rmlint will not delete any files that are linked to any original in their respective group.
+    Such files will be displayed like original (i.e. for the default output with a "ls" in front).
+    The reasoning here is to maximize the number of kept files, while maximizing the number of freed space:
+    Removing hardlinks to originals will not allocate any free space.
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
