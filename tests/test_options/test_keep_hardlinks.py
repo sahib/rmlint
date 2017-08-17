@@ -25,9 +25,9 @@ def test_keep_hardlinks():
     assert data[2]["is_original"] is False
 
     head, *data, footer = run_rmlint('--keep-hardlinked -S a')
-    assert data[0]["path"].endswith("file_b")
+    assert data[0]["path"].endswith("file_a")
     assert data[0]["is_original"] is True
-    assert data[1]["path"].endswith("file_a")
+    assert data[1]["path"].endswith("file_b")
     assert data[1]["is_original"] is True
     assert data[2]["path"].endswith("file_z")
     assert data[2]["is_original"] is False
