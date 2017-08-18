@@ -299,8 +299,10 @@ Traversal Options
 
 :``-l --hardlinked`` (**default**) / ``-L --no-hardlinked``:
 
-    Whether to report hardlinked files as duplicates. If ``--no-hardlinked`` is given,
-    ``rmlint`` will filter all hardlinks to files it already knows of.
+    Whether to report hardlinked files as duplicates. With ``--no-hardlinked``,
+    if a set of hardlinked files is encountered, all except one are ignored.
+    The "highest ranked" (see ``-S``) of the set is the one that will be used
+    for further processing.
 
     Note that hardlinked files will not appear as space waste in the
     statistics, since they do not allocate any extra space if not all of them are removed.
