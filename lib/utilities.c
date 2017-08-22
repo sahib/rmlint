@@ -1129,6 +1129,7 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
     g_list_free_full(mounts, (GDestroyNotify)g_unix_mount_free);
     return result;
 }
+
 RmLinkType rm_util_link_type(char *path1, char *path2) {
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 == -1) {
@@ -1249,7 +1250,7 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
 
     RM_RETURN(RM_LINK_ERROR);
 #else
-    RM_RETURN(RM_LINK_NO_DATA);
+    RM_RETURN(RM_LINK_NONE);
 #endif
 
 #undef RM_RETURN
