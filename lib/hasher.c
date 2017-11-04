@@ -131,34 +131,26 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
 #endif
 }
 
-static gboolean rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path,
+static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
+                                       RmDigest *digest, char *path,
                                        gsize *bytes_actually_read) {
-    /* Fake an IO operation on the symlink.  */
-    RmBuffer *buf = rm_buffer_get(hasher->mem_pool);
-    buf->len = 256;
-    memset(buf->data, 0, buf->len);
+    /* Read contents of symlink (i.e. path of symlink's target).  */
 
-    RmStat stat_buf;
-    if(rm_sys_stat(path, &stat_buf) == -1) {
-        /* Oops, that did not work out, report as an error */
-        rm_log_perror("Cannot stat symbolic link");
+    RmBuffer *buffer = rm_buffer_get(hasher->mem_pool);
+    gint len = readlink(path, (char *)buffer->data, rm_buffer_size(hasher->mem_pool));
+
+    if (len < 0) {
+        rm_log_perror("Cannot read symbolic link");
+        rm_buffer_release(buffer);
         return FALSE;
     }
 
-    gint data_size = snprintf((char *)buf->data, hasher->buf_size, "%ld:%ld",
-                              (long)stat_buf.st_dev, (long)stat_buf.st_ino);
-    buf->len = data_size;
-    buf->digest = digest;
-    *bytes_actually_read = buf->len;
+    *bytes_actually_read = len;
+    buffer->len = len;
+    buffer->digest = digest;
+    buffer->user_data = NULL;
+    rm_util_thread_pool_push(hashpipe, buffer);
 
-    rm_digest_buffered_update(buf);
-
-    /* In case of paranoia: shrink the used data buffer, so comparasion works
-     * as expected. Otherwise a full buffer is used with possibly different
-     * content */
-    if(digest->type == RM_DIGEST_PARANOID) {
-        rm_digest_paranoia_shrink(digest, data_size);
-    }
     return TRUE;
 }
 
@@ -469,7 +461,8 @@ gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offse
     gboolean success = false;
 
     if(is_symlink) {
-        success = rm_hasher_symlink_read(task->hasher, task->digest, path, &bytes_read);
+        success = rm_hasher_symlink_read(task->hasher, task->hashpipe, task->digest,
+                                         path, &bytes_read);
     } else if(task->hasher->use_buffered_read) {
         success = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest,
                                           path, start_offset, bytes_to_read, &bytes_read);
