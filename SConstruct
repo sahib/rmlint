@@ -674,6 +674,39 @@ SConsEnvironment.InstallPerm = InstallPerm
 # Your extra checks here
 env = conf.Finish()
 
+def get_cpu_count():
+    # priority: environ('NUM_CPU'), else try to read actual cpu count, else fallback
+    fallback = 4
+
+    if 'NUM_CPU' in os.environ:
+        return int(os.environ.get('NUM_CPU'))
+
+    # try multiprocessing.cpu_count() (Python 2.6+)
+    try:
+        import multiprocessing
+        return multiprocessing.cpu_count()
+    except (ImportError, NotImplementedError):
+        pass
+
+   # try psutil.cpu_count()
+    try:
+        import psutil
+        return psutil.cpu_count()
+    except (ImportError, AttributeError):
+        pass
+
+    # default value
+    return fallback
+
+
+# set number of parallel jobs during build
+# note: while not particularly intuitive or obvious from the documentation,
+# SetOption() will *not* over-ride commandline option passed by `scons -j<n>`
+# or `scons --jobs=<n>`
+SetOption('num_jobs', get_cpu_count())
+
+print "Running with --jobs=" + repr(GetOption('num_jobs'))
+
 library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')
 env.Default(library)
