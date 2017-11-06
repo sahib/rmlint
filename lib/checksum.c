@@ -146,7 +146,7 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         {"md5", RM_DIGEST_MD5},
         {"city512", RM_DIGEST_CITY512},
         {"xxhash", RM_DIGEST_XXHASH},
-        {"farmhash", RM_DIGEST_XXHASH},
+        {"farmhash", RM_DIGEST_FARMHASH},
         {"murmur", RM_DIGEST_MURMUR},
         {"murmur128", RM_DIGEST_MURMUR},
         {"murmur256", RM_DIGEST_MURMUR256},
