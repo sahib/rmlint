@@ -161,7 +161,6 @@ General Options
 
     There are also some compound variations of the above functions:
 
-    * **bastard:** 256bit, combining **city**, and **murmur**.
     * **city256, city512, murmur256, murmur512:** Use multiple 128-bit hashes with different seeds.
     * **spooky32, spooky64:** Faster version of **spooky** with less bits. We strongly advise against using these.
 
@@ -173,7 +172,7 @@ General Options
     * **-p** is equivalent to **--algorithm=sha512**
     * **-pp** is equivalent to **--algorithm=paranoid**
 
-    * **-P** is equivalent to **--algorithm bastard**
+    * **-P** is equivalent to **--algorithm <TODO>**
     * **-PP** is equivalent to **--algorithm spooky**
 
 :``-v --loud`` / ``-V --quiet``:

@@ -756,7 +756,7 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
         cfg->checksum_type = RM_DIGEST_XXHASH;
         break;
     case -1:
-        cfg->checksum_type = RM_DIGEST_BASTARD;
+        cfg->checksum_type = RM_DIGEST_CITY256;
         break;
     case 0:
         /* leave users choice of -a (default) */
@@ -799,9 +799,6 @@ static gboolean rm_cmd_parse_algorithm(_UNUSED const char *option_name,
     if(cfg->checksum_type == RM_DIGEST_UNKNOWN) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Unknown hash algorithm: '%s'"), value);
         return false;
-    } else if(cfg->checksum_type == RM_DIGEST_BASTARD) {
-        session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
-        session->hash_seed2 = GPOINTER_TO_UINT(&session);
     }
     return true;
 }

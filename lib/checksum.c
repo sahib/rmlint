@@ -170,8 +170,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         {"ext", RM_DIGEST_EXT},
         {"cumulative", RM_DIGEST_CUMULATIVE},
         {"paranoid", RM_DIGEST_PARANOID},
-        {"bastard", RM_DIGEST_BASTARD},
-        {"bastard256", RM_DIGEST_BASTARD},
         {"city", RM_DIGEST_CITY},
         {"city128", RM_DIGEST_CITY},
         {"city256", RM_DIGEST_CITY256},
@@ -230,7 +228,6 @@ const char *rm_digest_type_to_string(RmDigestType type) {
                                   [RM_DIGEST_BLAKE2BP] = "blake2bp",
                                   [RM_DIGEST_MURMUR256] = "murmur256",
                                   [RM_DIGEST_CITY256] = "city256",
-                                  [RM_DIGEST_BASTARD] = "bastard",
                                   [RM_DIGEST_MURMUR512] = "murmur512",
                                   [RM_DIGEST_CITY512] = "city512",
                                   [RM_DIGEST_EXT] = "ext",
@@ -244,16 +241,15 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 
 /*  TODO: remove? */
 int rm_digest_type_to_multihash_id(RmDigestType type) {
-    static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,  [RM_DIGEST_MURMUR] = 17,
-                        [RM_DIGEST_SPOOKY] = 14,   [RM_DIGEST_SPOOKY32] = 16,
-                        [RM_DIGEST_SPOOKY64] = 18, [RM_DIGEST_CITY] = 15,
-                        [RM_DIGEST_MD5] = 1,       [RM_DIGEST_SHA1] = 2,
-                        [RM_DIGEST_SHA256] = 4,    [RM_DIGEST_SHA512] = 6,
-                        [RM_DIGEST_MURMUR256] = 7, [RM_DIGEST_CITY256] = 8,
-                        [RM_DIGEST_BASTARD] = 9,   [RM_DIGEST_MURMUR512] = 10,
-                        [RM_DIGEST_CITY512] = 11,  [RM_DIGEST_EXT] = 12,
-                        [RM_DIGEST_FARMHASH] = 19, [RM_DIGEST_CUMULATIVE] = 13,
-                        [RM_DIGEST_PARANOID] = 14};
+    static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,   [RM_DIGEST_MURMUR] = 17,
+                        [RM_DIGEST_SPOOKY] = 14,    [RM_DIGEST_SPOOKY32] = 16,
+                        [RM_DIGEST_SPOOKY64] = 18,  [RM_DIGEST_CITY] = 15,
+                        [RM_DIGEST_MD5] = 1,        [RM_DIGEST_SHA1] = 2,
+                        [RM_DIGEST_SHA256] = 4,     [RM_DIGEST_SHA512] = 6,
+                        [RM_DIGEST_MURMUR256] = 7,  [RM_DIGEST_CITY256] = 8,
+                        [RM_DIGEST_MURMUR512] = 10, [RM_DIGEST_CITY512] = 11,
+                        [RM_DIGEST_EXT] = 12,       [RM_DIGEST_FARMHASH] = 19,
+                        [RM_DIGEST_CUMULATIVE] = 13,[RM_DIGEST_PARANOID] = 14};
 
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }
@@ -363,7 +359,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         break;
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
-    case RM_DIGEST_BASTARD:
         digest->bytes = 256 / 8;
         break;
     case RM_DIGEST_SPOOKY:
@@ -402,11 +397,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
         }
     }
 
-    if(digest->type == RM_DIGEST_BASTARD) {
-        /* bastard type *always* has *pure* murmur hash for first checksum
-         * and seeded city for second checksum */
-        digest->checksum[0].first = digest->checksum[0].second = 0;
-    }
     return digest;
 }
 
@@ -466,7 +456,6 @@ void rm_digest_free(RmDigest *digest) {
     case RM_DIGEST_CITY512:
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_CITY256:
-    case RM_DIGEST_BASTARD:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
@@ -571,14 +560,6 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
             old = CityHash128WithSeed((const char *)data, size, old);
             memcpy(&digest->checksum[block], &old, sizeof(uint128));
         }
-        break;
-    case RM_DIGEST_BASTARD:
-        MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[0].first,
-                            &digest->checksum[0]);
-
-        uint128 old = {digest->checksum[1].first, digest->checksum[1].second};
-        old = CityHash128WithSeed((const char *)data, size, old);
-        memcpy(&digest->checksum[1], &old, sizeof(uint128));
         break;
     case RM_DIGEST_CUMULATIVE: {
         /*  This only XORS the two checksums. */
@@ -726,7 +707,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_MURMUR512:
     case RM_DIGEST_XXHASH:
     case RM_DIGEST_FARMHASH:
-    case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
         self = rm_digest_new(digest->type, 0, 0, digest->bytes, FALSE);
@@ -771,7 +751,6 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     case RM_DIGEST_FARMHASH:
     case RM_DIGEST_MURMUR256:
     case RM_DIGEST_MURMUR512:
-    case RM_DIGEST_BASTARD:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
     case RM_DIGEST_PARANOID:
