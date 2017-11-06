@@ -144,7 +144,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         RmDigestType code;
     } code_entries[] = {
         {"md5", RM_DIGEST_MD5},
-        {"city512", RM_DIGEST_CITY512},
         {"xxhash", RM_DIGEST_XXHASH},
         {"farmhash", RM_DIGEST_FARMHASH},
         {"murmur", RM_DIGEST_MURMUR},
@@ -161,8 +160,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         {"blake2b", RM_DIGEST_BLAKE2B},
         {"blake2sp", RM_DIGEST_BLAKE2SP},
         {"blake2bp", RM_DIGEST_BLAKE2BP},
-        {"city256", RM_DIGEST_CITY256},
-        {"murmur256", RM_DIGEST_MURMUR256},
         {"spooky32", RM_DIGEST_SPOOKY32},
         {"spooky64", RM_DIGEST_SPOOKY64},
         {"spooky128", RM_DIGEST_SPOOKY},
@@ -183,6 +180,9 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
 
     const size_t n_codes = sizeof(code_entries) / sizeof(code_entries[0]);
     for(size_t idx = 0; idx < n_codes; idx++) {
+        if(g_hash_table_contains(*code_table, code_entries[idx].name)) {
+            rm_log_error_line("Duplicate entry for %s", code_entries[idx].name);
+        }
         g_hash_table_insert(*code_table,
                             code_entries[idx].name,
                             GUINT_TO_POINTER(code_entries[idx].code));
