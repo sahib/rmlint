@@ -159,21 +159,19 @@ General Options
     **sha512**, **farmhash**, **sha3**, **sha3-256**, **sha3-384**, **sha3-512**,
     **blake2s**, **blake2b**, **blake2sp**, **blake2bp**.
 
-    There are also some compound variations of the above functions:
-
-    * **city256, city512, murmur256, murmur512:** Use multiple 128-bit hashes with different seeds.
-    * **spooky32, spooky64:** Faster version of **spooky** with less bits. We strongly advise against using these.
+    There are also some weaker hashes; we strongly advise against using these:
+    * **spooky32, spooky64:** Faster version of **spooky** with less bits.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
     Use ``-pp`` if you want byte-by-byte comparison without any hashing.
 
-    * **-p** is equivalent to **--algorithm=sha512**
+    * **-p** is equivalent to **--algorithm=<TODO>**
     * **-pp** is equivalent to **--algorithm=paranoid**
 
-    * **-P** is equivalent to **--algorithm <TODO>**
-    * **-PP** is equivalent to **--algorithm spooky**
+    * **-P** is equivalent to **--algorithm=<TODO>**
+    * **-PP** is equivalent to **--algorithm=<TODO>**
 
 :``-v --loud`` / ``-V --quiet``:
 

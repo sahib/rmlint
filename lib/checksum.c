@@ -147,9 +147,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         {"xxhash", RM_DIGEST_XXHASH},
         {"farmhash", RM_DIGEST_FARMHASH},
         {"murmur", RM_DIGEST_MURMUR},
-        {"murmur128", RM_DIGEST_MURMUR},
-        {"murmur256", RM_DIGEST_MURMUR256},
-        {"murmur512", RM_DIGEST_MURMUR512},
         {"sha1", RM_DIGEST_SHA1},
         {"sha256", RM_DIGEST_SHA256},
         {"sha3", RM_DIGEST_SHA3_256},
@@ -168,9 +165,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         {"cumulative", RM_DIGEST_CUMULATIVE},
         {"paranoid", RM_DIGEST_PARANOID},
         {"city", RM_DIGEST_CITY},
-        {"city128", RM_DIGEST_CITY},
-        {"city256", RM_DIGEST_CITY256},
-        {"city512", RM_DIGEST_CITY512},
 #if HAVE_SHA512
         {"sha512", RM_DIGEST_SHA512},
 #endif
@@ -226,10 +220,6 @@ const char *rm_digest_type_to_string(RmDigestType type) {
                                   [RM_DIGEST_BLAKE2B] = "blake2b",
                                   [RM_DIGEST_BLAKE2SP] = "blake2sp",
                                   [RM_DIGEST_BLAKE2BP] = "blake2bp",
-                                  [RM_DIGEST_MURMUR256] = "murmur256",
-                                  [RM_DIGEST_CITY256] = "city256",
-                                  [RM_DIGEST_MURMUR512] = "murmur512",
-                                  [RM_DIGEST_CITY512] = "city512",
                                   [RM_DIGEST_EXT] = "ext",
                                   [RM_DIGEST_CUMULATIVE] = "cumulative",
                                   [RM_DIGEST_PARANOID] = "paranoid",
@@ -246,8 +236,6 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
                         [RM_DIGEST_SPOOKY64] = 18,  [RM_DIGEST_CITY] = 15,
                         [RM_DIGEST_MD5] = 1,        [RM_DIGEST_SHA1] = 2,
                         [RM_DIGEST_SHA256] = 4,     [RM_DIGEST_SHA512] = 6,
-                        [RM_DIGEST_MURMUR256] = 7,  [RM_DIGEST_CITY256] = 8,
-                        [RM_DIGEST_MURMUR512] = 10, [RM_DIGEST_CITY512] = 11,
                         [RM_DIGEST_EXT] = 12,       [RM_DIGEST_FARMHASH] = 19,
                         [RM_DIGEST_CUMULATIVE] = 13,[RM_DIGEST_PARANOID] = 14};
 
@@ -349,17 +337,9 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
     case RM_DIGEST_BLAKE2BP:
         BLAKE_INIT(blake2bp, BLAKE2B);
         return digest;
-    case RM_DIGEST_MURMUR512:
-    case RM_DIGEST_CITY512:
-        digest->bytes = 512 / 8;
-        break;
     case RM_DIGEST_EXT:
         /* gets allocated on rm_digest_update() */
         digest->bytes = ext_size;
-        break;
-    case RM_DIGEST_MURMUR256:
-    case RM_DIGEST_CITY256:
-        digest->bytes = 256 / 8;
         break;
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_MURMUR:
@@ -375,28 +355,11 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
             digest->paranoid->shadow_hash =
                 rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
         }
-        break;
+        return digest;
     default:
         rm_assert_gentle_not_reached();
     }
-
-    /* starting values to let us generate up to 4 different hashes in parallel with
-     * different starting seeds:
-     * */
-    static const RmOff seeds[4] = {0x0000000000000000, 0xf0f0f0f0f0f0f0f0,
-                                   0x3333333333333333, 0xaaaaaaaaaaaaaaaa};
-
-    if(digest->bytes > 0 && type != RM_DIGEST_PARANOID) {
-        const int n_seeds = sizeof(seeds) / sizeof(seeds[0]);
-
-        /* checksum type - allocate memory and initialise */
-        digest->checksum = g_slice_alloc0(digest->bytes);
-        for(gsize block = 0; block < (digest->bytes / 16); block++) {
-            digest->checksum[block].first = seeds[block % n_seeds] ^ seed1;
-            digest->checksum[block].second = seeds[block % n_seeds] ^ seed2;
-        }
-    }
-
+    digest->checksum = g_slice_alloc0(digest->bytes);       
     return digest;
 }
 
@@ -451,11 +414,7 @@ void rm_digest_free(RmDigest *digest) {
         break;
     case RM_DIGEST_EXT:
     case RM_DIGEST_CUMULATIVE:
-    case RM_DIGEST_MURMUR512:
     case RM_DIGEST_XXHASH:
-    case RM_DIGEST_CITY512:
-    case RM_DIGEST_MURMUR256:
-    case RM_DIGEST_CITY256:
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_SPOOKY32:
     case RM_DIGEST_SPOOKY64:
@@ -533,34 +492,26 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     case RM_DIGEST_FARMHASH:
         digest->checksum[0].first = cfarmhash((const char *)data, size);
         break;
-    case RM_DIGEST_MURMUR512:
-    case RM_DIGEST_MURMUR256:
     case RM_DIGEST_MURMUR:
-        for(guint8 block = 0; block < (digest->bytes / 16); block++) {
 #if RM_PLATFORM_32
-            MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum[block].first,
-                                &digest->checksum[block]);
+        MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum->first,
+                            digest->checksum);
 #elif RM_PLATFORM_64
-            MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum[block].first,
-                                &digest->checksum[block]);
+        MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum->first,
+                            digest->checksum);
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
-        }
         break;
-    case RM_DIGEST_CITY:
-    case RM_DIGEST_CITY256:
-    case RM_DIGEST_CITY512:
-        for(guint8 block = 0; block < (digest->bytes / 16); block++) {
-            /* Opt out for the more optimized version.
-            * This needs the crc command of sse4.2
-            * (available on Intel Nehalem and up; my amd box doesn't have this though)
-            */
-            uint128 old = {digest->checksum[block].first, digest->checksum[block].second};
-            old = CityHash128WithSeed((const char *)data, size, old);
-            memcpy(&digest->checksum[block], &old, sizeof(uint128));
-        }
-        break;
+    case RM_DIGEST_CITY: {
+        /* Opt out for the more optimized version.
+        * This needs the crc command of sse4.2
+        * (available on Intel Nehalem and up; my amd box doesn't have this though)
+        */
+        uint128 old = {digest->checksum->first, digest->checksum->second};
+        old = CityHash128WithSeed((const char *)data, size, old);
+        memcpy(digest->checksum, &old, sizeof(uint128));
+    } break;
     case RM_DIGEST_CUMULATIVE: {
         /*  This only XORS the two checksums. */
         for(gsize i = 0; i < digest->bytes; ++i) {
@@ -701,10 +652,6 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     case RM_DIGEST_SPOOKY64:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-    case RM_DIGEST_CITY256:
-    case RM_DIGEST_MURMUR256:
-    case RM_DIGEST_CITY512:
-    case RM_DIGEST_MURMUR512:
     case RM_DIGEST_XXHASH:
     case RM_DIGEST_FARMHASH:
     case RM_DIGEST_CUMULATIVE:
@@ -745,12 +692,8 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     case RM_DIGEST_SPOOKY:
     case RM_DIGEST_MURMUR:
     case RM_DIGEST_CITY:
-    case RM_DIGEST_CITY256:
-    case RM_DIGEST_CITY512:
     case RM_DIGEST_XXHASH:
     case RM_DIGEST_FARMHASH:
-    case RM_DIGEST_MURMUR256:
-    case RM_DIGEST_MURMUR512:
     case RM_DIGEST_CUMULATIVE:
     case RM_DIGEST_EXT:
     case RM_DIGEST_PARANOID:

@@ -214,8 +214,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
     cksum_types = [
         'paranoid', 'sha1', 'sha256', 'spooky', 'city',
-        'md5', 'city256', 'city512', 'murmur', 'murmur256', 'murmur512',
-        'spooky32', 'spooky64', 'xxhash', 'farmhash',
+        'md5', 'murmur', 'spooky32', 'spooky64', 'xxhash', 'farmhash',
         'sha3-256', 'sha3-384', 'sha3-512',
         'blake2s', 'blake2b', 'blake2sp', 'blake2bp',
     ]

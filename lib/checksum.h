@@ -52,10 +52,6 @@ typedef enum RmDigestType {
     RM_DIGEST_BLAKE2SP /*  Parallel version of BLAKE2P */,
     RM_DIGEST_BLAKE2BP /*  Parallel version of BLAKE2S */,
     RM_DIGEST_BLAKE2XS,
-    RM_DIGEST_MURMUR256,
-    RM_DIGEST_CITY256,
-    RM_DIGEST_MURMUR512,
-    RM_DIGEST_CITY512,
     RM_DIGEST_XXHASH,
     RM_DIGEST_FARMHASH,
 

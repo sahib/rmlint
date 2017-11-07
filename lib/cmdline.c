@@ -753,10 +753,10 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-        cfg->checksum_type = RM_DIGEST_XXHASH;
+        cfg->checksum_type = RM_DIGEST_MURMUR;
         break;
     case -1:
-        cfg->checksum_type = RM_DIGEST_CITY256;
+        cfg->checksum_type = RM_DIGEST_CITY;
         break;
     case 0:
         /* leave users choice of -a (default) */

@@ -158,12 +158,9 @@ int rm_hasher_main(int argc, const char **argv) {
                _("Multi-threaded file digest (hash) calculator.\n"
                  "\n  Available digest types:"
                  "\n    %s\n"
-                 "\n  Versions with different bit numbers:"
-                 "\n    %s\n"
                  "\n  Supported, but not useful:"
                  "\n    %s\n"),
                "spooky, city, xxhash, sha{1,256,512}, md5, murmur",
-               "spooky{32,64,128}, city{128,256,512}, murmur{512}",
                "farmhash, cumulative, paranoid, ext");
 
     g_option_group_add_entries(main_group, entries);
