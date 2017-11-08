@@ -54,10 +54,13 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
+typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data, RmOff size);
+
 typedef struct RmDigestSpec {
     const int bits;
     void (*init)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
     void (*free)(RmDigest *digest);
+    RmDigestUpdateFunc update;
 } RmDigestSpec;
 
 /*
@@ -88,6 +91,80 @@ static void rm_digest_generic_free(RmDigest *digest) {
         g_slice_free1(digest->bytes, digest->checksum);
     }
 }
+
+/*
+ ****** spooky hashes ******
+ */
+
+static void rm_digest_spooky32_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+    checksum->first = spooky_hash32(data, size, checksum->first);
+}
+
+static void rm_digest_spooky64_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+    checksum->first = spooky_hash64(data, size, checksum->first);
+}
+
+static void rm_digest_spooky_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+    spooky_hash128(data, size, (uint64_t *)&checksum->first, (uint64_t *)&checksum->second);
+}
+
+/*
+ ****** xxhash ******
+ */
+
+static void rm_digest_xxhash_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+    checksum->first = XXH64(data, size, checksum->first);
+}
+
+/*
+ ****** farmhash ******
+ */
+
+static void rm_digest_farmhash_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+    /* TODO: this won't work, it's not cumulative */
+    checksum->first = cfarmhash((const char *)data, size);
+}
+
+/*
+ ****** murmur ******
+ */
+
+static void rm_digest_murmur_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+#if RM_PLATFORM_32
+    MurmurHash3_x86_128(data, size, (uint32_t)checksum->first, checksum);
+#elif RM_PLATFORM_64
+    MurmurHash3_x64_128(data, size, (uint32_t)checksum->first, checksum);
+#else
+#error "Probably not a good idea to compile rmlint on 16bit."
+#endif
+}
+
+/*
+ ****** cityhash ******
+ */
+
+static void rm_digest_city_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+    /* There is a more optimized version but it needs the crc command of sse4.2
+    * (available on Intel Nehalem and up; my amd box doesn't have this though)
+    */
+    uint128 old = {checksum->first, checksum->second};
+    old = CityHash128WithSeed((const char *)data, size, old);
+    memcpy(checksum, &old, sizeof(uint128));
+}
+
+
+/*
+ ****** cumulative ******
+ */
+
+static void rm_digest_cumulative_update(guint8 *checksum, const unsigned char *data, RmOff size) {
+    /*  This only XORS the two checksums. */
+    size = MIN(size, 16);
+    for(gsize i = 0; i < size; ++i) {
+        checksum[i] ^= ((guint8 *)data)[i % size];
+    }
+}
+
 
 /*
  ****** glib hash algorithm interface ******
@@ -204,6 +281,24 @@ static void rm_digest_ext_init(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff
     rm_digest_generic_init(digest, seed1, seed2, ext_size, use_shadow_hash);
 }
 
+static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    /* Data is assumed to be a hex representation of a checksum.
+     * Needs to be compressed in pure memory first.
+     *
+     * Checksum is not updated but rather overwritten.
+     * */
+#define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
+
+
+    digest->bytes = size / 2;
+    digest->checksum = g_slice_alloc0(digest->bytes);
+
+    for(unsigned i = 0; i < digest->bytes; ++i) {
+        ((guint8 *)digest->checksum)[i] =
+            (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
+    }
+}
+
 /*
  ****** paranoid hash algorithm interface ******
  */
@@ -228,36 +323,37 @@ static void rm_digest_paranoid_free(RmDigest *digest) {
     g_slice_free(RmParanoid, digest->paranoid);
 }
 
-
 /*
  ****** hash interface specification map ******
  */
 
+#define UPDATE(ALGO) (RmDigestUpdateFunc)rm_digest_##ALGO##_update
+
 static const RmDigestSpec digest_specs[] = {
-    [RM_DIGEST_UNKNOWN]    = {   0, NULL, NULL},
-    [RM_DIGEST_MURMUR]     = { 128, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_SPOOKY]     = { 128, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_SPOOKY32]   = {  32, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_SPOOKY64]   = {  64, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_CITY]       = { 128, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_MD5]        = { 128, rm_digest_glib_init,     rm_digest_glib_free},
-    [RM_DIGEST_SHA1]       = { 160, rm_digest_glib_init,     rm_digest_glib_free},
-    [RM_DIGEST_SHA256]     = { 256, rm_digest_glib_init,     rm_digest_glib_free},
+    [RM_DIGEST_UNKNOWN]    = {   0, NULL, NULL, NULL},
+    [RM_DIGEST_MURMUR]     = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(murmur)},
+    [RM_DIGEST_SPOOKY]     = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(spooky)},
+    [RM_DIGEST_SPOOKY32]   = {  32, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(spooky32)},
+    [RM_DIGEST_SPOOKY64]   = {  64, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(spooky64)},
+    [RM_DIGEST_CITY]       = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(city)},
+    [RM_DIGEST_MD5]        = { 128, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
+    [RM_DIGEST_SHA1]       = { 160, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
+    [RM_DIGEST_SHA256]     = { 256, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
 #if HAVE_SHA512
-    [RM_DIGEST_SHA512]     = { 512, rm_digest_glib_init,     rm_digest_glib_free},
+    [RM_DIGEST_SHA512]     = { 512, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
 #endif
-    [RM_DIGEST_SHA3_256]   = { 256, rm_digest_sha3_init,     rm_digest_sha3_free},
-    [RM_DIGEST_SHA3_384]   = { 384, rm_digest_sha3_init,     rm_digest_sha3_free},
-    [RM_DIGEST_SHA3_512]   = { 512, rm_digest_sha3_init,     rm_digest_sha3_free},
-    [RM_DIGEST_BLAKE2S]    = { 256, rm_digest_blake2s_init,  rm_digest_blake2s_free},
-    [RM_DIGEST_BLAKE2B]    = { 512, rm_digest_blake2b_init,  rm_digest_blake2b_free},
-    [RM_DIGEST_BLAKE2SP]   = { 256, rm_digest_blake2sp_init, rm_digest_blake2sp_free},
-    [RM_DIGEST_BLAKE2BP]   = { 512, rm_digest_blake2bp_init, rm_digest_blake2bp_free},
-    [RM_DIGEST_EXT]        = {   0, rm_digest_ext_init,      rm_digest_generic_free},
-    [RM_DIGEST_CUMULATIVE] = { 128, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_PARANOID]   = {   0, rm_digest_paranoid_init, rm_digest_paranoid_free},
-    [RM_DIGEST_FARMHASH]   = {  64, rm_digest_generic_init,  rm_digest_generic_free},
-    [RM_DIGEST_XXHASH]     = {  64, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_SHA3_256]   = { 256, rm_digest_sha3_init,     rm_digest_sha3_free,     (RmDigestUpdateFunc)sha3_Update},
+    [RM_DIGEST_SHA3_384]   = { 384, rm_digest_sha3_init,     rm_digest_sha3_free,     (RmDigestUpdateFunc)sha3_Update},
+    [RM_DIGEST_SHA3_512]   = { 512, rm_digest_sha3_init,     rm_digest_sha3_free,     (RmDigestUpdateFunc)sha3_Update},
+    [RM_DIGEST_BLAKE2S]    = { 256, rm_digest_blake2s_init,  rm_digest_blake2s_free,  (RmDigestUpdateFunc)blake2s_update},
+    [RM_DIGEST_BLAKE2B]    = { 512, rm_digest_blake2b_init,  rm_digest_blake2b_free,  (RmDigestUpdateFunc)blake2b_update},
+    [RM_DIGEST_BLAKE2SP]   = { 256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, (RmDigestUpdateFunc)blake2sp_update},
+    [RM_DIGEST_BLAKE2BP]   = { 512, rm_digest_blake2bp_init, rm_digest_blake2bp_free, (RmDigestUpdateFunc)blake2bp_update},
+    [RM_DIGEST_EXT]        = {   0, rm_digest_ext_init,      rm_digest_generic_free,  UPDATE(ext)},
+    [RM_DIGEST_CUMULATIVE] = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(cumulative)},
+    [RM_DIGEST_PARANOID]   = {   0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL},
+    [RM_DIGEST_FARMHASH]   = {  64, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(farmhash)},
+    [RM_DIGEST_XXHASH]     = {  64, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(xxhash)},
 };
 
 
@@ -480,95 +576,8 @@ void rm_digest_free(RmDigest *digest) {
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    switch(digest->type) {
-    case RM_DIGEST_EXT:
-/* Data is assumed to be a hex representation of a checksum.
- * Needs to be compressed in pure memory first.
- *
- * Checksum is not updated but rather overwritten.
- * */
-#define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
-
-        rm_assert_gentle(data);
-
-        digest->bytes = size / 2;
-        digest->checksum = g_slice_alloc0(digest->bytes);
-
-        for(unsigned i = 0; i < digest->bytes; ++i) {
-            ((guint8 *)digest->checksum)[i] =
-                (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
-        }
-
-        break;
-    case RM_DIGEST_MD5:
-    case RM_DIGEST_SHA512:
-    case RM_DIGEST_SHA256:
-    case RM_DIGEST_SHA1:
-        g_checksum_update(digest->glib_checksum, (const guchar *)data, size);
-        break;
-    case RM_DIGEST_SHA3_256:
-    case RM_DIGEST_SHA3_384:
-    case RM_DIGEST_SHA3_512:
-        sha3_Update(digest->sha3_ctx, data, size);
-        break;
-    case RM_DIGEST_BLAKE2S:
-        blake2s_update(digest->blake2s_state, data, size);
-        break;
-    case RM_DIGEST_BLAKE2B:
-        blake2b_update(digest->blake2b_state, data, size);
-        break;
-    case RM_DIGEST_BLAKE2SP:
-        blake2sp_update(digest->blake2sp_state, data, size);
-        break;
-    case RM_DIGEST_BLAKE2BP:
-        blake2bp_update(digest->blake2bp_state, data, size);
-        break;
-    case RM_DIGEST_SPOOKY32:
-        digest->checksum[0].first = spooky_hash32(data, size, digest->checksum[0].first);
-        break;
-    case RM_DIGEST_SPOOKY64:
-        digest->checksum[0].first = spooky_hash64(data, size, digest->checksum[0].first);
-        break;
-    case RM_DIGEST_SPOOKY:
-        spooky_hash128(data, size, (uint64_t *)&digest->checksum[0].first,
-                       (uint64_t *)&digest->checksum[0].second);
-        break;
-    case RM_DIGEST_XXHASH:
-        digest->checksum[0].first = XXH64(data, size, digest->checksum[0].first);
-        break;
-    case RM_DIGEST_FARMHASH:
-        digest->checksum[0].first = cfarmhash((const char *)data, size);
-        break;
-    case RM_DIGEST_MURMUR:
-#if RM_PLATFORM_32
-        MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum->first,
-                            digest->checksum);
-#elif RM_PLATFORM_64
-        MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum->first,
-                            digest->checksum);
-#else
-#error "Probably not a good idea to compile rmlint on 16bit."
-#endif
-        break;
-    case RM_DIGEST_CITY: {
-        /* Opt out for the more optimized version.
-        * This needs the crc command of sse4.2
-        * (available on Intel Nehalem and up; my amd box doesn't have this though)
-        */
-        uint128 old = {digest->checksum->first, digest->checksum->second};
-        old = CityHash128WithSeed((const char *)data, size, old);
-        memcpy(digest->checksum, &old, sizeof(uint128));
-    } break;
-    case RM_DIGEST_CUMULATIVE: {
-        /*  This only XORS the two checksums. */
-        for(gsize i = 0; i < digest->bytes; ++i) {
-            ((guint8 *)digest->checksum)[i] ^= ((guint8 *)data)[i % size];
-        }
-    } break;
-    case RM_DIGEST_PARANOID:
-    default:
-        rm_assert_gentle_not_reached();
-    }
+    RmDigestSpec spec = digest_specs[digest->type];
+    spec.update(digest->checksum, data, size);
 }
 
 void rm_digest_buffered_update(RmBuffer *buffer) {
