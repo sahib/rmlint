@@ -549,11 +549,12 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
                         bool use_shadow_hash) {
     g_assert(type != RM_DIGEST_UNKNOWN);
 
+    RmDigestSpec spec = digest_specs[type];
     RmDigest *digest = g_slice_new0(RmDigest);
     digest->type = type;
-    digest->bytes = digest_specs[type].bits / 8;
 
-    digest_specs[type].init(digest, seed1, seed2, ext_size, use_shadow_hash);
+    digest->bytes = spec.bits / 8;
+    spec.init(digest, seed1, seed2, ext_size, use_shadow_hash);
 
     return digest;
 }
@@ -571,7 +572,8 @@ void rm_digest_release_buffers(RmDigest *digest) {
 }
 
 void rm_digest_free(RmDigest *digest) {
-    digest_specs[digest->type].free(digest);
+    RmDigestSpec spec = digest_specs[digest->type];
+    spec.free(digest);
     g_slice_free(RmDigest, digest);
 }
 
