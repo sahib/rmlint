@@ -54,6 +54,91 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
+
+///////////////////////////////////////
+//    BUFFER POOL IMPLEMENTATION     //
+///////////////////////////////////////
+
+RmOff rm_buffer_size(RmBufferPool *pool) {
+    return pool->buffer_size;
+}
+
+static RmBuffer *rm_buffer_new(RmBufferPool *pool) {
+    RmBuffer *self = g_slice_new0(RmBuffer);
+    self->pool = pool;
+    self->data = g_slice_alloc(pool->buffer_size);
+    return self;
+}
+
+static void rm_buffer_free(RmBuffer *buf) {
+    g_slice_free1(buf->pool->buffer_size, buf->data);
+    g_slice_free(RmBuffer, buf);
+}
+
+RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
+    RmBufferPool *self = g_slice_new0(RmBufferPool);
+    self->buffer_size = buffer_size;
+    self->avail_buffers = max_mem ? MAX(max_mem / buffer_size, 1) : (gsize)-1;
+
+    g_cond_init(&self->change);
+    g_mutex_init(&self->lock);
+    return self;
+}
+
+void rm_buffer_pool_destroy(RmBufferPool *pool) {
+    g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
+
+    g_mutex_clear(&pool->lock);
+    g_cond_clear(&pool->change);
+    g_slice_free(RmBufferPool, pool);
+}
+
+RmBuffer *rm_buffer_get(RmBufferPool *pool) {
+    RmBuffer *buffer = NULL;
+    g_mutex_lock(&pool->lock);
+    {
+        while(!buffer) {
+            buffer = rm_util_slist_pop(&pool->stack, NULL);
+            if(!buffer && pool->avail_buffers > 0) {
+                buffer = rm_buffer_new(pool);
+            }
+            if(!buffer) {
+                if(!pool->mem_warned) {
+                    rm_log_warning_line(
+                        "read buffer limit reached - waiting for "
+                        "processing to catch up");
+                    pool->mem_warned = true;
+                }
+                g_cond_wait(&pool->change, &pool->lock);
+            }
+        }
+        pool->avail_buffers--;
+    }
+    g_mutex_unlock(&pool->lock);
+
+    rm_assert_gentle(buffer);
+    return buffer;
+}
+
+void rm_buffer_release(RmBuffer *buf) {
+    RmBufferPool *pool = buf->pool;
+    g_mutex_lock(&pool->lock);
+    {
+        pool->avail_buffers++;
+        g_cond_signal(&pool->change);
+        pool->stack = g_slist_prepend(pool->stack, buf);
+    }
+    g_mutex_unlock(&pool->lock);
+}
+
+static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
+    return (a->len == b->len && memcmp(a->data, b->data, a->len) == 0);
+}
+
+///////////////////////////////////////
+//      RMDIGEST IMPLEMENTATION      //
+///////////////////////////////////////
+
 typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
 typedef void (*RmDigestFreeFunc)(RmDigest *digest);
 typedef void (*RmDigestUpdateFunc)(RmDigest *digest, const unsigned char *data, RmOff size);
@@ -65,9 +150,12 @@ typedef struct RmDigestSpec {
     RmDigestUpdateFunc update;
 } RmDigestSpec;
 
-/*
- ****** common interface for non-cryptographic hashes ******
- */
+
+///////////////////////////
+//    common funcs for   //
+//    non-cryptographic  //
+//    hashes             //
+///////////////////////////
 
 static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
     /* init for hashes which just require allocation of digest->checksum */
@@ -94,9 +182,9 @@ static void rm_digest_generic_free(RmDigest *digest) {
     }
 }
 
-/*
- ****** spooky hashes ******
- */
+///////////////////////////
+//    spooky hashes      //
+///////////////////////////
 
 static void rm_digest_spooky32_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     digest->checksum->first = spooky_hash32(data, size, digest->checksum->first);
@@ -186,7 +274,6 @@ static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *d
 
 static const RmDigestSpec cumulative_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_cumulative_update};
 
-
 ///////////////////////////
 //      glib hashes      //
 ///////////////////////////
@@ -225,9 +312,10 @@ static const RmDigestSpec sha256_spec = {256, rm_digest_glib_init, rm_digest_gli
 static const RmDigestSpec sha512_spec = {512, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
 #endif
 
-/*
- ****** sha3 hash algorithm interface ******
- */
+///////////////////////////
+//      sha3 hashes      //
+///////////////////////////
+
 
 static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
     digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
@@ -264,9 +352,10 @@ static const RmDigestSpec sha3_256_spec = { 256, rm_digest_sha3_init, rm_digest_
 static const RmDigestSpec sha3_384_spec = { 384, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
 static const RmDigestSpec sha3_512_spec = { 512, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
 
-/*
- ****** blake hash algorithm interface ******
- */
+///////////////////////////
+//      blake hashes     //
+///////////////////////////
+
 
 #define BLAKE_INIT(ALGO, ALGO_BIG)                                  \
     digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
@@ -335,9 +424,10 @@ static const RmDigestSpec blake2s_spec = {256, rm_digest_blake2s_init, rm_digest
 static const RmDigestSpec blake2sp_spec = {256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, rm_digest_blake2sp_update};
 
 
-/*
- ****** ext hash algorithm interface ******
- */
+///////////////////////////
+//      ext  hash        //
+///////////////////////////
+
 
 static void rm_digest_ext_init(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash) {
     digest->bytes = ext_size;
@@ -364,9 +454,10 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
 static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update};
 
 
-/*
- ****** paranoid hash algorithm interface ******
- */
+///////////////////////////
+//     paranoid 'hash'   //
+///////////////////////////
+
 
 static void rm_digest_paranoid_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, bool use_shadow_hash) {
     digest->paranoid = g_slice_new0(RmParanoid);
@@ -392,9 +483,10 @@ static void rm_digest_paranoid_free(RmDigest *digest) {
 
 static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL};
 
-/*
- ****** RmDigestSpec map ******
- */
+
+////////////////////////////////
+//      RmDigestSpec map      //
+////////////////////////////////
 
 static const RmDigestSpec *digest_specs[] = {
     [RM_DIGEST_UNKNOWN]    = NULL,
@@ -423,90 +515,6 @@ static const RmDigestSpec *digest_specs[] = {
     [RM_DIGEST_XXHASH]     = &xxhash_spec,
 };
 
-
-///////////////////////////////////////
-//    BUFFER POOL IMPLEMENTATION     //
-///////////////////////////////////////
-
-RmOff rm_buffer_size(RmBufferPool *pool) {
-    return pool->buffer_size;
-}
-
-static RmBuffer *rm_buffer_new(RmBufferPool *pool) {
-    RmBuffer *self = g_slice_new0(RmBuffer);
-    self->pool = pool;
-    self->data = g_slice_alloc(pool->buffer_size);
-    return self;
-}
-
-static void rm_buffer_free(RmBuffer *buf) {
-    g_slice_free1(buf->pool->buffer_size, buf->data);
-    g_slice_free(RmBuffer, buf);
-}
-
-RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
-    RmBufferPool *self = g_slice_new0(RmBufferPool);
-    self->buffer_size = buffer_size;
-    self->avail_buffers = max_mem ? MAX(max_mem / buffer_size, 1) : (gsize)-1;
-
-    g_cond_init(&self->change);
-    g_mutex_init(&self->lock);
-    return self;
-}
-
-void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
-
-    g_mutex_clear(&pool->lock);
-    g_cond_clear(&pool->change);
-    g_slice_free(RmBufferPool, pool);
-}
-
-RmBuffer *rm_buffer_get(RmBufferPool *pool) {
-    RmBuffer *buffer = NULL;
-    g_mutex_lock(&pool->lock);
-    {
-        while(!buffer) {
-            buffer = rm_util_slist_pop(&pool->stack, NULL);
-            if(!buffer && pool->avail_buffers > 0) {
-                buffer = rm_buffer_new(pool);
-            }
-            if(!buffer) {
-                if(!pool->mem_warned) {
-                    rm_log_warning_line(
-                        "read buffer limit reached - waiting for "
-                        "processing to catch up");
-                    pool->mem_warned = true;
-                }
-                g_cond_wait(&pool->change, &pool->lock);
-            }
-        }
-        pool->avail_buffers--;
-    }
-    g_mutex_unlock(&pool->lock);
-
-    rm_assert_gentle(buffer);
-    return buffer;
-}
-
-void rm_buffer_release(RmBuffer *buf) {
-    RmBufferPool *pool = buf->pool;
-    g_mutex_lock(&pool->lock);
-    {
-        pool->avail_buffers++;
-        g_cond_signal(&pool->change);
-        pool->stack = g_slist_prepend(pool->stack, buf);
-    }
-    g_mutex_unlock(&pool->lock);
-}
-
-static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
-    return (a->len == b->len && memcmp(a->data, b->data, a->len) == 0);
-}
-
-///////////////////////////////////////
-//      RMDIGEST IMPLEMENTATION      //
-///////////////////////////////////////
 
 static gpointer rm_init_digest_type_table(GHashTable **code_table) {
     static struct {
