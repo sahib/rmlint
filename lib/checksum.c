@@ -142,12 +142,14 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
 typedef void (*RmDigestFreeFunc)(RmDigest *digest);
 typedef void (*RmDigestUpdateFunc)(RmDigest *digest, const unsigned char *data, RmOff size);
+typedef void (*RmDigestCopyFunc)(RmDigest *digest, RmDigest *copy);
 
 typedef struct RmDigestSpec {
     const int bits;
     RmDigestInitFunc init;
     RmDigestFreeFunc free;
     RmDigestUpdateFunc update;
+    RmDigestCopyFunc copy;
 } RmDigestSpec;
 
 
@@ -157,13 +159,14 @@ typedef struct RmDigestSpec {
 //    hashes             //
 ///////////////////////////
 
+#define ALLOC_BYTES(bytes) MAX(8, bytes)
+
 static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
     /* init for hashes which just require allocation of digest->checksum */
 
-    RmOff bytes = MAX(8, digest->bytes);
     /* Cannot go lower than 8, since we read 8 byte in some places.
      * For some checksums this may mean trailing zeros in the unused bytes */
-    digest->checksum = g_slice_alloc0(bytes);
+    digest->checksum = g_slice_alloc0(ALLOC_BYTES(digest->bytes));
 
     if(seed1 && seed2) {
         /* copy seeds to checksum */
@@ -182,6 +185,10 @@ static void rm_digest_generic_free(RmDigest *digest) {
     }
 }
 
+static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
+    copy->checksum = g_slice_copy(ALLOC_BYTES(digest->bytes), digest->checksum);
+}
+
 ///////////////////////////
 //    spooky hashes      //
 ///////////////////////////
@@ -198,9 +205,9 @@ static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data,
     spooky_hash128(data, size, (uint64_t *)&digest->checksum->first, (uint64_t *)&digest->checksum->second);
 }
 
-static const RmDigestSpec spooky32_spec = {  32, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky32_update};
-static const RmDigestSpec spooky64_spec = {  32, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky64_update};
-static const RmDigestSpec spooky_spec   = { 128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky_update};
+static const RmDigestSpec spooky32_spec = {  32, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky32_update, rm_digest_generic_copy};
+static const RmDigestSpec spooky64_spec = {  64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky64_update, rm_digest_generic_copy};
+static const RmDigestSpec spooky_spec   = { 128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky_update, rm_digest_generic_copy};
 
 
 ///////////////////////////
@@ -211,7 +218,7 @@ static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data,
     digest->checksum->first = XXH64(data, size, digest->checksum->first);
 }
 
-static const RmDigestSpec xxhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_xxhash_update};
+static const RmDigestSpec xxhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_xxhash_update, rm_digest_generic_copy};
 
 ///////////////////////////
 //      farmhash         //
@@ -222,7 +229,7 @@ static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *dat
     digest->checksum->first = cfarmhash((const char *)data, size);
 }
 
-static const RmDigestSpec farmhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_farmhash_update};
+static const RmDigestSpec farmhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_farmhash_update, rm_digest_generic_copy};
 
 ///////////////////////////
 //        murmur         //
@@ -239,7 +246,7 @@ static void rm_digest_murmur_update(RmDigest *digest, const unsigned char *data,
 #endif
 }
 
-static const RmDigestSpec murmur_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_murmur_update};
+static const RmDigestSpec murmur_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_murmur_update, rm_digest_generic_copy};
 
 ///////////////////////////
 //      cityhash         //
@@ -258,7 +265,7 @@ static void rm_digest_city_update(RmDigest *digest, const unsigned char *data, R
     memcpy(digest->checksum, &old, sizeof(uint128));
 }
 
-static const RmDigestSpec city_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_city_update};
+static const RmDigestSpec city_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_city_update, rm_digest_generic_copy};
 
 ///////////////////////////
 //      cumulative       //
@@ -272,7 +279,7 @@ static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *d
     }
 }
 
-static const RmDigestSpec cumulative_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_cumulative_update};
+static const RmDigestSpec cumulative_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_cumulative_update, rm_digest_generic_copy};
 
 ///////////////////////////
 //      glib hashes      //
@@ -305,11 +312,16 @@ static void rm_digest_glib_update(RmDigest *digest, const unsigned char *data, R
     g_checksum_update(digest->glib_checksum, data, size);
 }
 
-static const RmDigestSpec md5_spec =  {128, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
-static const RmDigestSpec sha1_spec = {160, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
-static const RmDigestSpec sha256_spec = {256, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
+static void rm_digest_glib_copy(RmDigest *digest, RmDigest *copy) {
+    copy->glib_checksum = g_checksum_copy(digest->glib_checksum);
+}
+
+
+static const RmDigestSpec md5_spec =  {128, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
+static const RmDigestSpec sha1_spec = {160, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
+static const RmDigestSpec sha256_spec = {256, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
 #if HAVE_SHA512
-static const RmDigestSpec sha512_spec = {512, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
+static const RmDigestSpec sha512_spec = {512, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
 #endif
 
 ///////////////////////////
@@ -348,9 +360,13 @@ static void rm_digest_sha3_update(RmDigest *digest, const unsigned char *data, R
     sha3_Update(digest->sha3_ctx, data, size);
 }
 
-static const RmDigestSpec sha3_256_spec = { 256, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
-static const RmDigestSpec sha3_384_spec = { 384, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
-static const RmDigestSpec sha3_512_spec = { 512, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
+static void rm_digest_sha3_copy(RmDigest *digest, RmDigest *copy) {
+    copy->sha3_ctx = g_slice_copy(sizeof(sha3_context), digest->sha3_ctx);
+}
+
+static const RmDigestSpec sha3_256_spec = { 256, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy};
+static const RmDigestSpec sha3_384_spec = { 384, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy};
+static const RmDigestSpec sha3_512_spec = { 512, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy};
 
 ///////////////////////////
 //      blake hashes     //
@@ -417,11 +433,26 @@ static void rm_digest_blake2sp_update(RmDigest *digest, const unsigned char *dat
     blake2sp_update(digest->blake2sp_state, data, size);
 }
 
+static void rm_digest_blake2b_copy(RmDigest *digest, RmDigest *copy) {
+    copy->blake2b_state = g_slice_copy(sizeof(blake2b_state), digest->blake2b_state);
+}
 
-static const RmDigestSpec blake2b_spec = {512, rm_digest_blake2b_init, rm_digest_blake2b_free, rm_digest_blake2b_update};
-static const RmDigestSpec blake2bp_spec = {512, rm_digest_blake2bp_init, rm_digest_blake2bp_free, rm_digest_blake2bp_update};
-static const RmDigestSpec blake2s_spec = {256, rm_digest_blake2s_init, rm_digest_blake2s_free, rm_digest_blake2s_update};
-static const RmDigestSpec blake2sp_spec = {256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, rm_digest_blake2sp_update};
+static void rm_digest_blake2bp_copy(RmDigest *digest, RmDigest *copy) {
+    copy->blake2bp_state = g_slice_copy(sizeof(blake2bp_state), digest->blake2bp_state);
+}
+
+static void rm_digest_blake2s_copy(RmDigest *digest, RmDigest *copy) {
+    copy->blake2s_state = g_slice_copy(sizeof(blake2s_state), digest->blake2s_state);
+}
+
+static void rm_digest_blake2sp_copy(RmDigest *digest, RmDigest *copy) {
+    copy->blake2sp_state = g_slice_copy(sizeof(blake2sp_state), digest->blake2sp_state);
+}
+
+static const RmDigestSpec blake2b_spec = {512, rm_digest_blake2b_init, rm_digest_blake2b_free, rm_digest_blake2b_update, rm_digest_blake2b_copy};
+static const RmDigestSpec blake2bp_spec = {512, rm_digest_blake2bp_init, rm_digest_blake2bp_free, rm_digest_blake2bp_update, rm_digest_blake2bp_copy};
+static const RmDigestSpec blake2s_spec = {256, rm_digest_blake2s_init, rm_digest_blake2s_free, rm_digest_blake2s_update, rm_digest_blake2s_copy};
+static const RmDigestSpec blake2sp_spec = {256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, rm_digest_blake2sp_update, rm_digest_blake2sp_copy};
 
 
 ///////////////////////////
@@ -451,7 +482,7 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
     }
 }
 
-static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update};
+static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy};
 
 
 ///////////////////////////
@@ -481,7 +512,7 @@ static void rm_digest_paranoid_free(RmDigest *digest) {
 
 /* Note: paranoid update implementation is in rm_digest_buffered_update() below */
 
-static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL};
+static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL};
 
 
 ////////////////////////////////
@@ -735,73 +766,15 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     }
 }
 
-#define BLAKE_COPY(ALGO)                                                        \
-    {                                                                           \
-        self = g_slice_new0(RmDigest);                                          \
-        self->bytes = digest->bytes;                                            \
-        self->type = digest->type;                                              \
-        self->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));              \
-        memcpy(self->ALGO##_state, digest->ALGO##_state, sizeof(ALGO##_state)); \
-    }
-
 RmDigest *rm_digest_copy(RmDigest *digest) {
     rm_assert_gentle(digest);
 
-    RmDigest *self = NULL;
+    RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
 
-    switch(digest->type) {
-    case RM_DIGEST_MD5:
-    case RM_DIGEST_SHA512:
-    case RM_DIGEST_SHA256:
-    case RM_DIGEST_SHA1:
-        self = g_slice_new0(RmDigest);
-        self->bytes = digest->bytes;
-        self->type = digest->type;
-        self->glib_checksum = g_checksum_copy(digest->glib_checksum);
-        break;
-    case RM_DIGEST_SHA3_256:
-    case RM_DIGEST_SHA3_384:
-    case RM_DIGEST_SHA3_512:
-        self = g_slice_new0(RmDigest);
-        self->bytes = digest->bytes;
-        self->type = digest->type;
-        self->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
-        memcpy(self->sha3_ctx, digest->sha3_ctx, sizeof(sha3_context));
-        break;
-    case RM_DIGEST_BLAKE2S:
-        BLAKE_COPY(blake2s);
-        break;
-    case RM_DIGEST_BLAKE2B:
-        BLAKE_COPY(blake2b);
-        break;
-    case RM_DIGEST_BLAKE2SP:
-        BLAKE_COPY(blake2sp);
-        break;
-    case RM_DIGEST_BLAKE2BP:
-        BLAKE_COPY(blake2bp);
-        break;
-    case RM_DIGEST_SPOOKY:
-    case RM_DIGEST_SPOOKY32:
-    case RM_DIGEST_SPOOKY64:
-    case RM_DIGEST_MURMUR:
-    case RM_DIGEST_CITY:
-    case RM_DIGEST_XXHASH:
-    case RM_DIGEST_FARMHASH:
-    case RM_DIGEST_CUMULATIVE:
-    case RM_DIGEST_EXT:
-        self = rm_digest_new(digest->type, 0, 0, digest->bytes, FALSE);
+    const RmDigestSpec *spec = digest_specs[digest->type];
+    spec->copy(digest, copy);
 
-        if(self->checksum && digest->checksum) {
-            memcpy((char *)self->checksum, (char *)digest->checksum, self->bytes);
-        }
-
-        break;
-    case RM_DIGEST_PARANOID:
-    default:
-        rm_assert_gentle_not_reached();
-    }
-
-    return self;
+    return copy;
 }
 
 static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
