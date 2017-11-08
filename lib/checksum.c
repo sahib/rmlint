@@ -143,6 +143,7 @@ typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed1, RmOff seed2, RmO
 typedef void (*RmDigestFreeFunc)(RmDigest *digest);
 typedef void (*RmDigestUpdateFunc)(RmDigest *digest, const unsigned char *data, RmOff size);
 typedef void (*RmDigestCopyFunc)(RmDigest *digest, RmDigest *copy);
+typedef void (*RmDigestStealFunc)(RmDigest *digest, guint8 *result);
 
 typedef struct RmDigestSpec {
     const int bits;
@@ -150,6 +151,7 @@ typedef struct RmDigestSpec {
     RmDigestFreeFunc free;
     RmDigestUpdateFunc update;
     RmDigestCopyFunc copy;
+    RmDigestStealFunc steal;
 } RmDigestSpec;
 
 
@@ -205,9 +207,10 @@ static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data,
     spooky_hash128(data, size, (uint64_t *)&digest->checksum->first, (uint64_t *)&digest->checksum->second);
 }
 
-static const RmDigestSpec spooky32_spec = {  32, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky32_update, rm_digest_generic_copy};
-static const RmDigestSpec spooky64_spec = {  64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky64_update, rm_digest_generic_copy};
-static const RmDigestSpec spooky_spec   = { 128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky_update, rm_digest_generic_copy};
+#define GENERIC_FUNCS(ALGO) rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_##ALGO##_update, rm_digest_generic_copy, NULL
+static const RmDigestSpec spooky32_spec = {  32, GENERIC_FUNCS(spooky32) };
+static const RmDigestSpec spooky64_spec = {  64, GENERIC_FUNCS(spooky64) };
+static const RmDigestSpec spooky_spec   = { 128, GENERIC_FUNCS(spooky) };
 
 
 ///////////////////////////
@@ -218,7 +221,7 @@ static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data,
     digest->checksum->first = XXH64(data, size, digest->checksum->first);
 }
 
-static const RmDigestSpec xxhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_xxhash_update, rm_digest_generic_copy};
+static const RmDigestSpec xxhash_spec =  {64, GENERIC_FUNCS(xxhash)};
 
 ///////////////////////////
 //      farmhash         //
@@ -229,7 +232,7 @@ static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *dat
     digest->checksum->first = cfarmhash((const char *)data, size);
 }
 
-static const RmDigestSpec farmhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_farmhash_update, rm_digest_generic_copy};
+static const RmDigestSpec farmhash_spec =  {64, GENERIC_FUNCS(farmhash)};
 
 ///////////////////////////
 //        murmur         //
@@ -246,7 +249,7 @@ static void rm_digest_murmur_update(RmDigest *digest, const unsigned char *data,
 #endif
 }
 
-static const RmDigestSpec murmur_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_murmur_update, rm_digest_generic_copy};
+static const RmDigestSpec murmur_spec =  {128, GENERIC_FUNCS(murmur)};
 
 ///////////////////////////
 //      cityhash         //
@@ -265,7 +268,7 @@ static void rm_digest_city_update(RmDigest *digest, const unsigned char *data, R
     memcpy(digest->checksum, &old, sizeof(uint128));
 }
 
-static const RmDigestSpec city_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_city_update, rm_digest_generic_copy};
+static const RmDigestSpec city_spec =  {128, GENERIC_FUNCS(city)};
 
 ///////////////////////////
 //      cumulative       //
@@ -279,7 +282,7 @@ static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *d
     }
 }
 
-static const RmDigestSpec cumulative_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_cumulative_update, rm_digest_generic_copy};
+static const RmDigestSpec cumulative_spec =  {128, GENERIC_FUNCS(cumulative)};
 
 ///////////////////////////
 //      glib hashes      //
@@ -316,12 +319,21 @@ static void rm_digest_glib_copy(RmDigest *digest, RmDigest *copy) {
     copy->glib_checksum = g_checksum_copy(digest->glib_checksum);
 }
 
+static void rm_digest_glib_steal(RmDigest *digest, guint8 *result) {
+    GChecksum *copy = g_checksum_copy(digest->glib_checksum);
+    gsize buflen = digest->bytes;
+    g_checksum_get_digest(copy, result, &buflen);
+    rm_assert_gentle(buflen == digest->bytes);
+    g_checksum_free(copy);
+}
 
-static const RmDigestSpec md5_spec =  {128, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
-static const RmDigestSpec sha1_spec = {160, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
-static const RmDigestSpec sha256_spec = {256, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
+#define GLIB_FUNCS rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy, rm_digest_glib_steal
+
+static const RmDigestSpec md5_spec =  {128, GLIB_FUNCS};
+static const RmDigestSpec sha1_spec = {160, GLIB_FUNCS};
+static const RmDigestSpec sha256_spec = {256, GLIB_FUNCS};
 #if HAVE_SHA512
-static const RmDigestSpec sha512_spec = {512, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy};
+static const RmDigestSpec sha512_spec = {512, GLIB_FUNCS};
 #endif
 
 ///////////////////////////
@@ -364,16 +376,28 @@ static void rm_digest_sha3_copy(RmDigest *digest, RmDigest *copy) {
     copy->sha3_ctx = g_slice_copy(sizeof(sha3_context), digest->sha3_ctx);
 }
 
-static const RmDigestSpec sha3_256_spec = { 256, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy};
-static const RmDigestSpec sha3_384_spec = { 384, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy};
-static const RmDigestSpec sha3_512_spec = { 512, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy};
+static void rm_digest_sha3_steal(RmDigest *digest, guint8 *result) {
+    sha3_context *copy = g_slice_copy(sizeof(sha3_context), digest->sha3_ctx);
+    memcpy(result, sha3_Finalize(copy), digest->bytes);
+    g_slice_free(sha3_context, copy);
+}
+
+#define SHA3_FUNCS rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
+
+static const RmDigestSpec sha3_256_spec = { 256, SHA3_FUNCS};
+static const RmDigestSpec sha3_384_spec = { 384, SHA3_FUNCS};
+static const RmDigestSpec sha3_512_spec = { 512, SHA3_FUNCS};
 
 ///////////////////////////
 //      blake hashes     //
 ///////////////////////////
 
-
-#define BLAKE_INIT(ALGO, ALGO_BIG)                                  \
+#define CREATE_BLAKE_FUNCS(ALGO, ALGO_BIG)                          \
+                                                                    \
+static void rm_digest_##ALGO##_init(RmDigest *digest, RmOff seed1,  \
+                                    RmOff seed2,                    \
+                                    _UNUSED RmOff ext_size,         \
+                                    _UNUSED bool use_shadow_hash) { \
     digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
     ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);         \
     if(seed1) {                                                     \
@@ -382,78 +406,46 @@ static const RmDigestSpec sha3_512_spec = { 512, rm_digest_sha3_init, rm_digest_
     if(seed2) {                                                     \
         ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
     }                                                               \
-    g_assert(digest->bytes==ALGO_BIG##_OUTBYTES);
-
-
-static void rm_digest_blake2b_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    BLAKE_INIT(blake2b, BLAKE2B);
+    g_assert(digest->bytes==ALGO_BIG##_OUTBYTES);                   \
+}                                                                   \
+                                                                    \
+static void rm_digest_##ALGO##_free(RmDigest *digest) {             \
+    g_slice_free(ALGO##_state, digest->ALGO##_state);               \
+}                                                                   \
+                                                                    \
+static void rm_digest_##ALGO##_update(RmDigest *digest,             \
+                                      const unsigned char *data,    \
+                                      RmOff size) {                 \
+    ALGO##_update(digest->ALGO##_state, data, size);                \
+}                                                                   \
+                                                                    \
+static void rm_digest_##ALGO##_copy(RmDigest *digest,               \
+                                    RmDigest *copy) {               \
+    copy->ALGO##_state = g_slice_copy(sizeof(ALGO##_state),         \
+                                      digest->ALGO##_state);        \
+}                                                                   \
+                                                                    \
+static void rm_digest_##ALGO##_steal(RmDigest *digest,              \
+                                     guint8 *result) {              \
+    ALGO##_state *copy = g_slice_copy(sizeof(ALGO##_state),         \
+                                      digest->ALGO##_state);        \
+    ALGO##_final(copy, result, digest->bytes);                      \
+    g_slice_free(ALGO##_state, copy);                               \
 }
 
-static void rm_digest_blake2bp_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    BLAKE_INIT(blake2bp, BLAKE2B);
-}
 
-static void rm_digest_blake2s_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    BLAKE_INIT(blake2s, BLAKE2S);
-}
 
-static void rm_digest_blake2sp_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    BLAKE_INIT(blake2sp, BLAKE2S);
-}
+CREATE_BLAKE_FUNCS(blake2b, BLAKE2B);
+CREATE_BLAKE_FUNCS(blake2bp, BLAKE2B);
+CREATE_BLAKE_FUNCS(blake2s, BLAKE2S);
+CREATE_BLAKE_FUNCS(blake2sp, BLAKE2S);
 
-static void rm_digest_blake2b_free(RmDigest *digest) {
-    g_slice_free(blake2b_state, digest->blake2b_state);
-}
+#define BLAKE_FUNCS(ALGO) rm_digest_##ALGO##_init, rm_digest_##ALGO##_free, rm_digest_##ALGO##_update, rm_digest_##ALGO##_copy, rm_digest_##ALGO##_steal
 
-static void rm_digest_blake2bp_free(RmDigest *digest) {
-    g_slice_free(blake2bp_state, digest->blake2bp_state);
-}
-
-static void rm_digest_blake2s_free(RmDigest *digest) {
-    g_slice_free(blake2s_state, digest->blake2s_state);
-}
-
-static void rm_digest_blake2sp_free(RmDigest *digest) {
-    g_slice_free(blake2sp_state, digest->blake2sp_state);
-}
-
-static void rm_digest_blake2b_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    blake2b_update(digest->blake2b_state, data, size);
-}
-
-static void rm_digest_blake2bp_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    blake2bp_update(digest->blake2bp_state, data, size);
-}
-
-static void rm_digest_blake2s_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    blake2s_update(digest->blake2s_state, data, size);
-}
-
-static void rm_digest_blake2sp_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    blake2sp_update(digest->blake2sp_state, data, size);
-}
-
-static void rm_digest_blake2b_copy(RmDigest *digest, RmDigest *copy) {
-    copy->blake2b_state = g_slice_copy(sizeof(blake2b_state), digest->blake2b_state);
-}
-
-static void rm_digest_blake2bp_copy(RmDigest *digest, RmDigest *copy) {
-    copy->blake2bp_state = g_slice_copy(sizeof(blake2bp_state), digest->blake2bp_state);
-}
-
-static void rm_digest_blake2s_copy(RmDigest *digest, RmDigest *copy) {
-    copy->blake2s_state = g_slice_copy(sizeof(blake2s_state), digest->blake2s_state);
-}
-
-static void rm_digest_blake2sp_copy(RmDigest *digest, RmDigest *copy) {
-    copy->blake2sp_state = g_slice_copy(sizeof(blake2sp_state), digest->blake2sp_state);
-}
-
-static const RmDigestSpec blake2b_spec = {512, rm_digest_blake2b_init, rm_digest_blake2b_free, rm_digest_blake2b_update, rm_digest_blake2b_copy};
-static const RmDigestSpec blake2bp_spec = {512, rm_digest_blake2bp_init, rm_digest_blake2bp_free, rm_digest_blake2bp_update, rm_digest_blake2bp_copy};
-static const RmDigestSpec blake2s_spec = {256, rm_digest_blake2s_init, rm_digest_blake2s_free, rm_digest_blake2s_update, rm_digest_blake2s_copy};
-static const RmDigestSpec blake2sp_spec = {256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, rm_digest_blake2sp_update, rm_digest_blake2sp_copy};
-
+static const RmDigestSpec blake2b_spec = {512, BLAKE_FUNCS(blake2b)};
+static const RmDigestSpec blake2bp_spec = {512, BLAKE_FUNCS(blake2bp)};
+static const RmDigestSpec blake2s_spec = {256, BLAKE_FUNCS(blake2s)};
+static const RmDigestSpec blake2sp_spec = {256, BLAKE_FUNCS(blake2sp)};
 
 ///////////////////////////
 //      ext  hash        //
@@ -482,7 +474,7 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
     }
 }
 
-static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy};
+static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
 
 
 ///////////////////////////
@@ -512,7 +504,7 @@ static void rm_digest_paranoid_free(RmDigest *digest) {
 
 /* Note: paranoid update implementation is in rm_digest_buffered_update() below */
 
-static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL};
+static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, NULL};
 
 
 ////////////////////////////////
@@ -810,54 +802,15 @@ static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
     }
 }
 
-#define BLAKE_STEAL(ALGO)                                 \
-    {                                                     \
-        RmDigest *copy = rm_digest_copy(digest);          \
-        ALGO##_final(copy->ALGO##_state, result, buflen); \
-        rm_assert_gentle(buflen == digest->bytes);        \
-        rm_digest_free(copy);                             \
-    }
-
 guint8 *rm_digest_steal(RmDigest *digest) {
-    guint8 *result = g_slice_alloc0(digest->bytes);
-    gsize buflen = digest->bytes;
 
-    if(rm_digest_needs_steal(digest->type)) {
-        /* reading the digest is destructive, so we need to take a copy */
-        switch(digest->type) {
-        case RM_DIGEST_SHA3_256:
-        case RM_DIGEST_SHA3_384:
-        case RM_DIGEST_SHA3_512: {
-            RmDigest *copy = rm_digest_copy(digest);
-            memcpy(result, sha3_Finalize(copy->sha3_ctx), digest->bytes);
-            rm_assert_gentle(buflen == digest->bytes);
-            rm_digest_free(copy);
-            break;
-        }
-        case RM_DIGEST_BLAKE2S:
-            BLAKE_STEAL(blake2s);
-            break;
-        case RM_DIGEST_BLAKE2B:
-            BLAKE_STEAL(blake2b);
-            break;
-        case RM_DIGEST_BLAKE2SP:
-            BLAKE_STEAL(blake2sp);
-            break;
-        case RM_DIGEST_BLAKE2BP:
-            BLAKE_STEAL(blake2bp);
-            break;
-        default: {
-            RmDigest *copy = rm_digest_copy(digest);
-            g_checksum_get_digest(copy->glib_checksum, result, &buflen);
-            rm_assert_gentle(buflen == digest->bytes);
-            rm_digest_free(copy);
-            break;
-        }
-        }
-    } else {
-        /*  Stateless checksum, just copy it. */
-        memcpy(result, digest->checksum, digest->bytes);
+    const RmDigestSpec *spec = digest_specs[digest->type];
+    if(!spec->steal) {
+        return g_slice_copy(digest->bytes, digest->checksum);
     }
+
+    guint8 *result = g_slice_alloc0(digest->bytes);
+    spec->steal(digest, result);
     return result;
 }
 
