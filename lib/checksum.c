@@ -54,6 +54,169 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
+typedef struct RmDigestSpec {
+    const int bits;
+    void (*init)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
+} RmDigestSpec;
+
+/*
+ ****** common interface for non-cryptographic hashes ******
+ */
+
+static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    /* init for hashes which just require allocation of digest->checksum */
+
+    RmOff bytes = MAX(8, digest->bytes);
+    /* Cannot go lower than 8, since we read 8 byte in some places.
+     * For some checksums this may mean trailing zeros in the unused bytes */
+    digest->checksum = g_slice_alloc0(bytes);
+
+    if(seed1 && seed2) {
+        /* copy seeds to checksum */
+        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes / 2);
+        memcpy(digest->checksum, &seed1, seed_bytes);
+        memcpy(digest->checksum + digest->bytes/2, &seed2, seed_bytes);
+    } else if(seed1) {
+        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes);
+        memcpy(digest->checksum, &seed1, seed_bytes);
+    }
+}
+
+/*
+ ****** glib hash algorithm interface ******
+ */
+
+static const GChecksumType glib_map[] = {
+    [RM_DIGEST_MD5]        = G_CHECKSUM_MD5,
+    [RM_DIGEST_SHA1]       = G_CHECKSUM_SHA1,
+    [RM_DIGEST_SHA256]     = G_CHECKSUM_SHA256,
+#if HAVE_SHA512
+    [RM_DIGEST_SHA512]     = G_CHECKSUM_SHA512,
+#endif
+};
+
+static void rm_digest_glib_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->glib_checksum = g_checksum_new(glib_map[digest->type]);
+    if(seed1) {
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed1, sizeof(seed1));
+    }
+    if(seed2) {
+        g_checksum_update(digest->glib_checksum, (const guchar *)&seed2, sizeof(seed2));
+    }
+}
+
+/*
+ ****** sha3 hash algorithm interface ******
+ */
+
+static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
+    switch(digest->type) {
+        case RM_DIGEST_SHA3_256:
+            sha3_Init256(digest->sha3_ctx);
+            break;
+        case RM_DIGEST_SHA3_384:
+            sha3_Init384(digest->sha3_ctx);
+            break;
+        case RM_DIGEST_SHA3_512:
+            sha3_Init512(digest->sha3_ctx);
+            break;
+        default:
+            g_assert_not_reached();
+    }
+    if(seed1) {
+        sha3_Update(digest->sha3_ctx, &seed1, sizeof(seed1));
+    }
+    if(seed2) {
+        sha3_Update(digest->sha3_ctx, &seed2, sizeof(seed2));
+    }
+}
+
+/*
+ ****** blake hash algorithm interface ******
+ */
+
+#define BLAKE_INIT(ALGO, ALGO_BIG)                                  \
+    digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
+    ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);         \
+    if(seed1) {                                                     \
+        ALGO##_update(digest->ALGO##_state, &seed1, sizeof(RmOff)); \
+    }                                                               \
+    if(seed2) {                                                     \
+        ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
+    }                                                               \
+    g_assert(digest->bytes==ALGO_BIG##_OUTBYTES);
+
+
+static void rm_digest_blake2b_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    BLAKE_INIT(blake2b, BLAKE2B);
+}
+
+static void rm_digest_blake2bp_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    BLAKE_INIT(blake2bp, BLAKE2B);
+}
+
+static void rm_digest_blake2s_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    BLAKE_INIT(blake2s, BLAKE2S);
+}
+
+static void rm_digest_blake2sp_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    BLAKE_INIT(blake2sp, BLAKE2S);
+}
+
+/*
+ ****** ext hash algorithm interface ******
+ */
+
+static void rm_digest_ext_init(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash) {
+    digest->bytes = ext_size;
+    rm_digest_generic_init(digest, seed1, seed2, ext_size, use_shadow_hash);
+}
+
+/*
+ ****** paranoid hash algorithm interface ******
+ */
+
+static void rm_digest_paranoid_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, bool use_shadow_hash) {
+    digest->paranoid = g_slice_new0(RmParanoid);
+    digest->paranoid->incoming_twin_candidates = g_async_queue_new();
+    if(use_shadow_hash) {
+        digest->paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
+    }
+}
+
+/*
+ ****** hash interface specification map ******
+ */
+
+static const RmDigestSpec digest_specs[] = {
+    [RM_DIGEST_UNKNOWN]    = {   0, NULL                   },
+    [RM_DIGEST_MURMUR]     = { 128, rm_digest_generic_init },
+    [RM_DIGEST_SPOOKY]     = { 128, rm_digest_generic_init },
+    [RM_DIGEST_SPOOKY32]   = {  32, rm_digest_generic_init },
+    [RM_DIGEST_SPOOKY64]   = {  64, rm_digest_generic_init },
+    [RM_DIGEST_CITY]       = { 128, rm_digest_generic_init },
+    [RM_DIGEST_MD5]        = { 128, rm_digest_glib_init    },
+    [RM_DIGEST_SHA1]       = { 160, rm_digest_glib_init    },
+    [RM_DIGEST_SHA256]     = { 256, rm_digest_glib_init    },
+#if HAVE_SHA512
+    [RM_DIGEST_SHA512]     = { 512, rm_digest_glib_init    },
+#endif
+    [RM_DIGEST_SHA3_256]   = { 256, rm_digest_sha3_init    },
+    [RM_DIGEST_SHA3_384]   = { 384, rm_digest_sha3_init    },
+    [RM_DIGEST_SHA3_512]   = { 512, rm_digest_sha3_init    },
+    [RM_DIGEST_BLAKE2S]    = { 256, rm_digest_blake2s_init },
+    [RM_DIGEST_BLAKE2B]    = { 512, rm_digest_blake2b_init },
+    [RM_DIGEST_BLAKE2SP]   = { 256, rm_digest_blake2sp_init},
+    [RM_DIGEST_BLAKE2BP]   = { 512, rm_digest_blake2bp_init},
+    [RM_DIGEST_EXT]        = {   0, rm_digest_ext_init     },
+    [RM_DIGEST_CUMULATIVE] = { 128, rm_digest_generic_init },
+    [RM_DIGEST_PARANOID]   = {   0, rm_digest_paranoid_init},
+    [RM_DIGEST_FARMHASH]   = {  64, rm_digest_generic_init },
+    [RM_DIGEST_XXHASH]     = {  64, rm_digest_generic_init },
+};
+
+
 ///////////////////////////////////////
 //    BUFFER POOL IMPLEMENTATION     //
 ///////////////////////////////////////
@@ -242,124 +405,16 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }
 
-#define ADD_SEED(digest, seed)                                              \
-    {                                                                       \
-        if(seed) {                                                          \
-            g_checksum_update(digest->glib_checksum, (const guchar *)&seed, \
-                              sizeof(RmOff));                               \
-        }                                                                   \
-    }
-
-#define BLAKE_INIT(ALGO, ALGO_BIG)                                      \
-    {                                                                   \
-        digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
-        ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);         \
-        if(seed1) {                                                     \
-            ALGO##_update(digest->ALGO##_state, &seed1, sizeof(RmOff)); \
-        }                                                               \
-        if(seed2) {                                                     \
-            ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
-        }                                                               \
-        digest->bytes = ALGO_BIG##_OUTBYTES;                            \
-    }
-
-#define SHA3_INIT(SIZE)                                       \
-    digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));  \
-    sha3_Init##SIZE(digest->sha3_ctx);                        \
-    if(seed1) {                                               \
-        sha3_Update(digest->sha3_ctx, &seed1, sizeof(RmOff)); \
-    }                                                         \
-    if(seed2) {                                               \
-        sha3_Update(digest->sha3_ctx, &seed2, sizeof(RmOff)); \
-    }                                                         \
-    digest->bytes = (SIZE) / 8;
-
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
                         bool use_shadow_hash) {
+    g_assert(type != RM_DIGEST_UNKNOWN);
+
     RmDigest *digest = g_slice_new0(RmDigest);
-
-    digest->checksum = NULL;
     digest->type = type;
-    digest->bytes = 0;
+    digest->bytes = digest_specs[type].bits / 8;
 
-    switch(type) {
-    case RM_DIGEST_SPOOKY32:
-        /* cannot go lower than 64, since we read 8 byte in some places.
-         * simulate by leaving the part at the end empty
-         */
-        digest->bytes = 64 / 8;
-        break;
-    case RM_DIGEST_XXHASH:
-    case RM_DIGEST_FARMHASH:
-    case RM_DIGEST_SPOOKY64:
-        digest->bytes = 64 / 8;
-        break;
-    case RM_DIGEST_MD5:
-        digest->glib_checksum = g_checksum_new(G_CHECKSUM_MD5);
-        ADD_SEED(digest, seed1);
-        digest->bytes = 128 / 8;
-        return digest;
-#if HAVE_SHA512
-    case RM_DIGEST_SHA512:
-        digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA512);
-        ADD_SEED(digest, seed1);
-        digest->bytes = 512 / 8;
-        return digest;
-#endif
-    case RM_DIGEST_SHA256:
-        digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA256);
-        ADD_SEED(digest, seed1);
-        digest->bytes = 256 / 8;
-        return digest;
-    case RM_DIGEST_SHA1:
-        digest->glib_checksum = g_checksum_new(G_CHECKSUM_SHA1);
-        ADD_SEED(digest, seed1);
-        digest->bytes = 160 / 8;
-        return digest;
-    case RM_DIGEST_SHA3_256:
-        SHA3_INIT(256);
-        return digest;
-    case RM_DIGEST_SHA3_384:
-        SHA3_INIT(384);
-        return digest;
-    case RM_DIGEST_SHA3_512:
-        SHA3_INIT(512);
-        return digest;
-    case RM_DIGEST_BLAKE2S:
-        BLAKE_INIT(blake2s, BLAKE2S);
-        return digest;
-    case RM_DIGEST_BLAKE2B:
-        BLAKE_INIT(blake2b, BLAKE2B);
-        return digest;
-    case RM_DIGEST_BLAKE2SP:
-        BLAKE_INIT(blake2sp, BLAKE2S);
-        return digest;
-    case RM_DIGEST_BLAKE2BP:
-        BLAKE_INIT(blake2bp, BLAKE2B);
-        return digest;
-    case RM_DIGEST_EXT:
-        /* gets allocated on rm_digest_update() */
-        digest->bytes = ext_size;
-        break;
-    case RM_DIGEST_SPOOKY:
-    case RM_DIGEST_MURMUR:
-    case RM_DIGEST_CITY:
-    case RM_DIGEST_CUMULATIVE:
-        digest->bytes = 128 / 8;
-        break;
-    case RM_DIGEST_PARANOID:
-        digest->bytes = 0;
-        digest->paranoid = g_slice_new0(RmParanoid);
-        digest->paranoid->incoming_twin_candidates = g_async_queue_new();
-        if(use_shadow_hash) {
-            digest->paranoid->shadow_hash =
-                rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
-        }
-        return digest;
-    default:
-        rm_assert_gentle_not_reached();
-    }
-    digest->checksum = g_slice_alloc0(digest->bytes);       
+    digest_specs[type].init(digest, seed1, seed2, ext_size, use_shadow_hash);
+
     return digest;
 }
 
