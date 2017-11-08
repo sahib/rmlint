@@ -103,6 +103,7 @@ typedef struct RmDigest {
         sha3_context *sha3_ctx;
         RmUint128 *checksum;
         RmParanoid *paranoid;
+        guint8 *data;
     };
 
     /* digest type */

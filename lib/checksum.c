@@ -54,12 +54,14 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
-typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data, RmOff size);
+typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
+typedef void (*RmDigestFreeFunc)(RmDigest *digest);
+typedef void (*RmDigestUpdateFunc)(RmDigest *digest, const unsigned char *data, RmOff size);
 
 typedef struct RmDigestSpec {
     const int bits;
-    void (*init)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
-    void (*free)(RmDigest *digest);
+    RmDigestInitFunc init;
+    RmDigestFreeFunc free;
     RmDigestUpdateFunc update;
 } RmDigestSpec;
 
@@ -96,79 +98,98 @@ static void rm_digest_generic_free(RmDigest *digest) {
  ****** spooky hashes ******
  */
 
-static void rm_digest_spooky32_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
-    checksum->first = spooky_hash32(data, size, checksum->first);
+static void rm_digest_spooky32_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    digest->checksum->first = spooky_hash32(data, size, digest->checksum->first);
 }
 
-static void rm_digest_spooky64_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
-    checksum->first = spooky_hash64(data, size, checksum->first);
+static void rm_digest_spooky64_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    digest->checksum->first = spooky_hash64(data, size, digest->checksum->first);
 }
 
-static void rm_digest_spooky_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
-    spooky_hash128(data, size, (uint64_t *)&checksum->first, (uint64_t *)&checksum->second);
+static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    spooky_hash128(data, size, (uint64_t *)&digest->checksum->first, (uint64_t *)&digest->checksum->second);
 }
 
-/*
- ****** xxhash ******
- */
+static const RmDigestSpec spooky32_spec = {  32, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky32_update};
+static const RmDigestSpec spooky64_spec = {  32, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky64_update};
+static const RmDigestSpec spooky_spec   = { 128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_spooky_update};
 
-static void rm_digest_xxhash_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
-    checksum->first = XXH64(data, size, checksum->first);
+
+///////////////////////////
+//        xxhash         //
+///////////////////////////
+
+static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    digest->checksum->first = XXH64(data, size, digest->checksum->first);
 }
 
-/*
- ****** farmhash ******
- */
+static const RmDigestSpec xxhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_xxhash_update};
 
-static void rm_digest_farmhash_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+///////////////////////////
+//      farmhash         //
+///////////////////////////
+
+static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     /* TODO: this won't work, it's not cumulative */
-    checksum->first = cfarmhash((const char *)data, size);
+    digest->checksum->first = cfarmhash((const char *)data, size);
 }
 
-/*
- ****** murmur ******
- */
+static const RmDigestSpec farmhash_spec =  {64, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_farmhash_update};
 
-static void rm_digest_murmur_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+///////////////////////////
+//        murmur         //
+///////////////////////////
+
+
+static void rm_digest_murmur_update(RmDigest *digest, const unsigned char *data, RmOff size) {
 #if RM_PLATFORM_32
-    MurmurHash3_x86_128(data, size, (uint32_t)checksum->first, checksum);
+    MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum->first, digest->checksum);
 #elif RM_PLATFORM_64
-    MurmurHash3_x64_128(data, size, (uint32_t)checksum->first, checksum);
+    MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum->first, digest->checksum);
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
 }
 
-/*
- ****** cityhash ******
- */
+static const RmDigestSpec murmur_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_murmur_update};
 
-static void rm_digest_city_update(RmUint128 *checksum, const unsigned char *data, RmOff size) {
+///////////////////////////
+//      cityhash         //
+///////////////////////////
+
+static void rm_digest_city_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     /* There is a more optimized version but it needs the crc command of sse4.2
     * (available on Intel Nehalem and up; my amd box doesn't have this though)
     */
-    uint128 old = {checksum->first, checksum->second};
+    uint128 old = {digest->checksum->first, digest->checksum->second};
+#ifdef __SSE4_2__
+    old = CityHashCrc128WithSeed((const char *)data, size, old);
+#else
     old = CityHash128WithSeed((const char *)data, size, old);
-    memcpy(checksum, &old, sizeof(uint128));
+#endif
+    memcpy(digest->checksum, &old, sizeof(uint128));
 }
 
+static const RmDigestSpec city_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_city_update};
 
-/*
- ****** cumulative ******
- */
+///////////////////////////
+//      cumulative       //
+///////////////////////////
 
-static void rm_digest_cumulative_update(guint8 *checksum, const unsigned char *data, RmOff size) {
+static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     /*  This only XORS the two checksums. */
-    size = MIN(size, 16);
+    size = MIN(size, digest->bytes);
     for(gsize i = 0; i < size; ++i) {
-        checksum[i] ^= ((guint8 *)data)[i % size];
+        digest->data[i] ^= ((guint8 *)data)[i % size];
     }
 }
 
+static const RmDigestSpec cumulative_spec =  {128, rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_cumulative_update};
 
-/*
- ****** glib hash algorithm interface ******
- */
+
+///////////////////////////
+//      glib hashes      //
+///////////////////////////
 
 static const GChecksumType glib_map[] = {
     [RM_DIGEST_MD5]        = G_CHECKSUM_MD5,
@@ -192,6 +213,17 @@ static void rm_digest_glib_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNU
 static void rm_digest_glib_free(RmDigest *digest) {
     g_checksum_free(digest->glib_checksum);
 }
+
+static void rm_digest_glib_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    g_checksum_update(digest->glib_checksum, data, size);
+}
+
+static const RmDigestSpec md5_spec =  {128, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
+static const RmDigestSpec sha1_spec = {160, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
+static const RmDigestSpec sha256_spec = {256, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
+#if HAVE_SHA512
+static const RmDigestSpec sha512_spec = {512, rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update};
+#endif
 
 /*
  ****** sha3 hash algorithm interface ******
@@ -223,6 +255,14 @@ static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNU
 static void rm_digest_sha3_free(RmDigest *digest) {
     g_slice_free(sha3_context, digest->sha3_ctx);
 }
+
+static void rm_digest_sha3_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    sha3_Update(digest->sha3_ctx, data, size);
+}
+
+static const RmDigestSpec sha3_256_spec = { 256, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
+static const RmDigestSpec sha3_384_spec = { 384, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
+static const RmDigestSpec sha3_512_spec = { 512, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update};
 
 /*
  ****** blake hash algorithm interface ******
@@ -272,6 +312,29 @@ static void rm_digest_blake2sp_free(RmDigest *digest) {
     g_slice_free(blake2sp_state, digest->blake2sp_state);
 }
 
+static void rm_digest_blake2b_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    blake2b_update(digest->blake2b_state, data, size);
+}
+
+static void rm_digest_blake2bp_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    blake2bp_update(digest->blake2bp_state, data, size);
+}
+
+static void rm_digest_blake2s_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    blake2s_update(digest->blake2s_state, data, size);
+}
+
+static void rm_digest_blake2sp_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    blake2sp_update(digest->blake2sp_state, data, size);
+}
+
+
+static const RmDigestSpec blake2b_spec = {512, rm_digest_blake2b_init, rm_digest_blake2b_free, rm_digest_blake2b_update};
+static const RmDigestSpec blake2bp_spec = {512, rm_digest_blake2bp_init, rm_digest_blake2bp_free, rm_digest_blake2bp_update};
+static const RmDigestSpec blake2s_spec = {256, rm_digest_blake2s_init, rm_digest_blake2s_free, rm_digest_blake2s_update};
+static const RmDigestSpec blake2sp_spec = {256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, rm_digest_blake2sp_update};
+
+
 /*
  ****** ext hash algorithm interface ******
  */
@@ -289,7 +352,6 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
      * */
 #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
-
     digest->bytes = size / 2;
     digest->checksum = g_slice_alloc0(digest->bytes);
 
@@ -298,6 +360,9 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
             (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
     }
 }
+
+static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update};
+
 
 /*
  ****** paranoid hash algorithm interface ******
@@ -323,37 +388,39 @@ static void rm_digest_paranoid_free(RmDigest *digest) {
     g_slice_free(RmParanoid, digest->paranoid);
 }
 
+/* Note: paranoid update implementation is in rm_digest_buffered_update() below */
+
+static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL};
+
 /*
- ****** hash interface specification map ******
+ ****** RmDigestSpec map ******
  */
 
-#define UPDATE(ALGO) (RmDigestUpdateFunc)rm_digest_##ALGO##_update
-
-static const RmDigestSpec digest_specs[] = {
-    [RM_DIGEST_UNKNOWN]    = {   0, NULL, NULL, NULL},
-    [RM_DIGEST_MURMUR]     = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(murmur)},
-    [RM_DIGEST_SPOOKY]     = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(spooky)},
-    [RM_DIGEST_SPOOKY32]   = {  32, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(spooky32)},
-    [RM_DIGEST_SPOOKY64]   = {  64, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(spooky64)},
-    [RM_DIGEST_CITY]       = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(city)},
-    [RM_DIGEST_MD5]        = { 128, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
-    [RM_DIGEST_SHA1]       = { 160, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
-    [RM_DIGEST_SHA256]     = { 256, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
+static const RmDigestSpec *digest_specs[] = {
+    [RM_DIGEST_UNKNOWN]    = NULL,
+    [RM_DIGEST_MURMUR]     = &murmur_spec,
+    [RM_DIGEST_SPOOKY]     = &spooky_spec,
+    [RM_DIGEST_SPOOKY32]   = &spooky32_spec,
+    [RM_DIGEST_SPOOKY64]   = &spooky64_spec,
+    [RM_DIGEST_CITY]       = &city_spec,
+    [RM_DIGEST_MD5]        = &md5_spec,
+    [RM_DIGEST_SHA1]       = &sha1_spec,
+    [RM_DIGEST_SHA256]     = &sha256_spec,
 #if HAVE_SHA512
-    [RM_DIGEST_SHA512]     = { 512, rm_digest_glib_init,     rm_digest_glib_free,     (RmDigestUpdateFunc)g_checksum_update},
+    [RM_DIGEST_SHA512]     = &sha512_spec,
 #endif
-    [RM_DIGEST_SHA3_256]   = { 256, rm_digest_sha3_init,     rm_digest_sha3_free,     (RmDigestUpdateFunc)sha3_Update},
-    [RM_DIGEST_SHA3_384]   = { 384, rm_digest_sha3_init,     rm_digest_sha3_free,     (RmDigestUpdateFunc)sha3_Update},
-    [RM_DIGEST_SHA3_512]   = { 512, rm_digest_sha3_init,     rm_digest_sha3_free,     (RmDigestUpdateFunc)sha3_Update},
-    [RM_DIGEST_BLAKE2S]    = { 256, rm_digest_blake2s_init,  rm_digest_blake2s_free,  (RmDigestUpdateFunc)blake2s_update},
-    [RM_DIGEST_BLAKE2B]    = { 512, rm_digest_blake2b_init,  rm_digest_blake2b_free,  (RmDigestUpdateFunc)blake2b_update},
-    [RM_DIGEST_BLAKE2SP]   = { 256, rm_digest_blake2sp_init, rm_digest_blake2sp_free, (RmDigestUpdateFunc)blake2sp_update},
-    [RM_DIGEST_BLAKE2BP]   = { 512, rm_digest_blake2bp_init, rm_digest_blake2bp_free, (RmDigestUpdateFunc)blake2bp_update},
-    [RM_DIGEST_EXT]        = {   0, rm_digest_ext_init,      rm_digest_generic_free,  UPDATE(ext)},
-    [RM_DIGEST_CUMULATIVE] = { 128, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(cumulative)},
-    [RM_DIGEST_PARANOID]   = {   0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL},
-    [RM_DIGEST_FARMHASH]   = {  64, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(farmhash)},
-    [RM_DIGEST_XXHASH]     = {  64, rm_digest_generic_init,  rm_digest_generic_free,  UPDATE(xxhash)},
+    [RM_DIGEST_SHA3_256]   = &sha3_256_spec,
+    [RM_DIGEST_SHA3_384]   = &sha3_384_spec,
+    [RM_DIGEST_SHA3_512]   = &sha3_512_spec,
+    [RM_DIGEST_BLAKE2S]    = &blake2s_spec,
+    [RM_DIGEST_BLAKE2B]    = &blake2b_spec,
+    [RM_DIGEST_BLAKE2SP]   = &blake2sp_spec,
+    [RM_DIGEST_BLAKE2BP]   = &blake2bp_spec,
+    [RM_DIGEST_EXT]        = &ext_spec,
+    [RM_DIGEST_CUMULATIVE] = &cumulative_spec,
+    [RM_DIGEST_PARANOID]   = &paranoid_spec,
+    [RM_DIGEST_FARMHASH]   = &farmhash_spec,
+    [RM_DIGEST_XXHASH]     = &xxhash_spec,
 };
 
 
@@ -549,12 +616,12 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
                         bool use_shadow_hash) {
     g_assert(type != RM_DIGEST_UNKNOWN);
 
-    RmDigestSpec spec = digest_specs[type];
+    const RmDigestSpec *spec = digest_specs[type];
     RmDigest *digest = g_slice_new0(RmDigest);
     digest->type = type;
 
-    digest->bytes = spec.bits / 8;
-    spec.init(digest, seed1, seed2, ext_size, use_shadow_hash);
+    digest->bytes = spec->bits / 8;
+    spec->init(digest, seed1, seed2, ext_size, use_shadow_hash);
 
     return digest;
 }
@@ -572,25 +639,25 @@ void rm_digest_release_buffers(RmDigest *digest) {
 }
 
 void rm_digest_free(RmDigest *digest) {
-    RmDigestSpec spec = digest_specs[digest->type];
-    spec.free(digest);
+    const RmDigestSpec *spec = digest_specs[digest->type];
+    spec->free(digest);
     g_slice_free(RmDigest, digest);
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    RmDigestSpec spec = digest_specs[digest->type];
-    spec.update(digest->checksum, data, size);
+    const RmDigestSpec *spec = digest_specs[digest->type];
+    spec->update(digest, data, size);
 }
 
 void rm_digest_buffered_update(RmBuffer *buffer) {
+    rm_assert_gentle(buffer);
     RmDigest *digest = buffer->digest;
     if(digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
         rm_buffer_release(buffer);
     } else {
         RmParanoid *paranoid = digest->paranoid;
-
-        /* efficiently append buffer to buffers GSList */
+        /* paranoid update... */
         if(!paranoid->buffers) {
             /* first buffer */
             paranoid->buffers = g_slist_prepend(NULL, buffer);
@@ -638,7 +705,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                 paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
             }
             if(paranoid->twin_candidate && !match) {
-/* reject the twin candidate, also add to rejects list to speed up rm_digest_equal() */
+    /* reject the twin candidate, also add to rejects list to speed up rm_digest_equal() */
 #if _RM_CHECKSUM_DEBUG
                 rm_log_debug_line("Rejected twin candidate %p for %p",
                                   paranoid->twin_candidate, paranoid);
