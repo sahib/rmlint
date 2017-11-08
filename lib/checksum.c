@@ -57,6 +57,7 @@
 typedef struct RmDigestSpec {
     const int bits;
     void (*init)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
+    void (*free)(RmDigest *digest);
 } RmDigestSpec;
 
 /*
@@ -82,6 +83,12 @@ static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _
     }
 }
 
+static void rm_digest_generic_free(RmDigest *digest) {
+    if(digest->checksum) {
+        g_slice_free1(digest->bytes, digest->checksum);
+    }
+}
+
 /*
  ****** glib hash algorithm interface ******
  */
@@ -103,6 +110,10 @@ static void rm_digest_glib_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNU
     if(seed2) {
         g_checksum_update(digest->glib_checksum, (const guchar *)&seed2, sizeof(seed2));
     }
+}
+
+static void rm_digest_glib_free(RmDigest *digest) {
+    g_checksum_free(digest->glib_checksum);
 }
 
 /*
@@ -130,6 +141,10 @@ static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNU
     if(seed2) {
         sha3_Update(digest->sha3_ctx, &seed2, sizeof(seed2));
     }
+}
+
+static void rm_digest_sha3_free(RmDigest *digest) {
+    g_slice_free(sha3_context, digest->sha3_ctx);
 }
 
 /*
@@ -164,6 +179,22 @@ static void rm_digest_blake2sp_init(RmDigest *digest, RmOff seed1, RmOff seed2, 
     BLAKE_INIT(blake2sp, BLAKE2S);
 }
 
+static void rm_digest_blake2b_free(RmDigest *digest) {
+    g_slice_free(blake2b_state, digest->blake2b_state);
+}
+
+static void rm_digest_blake2bp_free(RmDigest *digest) {
+    g_slice_free(blake2bp_state, digest->blake2bp_state);
+}
+
+static void rm_digest_blake2s_free(RmDigest *digest) {
+    g_slice_free(blake2s_state, digest->blake2s_state);
+}
+
+static void rm_digest_blake2sp_free(RmDigest *digest) {
+    g_slice_free(blake2sp_state, digest->blake2sp_state);
+}
+
 /*
  ****** ext hash algorithm interface ******
  */
@@ -185,35 +216,48 @@ static void rm_digest_paranoid_init(RmDigest *digest, RmOff seed1, RmOff seed2, 
     }
 }
 
+static void rm_digest_paranoid_free(RmDigest *digest) {
+    if(digest->paranoid->shadow_hash) {
+        rm_digest_free(digest->paranoid->shadow_hash);
+    }
+    rm_digest_release_buffers(digest);
+    if(digest->paranoid->incoming_twin_candidates) {
+        g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
+    }
+    g_slist_free(digest->paranoid->rejects);
+    g_slice_free(RmParanoid, digest->paranoid);
+}
+
+
 /*
  ****** hash interface specification map ******
  */
 
 static const RmDigestSpec digest_specs[] = {
-    [RM_DIGEST_UNKNOWN]    = {   0, NULL                   },
-    [RM_DIGEST_MURMUR]     = { 128, rm_digest_generic_init },
-    [RM_DIGEST_SPOOKY]     = { 128, rm_digest_generic_init },
-    [RM_DIGEST_SPOOKY32]   = {  32, rm_digest_generic_init },
-    [RM_DIGEST_SPOOKY64]   = {  64, rm_digest_generic_init },
-    [RM_DIGEST_CITY]       = { 128, rm_digest_generic_init },
-    [RM_DIGEST_MD5]        = { 128, rm_digest_glib_init    },
-    [RM_DIGEST_SHA1]       = { 160, rm_digest_glib_init    },
-    [RM_DIGEST_SHA256]     = { 256, rm_digest_glib_init    },
+    [RM_DIGEST_UNKNOWN]    = {   0, NULL, NULL},
+    [RM_DIGEST_MURMUR]     = { 128, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_SPOOKY]     = { 128, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_SPOOKY32]   = {  32, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_SPOOKY64]   = {  64, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_CITY]       = { 128, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_MD5]        = { 128, rm_digest_glib_init,     rm_digest_glib_free},
+    [RM_DIGEST_SHA1]       = { 160, rm_digest_glib_init,     rm_digest_glib_free},
+    [RM_DIGEST_SHA256]     = { 256, rm_digest_glib_init,     rm_digest_glib_free},
 #if HAVE_SHA512
-    [RM_DIGEST_SHA512]     = { 512, rm_digest_glib_init    },
+    [RM_DIGEST_SHA512]     = { 512, rm_digest_glib_init,     rm_digest_glib_free},
 #endif
-    [RM_DIGEST_SHA3_256]   = { 256, rm_digest_sha3_init    },
-    [RM_DIGEST_SHA3_384]   = { 384, rm_digest_sha3_init    },
-    [RM_DIGEST_SHA3_512]   = { 512, rm_digest_sha3_init    },
-    [RM_DIGEST_BLAKE2S]    = { 256, rm_digest_blake2s_init },
-    [RM_DIGEST_BLAKE2B]    = { 512, rm_digest_blake2b_init },
-    [RM_DIGEST_BLAKE2SP]   = { 256, rm_digest_blake2sp_init},
-    [RM_DIGEST_BLAKE2BP]   = { 512, rm_digest_blake2bp_init},
-    [RM_DIGEST_EXT]        = {   0, rm_digest_ext_init     },
-    [RM_DIGEST_CUMULATIVE] = { 128, rm_digest_generic_init },
-    [RM_DIGEST_PARANOID]   = {   0, rm_digest_paranoid_init},
-    [RM_DIGEST_FARMHASH]   = {  64, rm_digest_generic_init },
-    [RM_DIGEST_XXHASH]     = {  64, rm_digest_generic_init },
+    [RM_DIGEST_SHA3_256]   = { 256, rm_digest_sha3_init,     rm_digest_sha3_free},
+    [RM_DIGEST_SHA3_384]   = { 384, rm_digest_sha3_init,     rm_digest_sha3_free},
+    [RM_DIGEST_SHA3_512]   = { 512, rm_digest_sha3_init,     rm_digest_sha3_free},
+    [RM_DIGEST_BLAKE2S]    = { 256, rm_digest_blake2s_init,  rm_digest_blake2s_free},
+    [RM_DIGEST_BLAKE2B]    = { 512, rm_digest_blake2b_init,  rm_digest_blake2b_free},
+    [RM_DIGEST_BLAKE2SP]   = { 256, rm_digest_blake2sp_init, rm_digest_blake2sp_free},
+    [RM_DIGEST_BLAKE2BP]   = { 512, rm_digest_blake2bp_init, rm_digest_blake2bp_free},
+    [RM_DIGEST_EXT]        = {   0, rm_digest_ext_init,      rm_digest_generic_free},
+    [RM_DIGEST_CUMULATIVE] = { 128, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_PARANOID]   = {   0, rm_digest_paranoid_init, rm_digest_paranoid_free},
+    [RM_DIGEST_FARMHASH]   = {  64, rm_digest_generic_init,  rm_digest_generic_free},
+    [RM_DIGEST_XXHASH]     = {  64, rm_digest_generic_init,  rm_digest_generic_free},
 };
 
 
@@ -431,59 +475,7 @@ void rm_digest_release_buffers(RmDigest *digest) {
 }
 
 void rm_digest_free(RmDigest *digest) {
-    switch(digest->type) {
-    case RM_DIGEST_MD5:
-    case RM_DIGEST_SHA512:
-    case RM_DIGEST_SHA256:
-    case RM_DIGEST_SHA1:
-        g_checksum_free(digest->glib_checksum);
-        digest->glib_checksum = NULL;
-        break;
-    case RM_DIGEST_PARANOID:
-        if(digest->paranoid->shadow_hash) {
-            rm_digest_free(digest->paranoid->shadow_hash);
-        }
-        rm_digest_release_buffers(digest);
-        if(digest->paranoid->incoming_twin_candidates) {
-            g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
-        }
-        g_slist_free(digest->paranoid->rejects);
-        g_slice_free(RmParanoid, digest->paranoid);
-        break;
-    case RM_DIGEST_SHA3_256:
-    case RM_DIGEST_SHA3_384:
-    case RM_DIGEST_SHA3_512:
-        g_slice_free(sha3_context, digest->sha3_ctx);
-        break;
-    case RM_DIGEST_BLAKE2S:
-        g_slice_free(blake2s_state, digest->blake2s_state);
-        break;
-    case RM_DIGEST_BLAKE2B:
-        g_slice_free(blake2b_state, digest->blake2b_state);
-        break;
-    case RM_DIGEST_BLAKE2SP:
-        g_slice_free(blake2sp_state, digest->blake2sp_state);
-        break;
-    case RM_DIGEST_BLAKE2BP:
-        g_slice_free(blake2bp_state, digest->blake2bp_state);
-        break;
-    case RM_DIGEST_EXT:
-    case RM_DIGEST_CUMULATIVE:
-    case RM_DIGEST_XXHASH:
-    case RM_DIGEST_SPOOKY:
-    case RM_DIGEST_SPOOKY32:
-    case RM_DIGEST_SPOOKY64:
-    case RM_DIGEST_FARMHASH:
-    case RM_DIGEST_MURMUR:
-    case RM_DIGEST_CITY:
-        if(digest->checksum) {
-            g_slice_free1(digest->bytes, digest->checksum);
-            digest->checksum = NULL;
-        }
-        break;
-    default:
-        rm_assert_gentle_not_reached();
-    }
+    digest_specs[digest->type].free(digest);
     g_slice_free(RmDigest, digest);
 }
 
