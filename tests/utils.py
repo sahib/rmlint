@@ -213,10 +213,30 @@ def run_rmlint_pedantic(*args, **kwargs):
     ]
 
     cksum_types = [
-        'paranoid', 'sha1', 'sha256', 'spooky', 'city',
-        'md5', 'murmur', 'spooky32', 'spooky64', 'xxhash', 'farmhash',
-        'sha3-256', 'sha3-384', 'sha3-512',
-        'blake2s', 'blake2b', 'blake2sp', 'blake2bp',
+        'murmur',
+        'spooky',
+        'spooky32',
+        'spooky64',
+        'city',
+        'md5',
+        'sha1',
+        'sha256',
+        'sha512',
+        'sha3-256',
+        'sha3-384',
+        'sha3-512',
+        'blake2s',
+        'blake2b',
+        'blake2sp',
+        'blake2bp',
+        'xxhash',
+        'farmhash',
+        'highway64',
+        'highway128',
+        'highway256',
+        #'cumulative',
+        #'ext',
+        'paranoid',
     ]
 
     # Note: sha512 is supported on all system which have
