@@ -286,6 +286,55 @@ static const RmDigestSpec cumulative_spec =  { "cumulative", 128, GENERIC_FUNCS(
 
 
 ///////////////////////////
+//     highway hash      //
+///////////////////////////
+
+static void rm_digest_highway_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    uint64_t key[4] = {1, 2, 3, 4};
+    if(seed1) {
+        key[0] = (uint64_t)seed1;
+    }
+    if(seed2) {
+        key[2] = (uint64_t)seed2;
+    }
+
+    digest->highway_cat = g_slice_alloc0(sizeof(HighwayHashCat));
+    HighwayHashCatStart(key, digest->highway_cat);
+}
+
+static void rm_digest_highway_free(RmDigest *digest) {
+    g_slice_free(HighwayHashCat, digest->highway_cat);
+}
+
+static void rm_digest_highway_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    HighwayHashCatAppend((const uint8_t*)data, size, digest->highway_cat);
+}
+
+static void rm_digest_highway_copy(RmDigest *digest, RmDigest *copy) {
+    copy->glib_checksum = g_slice_copy(sizeof(HighwayHashCat), digest->highway_cat);
+}
+
+/* HighwayHashCatFinish functions are non-destructive */
+static void rm_digest_highway256_steal(RmDigest *digest, guint8 *result) {
+    HighwayHashCatFinish256(digest->highway_cat, (uint64_t*)result);
+}
+
+static void rm_digest_highway128_steal(RmDigest *digest, guint8 *result) {
+    HighwayHashCatFinish128(digest->highway_cat, (uint64_t*)result);
+}
+
+static void rm_digest_highway64_steal(RmDigest *digest, guint8 *result) {
+    *result = HighwayHashCatFinish64(digest->highway_cat);
+}
+
+#define HIGHWAY_SPEC(BITS) "highway##BITS", BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
+
+static const RmDigestSpec highway256_spec =  {HIGHWAY_SPEC(256)};
+static const RmDigestSpec highway128_spec =  {HIGHWAY_SPEC(128)};
+static const RmDigestSpec highway64_spec  =  {HIGHWAY_SPEC(64)};
+
+
+///////////////////////////
 //      glib hashes      //
 ///////////////////////////
 
@@ -539,6 +588,9 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
         [RM_DIGEST_PARANOID]   = &paranoid_spec,
         [RM_DIGEST_FARMHASH]   = &farmhash_spec,
         [RM_DIGEST_XXHASH]     = &xxhash_spec,
+        [RM_DIGEST_HIGHWAY64]  = &highway64_spec,
+        [RM_DIGEST_HIGHWAY128] = &highway128_spec,
+        [RM_DIGEST_HIGHWAY256] = &highway256_spec,
     };
 
     if(type >= RM_DIGEST_SENTINEL) {
@@ -576,6 +628,9 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
         {"cumulative", RM_DIGEST_CUMULATIVE},
         {"paranoid", RM_DIGEST_PARANOID},
         {"city", RM_DIGEST_CITY},
+        {"highway64", RM_DIGEST_HIGHWAY64},
+        {"highway128", RM_DIGEST_HIGHWAY128},
+        {"highway256", RM_DIGEST_HIGHWAY256},
 #if HAVE_SHA512
         {"sha512", RM_DIGEST_SHA512},
 #endif

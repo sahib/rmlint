@@ -56,6 +56,9 @@ typedef enum RmDigestType {
     RM_DIGEST_BLAKE2XS,
     RM_DIGEST_XXHASH,
     RM_DIGEST_FARMHASH,
+    RM_DIGEST_HIGHWAY64,
+    RM_DIGEST_HIGHWAY128,
+    RM_DIGEST_HIGHWAY256,
 
     /* special kids in town */
     RM_DIGEST_CUMULATIVE, /* hash([a, b]) = hash([b, a]) */
@@ -104,6 +107,7 @@ typedef struct RmDigest {
         blake2b_state *blake2b_state;
         blake2sp_state *blake2sp_state;
         blake2bp_state *blake2bp_state;
+        HighwayHashCat *highway_cat;
         sha3_context *sha3_ctx;
         RmUint128 *checksum;
         uint128_t *farmhash;
