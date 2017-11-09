@@ -208,7 +208,7 @@ static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data,
 }
 
 #define GENERIC_FUNCS(ALGO) rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_##ALGO##_update, rm_digest_generic_copy, NULL
-static const RmDigestSpec spooky32_spec = { "spook32",  32, GENERIC_FUNCS(spooky32) };
+static const RmDigestSpec spooky32_spec = { "spooky32",  32, GENERIC_FUNCS(spooky32) };
 static const RmDigestSpec spooky64_spec = { "spooky64", 64, GENERIC_FUNCS(spooky64) };
 static const RmDigestSpec spooky_spec   = { "spooky",  128, GENERIC_FUNCS(spooky) };
 
@@ -327,11 +327,11 @@ static void rm_digest_highway64_steal(RmDigest *digest, guint8 *result) {
     *result = HighwayHashCatFinish64(digest->highway_cat);
 }
 
-#define HIGHWAY_SPEC(BITS) "highway##BITS", BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
+#define HIGHWAY_SPEC(BITS) BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
 
-static const RmDigestSpec highway256_spec =  {HIGHWAY_SPEC(256)};
-static const RmDigestSpec highway128_spec =  {HIGHWAY_SPEC(128)};
-static const RmDigestSpec highway64_spec  =  {HIGHWAY_SPEC(64)};
+static const RmDigestSpec highway256_spec =  {"highway256", HIGHWAY_SPEC(256)};
+static const RmDigestSpec highway128_spec =  {"highway128", HIGHWAY_SPEC(128)};
+static const RmDigestSpec highway64_spec  =  {"highway64", HIGHWAY_SPEC(64)};
 
 
 ///////////////////////////
@@ -432,11 +432,11 @@ static void rm_digest_sha3_steal(RmDigest *digest, guint8 *result) {
     g_slice_free(sha3_context, copy);
 }
 
-#define SHA3_SPEC(BITS) "sha3_##BITS", BITS, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
+#define SHA3_SPEC(BITS) BITS, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
 
-static const RmDigestSpec sha3_256_spec = { SHA3_SPEC(256)};
-static const RmDigestSpec sha3_384_spec = { SHA3_SPEC(384)};
-static const RmDigestSpec sha3_512_spec = { SHA3_SPEC(512)};
+static const RmDigestSpec sha3_256_spec = { "sha3-256", SHA3_SPEC(256)};
+static const RmDigestSpec sha3_384_spec = { "sha3-384", SHA3_SPEC(384)};
+static const RmDigestSpec sha3_512_spec = { "sha3-512", SHA3_SPEC(512)};
 
 ///////////////////////////
 //      blake hashes     //
@@ -593,12 +593,11 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
         [RM_DIGEST_HIGHWAY256] = &highway256_spec,
     };
 
-    if(type >= RM_DIGEST_SENTINEL) {
-        rm_assert_gentle_not_reached();
-        return digest_specs[RM_DEFAULT_DIGEST];
+    if(type < RM_DIGEST_SENTINEL && digest_specs[type]) {
+        return digest_specs[type];
     }
-
-    return digest_specs[type];
+    rm_log_error_line("No digest spec for enum %i", type);
+    g_assert_not_reached();
 }
 
 static gpointer rm_init_digest_type_table(GHashTable **code_table) {
