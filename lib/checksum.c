@@ -25,9 +25,8 @@
 
 /* Welcome to hell!
  *
- * This file is 90% boring switch statements with innocent, but insane code
- * squashed between. Modify this file with care and make sure to test all
- * checksums afterwards.
+ * This file is mostly boring code except for the paranoid digest
+ * optimisations which are pretty insane.
  **/
 
 #include <glib.h>
