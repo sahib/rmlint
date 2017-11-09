@@ -145,6 +145,7 @@ typedef void (*RmDigestCopyFunc)(RmDigest *digest, RmDigest *copy);
 typedef void (*RmDigestStealFunc)(RmDigest *digest, guint8 *result);
 
 typedef struct RmDigestSpec {
+    const char *name;
     const int bits;
     RmDigestInitFunc init;
     RmDigestFreeFunc free;
@@ -207,9 +208,9 @@ static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data,
 }
 
 #define GENERIC_FUNCS(ALGO) rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_##ALGO##_update, rm_digest_generic_copy, NULL
-static const RmDigestSpec spooky32_spec = {  32, GENERIC_FUNCS(spooky32) };
-static const RmDigestSpec spooky64_spec = {  64, GENERIC_FUNCS(spooky64) };
-static const RmDigestSpec spooky_spec   = { 128, GENERIC_FUNCS(spooky) };
+static const RmDigestSpec spooky32_spec = { "spook32",  32, GENERIC_FUNCS(spooky32) };
+static const RmDigestSpec spooky64_spec = { "spooky64", 64, GENERIC_FUNCS(spooky64) };
+static const RmDigestSpec spooky_spec   = { "spooky",  128, GENERIC_FUNCS(spooky) };
 
 
 ///////////////////////////
@@ -220,7 +221,7 @@ static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data,
     digest->checksum->first = XXH64(data, size, digest->checksum->first);
 }
 
-static const RmDigestSpec xxhash_spec =  {64, GENERIC_FUNCS(xxhash)};
+static const RmDigestSpec xxhash_spec =  { "xxhash", 64, GENERIC_FUNCS(xxhash)};
 
 ///////////////////////////
 //      farmhash         //
@@ -230,7 +231,7 @@ static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *dat
     *digest->farmhash = farmhash128_with_seed((const char*)data, size, *digest->farmhash);
 }
 
-static const RmDigestSpec farmhash_spec =  {64, GENERIC_FUNCS(farmhash)};
+static const RmDigestSpec farmhash_spec =  { "farmhash", 64, GENERIC_FUNCS(farmhash)};
 
 ///////////////////////////
 //        murmur         //
@@ -247,7 +248,7 @@ static void rm_digest_murmur_update(RmDigest *digest, const unsigned char *data,
 #endif
 }
 
-static const RmDigestSpec murmur_spec =  {128, GENERIC_FUNCS(murmur)};
+static const RmDigestSpec murmur_spec =  { "murmur", 128, GENERIC_FUNCS(murmur)};
 
 ///////////////////////////
 //      cityhash         //
@@ -266,7 +267,8 @@ static void rm_digest_city_update(RmDigest *digest, const unsigned char *data, R
     memcpy(digest->checksum, &old, sizeof(uint128));
 }
 
-static const RmDigestSpec city_spec =  {128, GENERIC_FUNCS(city)};
+static const RmDigestSpec city_spec =  { "city", 128, GENERIC_FUNCS(city)};
+
 
 ///////////////////////////
 //      cumulative       //
@@ -280,7 +282,8 @@ static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *d
     }
 }
 
-static const RmDigestSpec cumulative_spec =  {128, GENERIC_FUNCS(cumulative)};
+static const RmDigestSpec cumulative_spec =  { "cumulative", 128, GENERIC_FUNCS(cumulative)};
+
 
 ///////////////////////////
 //      glib hashes      //
@@ -327,11 +330,11 @@ static void rm_digest_glib_steal(RmDigest *digest, guint8 *result) {
 
 #define GLIB_FUNCS rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy, rm_digest_glib_steal
 
-static const RmDigestSpec md5_spec =  {128, GLIB_FUNCS};
-static const RmDigestSpec sha1_spec = {160, GLIB_FUNCS};
-static const RmDigestSpec sha256_spec = {256, GLIB_FUNCS};
+static const RmDigestSpec md5_spec =  {"md5", 128, GLIB_FUNCS};
+static const RmDigestSpec sha1_spec = {"sha1", 160, GLIB_FUNCS};
+static const RmDigestSpec sha256_spec = {"sha256", 256, GLIB_FUNCS};
 #if HAVE_SHA512
-static const RmDigestSpec sha512_spec = {512, GLIB_FUNCS};
+static const RmDigestSpec sha512_spec = {"sha512", 512, GLIB_FUNCS};
 #endif
 
 ///////////////////////////
@@ -380,11 +383,11 @@ static void rm_digest_sha3_steal(RmDigest *digest, guint8 *result) {
     g_slice_free(sha3_context, copy);
 }
 
-#define SHA3_FUNCS rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
+#define SHA3_SPEC(BITS) "sha3_##BITS", BITS, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
 
-static const RmDigestSpec sha3_256_spec = { 256, SHA3_FUNCS};
-static const RmDigestSpec sha3_384_spec = { 384, SHA3_FUNCS};
-static const RmDigestSpec sha3_512_spec = { 512, SHA3_FUNCS};
+static const RmDigestSpec sha3_256_spec = { SHA3_SPEC(256)};
+static const RmDigestSpec sha3_384_spec = { SHA3_SPEC(384)};
+static const RmDigestSpec sha3_512_spec = { SHA3_SPEC(512)};
 
 ///////////////////////////
 //      blake hashes     //
@@ -440,10 +443,10 @@ CREATE_BLAKE_FUNCS(blake2sp, BLAKE2S);
 
 #define BLAKE_FUNCS(ALGO) rm_digest_##ALGO##_init, rm_digest_##ALGO##_free, rm_digest_##ALGO##_update, rm_digest_##ALGO##_copy, rm_digest_##ALGO##_steal
 
-static const RmDigestSpec blake2b_spec = {512, BLAKE_FUNCS(blake2b)};
-static const RmDigestSpec blake2bp_spec = {512, BLAKE_FUNCS(blake2bp)};
-static const RmDigestSpec blake2s_spec = {256, BLAKE_FUNCS(blake2s)};
-static const RmDigestSpec blake2sp_spec = {256, BLAKE_FUNCS(blake2sp)};
+static const RmDigestSpec blake2b_spec = {"blake2b", 512, BLAKE_FUNCS(blake2b)};
+static const RmDigestSpec blake2bp_spec = {"blake2bp", 512, BLAKE_FUNCS(blake2bp)};
+static const RmDigestSpec blake2s_spec = {"blake2s", 256, BLAKE_FUNCS(blake2s)};
+static const RmDigestSpec blake2sp_spec = {"blake2sp", 256, BLAKE_FUNCS(blake2sp)};
 
 ///////////////////////////
 //      ext  hash        //
@@ -472,7 +475,7 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
     }
 }
 
-static const RmDigestSpec ext_spec = {0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
+static const RmDigestSpec ext_spec = {"ext", 0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
 
 
 ///////////////////////////
@@ -502,40 +505,49 @@ static void rm_digest_paranoid_free(RmDigest *digest) {
 
 /* Note: paranoid update implementation is in rm_digest_buffered_update() below */
 
-static const RmDigestSpec paranoid_spec = {0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, NULL};
+static const RmDigestSpec paranoid_spec = { "paranoid", 0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, NULL};
 
 
 ////////////////////////////////
 //      RmDigestSpec map      //
 ////////////////////////////////
 
-static const RmDigestSpec *digest_specs[] = {
-    [RM_DIGEST_UNKNOWN]    = NULL,
-    [RM_DIGEST_MURMUR]     = &murmur_spec,
-    [RM_DIGEST_SPOOKY]     = &spooky_spec,
-    [RM_DIGEST_SPOOKY32]   = &spooky32_spec,
-    [RM_DIGEST_SPOOKY64]   = &spooky64_spec,
-    [RM_DIGEST_CITY]       = &city_spec,
-    [RM_DIGEST_MD5]        = &md5_spec,
-    [RM_DIGEST_SHA1]       = &sha1_spec,
-    [RM_DIGEST_SHA256]     = &sha256_spec,
-#if HAVE_SHA512
-    [RM_DIGEST_SHA512]     = &sha512_spec,
-#endif
-    [RM_DIGEST_SHA3_256]   = &sha3_256_spec,
-    [RM_DIGEST_SHA3_384]   = &sha3_384_spec,
-    [RM_DIGEST_SHA3_512]   = &sha3_512_spec,
-    [RM_DIGEST_BLAKE2S]    = &blake2s_spec,
-    [RM_DIGEST_BLAKE2B]    = &blake2b_spec,
-    [RM_DIGEST_BLAKE2SP]   = &blake2sp_spec,
-    [RM_DIGEST_BLAKE2BP]   = &blake2bp_spec,
-    [RM_DIGEST_EXT]        = &ext_spec,
-    [RM_DIGEST_CUMULATIVE] = &cumulative_spec,
-    [RM_DIGEST_PARANOID]   = &paranoid_spec,
-    [RM_DIGEST_FARMHASH]   = &farmhash_spec,
-    [RM_DIGEST_XXHASH]     = &xxhash_spec,
-};
 
+static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
+    static const RmDigestSpec *digest_specs[] = {
+        [RM_DIGEST_UNKNOWN]    = NULL,
+        [RM_DIGEST_MURMUR]     = &murmur_spec,
+        [RM_DIGEST_SPOOKY]     = &spooky_spec,
+        [RM_DIGEST_SPOOKY32]   = &spooky32_spec,
+        [RM_DIGEST_SPOOKY64]   = &spooky64_spec,
+        [RM_DIGEST_CITY]       = &city_spec,
+        [RM_DIGEST_MD5]        = &md5_spec,
+        [RM_DIGEST_SHA1]       = &sha1_spec,
+        [RM_DIGEST_SHA256]     = &sha256_spec,
+    #if HAVE_SHA512
+        [RM_DIGEST_SHA512]     = &sha512_spec,
+    #endif
+        [RM_DIGEST_SHA3_256]   = &sha3_256_spec,
+        [RM_DIGEST_SHA3_384]   = &sha3_384_spec,
+        [RM_DIGEST_SHA3_512]   = &sha3_512_spec,
+        [RM_DIGEST_BLAKE2S]    = &blake2s_spec,
+        [RM_DIGEST_BLAKE2B]    = &blake2b_spec,
+        [RM_DIGEST_BLAKE2SP]   = &blake2sp_spec,
+        [RM_DIGEST_BLAKE2BP]   = &blake2bp_spec,
+        [RM_DIGEST_EXT]        = &ext_spec,
+        [RM_DIGEST_CUMULATIVE] = &cumulative_spec,
+        [RM_DIGEST_PARANOID]   = &paranoid_spec,
+        [RM_DIGEST_FARMHASH]   = &farmhash_spec,
+        [RM_DIGEST_XXHASH]     = &xxhash_spec,
+    };
+
+    if(type >= RM_DIGEST_SENTINEL) {
+        rm_assert_gentle_not_reached();
+        return digest_specs[RM_DEFAULT_DIGEST];
+    }
+
+    return digest_specs[type];
+}
 
 static gpointer rm_init_digest_type_table(GHashTable **code_table) {
     static struct {
@@ -602,30 +614,8 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
-    static const char *names[] = {[RM_DIGEST_UNKNOWN] = "unknown",
-                                  [RM_DIGEST_MURMUR] = "murmur",
-                                  [RM_DIGEST_SPOOKY] = "spooky",
-                                  [RM_DIGEST_SPOOKY32] = "spooky32",
-                                  [RM_DIGEST_SPOOKY64] = "spooky64",
-                                  [RM_DIGEST_CITY] = "city",
-                                  [RM_DIGEST_MD5] = "md5",
-                                  [RM_DIGEST_SHA1] = "sha1",
-                                  [RM_DIGEST_SHA256] = "sha256",
-                                  [RM_DIGEST_SHA512] = "sha512",
-                                  [RM_DIGEST_SHA3_256] = "sha3-256",
-                                  [RM_DIGEST_SHA3_384] = "sha3-384",
-                                  [RM_DIGEST_SHA3_512] = "sha3-512",
-                                  [RM_DIGEST_BLAKE2S] = "blake2s",
-                                  [RM_DIGEST_BLAKE2B] = "blake2b",
-                                  [RM_DIGEST_BLAKE2SP] = "blake2sp",
-                                  [RM_DIGEST_BLAKE2BP] = "blake2bp",
-                                  [RM_DIGEST_EXT] = "ext",
-                                  [RM_DIGEST_CUMULATIVE] = "cumulative",
-                                  [RM_DIGEST_PARANOID] = "paranoid",
-                                  [RM_DIGEST_FARMHASH] = "farmhash",
-                                  [RM_DIGEST_XXHASH] = "xxhash"};
-
-    return names[MIN(type, sizeof(names) / sizeof(names[0]))];
+    const RmDigestSpec *spec = rm_digest_spec(type);
+    return spec->name;
 }
 
 /*  TODO: remove? */
@@ -645,10 +635,9 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
                         bool use_shadow_hash) {
     g_assert(type != RM_DIGEST_UNKNOWN);
 
-    const RmDigestSpec *spec = digest_specs[type];
+    const RmDigestSpec *spec = rm_digest_spec(type);
     RmDigest *digest = g_slice_new0(RmDigest);
     digest->type = type;
-
     digest->bytes = spec->bits / 8;
     spec->init(digest, seed1, seed2, ext_size, use_shadow_hash);
 
@@ -668,13 +657,13 @@ void rm_digest_release_buffers(RmDigest *digest) {
 }
 
 void rm_digest_free(RmDigest *digest) {
-    const RmDigestSpec *spec = digest_specs[digest->type];
+    const RmDigestSpec *spec = rm_digest_spec(digest->type);
     spec->free(digest);
     g_slice_free(RmDigest, digest);
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    const RmDigestSpec *spec = digest_specs[digest->type];
+    const RmDigestSpec *spec = rm_digest_spec(digest->type);
     spec->update(digest, data, size);
 }
 
@@ -761,48 +750,15 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
 
     RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
 
-    const RmDigestSpec *spec = digest_specs[digest->type];
+    const RmDigestSpec *spec = rm_digest_spec(digest->type);
     spec->copy(digest, copy);
 
     return copy;
 }
 
-static gboolean rm_digest_needs_steal(RmDigestType digest_type) {
-    switch(digest_type) {
-    case RM_DIGEST_MD5:
-    case RM_DIGEST_SHA512:
-    case RM_DIGEST_SHA256:
-    case RM_DIGEST_SHA1:
-    case RM_DIGEST_SHA3_256:
-    case RM_DIGEST_SHA3_384:
-    case RM_DIGEST_SHA3_512:
-    case RM_DIGEST_BLAKE2S:
-    case RM_DIGEST_BLAKE2B:
-    case RM_DIGEST_BLAKE2SP:
-    case RM_DIGEST_BLAKE2BP:
-        /* for all of the above, reading the digest is destructive, so we
-         * need to take a copy */
-        return TRUE;
-    case RM_DIGEST_SPOOKY32:
-    case RM_DIGEST_SPOOKY64:
-    case RM_DIGEST_SPOOKY:
-    case RM_DIGEST_MURMUR:
-    case RM_DIGEST_CITY:
-    case RM_DIGEST_XXHASH:
-    case RM_DIGEST_FARMHASH:
-    case RM_DIGEST_CUMULATIVE:
-    case RM_DIGEST_EXT:
-    case RM_DIGEST_PARANOID:
-        return FALSE;
-    default:
-        rm_assert_gentle_not_reached();
-        return FALSE;
-    }
-}
-
 guint8 *rm_digest_steal(RmDigest *digest) {
 
-    const RmDigestSpec *spec = digest_specs[digest->type];
+    const RmDigestSpec *spec = rm_digest_spec(digest->type);
     if(!spec->steal) {
         return g_slice_copy(digest->bytes, digest->checksum);
     }
@@ -855,6 +811,8 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         return false;
     }
 
+    const RmDigestSpec *spec = rm_digest_spec(a->type);
+
     if(a->type == RM_DIGEST_PARANOID) {
         if(!a->paranoid->buffers) {
             /* buffers have been freed so we need to rely on shadow hash */
@@ -886,7 +844,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         }
 
         return (!a_iter && !b_iter && bytes == a->bytes);
-    } else if(rm_digest_needs_steal(a->type)) {
+    } else if(spec->steal) {
         guint8 *buf_a = rm_digest_steal(a);
         guint8 *buf_b = rm_digest_steal(b);
         gboolean result = !memcmp(buf_a, buf_b, a->bytes);

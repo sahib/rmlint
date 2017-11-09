@@ -33,6 +33,7 @@
 #include "checksums/blake2/blake2.h"
 #include "checksums/sha3/sha3.h"
 #include "checksums/farmhash.h"
+#include "checksums/highwayhash.h"
 
 typedef enum RmDigestType {
     RM_DIGEST_UNKNOWN = 0,
@@ -59,7 +60,9 @@ typedef enum RmDigestType {
     /* special kids in town */
     RM_DIGEST_CUMULATIVE, /* hash([a, b]) = hash([b, a]) */
     RM_DIGEST_EXT,        /* read hash as string         */
-    RM_DIGEST_PARANOID    /* direct block comparisons    */
+    RM_DIGEST_PARANOID,   /* direct block comparisons    */
+    /* sentinel */
+    RM_DIGEST_SENTINEL,
 } RmDigestType;
 
 typedef struct RmUint128 {
