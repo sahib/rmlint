@@ -32,6 +32,7 @@
 
 #include "checksums/blake2/blake2.h"
 #include "checksums/sha3/sha3.h"
+#include "checksums/farmhash.h"
 
 typedef enum RmDigestType {
     RM_DIGEST_UNKNOWN = 0,
@@ -102,6 +103,7 @@ typedef struct RmDigest {
         blake2bp_state *blake2bp_state;
         sha3_context *sha3_ctx;
         RmUint128 *checksum;
+        uint128_t *farmhash;
         RmParanoid *paranoid;
         guint8 *data;
     };

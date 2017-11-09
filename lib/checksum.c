@@ -42,7 +42,6 @@
 #include "checksum.h"
 
 #include "checksums/blake2/blake2.h"
-#include "checksums/cfarmhash.h"
 #include "checksums/city.h"
 #include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
@@ -228,8 +227,7 @@ static const RmDigestSpec xxhash_spec =  {64, GENERIC_FUNCS(xxhash)};
 ///////////////////////////
 
 static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    /* TODO: this won't work, it's not cumulative */
-    digest->checksum->first = cfarmhash((const char *)data, size);
+    *digest->farmhash = farmhash128_with_seed((const char*)data, size, *digest->farmhash);
 }
 
 static const RmDigestSpec farmhash_spec =  {64, GENERIC_FUNCS(farmhash)};
