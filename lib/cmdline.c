@@ -762,11 +762,7 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
         /* leave users choice of -a (default) */
         break;
     case 1:
-#if HAVE_SHA512
-        cfg->checksum_type = RM_DIGEST_SHA512;
-#else
-        cfg->checksum_type = RM_DIGEST_SHA256;
-#endif
+		cfg->checksum_type = RM_DIGEST_BLAKE2B;
         break;
     case 2:
         cfg->checksum_type = RM_DIGEST_PARANOID;
