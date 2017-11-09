@@ -53,13 +53,11 @@ typedef enum RmDigestType {
     RM_DIGEST_BLAKE2B,
     RM_DIGEST_BLAKE2SP /*  Parallel version of BLAKE2P */,
     RM_DIGEST_BLAKE2BP /*  Parallel version of BLAKE2S */,
-    RM_DIGEST_BLAKE2XS,
     RM_DIGEST_XXHASH,
     RM_DIGEST_FARMHASH,
     RM_DIGEST_HIGHWAY64,
     RM_DIGEST_HIGHWAY128,
     RM_DIGEST_HIGHWAY256,
-
     /* special kids in town */
     RM_DIGEST_CUMULATIVE, /* hash([a, b]) = hash([b, a]) */
     RM_DIGEST_EXT,        /* read hash as string         */
