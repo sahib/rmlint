@@ -600,52 +600,24 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
     g_assert_not_reached();
 }
 
+static void rm_digest_table_insert(GHashTable *code_table, char *name, RmDigestType type) {
+    if(g_hash_table_contains(code_table, name)) {
+        rm_log_error_line("Duplicate entry for %s in rm_init_digest_type_table()", name);
+    }
+    g_hash_table_insert(code_table, name, GUINT_TO_POINTER(type));
+}
+
 static gpointer rm_init_digest_type_table(GHashTable **code_table) {
-    static struct {
-        char *name;
-        RmDigestType code;
-    } code_entries[] = {
-        {"md5", RM_DIGEST_MD5},
-        {"xxhash", RM_DIGEST_XXHASH},
-        {"farmhash", RM_DIGEST_FARMHASH},
-        {"murmur", RM_DIGEST_MURMUR},
-        {"sha1", RM_DIGEST_SHA1},
-        {"sha256", RM_DIGEST_SHA256},
-        {"sha3", RM_DIGEST_SHA3_256},
-        {"sha3-256", RM_DIGEST_SHA3_256},
-        {"sha3-384", RM_DIGEST_SHA3_384},
-        {"sha3-512", RM_DIGEST_SHA3_512},
-        {"blake2s", RM_DIGEST_BLAKE2S},
-        {"blake2b", RM_DIGEST_BLAKE2B},
-        {"blake2sp", RM_DIGEST_BLAKE2SP},
-        {"blake2bp", RM_DIGEST_BLAKE2BP},
-        {"spooky32", RM_DIGEST_SPOOKY32},
-        {"spooky64", RM_DIGEST_SPOOKY64},
-        {"spooky128", RM_DIGEST_SPOOKY},
-        {"spooky", RM_DIGEST_SPOOKY},
-        {"ext", RM_DIGEST_EXT},
-        {"cumulative", RM_DIGEST_CUMULATIVE},
-        {"paranoid", RM_DIGEST_PARANOID},
-        {"city", RM_DIGEST_CITY},
-        {"highway64", RM_DIGEST_HIGHWAY64},
-        {"highway128", RM_DIGEST_HIGHWAY128},
-        {"highway256", RM_DIGEST_HIGHWAY256},
-#if HAVE_SHA512
-        {"sha512", RM_DIGEST_SHA512},
-#endif
-    };
 
     *code_table = g_hash_table_new(g_str_hash, g_str_equal);
+	for(RmDigestType type=1; type<RM_DIGEST_SENTINEL; type++) {
+        rm_digest_table_insert(*code_table, (char*)rm_digest_spec(type)->name, type);
+	}
 
-    const size_t n_codes = sizeof(code_entries) / sizeof(code_entries[0]);
-    for(size_t idx = 0; idx < n_codes; idx++) {
-        if(g_hash_table_contains(*code_table, code_entries[idx].name)) {
-            rm_log_error_line("Duplicate entry for %s", code_entries[idx].name);
-        }
-        g_hash_table_insert(*code_table,
-                            code_entries[idx].name,
-                            GUINT_TO_POINTER(code_entries[idx].code));
-    }
+    /* add some synonyms */
+    rm_digest_table_insert(*code_table, "sha3", RM_DIGEST_SHA3_256);
+    rm_digest_table_insert(*code_table, "spooky128", RM_DIGEST_SPOOKY);
+    rm_digest_table_insert(*code_table, "highway", RM_DIGEST_HIGHWAY256);
 
     return NULL;
 }
