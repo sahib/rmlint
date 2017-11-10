@@ -15,6 +15,33 @@ import subprocess
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
+CKSUM_TYPES = [
+    'murmur',
+    'spooky',
+    'spooky32',
+    'spooky64',
+    'city',
+    'md5',
+    'sha1',
+    'sha256',
+    'sha512',
+    'sha3-256',
+    'sha3-384',
+    'sha3-512',
+    'blake2s',
+    'blake2b',
+    'blake2sp',
+    'blake2bp',
+    'xxhash',
+    'farmhash',
+    'highway64',
+    'highway128',
+    'highway256',
+    #'cumulative',
+    #'ext',
+    'paranoid',
+]
+
 def runs_as_root():
     return os.geteuid() is 0
 
@@ -212,39 +239,13 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--no-mount-table'
     ]
 
-    cksum_types = [
-        'murmur',
-        'spooky',
-        'spooky32',
-        'spooky64',
-        'city',
-        'md5',
-        'sha1',
-        'sha256',
-        'sha512',
-        'sha3-256',
-        'sha3-384',
-        'sha3-512',
-        'blake2s',
-        'blake2b',
-        'blake2sp',
-        'blake2bp',
-        'xxhash',
-        'farmhash',
-        'highway64',
-        'highway128',
-        'highway256',
-        #'cumulative',
-        #'ext',
-        'paranoid',
-    ]
 
     # Note: sha512 is supported on all system which have
     #       no recent enough glib with. God forsaken debian people.
     if has_feature('sha512'):
         cksum_types.append('sha512')
 
-    for cksum_type in cksum_types:
+    for cksum_type in CKSUM_TYPES:
         options.append('--algorithm=' + cksum_type)
 
     data = None
