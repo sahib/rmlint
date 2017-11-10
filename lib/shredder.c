@@ -1658,7 +1658,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
                 file->shred_group->children &&
                 /* no point waiting if paranoid digest with no twin candidates */
                 (file->digest->type != RM_DIGEST_PARANOID ||
-                 file->digest->paranoid->twin_candidate);
+                 ((RmParanoid*)file->digest->state)->twin_candidate);
         }
         file->signal = shredder_waiting ? rm_signal_new() : NULL;
         file->shredder_waiting = shredder_waiting;

@@ -423,13 +423,8 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
 
-    if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal(file->digest->paranoid->shadow_hash);
-        digest_bytes = file->digest->paranoid->shadow_hash->bytes;
-    } else {
-        file_digest = rm_digest_steal(file->digest);
-        digest_bytes = file->digest->bytes;
-    }
+    file_digest = rm_digest_steal(file->digest);
+    digest_bytes = file->digest->bytes;
 
     /* Update the directorie's hash with the file's hash
        Since we cannot be sure in which order the files come in

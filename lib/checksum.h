@@ -99,25 +99,14 @@ typedef struct RmParanoid {
 
 typedef struct RmDigest {
     /* Different storage structures are used depending on digest type: */
-    union {
-        GChecksum *glib_checksum;
-        blake2s_state *blake2s_state;
-        blake2b_state *blake2b_state;
-        blake2sp_state *blake2sp_state;
-        blake2bp_state *blake2bp_state;
-        HighwayHashCat *highway_cat;
-        sha3_context *sha3_ctx;
-        RmUint128 *checksum;
-        uint128_t *farmhash;
-        RmParanoid *paranoid;
-        guint8 *data;
-    };
+    gpointer state;
 
     /* digest type */
     RmDigestType type;
 
-    /* digest size in bytes */
+    /* digest output size in bytes */
     gsize bytes;
+
 } RmDigest;
 
 /////////// RmBufferPool and RmBuffer ////////////////

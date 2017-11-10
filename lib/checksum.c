@@ -145,8 +145,8 @@ typedef void (*RmDigestStealFunc)(RmDigest *digest, guint8 *result);
 
 typedef struct RmDigestSpec {
     const char *name;
-    const int bits;
-    RmDigestInitFunc init;
+    const uint bits;          // length of the output checksum in bits
+    RmDigestInitFunc init;    // performs initialisation of digest->state
     RmDigestFreeFunc free;
     RmDigestUpdateFunc update;
     RmDigestCopyFunc copy;
@@ -167,43 +167,49 @@ static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _
 
     /* Cannot go lower than 8, since we read 8 byte in some places.
      * For some checksums this may mean trailing zeros in the unused bytes */
-    digest->checksum = g_slice_alloc0(ALLOC_BYTES(digest->bytes));
+    digest->state = g_slice_alloc0(ALLOC_BYTES(digest->bytes));
 
     if(seed1 && seed2) {
         /* copy seeds to checksum */
         size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes / 2);
-        memcpy(digest->checksum, &seed1, seed_bytes);
-        memcpy(digest->checksum + digest->bytes/2, &seed2, seed_bytes);
+        memcpy(digest->state, &seed1, seed_bytes);
+        memcpy(digest->state + digest->bytes/2, &seed2, seed_bytes);
     } else if(seed1) {
         size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes);
-        memcpy(digest->checksum, &seed1, seed_bytes);
+        memcpy(digest->state, &seed1, seed_bytes);
     }
 }
 
 static void rm_digest_generic_free(RmDigest *digest) {
-    if(digest->checksum) {
-        g_slice_free1(digest->bytes, digest->checksum);
+    if(digest->state) {
+        g_slice_free1(digest->bytes, digest->state);
+        digest->state = NULL;
     }
 }
 
 static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
-    copy->checksum = g_slice_copy(ALLOC_BYTES(digest->bytes), digest->checksum);
+    copy->state = g_slice_copy(ALLOC_BYTES(digest->bytes), digest->state);
 }
 
 ///////////////////////////
 //    spooky hashes      //
 ///////////////////////////
 
+/* TODO: this is broken; need to extend spooky API to add a streaming variant */
+
 static void rm_digest_spooky32_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    digest->checksum->first = spooky_hash32(data, size, digest->checksum->first);
+    uint32_t* hash = digest->state;
+    *hash = spooky_hash32(data, size, *hash);
 }
 
 static void rm_digest_spooky64_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    digest->checksum->first = spooky_hash64(data, size, digest->checksum->first);
+    uint64_t* hash = digest->state;
+    *hash = spooky_hash64(data, size, *hash);
 }
 
 static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    spooky_hash128(data, size, (uint64_t *)&digest->checksum->first, (uint64_t *)&digest->checksum->second);
+    uint128 *hash = digest->state;
+    spooky_hash128(data, size, &hash->first, &hash->second);
 }
 
 #define GENERIC_FUNCS(ALGO) rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_##ALGO##_update, rm_digest_generic_copy, NULL
@@ -216,8 +222,11 @@ static const RmDigestSpec spooky_spec   = { "spooky",  128, GENERIC_FUNCS(spooky
 //        xxhash         //
 ///////////////////////////
 
+/* TODO: this is probably broken; should use streaming variant XXH64_update() */
+
 static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    digest->checksum->first = XXH64(data, size, digest->checksum->first);
+    unsigned long long *hash = digest->state;
+    *hash = XXH64(data, size, *hash);
 }
 
 static const RmDigestSpec xxhash_spec =  { "xxhash", 64, GENERIC_FUNCS(xxhash)};
@@ -226,8 +235,11 @@ static const RmDigestSpec xxhash_spec =  { "xxhash", 64, GENERIC_FUNCS(xxhash)};
 //      farmhash         //
 ///////////////////////////
 
+/* TODO: check that this is not broken, i.e. final hash is independent of increment size */
+
 static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    *digest->farmhash = farmhash128_with_seed((const char*)data, size, *digest->farmhash);
+    uint128_t *hash = digest->state;
+    *hash = farmhash128_with_seed((const char*)data, size, *hash);
 }
 
 static const RmDigestSpec farmhash_spec =  { "farmhash", 64, GENERIC_FUNCS(farmhash)};
@@ -238,10 +250,12 @@ static const RmDigestSpec farmhash_spec =  { "farmhash", 64, GENERIC_FUNCS(farmh
 
 
 static void rm_digest_murmur_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    /* TODO: this is broken; need to extend murmur API to add a streaming variant */
+    uint32_t *hash = digest->state;
 #if RM_PLATFORM_32
-    MurmurHash3_x86_128(data, size, (uint32_t)digest->checksum->first, digest->checksum);
+    MurmurHash3_x86_128(data, size, *hash, hash);
 #elif RM_PLATFORM_64
-    MurmurHash3_x64_128(data, size, (uint32_t)digest->checksum->first, digest->checksum);
+    MurmurHash3_x64_128(data, size, *hash, hash);
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
@@ -254,16 +268,18 @@ static const RmDigestSpec murmur_spec =  { "murmur", 128, GENERIC_FUNCS(murmur)}
 ///////////////////////////
 
 static void rm_digest_city_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+
+    /* TODO: check that this is not broken, i.e. final hash is independent of increment size */
+
     /* There is a more optimized version but it needs the crc command of sse4.2
     * (available on Intel Nehalem and up; my amd box doesn't have this though)
     */
-    uint128 old = {digest->checksum->first, digest->checksum->second};
+    uint128 *hash = digest->state;
 #ifdef __SSE4_2__
-    old = CityHashCrc128WithSeed((const char *)data, size, old);
+    *hash = CityHashCrc128WithSeed((const char *)data, size, *hash);
 #else
-    old = CityHash128WithSeed((const char *)data, size, old);
+    *hash = CityHash128WithSeed((const char *)data, size, *hash);
 #endif
-    memcpy(digest->checksum, &old, sizeof(uint128));
 }
 
 static const RmDigestSpec city_spec =  { "city", 128, GENERIC_FUNCS(city)};
@@ -275,9 +291,10 @@ static const RmDigestSpec city_spec =  { "city", 128, GENERIC_FUNCS(city)};
 
 static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     /*  This only XORS the two checksums. */
-    size = MIN(size, digest->bytes);
-    for(gsize i = 0; i < size; ++i) {
-        digest->data[i] ^= ((guint8 *)data)[i % size];
+    guint8 *hash = digest->state;
+    RmOff bytes = MIN(size, digest->bytes);
+    for(gsize i = 0; i < bytes; ++i) {
+        hash[i] ^= ((guint8 *)data)[i % size];
     }
 }
 
@@ -297,33 +314,33 @@ static void rm_digest_highway_init(RmDigest *digest, RmOff seed1, RmOff seed2, _
         key[2] = (uint64_t)seed2;
     }
 
-    digest->highway_cat = g_slice_alloc0(sizeof(HighwayHashCat));
-    HighwayHashCatStart(key, digest->highway_cat);
+    digest->state = g_slice_alloc0(sizeof(HighwayHashCat));
+    HighwayHashCatStart(key, digest->state);
 }
 
 static void rm_digest_highway_free(RmDigest *digest) {
-    g_slice_free(HighwayHashCat, digest->highway_cat);
+    g_slice_free(HighwayHashCat, digest->state);
 }
 
 static void rm_digest_highway_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    HighwayHashCatAppend((const uint8_t*)data, size, digest->highway_cat);
+    HighwayHashCatAppend((const uint8_t*)data, size, digest->state);
 }
 
 static void rm_digest_highway_copy(RmDigest *digest, RmDigest *copy) {
-    copy->glib_checksum = g_slice_copy(sizeof(HighwayHashCat), digest->highway_cat);
+    copy->state = g_slice_copy(sizeof(HighwayHashCat), digest->state);
 }
 
 /* HighwayHashCatFinish functions are non-destructive */
 static void rm_digest_highway256_steal(RmDigest *digest, guint8 *result) {
-    HighwayHashCatFinish256(digest->highway_cat, (uint64_t*)result);
+    HighwayHashCatFinish256(digest->state, (uint64_t*)result);
 }
 
 static void rm_digest_highway128_steal(RmDigest *digest, guint8 *result) {
-    HighwayHashCatFinish128(digest->highway_cat, (uint64_t*)result);
+    HighwayHashCatFinish128(digest->state, (uint64_t*)result);
 }
 
 static void rm_digest_highway64_steal(RmDigest *digest, guint8 *result) {
-    *result = HighwayHashCatFinish64(digest->highway_cat);
+    *result = HighwayHashCatFinish64(digest->state);
 }
 
 #define HIGHWAY_SPEC(BITS) BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
@@ -347,29 +364,29 @@ static const GChecksumType glib_map[] = {
 };
 
 static void rm_digest_glib_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    digest->glib_checksum = g_checksum_new(glib_map[digest->type]);
+    digest->state = g_checksum_new(glib_map[digest->type]);
     if(seed1) {
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed1, sizeof(seed1));
+        g_checksum_update(digest->state, (const guchar *)&seed1, sizeof(seed1));
     }
     if(seed2) {
-        g_checksum_update(digest->glib_checksum, (const guchar *)&seed2, sizeof(seed2));
+        g_checksum_update(digest->state, (const guchar *)&seed2, sizeof(seed2));
     }
 }
 
 static void rm_digest_glib_free(RmDigest *digest) {
-    g_checksum_free(digest->glib_checksum);
+    g_checksum_free(digest->state);
 }
 
 static void rm_digest_glib_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    g_checksum_update(digest->glib_checksum, data, size);
+    g_checksum_update(digest->state, data, size);
 }
 
 static void rm_digest_glib_copy(RmDigest *digest, RmDigest *copy) {
-    copy->glib_checksum = g_checksum_copy(digest->glib_checksum);
+    copy->state = g_checksum_copy(digest->state);
 }
 
 static void rm_digest_glib_steal(RmDigest *digest, guint8 *result) {
-    GChecksum *copy = g_checksum_copy(digest->glib_checksum);
+    GChecksum *copy = g_checksum_copy(digest->state);
     gsize buflen = digest->bytes;
     g_checksum_get_digest(copy, result, &buflen);
     rm_assert_gentle(buflen == digest->bytes);
@@ -391,42 +408,42 @@ static const RmDigestSpec sha512_spec = {"sha512", 512, GLIB_FUNCS};
 
 
 static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    digest->sha3_ctx = g_slice_alloc0(sizeof(sha3_context));
+    digest->state = g_slice_alloc0(sizeof(sha3_context));
     switch(digest->type) {
         case RM_DIGEST_SHA3_256:
-            sha3_Init256(digest->sha3_ctx);
+            sha3_Init256(digest->state);
             break;
         case RM_DIGEST_SHA3_384:
-            sha3_Init384(digest->sha3_ctx);
+            sha3_Init384(digest->state);
             break;
         case RM_DIGEST_SHA3_512:
-            sha3_Init512(digest->sha3_ctx);
+            sha3_Init512(digest->state);
             break;
         default:
             g_assert_not_reached();
     }
     if(seed1) {
-        sha3_Update(digest->sha3_ctx, &seed1, sizeof(seed1));
+        sha3_Update(digest->state, &seed1, sizeof(seed1));
     }
     if(seed2) {
-        sha3_Update(digest->sha3_ctx, &seed2, sizeof(seed2));
+        sha3_Update(digest->state, &seed2, sizeof(seed2));
     }
 }
 
 static void rm_digest_sha3_free(RmDigest *digest) {
-    g_slice_free(sha3_context, digest->sha3_ctx);
+    g_slice_free(sha3_context, digest->state);
 }
 
 static void rm_digest_sha3_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    sha3_Update(digest->sha3_ctx, data, size);
+    sha3_Update(digest->state, data, size);
 }
 
 static void rm_digest_sha3_copy(RmDigest *digest, RmDigest *copy) {
-    copy->sha3_ctx = g_slice_copy(sizeof(sha3_context), digest->sha3_ctx);
+    copy->state = g_slice_copy(sizeof(sha3_context), digest->state);
 }
 
 static void rm_digest_sha3_steal(RmDigest *digest, guint8 *result) {
-    sha3_context *copy = g_slice_copy(sizeof(sha3_context), digest->sha3_ctx);
+    sha3_context *copy = g_slice_copy(sizeof(sha3_context), digest->state);
     memcpy(result, sha3_Finalize(copy), digest->bytes);
     g_slice_free(sha3_context, copy);
 }
@@ -447,37 +464,37 @@ static void rm_digest_##ALGO##_init(RmDigest *digest, RmOff seed1,  \
                                     RmOff seed2,                    \
                                     _UNUSED RmOff ext_size,         \
                                     _UNUSED bool use_shadow_hash) { \
-    digest->ALGO##_state = g_slice_alloc0(sizeof(ALGO##_state));    \
-    ALGO##_init(digest->ALGO##_state, ALGO_BIG##_OUTBYTES);         \
+    digest->state = g_slice_alloc0(sizeof(ALGO##_state));           \
+    ALGO##_init(digest->state, ALGO_BIG##_OUTBYTES);                \
     if(seed1) {                                                     \
-        ALGO##_update(digest->ALGO##_state, &seed1, sizeof(RmOff)); \
+        ALGO##_update(digest->state, &seed1, sizeof(RmOff));        \
     }                                                               \
     if(seed2) {                                                     \
-        ALGO##_update(digest->ALGO##_state, &seed2, sizeof(RmOff)); \
+        ALGO##_update(digest->state, &seed2, sizeof(RmOff));        \
     }                                                               \
     g_assert(digest->bytes==ALGO_BIG##_OUTBYTES);                   \
 }                                                                   \
                                                                     \
 static void rm_digest_##ALGO##_free(RmDigest *digest) {             \
-    g_slice_free(ALGO##_state, digest->ALGO##_state);               \
+    g_slice_free(ALGO##_state, digest->state);                      \
 }                                                                   \
                                                                     \
 static void rm_digest_##ALGO##_update(RmDigest *digest,             \
                                       const unsigned char *data,    \
                                       RmOff size) {                 \
-    ALGO##_update(digest->ALGO##_state, data, size);                \
+    ALGO##_update(digest->state, data, size);                       \
 }                                                                   \
                                                                     \
 static void rm_digest_##ALGO##_copy(RmDigest *digest,               \
                                     RmDigest *copy) {               \
-    copy->ALGO##_state = g_slice_copy(sizeof(ALGO##_state),         \
-                                      digest->ALGO##_state);        \
+    copy->state = g_slice_copy(sizeof(ALGO##_state),                \
+                                      digest->state);               \
 }                                                                   \
                                                                     \
 static void rm_digest_##ALGO##_steal(RmDigest *digest,              \
                                      guint8 *result) {              \
     ALGO##_state *copy = g_slice_copy(sizeof(ALGO##_state),         \
-                                      digest->ALGO##_state);        \
+                                      digest->state);               \
     ALGO##_final(copy, result, digest->bytes);                      \
     g_slice_free(ALGO##_state, copy);                               \
 }
@@ -515,10 +532,10 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
 #define CHAR_TO_NUM(c) (unsigned char)(g_ascii_isdigit(c) ? c - '0' : (c - 'a') + 10)
 
     digest->bytes = size / 2;
-    digest->checksum = g_slice_alloc0(digest->bytes);
+    digest->state = g_slice_alloc0(digest->bytes);
 
     for(unsigned i = 0; i < digest->bytes; ++i) {
-        ((guint8 *)digest->checksum)[i] =
+        ((guint8 *)digest->state)[i] =
             (CHAR_TO_NUM(data[2 * i]) << 4) + CHAR_TO_NUM(data[2 * i + 1]);
     }
 }
@@ -532,28 +549,46 @@ static const RmDigestSpec ext_spec = {"ext", 0, rm_digest_ext_init, rm_digest_ge
 
 
 static void rm_digest_paranoid_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, bool use_shadow_hash) {
-    digest->paranoid = g_slice_new0(RmParanoid);
-    digest->paranoid->incoming_twin_candidates = g_async_queue_new();
+    RmParanoid *paranoid = g_slice_new0(RmParanoid);
+    digest->state = paranoid;
+    paranoid->incoming_twin_candidates = g_async_queue_new();
     if(use_shadow_hash) {
-        digest->paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
+        paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
+        digest->bytes = paranoid->shadow_hash->bytes;
     }
 }
 
 static void rm_digest_paranoid_free(RmDigest *digest) {
-    if(digest->paranoid->shadow_hash) {
-        rm_digest_free(digest->paranoid->shadow_hash);
+    RmParanoid *paranoid = digest->state;
+    if(paranoid->shadow_hash) {
+        rm_digest_free(paranoid->shadow_hash);
     }
     rm_digest_release_buffers(digest);
-    if(digest->paranoid->incoming_twin_candidates) {
-        g_async_queue_unref(digest->paranoid->incoming_twin_candidates);
+    if(paranoid->incoming_twin_candidates) {
+        g_async_queue_unref(paranoid->incoming_twin_candidates);
     }
-    g_slist_free(digest->paranoid->rejects);
-    g_slice_free(RmParanoid, digest->paranoid);
+    g_slist_free(paranoid->rejects);
+    g_slice_free(RmParanoid, paranoid);
 }
+
+static void rm_digest_paranoid_steal(RmDigest *digest, guint8 *result) {
+    RmParanoid *paranoid = digest->state;
+    if(paranoid->shadow_hash) {
+        guint8 *buf = rm_digest_steal(paranoid->shadow_hash);
+        memcpy(result, buf, digest->bytes);
+    } else {
+        /* steal the first few bytes of the first buffer */
+        if(paranoid->buffers) {
+            RmBuffer *buffer = paranoid->buffers->data;
+            memcpy(result, buffer->data, MIN(buffer->len, digest->bytes));
+        }
+    }
+}
+
 
 /* Note: paranoid update implementation is in rm_digest_buffered_update() below */
 
-static const RmDigestSpec paranoid_spec = { "paranoid", 0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, NULL};
+static const RmDigestSpec paranoid_spec = { "paranoid", 0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, rm_digest_paranoid_steal};
 
 
 ////////////////////////////////
@@ -675,9 +710,10 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
 }
 
 void rm_digest_release_buffers(RmDigest *digest) {
-    if(digest->paranoid && digest->paranoid->buffers) {
-        g_slist_free_full(digest->paranoid->buffers, (GDestroyNotify)rm_buffer_free);
-        digest->paranoid->buffers = NULL;
+    RmParanoid *paranoid = digest->state;
+    if(paranoid && paranoid->buffers) {
+        g_slist_free_full(paranoid->buffers, (GDestroyNotify)rm_buffer_free);
+        paranoid->buffers = NULL;
     }
 }
 
@@ -699,7 +735,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
         rm_digest_update(digest, buffer->data, buffer->len);
         rm_buffer_release(buffer);
     } else {
-        RmParanoid *paranoid = digest->paranoid;
+        RmParanoid *paranoid = digest->state;
         /* paranoid update... */
         if(!paranoid->buffers) {
             /* first buffer */
@@ -708,8 +744,6 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
         } else {
             paranoid->buffer_tail = g_slist_append(paranoid->buffer_tail, buffer)->next;
         }
-
-        digest->bytes += buffer->len;
 
         if(paranoid->shadow_hash) {
             rm_digest_update(paranoid->shadow_hash, buffer->data, buffer->len);
@@ -738,7 +772,8 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
                    g_async_queue_try_pop(paranoid->incoming_twin_candidates))) {
             /* validate the new candidate by comparing the previous buffers (not
              * including current)*/
-            paranoid->twin_candidate_buffer = paranoid->twin_candidate->paranoid->buffers;
+            RmParanoid *twin = paranoid->twin_candidate->state;
+            paranoid->twin_candidate_buffer = twin->buffers;
             GSList *iter_self = paranoid->buffers;
             gboolean match = TRUE;
             while(match && iter_self) {
@@ -785,7 +820,7 @@ guint8 *rm_digest_steal(RmDigest *digest) {
 
     const RmDigestSpec *spec = rm_digest_spec(digest->type);
     if(!spec->steal) {
-        return g_slice_copy(digest->bytes, digest->checksum);
+        return g_slice_copy(digest->bytes, digest->state);
     }
 
     guint8 *result = g_slice_alloc0(digest->bytes);
@@ -798,24 +833,8 @@ guint rm_digest_hash(RmDigest *digest) {
     gsize bytes = 0;
     guint hash = 0;
 
-    if(digest->type == RM_DIGEST_PARANOID) {
-        if(digest->paranoid->shadow_hash) {
-            buf = rm_digest_steal(digest->paranoid->shadow_hash);
-            bytes = digest->paranoid->shadow_hash->bytes;
-        } else {
-            /* steal the first few bytes of the first buffer */
-            if(digest->paranoid->buffers) {
-                RmBuffer *buffer = digest->paranoid->buffers->data;
-                if(buffer->len >= sizeof(guint)) {
-                    hash = *(guint *)buffer->data;
-                    return hash;
-                }
-            }
-        }
-    } else {
-        buf = rm_digest_steal(digest);
-        bytes = digest->bytes;
-    }
+    buf = rm_digest_steal(digest);
+    bytes = digest->bytes;
 
     if(buf != NULL) {
         rm_assert_gentle(bytes >= sizeof(guint));
@@ -839,22 +858,24 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
     const RmDigestSpec *spec = rm_digest_spec(a->type);
 
     if(a->type == RM_DIGEST_PARANOID) {
-        if(!a->paranoid->buffers) {
+        RmParanoid *pa = a->state;
+        RmParanoid *pb = b->state;
+        if(!pa->buffers) {
             /* buffers have been freed so we need to rely on shadow hash */
-            return rm_digest_equal(a->paranoid->shadow_hash, b->paranoid->shadow_hash);
+            return rm_digest_equal(pa->shadow_hash, pb->shadow_hash);
         }
         /* check if pre-matched twins */
-        if(a->paranoid->twin_candidate == b || b->paranoid->twin_candidate == a) {
+        if(pa->twin_candidate == b || pb->twin_candidate == a) {
             return true;
         }
         /* check if already rejected */
-        if(g_slist_find(a->paranoid->rejects, b) ||
-           g_slist_find(b->paranoid->rejects, a)) {
+        if(g_slist_find(pa->rejects, b) ||
+           g_slist_find(pb->rejects, a)) {
             return false;
         }
         /* all the "easy" ways failed... do manual check of all buffers */
-        GSList *a_iter = a->paranoid->buffers;
-        GSList *b_iter = b->paranoid->buffers;
+        GSList *a_iter = pa->buffers;
+        GSList *b_iter = pb->buffers;
         guint bytes = 0;
         while(a_iter && b_iter) {
             if(!rm_buffer_equal(a_iter->data, b_iter->data)) {
@@ -868,7 +889,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
             b_iter = b_iter->next;
         }
 
-        return (!a_iter && !b_iter && bytes == a->bytes);
+        return (!a_iter && !b_iter);
     } else if(spec->steal) {
         guint8 *buf_a = rm_digest_steal(a);
         guint8 *buf_b = rm_digest_steal(b);
@@ -879,7 +900,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
 
         return result;
     } else {
-        return !memcmp(a->checksum, b->checksum, a->bytes);
+        return !memcmp(a->state, b->state, a->bytes);
     }
 }
 
@@ -891,15 +912,8 @@ int rm_digest_hexstring(RmDigest *digest, char *buffer) {
         return 0;
     }
 
-    if(digest->type == RM_DIGEST_PARANOID) {
-        if(digest->paranoid->shadow_hash) {
-            input = rm_digest_steal(digest->paranoid->shadow_hash);
-            bytes = digest->paranoid->shadow_hash->bytes;
-        }
-    } else {
-        input = rm_digest_steal(digest);
-        bytes = digest->bytes;
-    }
+    input = rm_digest_steal(digest);
+    bytes = digest->bytes;
 
     for(gsize i = 0; i < bytes; ++i) {
         buffer[0] = hex[input[i] / 16];
@@ -921,22 +935,16 @@ int rm_digest_get_bytes(RmDigest *self) {
         return 0;
     }
 
-    if(self->type != RM_DIGEST_PARANOID) {
-        return self->bytes;
-    }
-
-    if(self->paranoid->shadow_hash) {
-        return self->paranoid->shadow_hash->bytes;
-    }
-
-    return 0;
+    return self->bytes;
 }
 
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
-    if(!target->paranoid->incoming_twin_candidates) {
-        target->paranoid->incoming_twin_candidates = g_async_queue_new();
+    RmParanoid *paranoid = target->state;
+    
+    if(!paranoid->incoming_twin_candidates) {
+        paranoid->incoming_twin_candidates = g_async_queue_new();
     }
-    g_async_queue_push(target->paranoid->incoming_twin_candidates, candidate);
+    g_async_queue_push(paranoid->incoming_twin_candidates, candidate);
 }
 
 guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *out_len) {
