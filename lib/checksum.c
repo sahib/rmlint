@@ -249,19 +249,55 @@ static const RmDigestSpec farmhash_spec =  { "farmhash", 64, GENERIC_FUNCS(farmh
 ///////////////////////////
 
 
-static void rm_digest_murmur_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    /* TODO: this is broken; need to extend murmur API to add a streaming variant */
-    uint32_t *hash = digest->state;
+
+
+
+#define CREATE_MURMUR_FUNCS(TYPE)                                               \
+static void rm_digest_murmur_##TYPE##_free(RmDigest *digest) {                  \
+    MurmurHash3_##TYPE##_free(digest->state);                                   \
+}                                                                               \
+                                                                                \
+static void rm_digest_murmur_##TYPE##_update(RmDigest *digest,                  \
+                                    const unsigned char *data,                  \
+                                    RmOff size) {                               \
+    MurmurHash3_##TYPE##_update(digest->state, data, size);                     \
+}                                                                               \
+                                                                                \
+static void rm_digest_murmur_##TYPE##_copy(RmDigest *digest, RmDigest *copy) {  \
+    copy->state = MurmurHash3_##TYPE##_copy(digest->state);                     \
+}                                                                               \
+                                                                                \
+static void rm_digest_murmur_##TYPE##_steal(RmDigest *digest, guint8 *result) { \
+    MurmurHash3_##TYPE##_steal(digest->state, result);                          \
+}
+
+#define MURMUR_FUNCS(TYPE) rm_digest_murmur_##TYPE##_init, rm_digest_murmur_##TYPE##_free, rm_digest_murmur_##TYPE##_update, rm_digest_murmur_##TYPE##_copy, rm_digest_murmur_##TYPE##_steal
+
+
 #if RM_PLATFORM_32
-    MurmurHash3_x86_128(data, size, *hash, hash);
+
+CREATE_MURMUR_FUNCS(x86_128)
+
+static void rm_digest_murmur_x86_128_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->state = MurmurHash3_x86_128_new(seed1, seed1>>32, seed2, seed2>>32);
+}
+
+static const RmDigestSpec murmur_spec = { "murmur", 128, MURMUR_FUNCS(x86_128)};
+
 #elif RM_PLATFORM_64
-    MurmurHash3_x64_128(data, size, *hash, hash);
+
+CREATE_MURMUR_FUNCS(x64_128)
+
+static void rm_digest_murmur_x64_128_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->state = MurmurHash3_x64_128_new(seed1, seed2);
+}
+
+static const RmDigestSpec murmur_spec = { "murmur", 128, MURMUR_FUNCS(x64_128)};
+
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
-}
 
-static const RmDigestSpec murmur_spec =  { "murmur", 128, GENERIC_FUNCS(murmur)};
 
 ///////////////////////////
 //      cityhash         //
