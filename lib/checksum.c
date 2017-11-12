@@ -196,14 +196,30 @@ static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
 //        xxhash         //
 ///////////////////////////
 
-/* TODO: this is probably broken; should use streaming variant XXH64_update() */
-
-static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    unsigned long long *hash = digest->state;
-    *hash = XXH64(data, size, *hash);
+static void rm_digest_xxhash_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->state = XXH64_createState();
+    XXH64_reset(digest->state, seed1 ^ seed2);
 }
 
-static const RmDigestSpec xxhash_spec =  { "xxhash", 64, GENERIC_FUNCS(xxhash)};
+static void rm_digest_xxhash_free(RmDigest *digest) {
+    XXH64_freeState(digest->state);
+}
+
+static void rm_digest_xxhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    XXH64_update(digest->state, data, size);
+}
+
+static void rm_digest_xxhash_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = XXH64_createState();
+    memcpy(copy->state, digest->state, sizeof(XXH64_state_t));
+}
+
+static void rm_digest_xxhash_steal(RmDigest *digest, guint8 *result) {
+    *(unsigned long long*)result = XXH64_digest(digest->state);
+}
+
+
+static const RmDigestSpec xxhash_spec =  { "xxhash", 64, rm_digest_xxhash_init, rm_digest_xxhash_free, rm_digest_xxhash_update, rm_digest_xxhash_copy, rm_digest_xxhash_steal};
 
 ///////////////////////////
 //      farmhash         //
@@ -221,9 +237,6 @@ static const RmDigestSpec farmhash_spec =  { "farmhash", 64, GENERIC_FUNCS(farmh
 ///////////////////////////
 //        murmur         //
 ///////////////////////////
-
-
-
 
 
 #define CREATE_MURMUR_FUNCS(TYPE)                                               \
