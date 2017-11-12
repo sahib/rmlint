@@ -294,7 +294,7 @@ static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *d
     guint8 *hash = digest->state;
     RmOff bytes = MIN(size, digest->bytes);
     for(gsize i = 0; i < bytes; ++i) {
-        hash[i] ^= ((guint8 *)data)[i % size];
+        hash[i] ^= ((guint8 *)data)[i];
     }
 }
 
@@ -906,28 +906,22 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
 
 int rm_digest_hexstring(RmDigest *digest, char *buffer) {
     static const char *hex = "0123456789abcdef";
-    guint8 *input = NULL;
-    gsize bytes = 0;
     if(digest == NULL) {
         return 0;
     }
 
-    input = rm_digest_steal(digest);
-    bytes = digest->bytes;
+    guint8 *input = rm_digest_steal(digest);
+    gsize bytes = digest->bytes;
+    gsize out = 0;
 
     for(gsize i = 0; i < bytes; ++i) {
-        buffer[0] = hex[input[i] / 16];
-        buffer[1] = hex[input[i] % 16];
-
-        if(i == bytes - 1) {
-            buffer[2] = '\0';
-        }
-
-        buffer += 2;
+        buffer[out++] = hex[input[i] / 16];
+        buffer[out++] = hex[input[i] % 16];
     }
+    buffer[out++] = '\0';
 
     g_slice_free1(bytes, input);
-    return bytes * 2 + 1;
+    return out;
 }
 
 int rm_digest_get_bytes(RmDigest *self) {
