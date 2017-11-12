@@ -198,10 +198,12 @@ void MurmurHash3_x86_32_free(MurmurHash3_x86_32_state  *state) {
     g_slice_free(MurmurHash3_x86_32_state, state);
 }
 
-void MurmurHash3_x86_32(const void *key, uint32_t len, uint32_t seed, void *out) {
+uint32_t MurmurHash3_x86_32(const void *key, uint32_t len, uint32_t seed) {
+    uint32_t out;
     MurmurHash3_x86_32_state *state = MurmurHash3_x86_32_new(seed);
     MurmurHash3_x86_32_update(state, key, len);
-    MurmurHash3_x86_32_finalise(state, out);
+    MurmurHash3_x86_32_finalise(state, &out);
+    return out;
 }
 
 

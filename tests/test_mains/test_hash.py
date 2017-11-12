@@ -3,6 +3,7 @@
 
 from nose import with_setup
 from tests.utils import *
+from nose.plugins.attrib import attr
 
 INCREMENTS = [4096, 1024, 1, 20000]
 
@@ -28,10 +29,7 @@ def streaming_compliance_check(*patterns):
                 break
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_spooky():
-    streaming_compliance_check('spooky')
-
+@attr('known_issue')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_city():
     streaming_compliance_check('city')
@@ -52,10 +50,12 @@ def test_sha3():
 def test_blake():
     streaming_compliance_check('blake')
 
+@attr('known_issue')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_xx():
     streaming_compliance_check('xxhash')
 
+@attr('known_issue')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_farm():
     streaming_compliance_check('farm')
@@ -64,6 +64,7 @@ def test_farm():
 def test_highway():
     streaming_compliance_check('highway')
 
+@attr('known_issue')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_cumulative():
     streaming_compliance_check('cumulative')

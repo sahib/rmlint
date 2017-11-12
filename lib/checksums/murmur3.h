@@ -65,7 +65,7 @@ void MurmurHash3_x64_128_free(MurmurHash3_x64_128_state *state);
 /**
  * convenience single-buffer hash
  */
-void MurmurHash3_x86_32(const void *key, uint32_t len, uint32_t seed, void *out);
+uint32_t MurmurHash3_x86_32(const void *key, uint32_t len, uint32_t seed);
 void MurmurHash3_x86_128(const void *key, uint32_t len, uint32_t seed, void *out);
 void MurmurHash3_x64_128(const void *key, uint64_t len, uint32_t seed, void *out);
 

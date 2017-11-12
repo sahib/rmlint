@@ -23,7 +23,7 @@
  *
  */
 
-#include "../checksums/spooky-c.h"
+#include "../checksums/murmur3.h"
 #include "../formats.h"
 #include "../preprocess.h"
 #include "../utilities.h"
@@ -54,8 +54,8 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
     hash ^= file->actual_file_size;
 
     for(int i = 0; i < 8192; ++i) {
-        hash ^= spooky_hash32(file_path, strlen(file_path), i);
-        hash ^= spooky_hash32(cksum, strlen(cksum), i);
+        hash ^= MurmurHash3_x86_32(file_path, strlen(file_path), i);
+        hash ^= MurmurHash3_x86_32(cksum, strlen(cksum), i);
 
         if(!g_hash_table_contains(self->id_set, GUINT_TO_POINTER(hash))) {
             break;

@@ -45,7 +45,6 @@
 #include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
 #include "checksums/sha3/sha3.h"
-#include "checksums/spooky-c.h"
 #include "checksums/xxhash/xxhash.h"
 
 #include "utilities.h"
@@ -191,32 +190,7 @@ static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
     copy->state = g_slice_copy(ALLOC_BYTES(digest->bytes), digest->state);
 }
 
-///////////////////////////
-//    spooky hashes      //
-///////////////////////////
-
-/* TODO: this is broken; need to extend spooky API to add a streaming variant */
-
-static void rm_digest_spooky32_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    uint32_t* hash = digest->state;
-    *hash = spooky_hash32(data, size, *hash);
-}
-
-static void rm_digest_spooky64_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    uint64_t* hash = digest->state;
-    *hash = spooky_hash64(data, size, *hash);
-}
-
-static void rm_digest_spooky_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    uint128 *hash = digest->state;
-    spooky_hash128(data, size, &hash->first, &hash->second);
-}
-
 #define GENERIC_FUNCS(ALGO) rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_##ALGO##_update, rm_digest_generic_copy, NULL
-static const RmDigestSpec spooky32_spec = { "spooky32",  32, GENERIC_FUNCS(spooky32) };
-static const RmDigestSpec spooky64_spec = { "spooky64", 64, GENERIC_FUNCS(spooky64) };
-static const RmDigestSpec spooky_spec   = { "spooky",  128, GENERIC_FUNCS(spooky) };
-
 
 ///////////////////////////
 //        xxhash         //
@@ -636,9 +610,6 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
     static const RmDigestSpec *digest_specs[] = {
         [RM_DIGEST_UNKNOWN]    = NULL,
         [RM_DIGEST_MURMUR]     = &murmur_spec,
-        [RM_DIGEST_SPOOKY]     = &spooky_spec,
-        [RM_DIGEST_SPOOKY32]   = &spooky32_spec,
-        [RM_DIGEST_SPOOKY64]   = &spooky64_spec,
         [RM_DIGEST_CITY]       = &city_spec,
         [RM_DIGEST_MD5]        = &md5_spec,
         [RM_DIGEST_SHA1]       = &sha1_spec,
@@ -686,7 +657,6 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
 
     /* add some synonyms */
     rm_digest_table_insert(*code_table, "sha3", RM_DIGEST_SHA3_256);
-    rm_digest_table_insert(*code_table, "spooky128", RM_DIGEST_SPOOKY);
     rm_digest_table_insert(*code_table, "highway", RM_DIGEST_HIGHWAY256);
 
     return NULL;
@@ -717,8 +687,7 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 /*  TODO: remove? */
 int rm_digest_type_to_multihash_id(RmDigestType type) {
     static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,   [RM_DIGEST_MURMUR] = 17,
-                        [RM_DIGEST_SPOOKY] = 14,    [RM_DIGEST_SPOOKY32] = 16,
-                        [RM_DIGEST_SPOOKY64] = 18,  [RM_DIGEST_CITY] = 15,
+                        [RM_DIGEST_CITY] = 15,
                         [RM_DIGEST_MD5] = 1,        [RM_DIGEST_SHA1] = 2,
                         [RM_DIGEST_SHA256] = 4,     [RM_DIGEST_SHA512] = 6,
                         [RM_DIGEST_EXT] = 12,       [RM_DIGEST_FARMHASH] = 19,
