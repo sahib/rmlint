@@ -42,6 +42,7 @@
 
 #include "checksums/blake2/blake2.h"
 #include "checksums/murmur3.h"
+#include "checksums/metrohash.h"
 #include "checksums/sha3/sha3.h"
 #include "checksums/xxhash/xxhash.h"
 
@@ -271,6 +272,32 @@ static const RmDigestSpec murmur_spec = { "murmur", 128, MURMUR_FUNCS(x64_128)};
 #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
 
+
+///////////////////////////
+//         metro         //
+///////////////////////////
+
+static void rm_digest_metro_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->state = metrohash128crc_1_new(seed1 ^ seed2);
+}
+
+static void rm_digest_metro_free(RmDigest *digest) {
+    metrohash128crc_1_free(digest->state);
+}
+
+static void rm_digest_metro_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    metrohash128crc_1_update(digest->state, data, size);
+}
+
+static void rm_digest_metro_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = metrohash128crc_1_copy(digest->state);
+}
+
+static void rm_digest_metro_steal(RmDigest *digest, guint8 *result) {
+    metrohash128crc_1_steal(digest->state, result);
+}
+
+static const RmDigestSpec metro_spec =  {"metro", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_update, rm_digest_metro_copy, rm_digest_metro_steal };
 
 ///////////////////////////
 //      cumulative       //
@@ -586,6 +613,7 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
     static const RmDigestSpec *digest_specs[] = {
         [RM_DIGEST_UNKNOWN]    = NULL,
         [RM_DIGEST_MURMUR]     = &murmur_spec,
+        [RM_DIGEST_METRO]      = &metro_spec,
         [RM_DIGEST_MD5]        = &md5_spec,
         [RM_DIGEST_SHA1]       = &sha1_spec,
         [RM_DIGEST_SHA256]     = &sha256_spec,

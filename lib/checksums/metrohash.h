@@ -28,6 +28,10 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "../config.h"
+
+typedef struct _Metro64_state Metro64State;
+typedef struct _Metro128_state Metro128State;
 
 // MetroHash 64-bit hash functions
 void metrohash64_1(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
@@ -41,6 +45,13 @@ void metrohash128_2(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * 
 // MetroHash 128-bit hash functions using CRC instruction
 void metrohash128crc_1(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
 void metrohash128crc_2(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
+
+Metro128State *metrohash128crc_1_new(uint32_t seed);
+Metro128State *metrohash128crc_1_copy(Metro128State *state);
+void metrohash128crc_1_free(Metro128State *state);
+void metrohash128crc_1_update(Metro128State *state, const uint8_t * key, uint64_t len);
+void metrohash128crc_1_steal(Metro128State *state, uint8_t * out);
+
 #endif
 
 /* rotate right idiom recognized by compiler*/
