@@ -362,7 +362,7 @@ static void rm_digest_highway128_steal(RmDigest *digest, guint8 *result) {
 }
 
 static void rm_digest_highway64_steal(RmDigest *digest, guint8 *result) {
-    *result = HighwayHashCatFinish64(digest->state);
+    *(uint64_t*)result = HighwayHashCatFinish64(digest->state);
 }
 
 #define HIGHWAY_SPEC(BITS) BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
