@@ -315,9 +315,8 @@ static const RmDigestSpec city_spec =  { "city", 128, GENERIC_FUNCS(city)};
 static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     /*  This only XORS the two checksums. */
     guint8 *hash = digest->state;
-    RmOff bytes = MIN(size, digest->bytes);
-    for(gsize i = 0; i < bytes; ++i) {
-        hash[i] ^= ((guint8 *)data)[i];
+    for(gsize i = 0; i < size; ++i) {
+        hash[i % digest->bytes] ^= ((guint8 *)data)[i];
     }
 }
 
