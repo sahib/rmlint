@@ -219,18 +219,6 @@ static void rm_digest_xxhash_steal(RmDigest *digest, guint8 *result) {
 
 static const RmDigestSpec xxhash_spec =  { "xxhash", 64, rm_digest_xxhash_init, rm_digest_xxhash_free, rm_digest_xxhash_update, rm_digest_xxhash_copy, rm_digest_xxhash_steal};
 
-///////////////////////////
-//      farmhash         //
-///////////////////////////
-
-/* TODO: check that this is not broken, i.e. final hash is independent of increment size */
-
-static void rm_digest_farmhash_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    uint128_t *hash = digest->state;
-    *hash = farmhash128_with_seed((const char*)data, size, *hash);
-}
-
-static const RmDigestSpec farmhash_spec =  { "farmhash", 64, GENERIC_FUNCS(farmhash)};
 
 ///////////////////////////
 //        murmur         //
@@ -614,7 +602,6 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
         [RM_DIGEST_EXT]        = &ext_spec,
         [RM_DIGEST_CUMULATIVE] = &cumulative_spec,
         [RM_DIGEST_PARANOID]   = &paranoid_spec,
-        [RM_DIGEST_FARMHASH]   = &farmhash_spec,
         [RM_DIGEST_XXHASH]     = &xxhash_spec,
         [RM_DIGEST_HIGHWAY64]  = &highway64_spec,
         [RM_DIGEST_HIGHWAY128] = &highway128_spec,
@@ -676,7 +663,6 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
     static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,   [RM_DIGEST_MURMUR] = 17,
                         [RM_DIGEST_MD5] = 1,        [RM_DIGEST_SHA1] = 2,
                         [RM_DIGEST_SHA256] = 4,     [RM_DIGEST_SHA512] = 6,
-                        [RM_DIGEST_EXT] = 12,       [RM_DIGEST_FARMHASH] = 19,
                         [RM_DIGEST_CUMULATIVE] = 13,[RM_DIGEST_PARANOID] = 14};
 
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];

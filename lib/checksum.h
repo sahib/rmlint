@@ -32,7 +32,6 @@
 
 #include "checksums/blake2/blake2.h"
 #include "checksums/sha3/sha3.h"
-#include "checksums/farmhash.h"
 #include "checksums/highwayhash.h"
 
 typedef enum RmDigestType {
@@ -50,7 +49,6 @@ typedef enum RmDigestType {
     RM_DIGEST_BLAKE2SP /*  Parallel version of BLAKE2P */,
     RM_DIGEST_BLAKE2BP /*  Parallel version of BLAKE2S */,
     RM_DIGEST_XXHASH,
-    RM_DIGEST_FARMHASH,
     RM_DIGEST_HIGHWAY64,
     RM_DIGEST_HIGHWAY128,
     RM_DIGEST_HIGHWAY256,
