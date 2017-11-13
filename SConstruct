@@ -361,6 +361,21 @@ def check_cygwin(context):
     context.Result(rc)
     return rc
 
+def check_sse4(context):
+    rc = 0
+
+    context.Message('Checking for sse4 support...')
+    try:
+        if 'sse4' in open('/proc/cpuinfo').read():
+            rc = 1
+    except subprocess.CalledProcessError:
+        # Oops.
+        context.Message("read cpuinfo failed")
+
+    conf.env['HAVE_SSE4'] = rc
+    context.Result(rc)
+    return rc
+
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -536,6 +551,7 @@ conf = Configure(env, custom_tests={
     'check_linux_fs_h': check_linux_fs_h,
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
+    'check_sse4': check_sse4,
     'check_sysmacro_h': check_sysmacro_h
 })
 
@@ -609,6 +625,11 @@ if conf.env['IS_CYGWIN']:
 else:
     conf.env.Append(CCFLAGS=['-fPIC'])
 
+# check SSE4 support:
+conf.check_sse4()
+if conf.env['HAVE_SSE4']:
+    conf.env.Append(CCFLAGS=['-msse4'])
+
 
 if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
@@ -629,7 +650,7 @@ conf.env.Append(CFLAGS=[
     '-Wmissing-include-dirs',
     '-Wuninitialized',
     '-Wstrict-prototypes',
-    '-Wno-implicit-fallthrough'
+    '-Wno-implicit-fallthrough',
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))

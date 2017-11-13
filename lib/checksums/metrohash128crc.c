@@ -23,6 +23,7 @@
 // SOFTWARE.
 //
 
+#if HAVE_SSE4
 
 #include "metrohash.h"
 #include <nmmintrin.h>
@@ -177,3 +178,5 @@ void metrohash128crc_2(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t
 
     memcpy(out, v, 16);
 }
+
+#endif

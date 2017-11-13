@@ -37,9 +37,11 @@ void metrohash64_2(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * o
 void metrohash128_1(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
 void metrohash128_2(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
 
+#if HAVE_SSE4
 // MetroHash 128-bit hash functions using CRC instruction
 void metrohash128crc_1(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
 void metrohash128crc_2(const uint8_t * key, uint64_t len, uint32_t seed, uint8_t * out);
+#endif
 
 /* rotate right idiom recognized by compiler*/
 inline static uint64_t rotate_right(uint64_t v, unsigned k)
