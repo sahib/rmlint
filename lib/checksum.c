@@ -297,7 +297,29 @@ static void rm_digest_metro_steal(RmDigest *digest, guint8 *result) {
     metrohash128_1_steal(digest->state, result);
 }
 
+static void rm_digest_metro256_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    digest->state = metrohash256_new(seed1 ^ seed2);
+}
+
+static void rm_digest_metro256_free(RmDigest *digest) {
+    metrohash256_free(digest->state);
+}
+
+static void rm_digest_metro256_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    metrohash256_update(digest->state, data, size);
+}
+
+static void rm_digest_metro256_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = metrohash256_copy(digest->state);
+}
+
+static void rm_digest_metro256_steal(RmDigest *digest, guint8 *result) {
+    metrohash256_steal(digest->state, result);
+}
+
+
 static const RmDigestSpec metro_spec =  {"metro", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_update, rm_digest_metro_copy, rm_digest_metro_steal };
+static const RmDigestSpec metro256_spec =  {"metro256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_update, rm_digest_metro256_copy, rm_digest_metro256_steal };
 
 #if HAVE_SSE4
 
@@ -309,7 +331,17 @@ static void rm_digest_metro_crc_steal(RmDigest *digest, guint8 *result) {
     metrohash128crc_1_steal(digest->state, result);
 }
 
+static void rm_digest_metro256_crc_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    metrohash256_update(digest->state, data, size);
+}
+
+static void rm_digest_metro256_crc_steal(RmDigest *digest, guint8 *result) {
+    metrohash256_steal(digest->state, result);
+}
+
+
 static const RmDigestSpec metro_crc_spec =  {"metrocrc", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_crc_update, rm_digest_metro_copy, rm_digest_metro_crc_steal };
+static const RmDigestSpec metro256_crc_spec =  {"metrocrc256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_crc_update, rm_digest_metro256_copy, rm_digest_metro256_crc_steal };
 
 #endif
 
@@ -629,7 +661,11 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
         [RM_DIGEST_UNKNOWN]    = NULL,
         [RM_DIGEST_MURMUR]     = &murmur_spec,
         [RM_DIGEST_METRO]      = &metro_spec,
+        [RM_DIGEST_METRO256]   = &metro256_spec,
+    #if HAVE_SSE4
         [RM_DIGEST_METROCRC]   = &metro_crc_spec,
+        [RM_DIGEST_METROCRC256]= &metro256_crc_spec,
+    #endif
         [RM_DIGEST_MD5]        = &md5_spec,
         [RM_DIGEST_SHA1]       = &sha1_spec,
         [RM_DIGEST_SHA256]     = &sha256_spec,

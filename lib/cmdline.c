@@ -753,16 +753,20 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-        cfg->checksum_type = RM_DIGEST_XXHASH;  // 64-bit non-crypto
+        cfg->checksum_type = RM_DIGEST_METRO;       // 128-bit non-crypto
         break;
     case -1:
-        cfg->checksum_type = RM_DIGEST_MURMUR;    // 128-bit non-crypto
+#if HAVE_SSE4
+        cfg->checksum_type = RM_DIGEST_METROCRC256; // 256-bit non-crypto
+#else
+        cfg->checksum_type = RM_DIGEST_METRO256;    // 256-bit non-crypto
+#endif
         break;
     case 0:
         /* leave users choice of -a (default) */
         break;
     case 1:
-		cfg->checksum_type = RM_DIGEST_BLAKE2B; // 512-bit crypto
+		cfg->checksum_type = RM_DIGEST_BLAKE2B;     // 512-bit crypto
         break;
     case 2:
         cfg->checksum_type = RM_DIGEST_PARANOID;
