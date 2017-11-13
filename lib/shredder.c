@@ -1640,6 +1640,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
             shredder_waiting = FALSE;
         }
 
+        /* TODO: make this threadsafe: */
         session->shred_bytes_read += bytes_read;
 
         /* Update totals for file, device and session*/
