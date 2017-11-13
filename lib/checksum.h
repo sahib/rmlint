@@ -38,7 +38,6 @@
 typedef enum RmDigestType {
     RM_DIGEST_UNKNOWN = 0,
     RM_DIGEST_MURMUR,
-    RM_DIGEST_CITY,
     RM_DIGEST_MD5,
     RM_DIGEST_SHA1,
     RM_DIGEST_SHA256,

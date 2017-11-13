@@ -28,12 +28,6 @@ def streaming_compliance_check(*patterns):
                 assert False, "{} fails streaming test with increment {}".format(algo, increment)
                 break
 
-
-@attr('known_issue')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_city():
-    streaming_compliance_check('city')
-
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_murmur():
     streaming_compliance_check('murmur')

@@ -41,8 +41,6 @@
 #include "checksum.h"
 
 #include "checksums/blake2/blake2.h"
-#include "checksums/city.h"
-#include "checksums/citycrc.h"
 #include "checksums/murmur3.h"
 #include "checksums/sha3/sha3.h"
 #include "checksums/xxhash/xxhash.h"
@@ -284,28 +282,6 @@ static const RmDigestSpec murmur_spec = { "murmur", 128, MURMUR_FUNCS(x64_128)};
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
 #endif
-
-
-///////////////////////////
-//      cityhash         //
-///////////////////////////
-
-static void rm_digest_city_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-
-    /* TODO: check that this is not broken, i.e. final hash is independent of increment size */
-
-    /* There is a more optimized version but it needs the crc command of sse4.2
-    * (available on Intel Nehalem and up; my amd box doesn't have this though)
-    */
-    uint128 *hash = digest->state;
-#ifdef __SSE4_2__
-    *hash = CityHashCrc128WithSeed((const char *)data, size, *hash);
-#else
-    *hash = CityHash128WithSeed((const char *)data, size, *hash);
-#endif
-}
-
-static const RmDigestSpec city_spec =  { "city", 128, GENERIC_FUNCS(city)};
 
 
 ///////////////////////////
@@ -622,7 +598,6 @@ static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
     static const RmDigestSpec *digest_specs[] = {
         [RM_DIGEST_UNKNOWN]    = NULL,
         [RM_DIGEST_MURMUR]     = &murmur_spec,
-        [RM_DIGEST_CITY]       = &city_spec,
         [RM_DIGEST_MD5]        = &md5_spec,
         [RM_DIGEST_SHA1]       = &sha1_spec,
         [RM_DIGEST_SHA256]     = &sha256_spec,
@@ -699,7 +674,6 @@ const char *rm_digest_type_to_string(RmDigestType type) {
 /*  TODO: remove? */
 int rm_digest_type_to_multihash_id(RmDigestType type) {
     static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,   [RM_DIGEST_MURMUR] = 17,
-                        [RM_DIGEST_CITY] = 15,
                         [RM_DIGEST_MD5] = 1,        [RM_DIGEST_SHA1] = 2,
                         [RM_DIGEST_SHA256] = 4,     [RM_DIGEST_SHA512] = 6,
                         [RM_DIGEST_EXT] = 12,       [RM_DIGEST_FARMHASH] = 19,
