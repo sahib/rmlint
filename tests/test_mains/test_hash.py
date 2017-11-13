@@ -33,6 +33,10 @@ def test_murmur():
     streaming_compliance_check('murmur')
 
 @with_setup(usual_setup_func, usual_teardown_func)
+def test_metro():
+    streaming_compliance_check('metro')
+
+@with_setup(usual_setup_func, usual_teardown_func)
 def test_glib():
     streaming_compliance_check('md5', 'sha1', 'sha256', 'sha512')
 
@@ -48,15 +52,11 @@ def test_blake():
 def test_xx():
     streaming_compliance_check('xxhash')
 
-@attr('known_issue')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_farm():
-    streaming_compliance_check('farm')
-
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_highway():
     streaming_compliance_check('highway')
 
+@attr("known_issue")
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_cumulative():
     streaming_compliance_check('cumulative')

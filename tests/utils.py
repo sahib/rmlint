@@ -17,6 +17,8 @@ TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
 CKSUM_TYPES = [
     'murmur',
+    'metro',
+    'metro256'
     'md5',
     'sha1',
     'sha256',
@@ -28,7 +30,6 @@ CKSUM_TYPES = [
     'blake2sp',
     'blake2bp',
     'xxhash',
-    'farmhash',
     'highway64',
     'highway128',
     'highway256',
@@ -239,6 +240,10 @@ def run_rmlint_pedantic(*args, **kwargs):
     #       no recent enough glib with. God forsaken debian people.
     if has_feature('sha512'):
         CKSUM_TYPES.append('sha512')
+
+    if has_feature('sse4'):
+        CKSUM_TYPES.append('metrocrc')
+        CKSUM_TYPES.append('metrocrc256')
 
     for cksum_type in CKSUM_TYPES:
         options.append('--algorithm=' + cksum_type)
