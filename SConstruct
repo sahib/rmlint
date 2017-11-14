@@ -632,14 +632,6 @@ conf.check_sse4()
 if conf.env['HAVE_SSE4']:
     conf.env.Append(CCFLAGS=['-msse4'])
 
-
-if ARGUMENTS.get('DEBUG') == "1":
-    conf.env.Append(CCFLAGS=['-ggdb3'])
-else:
-    # Generic compiler:
-    conf.env.Append(LINKFLAGS=['-s'])
-
-
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
@@ -679,10 +671,19 @@ conf.check_sysmacro_h()
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
-# compiler optimisations:
-o_option = '-O' + (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
-print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(o_option))
-conf.env.Append(CCFLAGS=[o_option])
+# compiler optimisation and debug symbols:
+cc_O_option = '-O'
+if ARGUMENTS.get('DEBUG') == "1":
+    print("Compiling with gdb extra debug symbols")
+    conf.env.Append(CCFLAGS=['-ggdb3', '-fno-inline'])
+    cc_O_option += (ARGUMENTS.get('O') or '0')
+else:
+    conf.env.Append(LINKFLAGS=['-s'])
+    cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
+
+print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
+conf.env.Append(CCFLAGS=[cc_O_option])
+
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
