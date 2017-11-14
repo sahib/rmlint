@@ -43,8 +43,9 @@
 #include "checksums/blake2/blake2.h"
 #include "checksums/murmur3.h"
 #include "checksums/metrohash.h"
-#include "checksums/sha3/sha3.h"
+#include "checksums/sha3/sha3_rhash.h"
 #include "checksums/xxhash/xxhash.h"
+#include "checksums/highwayhash.h"
 
 #include "utilities.h"
 
@@ -538,44 +539,44 @@ static const RmDigestSpec sha512_spec = {"sha512", 512, GLIB_FUNCS};
 
 
 static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    digest->state = g_slice_alloc0(sizeof(sha3_context));
+    digest->state = g_slice_alloc0(sizeof(sha3_ctx));
     switch(digest->type) {
         case RM_DIGEST_SHA3_256:
-            sha3_Init256(digest->state);
+            rhash_sha3_256_init(digest->state);
             break;
         case RM_DIGEST_SHA3_384:
-            sha3_Init384(digest->state);
+            rhash_sha3_384_init(digest->state);
             break;
         case RM_DIGEST_SHA3_512:
-            sha3_Init512(digest->state);
+            rhash_sha3_512_init(digest->state);
             break;
         default:
             g_assert_not_reached();
     }
     if(seed1) {
-        sha3_Update(digest->state, &seed1, sizeof(seed1));
+        rhash_sha3_update(digest->state, (const unsigned char *)&seed1, sizeof(seed1));
     }
     if(seed2) {
-        sha3_Update(digest->state, &seed2, sizeof(seed2));
+        rhash_sha3_update(digest->state, (const unsigned char *)&seed2, sizeof(seed2));
     }
 }
 
 static void rm_digest_sha3_free(RmDigest *digest) {
-    g_slice_free(sha3_context, digest->state);
+    g_slice_free(sha3_ctx, digest->state);
 }
 
 static void rm_digest_sha3_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    sha3_Update(digest->state, data, size);
+    rhash_sha3_update(digest->state, data, size);
 }
 
 static void rm_digest_sha3_copy(RmDigest *digest, RmDigest *copy) {
-    copy->state = g_slice_copy(sizeof(sha3_context), digest->state);
+    copy->state = g_slice_copy(sizeof(sha3_ctx), digest->state);
 }
 
 static void rm_digest_sha3_steal(RmDigest *digest, guint8 *result) {
-    sha3_context *copy = g_slice_copy(sizeof(sha3_context), digest->state);
-    memcpy(result, sha3_Finalize(copy), digest->bytes);
-    g_slice_free(sha3_context, copy);
+    sha3_ctx *copy = g_slice_copy(sizeof(sha3_ctx), digest->state);
+    rhash_sha3_final(copy, result);
+    g_slice_free(sha3_ctx, copy);
 }
 
 #define SHA3_SPEC(BITS) BITS, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal

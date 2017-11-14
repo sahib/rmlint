@@ -34,6 +34,8 @@
 #include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdlib.h>
+
 
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
