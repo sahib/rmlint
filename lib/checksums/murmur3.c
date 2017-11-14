@@ -18,7 +18,7 @@
 //-----------------------------------------------------------------------------
 // Platform-specific functions and macros
 
-static inline uint32_t rotl32(uint32_t x, int8_t r) {
+__attribute__((__unused__)) static inline uint32_t rotl32(uint32_t x, int8_t r) {
     return (x << r) | (x >> (32 - r));
 }
 
