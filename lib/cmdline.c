@@ -753,7 +753,11 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
+#if HAVE_SSE4
+        cfg->checksum_type = RM_DIGEST_METROCRC;    // 128-bit non-crypto
+#else
         cfg->checksum_type = RM_DIGEST_METRO;       // 128-bit non-crypto
+#endif
         break;
     case -1:
 #if HAVE_SSE4
@@ -766,15 +770,12 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
         /* leave users choice of -a (default) */
         break;
     case 1:
-		cfg->checksum_type = RM_DIGEST_BLAKE2B;     // 512-bit crypto
-        break;
-    case 2:
         cfg->checksum_type = RM_DIGEST_PARANOID;
         break;
     default:
         if(error && *error == NULL) {
             g_set_error(error, RM_ERROR_QUARK, 0,
-                        _("Only up to -pp or down to -PP flags allowed"));
+                        _("Only up to -p or down to -PP flags allowed"));
         }
         break;
     }

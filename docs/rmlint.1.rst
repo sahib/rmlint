@@ -149,29 +149,34 @@ General Options
 
     ``$ rmlint -z rx $(echo $PATH | tr ":" " ")  # Look at all executable files in $PATH``
 
-:``-a --algorithm=name`` (**default\:** *blake2b*):
+:``-a --algorithm=name`` (**default\:** *sha512*):
 
     Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
-    algorithms to identify duplicates.  The following well-known algorithms are available:
+    algorithms to identify duplicates.  The following cryptographic algorithms are available:
 
-    **spooky**, **city**, **murmur**, **xxhash**, **md5**, **sha1**, **sha256**,
-    **sha512**, **farmhash**, **sha3**, **sha3-256**, **sha3-384**, **sha3-512**,
-    **blake2s**, **blake2b**, **blake2sp**, **blake2bp**.
+    **highway128**, **highway256**,
+    **sha1** (160 bit), **sha256**, **sha512**,
+    **sha3-256**, **sha3-384**, **sha3-512**,
+    **blake2s/blake2sp** (256), **blake2b/blake2bp** (512).
 
-    There are also some weaker hashes; we strongly advise against using these:
-    * **spooky32, spooky64:** Faster version of **spooky** with less bits.
+    For improved run time / reduced CPU load, the following non-cryptographic
+    hashes are also available:
+    **murmur** (128 bit), **metro** (128), **metro256**,
+    **metrocrc** (128), **metrocrc256** (if cpu supports crc)
+
+    There are also some 64-bit hashes; we strongly advise against using these:
+    * **highway64** (cryptographic), **xxhash**.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
     Use ``-pp`` if you want byte-by-byte comparison without any hashing.
 
-    * **-p** is equivalent to **--algorithm=<TODO>**
-    * **-pp** is equivalent to **--algorithm=paranoid**
+    * **-p** is equivalent to **--algorithm=paranoid**
 
-    * **-P** is equivalent to **--algorithm=<TODO>**
-    * **-PP** is equivalent to **--algorithm=<TODO>**
+    * **-P** is equivalent to **--algorithm=metro256**
+    * **-PP** is equivalent to **--algorithm=metro**
 
 :``-v --loud`` / ``-V --quiet``:
 
@@ -846,10 +851,12 @@ PROBLEMS
 
 1. **False Positives:** Depending on the options you use, there is a very slight risk
    of false positives (files that are erroneously detected as duplicate).
-   The default hash function (SHA1) is pretty safe but in theory it is possible for
-   two files to have then same hash. This happens about once in 2 ** 80 files, so
-   it is very very unlikely. If you're concerned just use the ``--paranoid`` (``-pp``)
-   option. This will compare all the files byte-by-byte and is not much slower than SHA1.
+   The default hash function (sha512) is very safe but in theory it is possible for
+   two files to have then same hash. If you had 10^73 different files, all the same
+   size, then the chance of a false positive is still less than 1 in a billion.
+   If you're concerned just use the ``--paranoid`` (``-pp``)
+   option. This will compare all the files byte-by-byte and is not much slower than
+   sha512 (it may even be faster), although it is a lot more memory-hungry.
 
 2. **File modification during or after rmlint run:** It is possible that a file
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in
