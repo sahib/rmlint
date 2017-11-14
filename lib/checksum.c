@@ -350,15 +350,85 @@ static const RmDigestSpec metro256_crc_spec =  {"metrocrc256", 256, rm_digest_me
 //      cumulative       //
 ///////////////////////////
 
+#define RM_DIGEST_CUMULATIVE_LEN 16 /* must be power of 2 and >= 8 */
+
+#if RM_PLATFORM_64
+
+#define RM_DIGEST_CUMULATIVE_T guint64
+#define RM_DIGEST_CUMULATIVE_DATA data64
+#define RM_DIGEST_CUMULATIVE_ALIGN 8
+
+#else
+
+#define RM_DIGEST_CUMULATIVE_T guint32
+#define RM_DIGEST_CUMULATIVE_DATA data32
+#define RM_DIGEST_CUMULATIVE_ALIGN 4
+
+#endif
+
+typedef struct RmDigestCumulative {
+    union {
+        guint8 data[RM_DIGEST_CUMULATIVE_LEN];
+        RM_DIGEST_CUMULATIVE_T bigdata[RM_DIGEST_CUMULATIVE_LEN / RM_DIGEST_CUMULATIVE_ALIGN];
+    };
+    RM_DIGEST_CUMULATIVE_T pos;  /* could be smaller but this is faster */
+} RmDigestCumulative;
+
+static void rm_digest_cumulative_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    RmDigestCumulative *state = g_slice_new0(RmDigestCumulative);
+    *(RmOff*)&state->data[0] ^= seed1;
+#if (RM_DIGEST_CUMULATIVE_LEN >= 16)
+    *(RmOff*)&state->data[8] ^= seed2;
+#else
+    *(RmOff*)&state->data[0] ^= seed2;
+#endif
+    digest->state = state;
+}
+
+static void rm_digest_cumulative_free(RmDigest *digest) {
+    g_slice_free(RmDigestCumulative, digest->state);
+    digest->state = NULL;
+}
+
 static void rm_digest_cumulative_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    /*  This only XORS the two checksums. */
-    guint8 *hash = digest->state;
-    for(gsize i = 0; i < size; ++i) {
-        hash[i % digest->bytes] ^= ((guint8 *)data)[i];
+    guint8 *ptr = (guint8*) data;
+    guint8 *stop = ptr + size;
+    RmDigestCumulative *state = digest->state;
+
+    /* align so we can use [32|64]-bit xor */
+    while ((state->pos % RM_DIGEST_CUMULATIVE_ALIGN != 0) && ptr < stop) {
+        state->data[state->pos++] ^= *(ptr++);
+        state->pos &= (RM_DIGEST_CUMULATIVE_LEN-1);
+    }
+
+    RM_DIGEST_CUMULATIVE_T *ptr_big = (RM_DIGEST_CUMULATIVE_T*)ptr;
+    RM_DIGEST_CUMULATIVE_T *stop_big = (RM_DIGEST_CUMULATIVE_T*)(stop + 1 - RM_DIGEST_CUMULATIVE_ALIGN);
+
+    /* plough through body of data efficiently */
+    while (ptr_big < stop_big) {
+        state->bigdata[state->pos / RM_DIGEST_CUMULATIVE_ALIGN] ^= *ptr_big++;
+        state->pos = (state->pos + RM_DIGEST_CUMULATIVE_ALIGN) & (RM_DIGEST_CUMULATIVE_ALIGN-1);
+    }
+
+    /* process remaining date byte-wise */
+    ptr = (guint8*)ptr_big;
+    while (ptr < stop) {
+        state->data[state->pos++] ^= *(ptr++);
+        state->pos &= (RM_DIGEST_CUMULATIVE_LEN-1);
     }
 }
 
-static const RmDigestSpec cumulative_spec =  { "cumulative", 128, GENERIC_FUNCS(cumulative)};
+static void rm_digest_cumulative_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = g_slice_copy(sizeof(RmDigestCumulative), digest->state);
+}
+
+static void rm_digest_cumulative_steal(RmDigest *digest, guint8 *result) {
+    RmDigestCumulative *state = digest->state;
+    memcpy(result, state->data, RM_DIGEST_CUMULATIVE_LEN);
+}
+
+static const RmDigestSpec cumulative_spec =  { "cumulative", 8 * RM_DIGEST_CUMULATIVE_LEN, rm_digest_cumulative_init, rm_digest_cumulative_free,
+        rm_digest_cumulative_update, rm_digest_cumulative_copy, rm_digest_cumulative_steal};
 
 
 ///////////////////////////
@@ -705,9 +775,9 @@ static void rm_digest_table_insert(GHashTable *code_table, char *name, RmDigestT
 static gpointer rm_init_digest_type_table(GHashTable **code_table) {
 
     *code_table = g_hash_table_new(g_str_hash, g_str_equal);
-	for(RmDigestType type=1; type<RM_DIGEST_SENTINEL; type++) {
+    for(RmDigestType type=1; type<RM_DIGEST_SENTINEL; type++) {
         rm_digest_table_insert(*code_table, (char*)rm_digest_spec(type)->name, type);
-	}
+    }
 
     /* add some synonyms */
     rm_digest_table_insert(*code_table, "sha3", RM_DIGEST_SHA3_256);
@@ -991,7 +1061,7 @@ int rm_digest_get_bytes(RmDigest *self) {
 
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
     RmParanoid *paranoid = target->state;
-    
+
     if(!paranoid->incoming_twin_candidates) {
         paranoid->incoming_twin_candidates = g_async_queue_new();
     }
