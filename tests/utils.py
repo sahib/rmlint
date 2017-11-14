@@ -18,7 +18,7 @@ TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 CKSUM_TYPES = [
     'murmur',
     'metro',
-    'metro256'
+    'metro256',
     'md5',
     'sha1',
     'sha256',
