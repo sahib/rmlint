@@ -11,6 +11,8 @@ import SCons
 import SCons.Conftest as tests
 from SCons.Script.SConscript import SConsEnvironment
 
+DEFAULT_OPTIMISATION='s'  # compile with -Os
+
 pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
 
 def read_version():
@@ -635,8 +637,8 @@ if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-ggdb3'])
 else:
     # Generic compiler:
-    conf.env.Append(CCFLAGS=['-Os'])
     conf.env.Append(LINKFLAGS=['-s'])
+
 
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
@@ -676,6 +678,11 @@ conf.check_sysmacro_h()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+# compiler optimisations:
+o_option = '-O' + (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
+print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(o_option))
+conf.env.Append(CCFLAGS=[o_option])
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
