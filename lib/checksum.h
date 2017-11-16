@@ -30,8 +30,9 @@
 #include <stdbool.h>
 #include "config.h"
 
-//#include "checksums/blake2/blake2.h"
-//#include "checksums/highwayhash.h"
+#include "checksums/blake2/blake2.h"
+#include "checksums/sha3/sha3.h"
+#include "checksums/highwayhash.h"
 
 typedef enum RmDigestType {
     RM_DIGEST_UNKNOWN = 0,
