@@ -174,11 +174,8 @@ const char *rm_digest_type_to_string(RmDigestType type);
  *
  * @param type Which algorithm to use for hashing.
  * @param seed Initial seed. Pass 0 if not interested.
- * @param ext_size Size of the digest in case on RM_DIGEST_EXT
- * @param use_shadow_hash.  Keep a shadow hash for lookup purposes.
  */
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
-                        bool use_shadow_hash);
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed);
 
 /**
  * @brief Deallocate memory assocated with a RmDigest.

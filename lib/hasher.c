@@ -425,8 +425,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
     if(digest) {
         self->digest = digest;
     } else {
-        self->digest = rm_digest_new(hasher->digest_type, 0, 0, 0,
-                                     hasher->digest_type == RM_DIGEST_PARANOID);
+        self->digest = rm_digest_new(hasher->digest_type, 0);
     }
 
     /* get a recycled hashpipe if available */

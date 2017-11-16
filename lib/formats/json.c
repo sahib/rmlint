@@ -200,11 +200,9 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "checksum_type",
                             rm_digest_type_to_string(session->cfg->checksum_type));
-            if(session->hash_seed1 && session->hash_seed2) {
+            if(session->hash_seed) {
                 rm_fmt_json_sep(self, out);
-                rm_fmt_json_key_int(out, "hash_seed1", session->hash_seed1);
-                rm_fmt_json_sep(self, out);
-                rm_fmt_json_key_int(out, "hash_seed2", session->hash_seed2);
+                rm_fmt_json_key_int(out, "hash_seed", session->hash_seed);
             }
         }
         rm_fmt_json_close(self, out);

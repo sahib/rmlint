@@ -76,7 +76,7 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 ///////////////////////////////////////
 
 /* Each digest type must have an RmDigestInterface defined as follows: */
-typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
+typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed);
 typedef void (*RmDigestFreeFunc)(RmDigest *digest);
 typedef void (*RmDigestUpdateFunc)(RmDigest *digest, const unsigned char *data, RmOff size);
 typedef void (*RmDigestCopyFunc)(RmDigest *digest, RmDigest *copy);
@@ -108,9 +108,9 @@ static const RmDigestInterface NAME##_interface =  {        \
 //   xxhash interface    //
 ///////////////////////////
 
-static void rm_digest_xxhash_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_xxhash_init(RmDigest *digest, RmOff seed) {
     digest->state = XXH64_createState();
-    XXH64_reset(digest->state, seed1 ^ seed2);
+    XXH64_reset(digest->state, seed);
 }
 
 static void rm_digest_xxhash_free(RmDigest *digest) {
@@ -138,10 +138,8 @@ RM_DIGEST_DEFINE_INTERFACE(xxhash, 64);
 
 #if RM_PLATFORM_32
 
-static void rm_digest_murmur_init(RmDigest *digest, RmOff seed1, RmOff seed2,
-                                  _UNUSED RmOff ext_size,
-                                  _UNUSED bool use_shadow_hash) {
-    digest->state = MurmurHash3_x86_128_new(seed1, seed1>>32, seed2, seed2>>32);
+static void rm_digest_murmur_init(RmDigest *digest, RmOff seed) {
+    digest->state = MurmurHash3_x86_128_new(seed, seed>>32, seed, seed>>32);
 }
 
 static void rm_digest_murmur_free(RmDigest *digest) {
@@ -165,10 +163,8 @@ static void rm_digest_murmur_steal(RmDigest *digest, guint8 *result) {
 
 #elif RM_PLATFORM_64
 
-static void rm_digest_murmur_init(RmDigest *digest, RmOff seed1, RmOff seed2,
-                                  _UNUSED RmOff ext_size,
-                                  _UNUSED bool use_shadow_hash) {
-    digest->state = MurmurHash3_x64_128_new(seed1, seed2);
+static void rm_digest_murmur_init(RmDigest *digest, RmOff seed) {
+    digest->state = MurmurHash3_x64_128_new(seed, seed);
 }
 
 static void rm_digest_murmur_free(RmDigest *digest) {
@@ -203,8 +199,8 @@ RM_DIGEST_DEFINE_INTERFACE(murmur, 128);
 //         metro         //
 ///////////////////////////
 
-static void rm_digest_metro_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    digest->state = metrohash128_1_new(seed1 ^ seed2);
+static void rm_digest_metro_init(RmDigest *digest, RmOff seed) {
+    digest->state = metrohash128_1_new(seed);
 }
 
 static void rm_digest_metro_free(RmDigest *digest) {
@@ -223,8 +219,8 @@ static void rm_digest_metro_steal(RmDigest *digest, guint8 *result) {
     metrohash128_1_steal(digest->state, result);
 }
 
-static void rm_digest_metro256_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    digest->state = metrohash256_new(seed1 ^ seed2);
+static void rm_digest_metro256_init(RmDigest *digest, RmOff seed) {
+    digest->state = metrohash256_new(seed);
 }
 
 static void rm_digest_metro256_free(RmDigest *digest) {
@@ -248,6 +244,7 @@ RM_DIGEST_DEFINE_INTERFACE(metro256, 256);
 
 #if HAVE_SSE4
 
+/* some of the interface procedures are common between crc- and non-crc-variants */
 #define rm_digest_metrocrc_init rm_digest_metro_init
 #define rm_digest_metrocrc_free rm_digest_metro_free
 #define rm_digest_metrocrc_copy rm_digest_metro_copy
@@ -260,6 +257,7 @@ static void rm_digest_metrocrc_steal(RmDigest *digest, guint8 *result) {
     metrohash128crc_1_steal(digest->state, result);
 }
 
+/* some of the interface procedures are common between crc- and non-crc-variants */
 #define rm_digest_metrocrc256_init rm_digest_metro256_init
 #define rm_digest_metrocrc256_free rm_digest_metro256_free
 #define rm_digest_metrocrc256_copy rm_digest_metro256_copy
@@ -306,14 +304,9 @@ typedef struct RmDigestCumulative {
     RM_DIGEST_CUMULATIVE_T pos;  /* could be smaller but this is faster */
 } RmDigestCumulative;
 
-static void rm_digest_cumulative_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_cumulative_init(RmDigest *digest, RmOff seed) {
     RmDigestCumulative *state = g_slice_new0(RmDigestCumulative);
-    *(RmOff*)&state->data[0] ^= seed1;
-#if (RM_DIGEST_CUMULATIVE_LEN >= 16)
-    *(RmOff*)&state->data[8] ^= seed2;
-#else
-    *(RmOff*)&state->data[0] ^= seed2;
-#endif
+    *(RmOff*)&state->data[0] ^= seed;
     digest->state = state;
 }
 
@@ -367,13 +360,10 @@ static const RmDigestInterface cumulative_interface =  { "cumulative", 8 * RM_DI
 //     highway hash      //
 ///////////////////////////
 
-static void rm_digest_highway_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_highway_init(RmDigest *digest, RmOff seed) {
     uint64_t key[4] = {1, 2, 3, 4};
-    if(seed1) {
-        key[0] = (uint64_t)seed1;
-    }
-    if(seed2) {
-        key[2] = (uint64_t)seed2;
+    if(seed) {
+        key[0] = (uint64_t)seed;
     }
 
     digest->state = g_slice_alloc0(sizeof(HighwayHashCat));
@@ -425,13 +415,10 @@ static const GChecksumType glib_map[] = {
 #endif
 };
 
-static void rm_digest_glib_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_glib_init(RmDigest *digest, RmOff seed) {
     digest->state = g_checksum_new(glib_map[digest->type]);
-    if(seed1) {
-        g_checksum_update(digest->state, (const guchar *)&seed1, sizeof(seed1));
-    }
-    if(seed2) {
-        g_checksum_update(digest->state, (const guchar *)&seed2, sizeof(seed2));
+    if(seed) {
+        g_checksum_update(digest->state, (const guchar *)&seed, sizeof(seed));
     }
 }
 
@@ -469,7 +456,7 @@ static const RmDigestInterface sha512_interface = {"sha512", 512, GLIB_FUNCS};
 ///////////////////////////
 
 
-static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_sha3_init(RmDigest *digest, RmOff seed) {
     digest->state = g_slice_alloc0(sizeof(sha3_ctx));
     switch(digest->type) {
         case RM_DIGEST_SHA3_256:
@@ -484,11 +471,8 @@ static void rm_digest_sha3_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNU
         default:
             g_assert_not_reached();
     }
-    if(seed1) {
-        rhash_sha3_update(digest->state, (const unsigned char *)&seed1, sizeof(seed1));
-    }
-    if(seed2) {
-        rhash_sha3_update(digest->state, (const unsigned char *)&seed2, sizeof(seed2));
+    if(seed) {
+        rhash_sha3_update(digest->state, (const unsigned char *)&seed, sizeof(seed));
     }
 }
 
@@ -522,17 +506,11 @@ static const RmDigestInterface sha3_512_interface = { "sha3-512", SHA3_INTERFACE
 
 #define CREATE_BLAKE_FUNCS(ALGO, ALGO_BIG)                          \
                                                                     \
-static void rm_digest_##ALGO##_init(RmDigest *digest, RmOff seed1,  \
-                                    RmOff seed2,                    \
-                                    _UNUSED RmOff ext_size,         \
-                                    _UNUSED bool use_shadow_hash) { \
+static void rm_digest_##ALGO##_init(RmDigest *digest, RmOff seed) { \
     digest->state = g_slice_alloc0(sizeof(ALGO##_state));           \
     ALGO##_init(digest->state, ALGO_BIG##_OUTBYTES);                \
-    if(seed1) {                                                     \
-        ALGO##_update(digest->state, &seed1, sizeof(RmOff));        \
-    }                                                               \
-    if(seed2) {                                                     \
-        ALGO##_update(digest->state, &seed2, sizeof(RmOff));        \
+    if(seed) {                                                      \
+        ALGO##_update(digest->state, &seed, sizeof(RmOff));         \
     }                                                               \
     g_assert(digest->bytes==ALGO_BIG##_OUTBYTES);                   \
 }                                                                   \
@@ -581,21 +559,17 @@ static const RmDigestInterface blake2sp_interface = {"blake2sp", 256, BLAKE_FUNC
 
 #define ALLOC_BYTES(bytes) MAX(8, bytes)
 
-static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_generic_init(RmDigest *digest, RmOff seed) {
     /* init for hashes which just require allocation of digest->checksum */
 
     /* Cannot go lower than 8, since we read 8 byte in some places.
      * For some checksums this may mean trailing zeros in the unused bytes */
     digest->state = g_slice_alloc0(ALLOC_BYTES(digest->bytes));
 
-    if(seed1 && seed2) {
-        /* copy seeds to checksum */
+    if(seed) {
+        /* copy seed to checksum */
         size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes / 2);
-        memcpy(digest->state, &seed1, seed_bytes);
-        memcpy(digest->state + digest->bytes/2, &seed2, seed_bytes);
-    } else if(seed1) {
-        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes);
-        memcpy(digest->state, &seed1, seed_bytes);
+        memcpy(digest->state, &seed, seed_bytes);
     }
 }
 
@@ -618,9 +592,9 @@ static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
         .steal = NULL
 
 
-static void rm_digest_ext_init(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash) {
-    digest->bytes = ext_size;
-    rm_digest_generic_init(digest, seed1, seed2, ext_size, use_shadow_hash);
+static void rm_digest_ext_init(RmDigest *digest, RmOff seed) {
+    digest->bytes = 64;
+    rm_digest_generic_init(digest, seed);
 }
 
 static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, RmOff size) {
@@ -640,7 +614,7 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
     }
 }
 
-static const RmDigestInterface ext_interface = {"ext", 0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
+static const RmDigestInterface ext_interface = {"ext", 512, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
 
 
 ///////////////////////////
@@ -648,14 +622,12 @@ static const RmDigestInterface ext_interface = {"ext", 0, rm_digest_ext_init, rm
 ///////////////////////////
 
 
-static void rm_digest_paranoid_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, bool use_shadow_hash) {
+static void rm_digest_paranoid_init(RmDigest *digest, RmOff seed) {
     RmParanoid *paranoid = g_slice_new0(RmParanoid);
     digest->state = paranoid;
     paranoid->incoming_twin_candidates = g_async_queue_new();
-    if(use_shadow_hash) {
-        paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, seed1, seed2, 0, false);
-        digest->bytes = paranoid->shadow_hash->bytes;
-    }
+    paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, seed);
+    digest->bytes = paranoid->shadow_hash->bytes;
 }
 
 static void rm_digest_paranoid_free(RmDigest *digest) {
@@ -788,15 +760,14 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
     return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
 }
 
-RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_size,
-                        bool use_shadow_hash) {
+RmDigest *rm_digest_new(RmDigestType type, RmOff seed) {
     g_assert(type != RM_DIGEST_UNKNOWN);
 
     const RmDigestInterface *interface = rm_digest_interface(type);
     RmDigest *digest = g_slice_new0(RmDigest);
     digest->type = type;
     digest->bytes = interface->bits / 8;
-    interface->init(digest, seed1, seed2, ext_size, use_shadow_hash);
+    interface->init(digest, seed);
 
     return digest;
 }
@@ -1034,7 +1005,7 @@ void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate) {
 }
 
 guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *out_len) {
-    RmDigest *digest = rm_digest_new(algo, 0, 0, 0, false);
+    RmDigest *digest = rm_digest_new(algo, 0);
     rm_digest_update(digest, data, len);
 
     guint8 *buf = rm_digest_steal(digest);

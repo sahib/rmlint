@@ -333,11 +333,6 @@ typedef struct RmShredTag {
 #define NEEDS_NEW(group) \
     (group->session->cfg->min_mtime)
 
-/* There does not seem to be an performance advance here,
- * but for paranoid mode it's useful to have a checksum in the json output.
- * */
-#define NEEDS_SHADOW_HASH(cfg)                                         \
-    (TRUE || cfg->merge_directories || cfg->read_cksum_from_xattr)
 
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
@@ -1070,7 +1065,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
 
     /* Create an empty checksum for empty files */
     if(file->file_size == 0) {
-        file->digest = rm_digest_new(cfg->checksum_type, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
+        file->digest = rm_digest_new(cfg->checksum_type, 0);
     }
 
     if(!(*group)) {
@@ -1486,13 +1481,12 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
-    RmCfg *cfg = tag->session->cfg;
 
     /* maybe create group's digest from external checksums */
     RmFile *headfile = group->held_files->head->data;
     char *cksum = headfile->ext_cksum;
     if(cksum && !group->digest) {
-        group->digest = rm_digest_new(RM_DIGEST_EXT, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
+        group->digest = rm_digest_new(RM_DIGEST_EXT, 0);
         rm_digest_update(group->digest, (unsigned char *)cksum, strlen(cksum));
     }
 
@@ -1556,7 +1550,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
         }
         g_mutex_unlock(&group->lock);
 
-        file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0, 0, 0, NEEDS_SHADOW_HASH(cfg));
+        file->digest = rm_digest_new(RM_DIGEST_PARANOID, 0);
 
         if((file->is_symlink == false || cfg->see_symlinks == false) &&
            (group->next_offset > file->hash_offset + SHRED_PREMATCH_THRESHOLD)) {
@@ -1584,10 +1578,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
     } else {
         /* this is first generation of RMGroups, so there is no progressive hash yet */
         file->digest = rm_digest_new(cfg->checksum_type,
-                                     main->session->hash_seed1,
-                                     main->session->hash_seed2,
-                                     0,
-                                     NEEDS_SHADOW_HASH(cfg));
+                                     main->session->hash_seed);
     }
     return true;
 }
