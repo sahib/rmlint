@@ -51,81 +51,20 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
+//////////////////////////////////
+//    BUFFER IMPLEMENTATION     //
+//////////////////////////////////
 
-///////////////////////////////////////
-//    BUFFER POOL IMPLEMENTATION     //
-///////////////////////////////////////
-
-RmOff rm_buffer_size(RmBufferPool *pool) {
-    return pool->buffer_size;
-}
-
-static RmBuffer *rm_buffer_new(RmBufferPool *pool) {
+RmBuffer *rm_buffer_new(gsize buf_size) {
     RmBuffer *self = g_slice_new0(RmBuffer);
-    self->pool = pool;
-    self->data = g_slice_alloc(pool->buffer_size);
+    self->data = g_slice_alloc(buf_size);
+    self->buf_size = buf_size;
     return self;
 }
 
-static void rm_buffer_free(RmBuffer *buf) {
-    g_slice_free1(buf->pool->buffer_size, buf->data);
+void rm_buffer_free(RmBuffer *buf) {
+    g_slice_free1(buf->buf_size, buf->data);
     g_slice_free(RmBuffer, buf);
-}
-
-RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem) {
-    RmBufferPool *self = g_slice_new0(RmBufferPool);
-    self->buffer_size = buffer_size;
-    self->avail_buffers = max_mem ? MAX(max_mem / buffer_size, 1) : (gsize)-1;
-
-    g_cond_init(&self->change);
-    g_mutex_init(&self->lock);
-    return self;
-}
-
-void rm_buffer_pool_destroy(RmBufferPool *pool) {
-    g_slist_free_full(pool->stack, (GDestroyNotify)rm_buffer_free);
-
-    g_mutex_clear(&pool->lock);
-    g_cond_clear(&pool->change);
-    g_slice_free(RmBufferPool, pool);
-}
-
-RmBuffer *rm_buffer_get(RmBufferPool *pool) {
-    RmBuffer *buffer = NULL;
-    g_mutex_lock(&pool->lock);
-    {
-        while(!buffer) {
-            buffer = rm_util_slist_pop(&pool->stack, NULL);
-            if(!buffer && pool->avail_buffers > 0) {
-                buffer = rm_buffer_new(pool);
-            }
-            if(!buffer) {
-                if(!pool->mem_warned) {
-                    rm_log_warning_line(
-                        "read buffer limit reached - waiting for "
-                        "processing to catch up");
-                    pool->mem_warned = true;
-                }
-                g_cond_wait(&pool->change, &pool->lock);
-            }
-        }
-        pool->avail_buffers--;
-    }
-    g_mutex_unlock(&pool->lock);
-
-    rm_assert_gentle(buffer);
-    return buffer;
-}
-
-void rm_buffer_release(RmBuffer *buf) {
-    RmBufferPool *pool = buf->pool;
-    g_mutex_lock(&pool->lock);
-    {
-        pool->avail_buffers++;
-        g_cond_signal(&pool->change);
-        pool->stack = g_slist_prepend(pool->stack, buf);
-    }
-    g_mutex_unlock(&pool->lock);
 }
 
 static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
@@ -861,7 +800,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
     RmDigest *digest = buffer->digest;
     if(digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
-        rm_buffer_release(buffer);
+        rm_buffer_free(buffer);
     } else {
         RmParanoid *paranoid = digest->state;
         /* paranoid update... */

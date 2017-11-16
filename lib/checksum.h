@@ -110,31 +110,8 @@ typedef struct RmDigest {
 
 } RmDigest;
 
-/////////// RmBufferPool and RmBuffer ////////////////
+/////////// RmBuffer ////////////////
 
-typedef struct RmBufferPool {
-    /* Place where recycled buffers are stored */
-    GSList *stack;
-
-    /* size of each buffer */
-    gsize buffer_size;
-
-    /* how many new buffers can we allocate before hitting mem limit? */
-    gsize avail_buffers;
-
-    /* Buffers that were kept for paranoia (internal) */
-    gsize kept_buffers;
-
-    gsize min_kept_buffers;
-    gsize max_kept_buffers;
-
-    /* Flag to prevent double warnings. */
-    bool mem_warned;
-
-    /* concurrent accesses may happen */
-    GMutex lock;
-    GCond change;
-} RmBufferPool;
 
 /* Represents one block of read data */
 typedef struct RmBuffer {
@@ -145,18 +122,23 @@ typedef struct RmBuffer {
     /* checksum the data belongs to */
     struct RmDigest *digest;
 
+    /* len of data */
+    guint32 buf_size;
+
     /* len of the data actually filled */
     guint32 len;
 
     /* user utility data field */
     gpointer user_data;
 
-    /* the pool the buffer belongs to */
-    RmBufferPool *pool;
-
     /* pointer to the data block */
     unsigned char *data;
 } RmBuffer;
+
+RmBuffer *rm_buffer_new(gsize buf_size);
+
+void rm_buffer_free(RmBuffer *buf);
+
 
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
@@ -307,48 +289,6 @@ void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
  * Release any kept (paranoid) buffers.
  */
 void rm_digest_release_buffers(RmDigest *digest);
-
-/**
- * @brief Return the size of an individual buffer.
- */
-RmOff rm_buffer_size(RmBufferPool *pool);
-
-/**
- * @brief Create a new buffer pool.
- *
- * A buffer pool holds a number of same-sized RmBuffer structs
- * up to a maximum number of bytes.
- *
- * If the limit is hit, rm_buffer_get() will block till
- * other buffers were released.
- *
- * @param buffer_size The size of each buffer.
- * @param max_mem Maxmimum number of bytes the pool may allocate; 0 for no limit.
- *
- * @return A readily usable RmBufferPool.
- */
-RmBufferPool *rm_buffer_pool_init(gsize buffer_size, gsize max_mem);
-
-/**
- * @brief Destroy a RmBufferPool.
- *
- * This can only be safely called when no parallel access to the pool is done.
- */
-void rm_buffer_pool_destroy(RmBufferPool *pool);
-
-/**
- * @brief Retrieve a RmBuffer.
- *
- * This might be either a previously used one or initially allocate one.
- */
-RmBuffer *rm_buffer_get(RmBufferPool *pool);
-
-/**
- * @brief Release a previously retrieved buffer.
- *
- * It will be either cached or freed if over the limit.
- */
-void rm_buffer_release(RmBuffer *buf);
 
 /**
  * @brief Send a new (pending) paranoid digest match `candidate` for `target`.
