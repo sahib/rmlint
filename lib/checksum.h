@@ -279,13 +279,6 @@ RmDigest *rm_digest_copy(RmDigest *digest);
 int rm_digest_get_bytes(RmDigest *self);
 
 /**
- * Shrink the paranoid checksum buffer to new_size.
- *
- * This is mainly useful for using an adjusted buffer for symlinks.
- */
-void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size);
-
-/**
  * Release any kept (paranoid) buffers.
  */
 void rm_digest_release_buffers(RmDigest *digest);

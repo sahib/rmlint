@@ -771,11 +771,6 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
     return digest;
 }
 
-void rm_digest_paranoia_shrink(RmDigest *digest, gsize new_size) {
-    rm_assert_gentle(digest->type == RM_DIGEST_PARANOID);
-    digest->bytes = new_size;
-}
-
 void rm_digest_release_buffers(RmDigest *digest) {
     RmParanoid *paranoid = digest->state;
     if(paranoid && paranoid->buffers) {
