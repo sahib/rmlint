@@ -32,8 +32,8 @@ You can contact the author at :
 */
 
 /**************************************
-*  Tuning parameters
-**************************************/
+ *  Tuning parameters
+ **************************************/
 /* Unaligned memory access is automatically enabled for "common" CPU, such as x86.
  * For others CPU, the compiler will be more cautious, and insert extra code to ensure
  * aligned access is respected.
@@ -70,8 +70,8 @@ You can contact the author at :
 #define XXH_FORCE_NATIVE_FORMAT 0
 
 /**************************************
-*  Compiler Specific Options
-***************************************/
+ *  Compiler Specific Options
+ ***************************************/
 #ifdef _MSC_VER                 /* Visual Studio */
 #pragma warning(disable : 4127) /* disable: C4127: conditional expression is constant */
 #define FORCE_INLINE static __forceinline
@@ -88,8 +88,8 @@ You can contact the author at :
 #endif
 
 /**************************************
-*  Includes & Memory related functions
-***************************************/
+ *  Includes & Memory related functions
+ ***************************************/
 #include "xxhash.h"
 /* Modify the local functions below should you wish to use some other memory routines */
 /* for malloc(), free() */
@@ -107,8 +107,8 @@ static void* XXH_memcpy(void* dest, const void* src, size_t size) {
 }
 
 /**************************************
-*  Basic Types
-***************************************/
+ *  Basic Types
+ ***************************************/
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L /* C99 */
 #include <stdint.h>
 typedef uint8_t BYTE;
@@ -137,8 +137,8 @@ static U64 XXH_read64(const void* memPtr) {
 }
 
 /******************************************
-*  Compiler-specific Functions and Macros
-******************************************/
+ *  Compiler-specific Functions and Macros
+ ******************************************/
 #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 
 /* Note : although _rotl exists for minGW (GCC under windows), performance seems poor */
@@ -170,8 +170,8 @@ static U64 XXH_swap64(U64 x) {
 #endif
 
 /***************************************
-*  Architecture Macros
-***************************************/
+ *  Architecture Macros
+ ***************************************/
 typedef enum { XXH_bigEndian = 0, XXH_littleEndian = 1 } XXH_endianess;
 #ifndef XXH_CPU_LITTLE_ENDIAN /* XXH_CPU_LITTLE_ENDIAN can be defined externally, for \
                                  example using a compiler switch */
@@ -180,8 +180,8 @@ static const int one = 1;
 #endif
 
 /*****************************
-*  Memory reads
-*****************************/
+ *  Memory reads
+ *****************************/
 typedef enum { XXH_aligned, XXH_unaligned } XXH_alignment;
 
 FORCE_INLINE U32 XXH_readLE32_align(const void* ptr, XXH_endianess endian,
@@ -211,16 +211,16 @@ FORCE_INLINE U64 XXH_readLE64(const void* ptr, XXH_endianess endian) {
 }
 
 /***************************************
-*  Macros
-***************************************/
+ *  Macros
+ ***************************************/
 #define XXH_STATIC_ASSERT(c)                      \
     {                                             \
         enum { XXH_static_assert = 1 / (!!(c)) }; \
     } /* use only *after* variable declarations */
 
 /***************************************
-*  Constants
-***************************************/
+ *  Constants
+ ***************************************/
 #define PRIME32_1 2654435761U
 #define PRIME32_2 2246822519U
 #define PRIME32_3 3266489917U
@@ -234,8 +234,8 @@ FORCE_INLINE U64 XXH_readLE64(const void* ptr, XXH_endianess endian) {
 #define PRIME64_5 2870177450012600261ULL
 
 /*****************************
-*  Simple Hash Functions
-*****************************/
+ *  Simple Hash Functions
+ *****************************/
 FORCE_INLINE U32 XXH32_endian_align(const void* input, size_t len, U32 seed,
                                     XXH_endianess endian, XXH_alignment align) {
     const BYTE* p = (const BYTE*)input;
@@ -465,8 +465,8 @@ unsigned long long XXH64(const void* input, size_t len, unsigned long long seed)
 }
 
 /****************************************************
-*  Advanced Hash Functions
-****************************************************/
+ *  Advanced Hash Functions
+ ****************************************************/
 
 /*** Allocation ***/
 typedef struct {

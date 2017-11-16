@@ -12,8 +12,8 @@
 // little-endian platforms
 
 #include "murmur3.h"
-#include <string.h>
 #include <glib.h>
+#include <string.h>
 
 //-----------------------------------------------------------------------------
 // Platform-specific functions and macros
@@ -31,16 +31,16 @@ static inline uint64_t rotl64(uint64_t x, int8_t r) {
 
 #define BIG_CONSTANT(x) (x##LLU)
 
-//-----------------------------------------------------------------------------
-// Block read - if your platform needs to do endian-swapping or can only
-// handle aligned reads, do the conversion here
+    //-----------------------------------------------------------------------------
+    // Block read - if your platform needs to do endian-swapping or can only
+    // handle aligned reads, do the conversion here
 
-#define GET_UINT64(p) *((uint64_t*)(p));
-#define GET_UINT32(p) *((uint32_t*)(p));
+#define GET_UINT64(p) *((uint64_t *)(p));
+#define GET_UINT32(p) *((uint32_t *)(p));
 
 struct _MurmurHash3_x86_32_state {
     uint32_t h1;
-    uint8_t xs[4];   /* unhashed data from last increment */
+    uint8_t xs[4]; /* unhashed data from last increment */
     uint8_t xs_len;
     uint32_t len;
 };
@@ -50,7 +50,7 @@ struct _MurmurHash3_x86_128_state {
     uint32_t h2;
     uint32_t h3;
     uint32_t h4;
-    uint8_t xs[16];   /* unhashed data from last increment */
+    uint8_t xs[16]; /* unhashed data from last increment */
     uint8_t xs_len;
     uint32_t len;
 };
@@ -58,11 +58,10 @@ struct _MurmurHash3_x86_128_state {
 struct _MurmurHash3_x64_128_state {
     uint64_t h1;
     uint64_t h2;
-    uint8_t xs[16];   /* unhashed data from last increment */
+    uint8_t xs[16]; /* unhashed data from last increment */
     uint8_t xs_len;
     uint32_t len;
 };
-
 
 //-----------------------------------------------------------------------------
 // Finalization mix - force all bits of a hash block to avalanche
@@ -89,28 +88,25 @@ static inline uint64_t fmix64(uint64_t k) {
     return k;
 }
 
-//-----------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------
 
-#define MURMUR_UPDATE(h, k, rotl, ca, cb)   \
-    k *= ca;                                \
-    k = ROTL64(k, rotl);                    \
-    k *= cb;                                \
+#define MURMUR_UPDATE(h, k, rotl, ca, cb) \
+    k *= ca;                              \
+    k = ROTL64(k, rotl);                  \
+    k *= cb;                              \
     h ^= k;
 
-#define MURMUR_MIX(ha, hb, rotl, c)         \
-    ha = ROTL64(ha, rotl);                  \
-    ha += hb;                               \
+#define MURMUR_MIX(ha, hb, rotl, c) \
+    ha = ROTL64(ha, rotl);          \
+    ha += hb;                       \
     ha = ha * 5 + c;
 
-#define MURMUR_FILL_XS(xs, xs_len, xs_cap, data, data_len)                      \
-    const int bytes = (data_len + xs_len > xs_cap) ?                            \
-            (int)xs_cap - (int)xs_len :                                         \
-            (int)data_len;                                                      \
-    memcpy(xs + xs_len, data, bytes);                                           \
-    xs_len += bytes;                                                            \
+#define MURMUR_FILL_XS(xs, xs_len, xs_cap, data, data_len)                        \
+    const int bytes =                                                             \
+        (data_len + xs_len > xs_cap) ? (int)xs_cap - (int)xs_len : (int)data_len; \
+    memcpy(xs + xs_len, data, bytes);                                             \
+    xs_len += bytes;                                                              \
     data += bytes;
-
-
 
 //-----------------------------------------------------------------------------
 
@@ -121,13 +117,15 @@ MurmurHash3_x86_32_state *MurmurHash3_x86_32_new(uint32_t seed) {
 }
 
 MurmurHash3_x86_32_state *MurmurHash3_x86_32_copy(MurmurHash3_x86_32_state *state) {
-    MurmurHash3_x86_32_state *copy = g_slice_copy(sizeof(MurmurHash3_x86_32_state), state);
+    MurmurHash3_x86_32_state *copy =
+        g_slice_copy(sizeof(MurmurHash3_x86_32_state), state);
     return copy;
 }
 
 #define MURMUR_UPDATE_H1_X86_32(H1) MURMUR_UPDATE(H1, k1, 15, 0xcc9e2d51, 0x1b873593);
 
-void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state, const void * restrict key, const uint32_t len) {
+void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state,
+                               const void *restrict key, const uint32_t len) {
     state->len += len;
     uint8_t *data = (uint8_t *)key;
     const uint8_t *stop = data + len;
@@ -138,7 +136,6 @@ void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state, const void
 
     /* process blocks of 4 bytes */
     while(state->xs_len == 4 || data + 4 <= stop) {
-
         uint32_t k1;
 
         if(state->xs_len == 4) {
@@ -155,14 +152,15 @@ void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state, const void
         MURMUR_MIX(state->h1, 0, 13, 0xe6546b64);
     }
 
-    if (state->xs_len == 0 && stop > data) {
+    if(state->xs_len == 0 && stop > data) {
         // store excess data in state
         state->xs_len = stop - data;
         memcpy(state->xs, data, state->xs_len);
     }
 }
 
-void MurmurHash3_x86_32_steal(const MurmurHash3_x86_32_state  *const restrict state, void *const restrict out) {
+void MurmurHash3_x86_32_steal(const MurmurHash3_x86_32_state *const restrict state,
+                              void *const restrict out) {
     uint32_t k1 = 0;
 
     /* copy h to make this a non-destructive steal */
@@ -194,7 +192,7 @@ void MurmurHash3_x86_32_finalise(MurmurHash3_x86_32_state *state, void *out) {
     MurmurHash3_x86_32_free(state);
 }
 
-void MurmurHash3_x86_32_free(MurmurHash3_x86_32_state  *state) {
+void MurmurHash3_x86_32_free(MurmurHash3_x86_32_state *state) {
     g_slice_free(MurmurHash3_x86_32_state, state);
 }
 
@@ -206,10 +204,10 @@ uint32_t MurmurHash3_x86_32(const void *key, uint32_t len, uint32_t seed) {
     return out;
 }
 
-
 //-----------------------------------------------------------------------------
 
-MurmurHash3_x86_128_state *MurmurHash3_x86_128_new(uint32_t seed1, uint32_t seed2, uint32_t seed3, uint32_t seed4) {
+MurmurHash3_x86_128_state *MurmurHash3_x86_128_new(uint32_t seed1, uint32_t seed2,
+                                                   uint32_t seed3, uint32_t seed4) {
     MurmurHash3_x86_128_state *state = g_slice_new0(MurmurHash3_x86_128_state);
     state->h1 = seed1;
     state->h2 = seed2;
@@ -219,7 +217,8 @@ MurmurHash3_x86_128_state *MurmurHash3_x86_128_new(uint32_t seed1, uint32_t seed
 }
 
 MurmurHash3_x86_128_state *MurmurHash3_x86_128_copy(MurmurHash3_x86_128_state *state) {
-    MurmurHash3_x86_128_state *copy = g_slice_copy(sizeof(MurmurHash3_x86_128_state), state);
+    MurmurHash3_x86_128_state *copy =
+        g_slice_copy(sizeof(MurmurHash3_x86_128_state), state);
     return copy;
 }
 
@@ -228,7 +227,8 @@ MurmurHash3_x86_128_state *MurmurHash3_x86_128_copy(MurmurHash3_x86_128_state *s
 #define MURMUR_UPDATE_H3_X86_128(H3) MURMUR_UPDATE(H3, k3, 17, 0x38b34ae5, 0xa1e38b93);
 #define MURMUR_UPDATE_H4_X86_128(H4) MURMUR_UPDATE(H4, k4, 18, 0xa1e38b93, 0x239b961b);
 
-void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state, const void * restrict key, const uint32_t len) {
+void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state,
+                                const void *restrict key, const uint32_t len) {
     state->len += len;
     uint8_t *data = (uint8_t *)key;
     const uint8_t *stop = data + len;
@@ -239,7 +239,6 @@ void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state, const vo
 
     /* process blocks of 16 bytes */
     while(state->xs_len == 16 || data + 16 <= stop) {
-
         uint32_t k1;
         uint32_t k2;
         uint32_t k3;
@@ -272,17 +271,17 @@ void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state, const vo
 
         MURMUR_UPDATE_H4_X86_128(state->h4);
         MURMUR_MIX(state->h4, state->h1, 13, 0x32ac3b17);
-
     }
 
-    if (state->xs_len == 0 && stop > data) {
+    if(state->xs_len == 0 && stop > data) {
         // store excess data in state
         state->xs_len = stop - data;
         memcpy(state->xs, data, state->xs_len);
     }
 }
 
-void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict state, void *const restrict out) {
+void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict state,
+                               void *const restrict out) {
     uint32_t k1 = 0;
     uint32_t k2 = 0;
     uint32_t k3 = 0;
@@ -369,7 +368,6 @@ void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict s
     ((uint32_t *)out)[1] = h2;
     ((uint32_t *)out)[2] = h3;
     ((uint32_t *)out)[3] = h4;
-
 }
 
 void MurmurHash3_x86_128_finalise(MurmurHash3_x86_128_state *state, void *out) {
@@ -389,8 +387,6 @@ void MurmurHash3_x86_128(const void *key, uint32_t len, uint32_t seed, void *out
 
 //-----------------------------------------------------------------------------
 
-
-
 MurmurHash3_x64_128_state *MurmurHash3_x64_128_new(uint64_t seed1, uint64_t seed2) {
     MurmurHash3_x64_128_state *state = g_slice_new0(MurmurHash3_x64_128_state);
     state->h1 = seed1;
@@ -402,11 +398,15 @@ MurmurHash3_x64_128_state *MurmurHash3_x64_128_copy(MurmurHash3_x64_128_state *s
     return g_slice_copy(sizeof(MurmurHash3_x64_128_state), state);
 }
 
-#define MURMUR_UPDATE_H1_X64_128(H1) MURMUR_UPDATE(H1, k1, 31, BIG_CONSTANT(0x87c37b91114253d5), BIG_CONSTANT(0x4cf5ad432745937f));
-#define MURMUR_UPDATE_H2_X64_128(H2) MURMUR_UPDATE(H2, k2, 33, BIG_CONSTANT(0x4cf5ad432745937f), BIG_CONSTANT(0x87c37b91114253d5));
+#define MURMUR_UPDATE_H1_X64_128(H1)                            \
+    MURMUR_UPDATE(H1, k1, 31, BIG_CONSTANT(0x87c37b91114253d5), \
+                  BIG_CONSTANT(0x4cf5ad432745937f));
+#define MURMUR_UPDATE_H2_X64_128(H2)                            \
+    MURMUR_UPDATE(H2, k2, 33, BIG_CONSTANT(0x4cf5ad432745937f), \
+                  BIG_CONSTANT(0x87c37b91114253d5));
 
-void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state, const void * restrict key, const uint64_t len) {
-
+void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
+                                const void *restrict key, const uint64_t len) {
     state->len += len;
     uint8_t *data = (uint8_t *)key;
     const uint8_t *stop = data + len;
@@ -417,7 +417,6 @@ void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
 
     /* process blocks of 16 bytes */
     while(state->xs_len == 16 || data + 16 <= stop) {
-
         uint64_t k1;
         uint64_t k2;
 
@@ -440,15 +439,15 @@ void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
         MURMUR_MIX(state->h2, state->h1, 31, 0x38495ab5);
     }
 
-    if (state->xs_len == 0 && stop > data) {
+    if(state->xs_len == 0 && stop > data) {
         // store excess data in state
         state->xs_len = stop - data;
         memcpy(state->xs, data, state->xs_len);
     }
 }
 
-void MurmurHash3_x64_128_steal(const MurmurHash3_x64_128_state *const restrict state, void *const restrict out) {
-
+void MurmurHash3_x64_128_steal(const MurmurHash3_x64_128_state *const restrict state,
+                               void *const restrict out) {
     uint64_t k1 = 0;
     uint64_t k2 = 0;
 
@@ -517,7 +516,8 @@ void MurmurHash3_x64_128_free(MurmurHash3_x64_128_state *state) {
     g_slice_free(MurmurHash3_x64_128_state, state);
 }
 
-void MurmurHash3_x64_128(const void *key, const uint64_t len, const uint32_t seed, void *out) {
+void MurmurHash3_x64_128(const void *key, const uint64_t len, const uint32_t seed,
+                         void *out) {
     MurmurHash3_x64_128_state *state = MurmurHash3_x64_128_new(seed, seed);
     MurmurHash3_x64_128_update(state, key, len);
     MurmurHash3_x64_128_finalise(state, out);
@@ -528,8 +528,9 @@ void MurmurHash3_x64_128_finalise(MurmurHash3_x64_128_state *state, void *out) {
     MurmurHash3_x64_128_free(state);
 }
 
-int MurmurHash3_x64_128_equal(MurmurHash3_x64_128_state *a, MurmurHash3_x64_128_state *b) {
-    if (a->h1 != b->h1 || a->h2 != b->h2 || a->xs_len != b->xs_len || a->len != b->len) {
+int MurmurHash3_x64_128_equal(MurmurHash3_x64_128_state *a,
+                              MurmurHash3_x64_128_state *b) {
+    if(a->h1 != b->h1 || a->h2 != b->h2 || a->xs_len != b->xs_len || a->len != b->len) {
         return 0;
     }
     return (a->xs_len == 0 || !memcmp(a->xs, b->xs, a->xs_len));

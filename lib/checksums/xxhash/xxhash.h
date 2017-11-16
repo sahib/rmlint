@@ -71,14 +71,14 @@ extern "C" {
 #endif
 
 /*****************************
-*  Definitions
-*****************************/
+ *  Definitions
+ *****************************/
 #include <stddef.h> /* size_t */
 typedef enum { XXH_OK = 0, XXH_ERROR } XXH_errorcode;
 
 /*****************************
-*  Simple Hash Functions
-*****************************/
+ *  Simple Hash Functions
+ *****************************/
 
 unsigned int XXH32(const void* input, size_t length, unsigned seed);
 unsigned long long XXH64(const void* input, size_t length, unsigned long long seed);
@@ -98,10 +98,14 @@ XXH64() :
 */
 
 /*****************************
-*  Advanced Hash Functions
-*****************************/
-typedef struct { long long ll[6]; } XXH32_state_t;
-typedef struct { long long ll[11]; } XXH64_state_t;
+ *  Advanced Hash Functions
+ *****************************/
+typedef struct {
+    long long ll[6];
+} XXH32_state_t;
+typedef struct {
+    long long ll[11];
+} XXH64_state_t;
 
 /*
 These structures allow static allocation of XXH states.

@@ -112,7 +112,6 @@ typedef struct RmDigest {
 
 /////////// RmBuffer ////////////////
 
-
 /* Represents one block of read data */
 typedef struct RmBuffer {
     /* note that first (sizeof(pointer)) bytes of this structure get overwritten
@@ -138,7 +137,6 @@ typedef struct RmBuffer {
 RmBuffer *rm_buffer_new(gsize buf_size);
 
 void rm_buffer_free(RmBuffer *buf);
-
 
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
@@ -235,7 +233,6 @@ guint8 *rm_digest_steal(RmDigest *digest);
  *           Free with g_slice_free1
  **/
 guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *out_len);
-
 
 /**
  * @brief Hash a Digest, suitable for GHashTable.
