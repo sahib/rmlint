@@ -92,48 +92,20 @@ typedef struct RmDigestInterface {
     RmDigestStealFunc steal;
 } RmDigestInterface;
 
+/* convenience macro to define an interface where all methods follow the standard naming convention */
+#define RM_DIGEST_DEFINE_INTERFACE(NAME, BITS)              \
+static const RmDigestInterface NAME##_interface =  {        \
+        .name = (#NAME),                                    \
+        .bits = (BITS),                                     \
+        .init = rm_digest_##NAME##_init,                    \
+        .free = rm_digest_##NAME##_free,                    \
+        .update = rm_digest_##NAME##_update,                \
+        .copy = rm_digest_##NAME##_copy,                    \
+        .steal = rm_digest_##NAME##_steal                   \
+        };
 
 ///////////////////////////
-//    common funcs for   //
-//    non-cryptographic  //
-//    hashes             //
-///////////////////////////
-
-#define ALLOC_BYTES(bytes) MAX(8, bytes)
-
-static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
-    /* init for hashes which just require allocation of digest->checksum */
-
-    /* Cannot go lower than 8, since we read 8 byte in some places.
-     * For some checksums this may mean trailing zeros in the unused bytes */
-    digest->state = g_slice_alloc0(ALLOC_BYTES(digest->bytes));
-
-    if(seed1 && seed2) {
-        /* copy seeds to checksum */
-        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes / 2);
-        memcpy(digest->state, &seed1, seed_bytes);
-        memcpy(digest->state + digest->bytes/2, &seed2, seed_bytes);
-    } else if(seed1) {
-        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes);
-        memcpy(digest->state, &seed1, seed_bytes);
-    }
-}
-
-static void rm_digest_generic_free(RmDigest *digest) {
-    if(digest->state) {
-        g_slice_free1(digest->bytes, digest->state);
-        digest->state = NULL;
-    }
-}
-
-static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
-    copy->state = g_slice_copy(ALLOC_BYTES(digest->bytes), digest->state);
-}
-
-#define GENERIC_FUNCS(ALGO) rm_digest_generic_init,  rm_digest_generic_free,  rm_digest_##ALGO##_update, rm_digest_generic_copy, NULL
-
-///////////////////////////
-//        xxhash         //
+//   xxhash interface    //
 ///////////////////////////
 
 static void rm_digest_xxhash_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
@@ -158,60 +130,73 @@ static void rm_digest_xxhash_steal(RmDigest *digest, guint8 *result) {
     *(unsigned long long*)result = XXH64_digest(digest->state);
 }
 
-
-static const RmDigestInterface xxhash_interface =  { "xxhash", 64, rm_digest_xxhash_init, rm_digest_xxhash_free, rm_digest_xxhash_update, rm_digest_xxhash_copy, rm_digest_xxhash_steal};
-
+RM_DIGEST_DEFINE_INTERFACE(xxhash, 64);
 
 ///////////////////////////
 //        murmur         //
 ///////////////////////////
 
-
-#define CREATE_MURMUR_FUNCS(TYPE)                                               \
-static void rm_digest_murmur_##TYPE##_free(RmDigest *digest) {                  \
-    MurmurHash3_##TYPE##_free(digest->state);                                   \
-}                                                                               \
-                                                                                \
-static void rm_digest_murmur_##TYPE##_update(RmDigest *digest,                  \
-                                    const unsigned char *data,                  \
-                                    RmOff size) {                               \
-    MurmurHash3_##TYPE##_update(digest->state, data, size);                     \
-}                                                                               \
-                                                                                \
-static void rm_digest_murmur_##TYPE##_copy(RmDigest *digest, RmDigest *copy) {  \
-    copy->state = MurmurHash3_##TYPE##_copy(digest->state);                     \
-}                                                                               \
-                                                                                \
-static void rm_digest_murmur_##TYPE##_steal(RmDigest *digest, guint8 *result) { \
-    MurmurHash3_##TYPE##_steal(digest->state, result);                          \
-}
-
-#define MURMUR_FUNCS(TYPE) rm_digest_murmur_##TYPE##_init, rm_digest_murmur_##TYPE##_free, rm_digest_murmur_##TYPE##_update, rm_digest_murmur_##TYPE##_copy, rm_digest_murmur_##TYPE##_steal
-
-
 #if RM_PLATFORM_32
 
-CREATE_MURMUR_FUNCS(x86_128)
-
-static void rm_digest_murmur_x86_128_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_murmur_init(RmDigest *digest, RmOff seed1, RmOff seed2,
+                                  _UNUSED RmOff ext_size,
+                                  _UNUSED bool use_shadow_hash) {
     digest->state = MurmurHash3_x86_128_new(seed1, seed1>>32, seed2, seed2>>32);
 }
 
-static const RmDigestInterface murmur_interface = { "murmur", 128, MURMUR_FUNCS(x86_128)};
+static void rm_digest_murmur_free(RmDigest *digest) {
+    MurmurHash3_x86_128_free(digest->state);
+}
+
+static void rm_digest_murmur_update(RmDigest *digest,
+                                    const unsigned char *data,
+                                    RmOff size) {
+    MurmurHash3_x86_128_update(digest->state, data, size);
+}
+
+static void rm_digest_murmur_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = MurmurHash3_x86_128_copy(digest->state);
+}
+
+static void rm_digest_murmur_steal(RmDigest *digest, guint8 *result) {
+    MurmurHash3_x86_128_steal(digest->state, result);
+}
+
 
 #elif RM_PLATFORM_64
 
-CREATE_MURMUR_FUNCS(x64_128)
-
-static void rm_digest_murmur_x64_128_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+static void rm_digest_murmur_init(RmDigest *digest, RmOff seed1, RmOff seed2,
+                                  _UNUSED RmOff ext_size,
+                                  _UNUSED bool use_shadow_hash) {
     digest->state = MurmurHash3_x64_128_new(seed1, seed2);
 }
 
-static const RmDigestInterface murmur_interface = { "murmur", 128, MURMUR_FUNCS(x64_128)};
+static void rm_digest_murmur_free(RmDigest *digest) {
+    MurmurHash3_x64_128_free(digest->state);
+}
+
+static void rm_digest_murmur_update(RmDigest *digest,
+                                    const unsigned char *data,
+                                    RmOff size) {
+    MurmurHash3_x64_128_update(digest->state, data, size);
+}
+
+static void rm_digest_murmur_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = MurmurHash3_x64_128_copy(digest->state);
+}
+
+static void rm_digest_murmur_steal(RmDigest *digest, guint8 *result) {
+    MurmurHash3_x64_128_steal(digest->state, result);
+}
+
 
 #else
+
 #error "Probably not a good idea to compile rmlint on 16bit."
+
 #endif
+
+RM_DIGEST_DEFINE_INTERFACE(murmur, 128);
 
 
 ///////////////////////////
@@ -258,31 +243,37 @@ static void rm_digest_metro256_steal(RmDigest *digest, guint8 *result) {
     metrohash256_steal(digest->state, result);
 }
 
-
-static const RmDigestInterface metro_interface =  {"metro", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_update, rm_digest_metro_copy, rm_digest_metro_steal };
-static const RmDigestInterface metro256_interface =  {"metro256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_update, rm_digest_metro256_copy, rm_digest_metro256_steal };
+RM_DIGEST_DEFINE_INTERFACE(metro, 128);
+RM_DIGEST_DEFINE_INTERFACE(metro256, 256);
 
 #if HAVE_SSE4
 
-static void rm_digest_metro_crc_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+#define rm_digest_metrocrc_init rm_digest_metro_init
+#define rm_digest_metrocrc_free rm_digest_metro_free
+#define rm_digest_metrocrc_copy rm_digest_metro_copy
+
+static void rm_digest_metrocrc_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     metrohash128crc_update(digest->state, data, size);
 }
 
-static void rm_digest_metro_crc_steal(RmDigest *digest, guint8 *result) {
+static void rm_digest_metrocrc_steal(RmDigest *digest, guint8 *result) {
     metrohash128crc_1_steal(digest->state, result);
 }
 
-static void rm_digest_metro256_crc_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    metrohash256_update(digest->state, data, size);
+#define rm_digest_metrocrc256_init rm_digest_metro256_init
+#define rm_digest_metrocrc256_free rm_digest_metro256_free
+#define rm_digest_metrocrc256_copy rm_digest_metro256_copy
+
+static void rm_digest_metrocrc256_update(RmDigest *digest, const unsigned char *data, RmOff size) {
+    metrohash256crc_update(digest->state, data, size);
 }
 
-static void rm_digest_metro256_crc_steal(RmDigest *digest, guint8 *result) {
-    metrohash256_steal(digest->state, result);
+static void rm_digest_metrocrc256_steal(RmDigest *digest, guint8 *result) {
+    metrohash256crc_steal(digest->state, result);
 }
 
-
-static const RmDigestInterface metro_crc_interface =  {"metrocrc", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_crc_update, rm_digest_metro_copy, rm_digest_metro_crc_steal };
-static const RmDigestInterface metro256_crc_interface =  {"metrocrc256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_crc_update, rm_digest_metro256_copy, rm_digest_metro256_crc_steal };
+RM_DIGEST_DEFINE_INTERFACE(metrocrc, 128);
+RM_DIGEST_DEFINE_INTERFACE(metrocrc256, 256);
 
 #endif
 
@@ -588,6 +579,44 @@ static const RmDigestInterface blake2sp_interface = {"blake2sp", 256, BLAKE_FUNC
 //      ext  hash        //
 ///////////////////////////
 
+#define ALLOC_BYTES(bytes) MAX(8, bytes)
+
+static void rm_digest_generic_init(RmDigest *digest, RmOff seed1, RmOff seed2, _UNUSED RmOff ext_size, _UNUSED bool use_shadow_hash) {
+    /* init for hashes which just require allocation of digest->checksum */
+
+    /* Cannot go lower than 8, since we read 8 byte in some places.
+     * For some checksums this may mean trailing zeros in the unused bytes */
+    digest->state = g_slice_alloc0(ALLOC_BYTES(digest->bytes));
+
+    if(seed1 && seed2) {
+        /* copy seeds to checksum */
+        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes / 2);
+        memcpy(digest->state, &seed1, seed_bytes);
+        memcpy(digest->state + digest->bytes/2, &seed2, seed_bytes);
+    } else if(seed1) {
+        size_t seed_bytes = MIN(sizeof(RmOff), digest->bytes);
+        memcpy(digest->state, &seed1, seed_bytes);
+    }
+}
+
+static void rm_digest_generic_free(RmDigest *digest) {
+    if(digest->state) {
+        g_slice_free1(digest->bytes, digest->state);
+        digest->state = NULL;
+    }
+}
+
+static void rm_digest_generic_copy(RmDigest *digest, RmDigest *copy) {
+    copy->state = g_slice_copy(ALLOC_BYTES(digest->bytes), digest->state);
+}
+
+#define GENERIC_FUNCS(ALGO)                 \
+        .init = rm_digest_generic_init,     \
+        .free = rm_digest_generic_free,     \
+        .update = rm_digest_##ALGO##_update,\
+        .copy = rm_digest_generic_copy,     \
+        .steal = NULL
+
 
 static void rm_digest_ext_init(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash) {
     digest->bytes = ext_size;
@@ -674,8 +703,8 @@ static const RmDigestInterface *rm_digest_interface(RmDigestType type) {
         [RM_DIGEST_METRO]      = &metro_interface,
         [RM_DIGEST_METRO256]   = &metro256_interface,
     #if HAVE_SSE4
-        [RM_DIGEST_METROCRC]   = &metro_crc_interface,
-        [RM_DIGEST_METROCRC256]= &metro256_crc_interface,
+        [RM_DIGEST_METROCRC]   = &metrocrc_interface,
+        [RM_DIGEST_METROCRC256]= &metrocrc256_interface,
     #endif
         [RM_DIGEST_MD5]        = &md5_interface,
         [RM_DIGEST_SHA1]       = &sha1_interface,
