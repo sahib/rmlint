@@ -683,7 +683,8 @@ static const RmDigestInterface paranoid_interface = {
 //   RmDigestInterface map    //
 ////////////////////////////////
 
-static const RmDigestInterface *rm_digest_interface(RmDigestType type) {
+static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
+
     static const RmDigestInterface *digest_interfaces[] = {
         [RM_DIGEST_UNKNOWN] = NULL,
         [RM_DIGEST_MURMUR] = &murmur_interface,
@@ -733,7 +734,7 @@ static void rm_digest_table_insert(GHashTable *code_table, char *name,
 static gpointer rm_init_digest_type_table(GHashTable **code_table) {
     *code_table = g_hash_table_new(g_str_hash, g_str_equal);
     for(RmDigestType type = 1; type < RM_DIGEST_SENTINEL; type++) {
-        rm_digest_table_insert(*code_table, (char *)rm_digest_interface(type)->name,
+        rm_digest_table_insert(*code_table, (char *)rm_digest_get_interface(type)->name,
                                type);
     }
 
@@ -762,7 +763,7 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
-    const RmDigestInterface *interface = rm_digest_interface(type);
+    const RmDigestInterface *interface = rm_digest_get_interface(type);
     return interface->name;
 }
 
@@ -779,7 +780,7 @@ int rm_digest_type_to_multihash_id(RmDigestType type) {
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed) {
     g_assert(type != RM_DIGEST_UNKNOWN);
 
-    const RmDigestInterface *interface = rm_digest_interface(type);
+    const RmDigestInterface *interface = rm_digest_get_interface(type);
     RmDigest *digest = g_slice_new0(RmDigest);
     digest->type = type;
     digest->bytes = interface->bits / 8;
@@ -797,13 +798,13 @@ void rm_digest_release_buffers(RmDigest *digest) {
 }
 
 void rm_digest_free(RmDigest *digest) {
-    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     interface->free(digest);
     g_slice_free(RmDigest, digest);
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     interface->update(digest, data, size);
 }
 
@@ -890,14 +891,14 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
 
     RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
 
-    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     interface->copy(digest, copy);
 
     return copy;
 }
 
 guint8 *rm_digest_steal(RmDigest *digest) {
-    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     if(!interface->steal) {
         return g_slice_copy(digest->bytes, digest->state);
     }
@@ -934,7 +935,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         return false;
     }
 
-    const RmDigestInterface *interface = rm_digest_interface(a->type);
+    const RmDigestInterface *interface = rm_digest_get_interface(a->type);
 
     if(a->type == RM_DIGEST_PARANOID) {
         RmParanoid *pa = a->state;
