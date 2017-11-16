@@ -72,16 +72,17 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 }
 
 ///////////////////////////////////////
-//      RMDIGEST IMPLEMENTATION      //
+//  RMDIGEST INTERFACE DEFINITIONS   //
 ///////////////////////////////////////
 
+/* Each digest type must have an RmDigestInterface defined as follows: */
 typedef void (*RmDigestInitFunc)(RmDigest *digest, RmOff seed1, RmOff seed2, RmOff ext_size, bool use_shadow_hash);
 typedef void (*RmDigestFreeFunc)(RmDigest *digest);
 typedef void (*RmDigestUpdateFunc)(RmDigest *digest, const unsigned char *data, RmOff size);
 typedef void (*RmDigestCopyFunc)(RmDigest *digest, RmDigest *copy);
 typedef void (*RmDigestStealFunc)(RmDigest *digest, guint8 *result);
 
-typedef struct RmDigestSpec {
+typedef struct RmDigestInterface {
     const char *name;
     const uint bits;          // length of the output checksum in bits
     RmDigestInitFunc init;    // performs initialisation of digest->state
@@ -89,7 +90,7 @@ typedef struct RmDigestSpec {
     RmDigestUpdateFunc update;
     RmDigestCopyFunc copy;
     RmDigestStealFunc steal;
-} RmDigestSpec;
+} RmDigestInterface;
 
 
 ///////////////////////////
@@ -158,7 +159,7 @@ static void rm_digest_xxhash_steal(RmDigest *digest, guint8 *result) {
 }
 
 
-static const RmDigestSpec xxhash_spec =  { "xxhash", 64, rm_digest_xxhash_init, rm_digest_xxhash_free, rm_digest_xxhash_update, rm_digest_xxhash_copy, rm_digest_xxhash_steal};
+static const RmDigestInterface xxhash_interface =  { "xxhash", 64, rm_digest_xxhash_init, rm_digest_xxhash_free, rm_digest_xxhash_update, rm_digest_xxhash_copy, rm_digest_xxhash_steal};
 
 
 ///////////////////////////
@@ -196,7 +197,7 @@ static void rm_digest_murmur_x86_128_init(RmDigest *digest, RmOff seed1, RmOff s
     digest->state = MurmurHash3_x86_128_new(seed1, seed1>>32, seed2, seed2>>32);
 }
 
-static const RmDigestSpec murmur_spec = { "murmur", 128, MURMUR_FUNCS(x86_128)};
+static const RmDigestInterface murmur_interface = { "murmur", 128, MURMUR_FUNCS(x86_128)};
 
 #elif RM_PLATFORM_64
 
@@ -206,7 +207,7 @@ static void rm_digest_murmur_x64_128_init(RmDigest *digest, RmOff seed1, RmOff s
     digest->state = MurmurHash3_x64_128_new(seed1, seed2);
 }
 
-static const RmDigestSpec murmur_spec = { "murmur", 128, MURMUR_FUNCS(x64_128)};
+static const RmDigestInterface murmur_interface = { "murmur", 128, MURMUR_FUNCS(x64_128)};
 
 #else
 #error "Probably not a good idea to compile rmlint on 16bit."
@@ -258,8 +259,8 @@ static void rm_digest_metro256_steal(RmDigest *digest, guint8 *result) {
 }
 
 
-static const RmDigestSpec metro_spec =  {"metro", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_update, rm_digest_metro_copy, rm_digest_metro_steal };
-static const RmDigestSpec metro256_spec =  {"metro256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_update, rm_digest_metro256_copy, rm_digest_metro256_steal };
+static const RmDigestInterface metro_interface =  {"metro", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_update, rm_digest_metro_copy, rm_digest_metro_steal };
+static const RmDigestInterface metro256_interface =  {"metro256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_update, rm_digest_metro256_copy, rm_digest_metro256_steal };
 
 #if HAVE_SSE4
 
@@ -280,8 +281,8 @@ static void rm_digest_metro256_crc_steal(RmDigest *digest, guint8 *result) {
 }
 
 
-static const RmDigestSpec metro_crc_spec =  {"metrocrc", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_crc_update, rm_digest_metro_copy, rm_digest_metro_crc_steal };
-static const RmDigestSpec metro256_crc_spec =  {"metrocrc256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_crc_update, rm_digest_metro256_copy, rm_digest_metro256_crc_steal };
+static const RmDigestInterface metro_crc_interface =  {"metrocrc", 128, rm_digest_metro_init, rm_digest_metro_free, rm_digest_metro_crc_update, rm_digest_metro_copy, rm_digest_metro_crc_steal };
+static const RmDigestInterface metro256_crc_interface =  {"metrocrc256", 256, rm_digest_metro256_init, rm_digest_metro256_free, rm_digest_metro256_crc_update, rm_digest_metro256_copy, rm_digest_metro256_crc_steal };
 
 #endif
 
@@ -367,7 +368,7 @@ static void rm_digest_cumulative_steal(RmDigest *digest, guint8 *result) {
     memcpy(result, state->data, RM_DIGEST_CUMULATIVE_LEN);
 }
 
-static const RmDigestSpec cumulative_spec =  { "cumulative", 8 * RM_DIGEST_CUMULATIVE_LEN, rm_digest_cumulative_init, rm_digest_cumulative_free,
+static const RmDigestInterface cumulative_interface =  { "cumulative", 8 * RM_DIGEST_CUMULATIVE_LEN, rm_digest_cumulative_init, rm_digest_cumulative_free,
         rm_digest_cumulative_update, rm_digest_cumulative_copy, rm_digest_cumulative_steal};
 
 
@@ -413,11 +414,11 @@ static void rm_digest_highway64_steal(RmDigest *digest, guint8 *result) {
     *(uint64_t*)result = HighwayHashCatFinish64(digest->state);
 }
 
-#define HIGHWAY_SPEC(BITS) BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
+#define HIGHWAY_INTERFACE(BITS) BITS, rm_digest_highway_init, rm_digest_highway_free, rm_digest_highway_update, rm_digest_highway_copy, rm_digest_highway##BITS##_steal
 
-static const RmDigestSpec highway256_spec =  {"highway256", HIGHWAY_SPEC(256)};
-static const RmDigestSpec highway128_spec =  {"highway128", HIGHWAY_SPEC(128)};
-static const RmDigestSpec highway64_spec  =  {"highway64", HIGHWAY_SPEC(64)};
+static const RmDigestInterface highway256_interface =  {"highway256", HIGHWAY_INTERFACE(256)};
+static const RmDigestInterface highway128_interface =  {"highway128", HIGHWAY_INTERFACE(128)};
+static const RmDigestInterface highway64_interface  =  {"highway64", HIGHWAY_INTERFACE(64)};
 
 
 ///////////////////////////
@@ -465,11 +466,11 @@ static void rm_digest_glib_steal(RmDigest *digest, guint8 *result) {
 
 #define GLIB_FUNCS rm_digest_glib_init, rm_digest_glib_free, rm_digest_glib_update, rm_digest_glib_copy, rm_digest_glib_steal
 
-static const RmDigestSpec md5_spec =  {"md5", 128, GLIB_FUNCS};
-static const RmDigestSpec sha1_spec = {"sha1", 160, GLIB_FUNCS};
-static const RmDigestSpec sha256_spec = {"sha256", 256, GLIB_FUNCS};
+static const RmDigestInterface md5_interface =  {"md5", 128, GLIB_FUNCS};
+static const RmDigestInterface sha1_interface = {"sha1", 160, GLIB_FUNCS};
+static const RmDigestInterface sha256_interface = {"sha256", 256, GLIB_FUNCS};
 #if HAVE_SHA512
-static const RmDigestSpec sha512_spec = {"sha512", 512, GLIB_FUNCS};
+static const RmDigestInterface sha512_interface = {"sha512", 512, GLIB_FUNCS};
 #endif
 
 ///////////////////////////
@@ -518,11 +519,11 @@ static void rm_digest_sha3_steal(RmDigest *digest, guint8 *result) {
     g_slice_free(sha3_ctx, copy);
 }
 
-#define SHA3_SPEC(BITS) BITS, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
+#define SHA3_INTERFACE(BITS) BITS, rm_digest_sha3_init, rm_digest_sha3_free, rm_digest_sha3_update, rm_digest_sha3_copy, rm_digest_sha3_steal
 
-static const RmDigestSpec sha3_256_spec = { "sha3-256", SHA3_SPEC(256)};
-static const RmDigestSpec sha3_384_spec = { "sha3-384", SHA3_SPEC(384)};
-static const RmDigestSpec sha3_512_spec = { "sha3-512", SHA3_SPEC(512)};
+static const RmDigestInterface sha3_256_interface = { "sha3-256", SHA3_INTERFACE(256)};
+static const RmDigestInterface sha3_384_interface = { "sha3-384", SHA3_INTERFACE(384)};
+static const RmDigestInterface sha3_512_interface = { "sha3-512", SHA3_INTERFACE(512)};
 
 ///////////////////////////
 //      blake hashes     //
@@ -578,10 +579,10 @@ CREATE_BLAKE_FUNCS(blake2sp, BLAKE2S);
 
 #define BLAKE_FUNCS(ALGO) rm_digest_##ALGO##_init, rm_digest_##ALGO##_free, rm_digest_##ALGO##_update, rm_digest_##ALGO##_copy, rm_digest_##ALGO##_steal
 
-static const RmDigestSpec blake2b_spec = {"blake2b", 512, BLAKE_FUNCS(blake2b)};
-static const RmDigestSpec blake2bp_spec = {"blake2bp", 512, BLAKE_FUNCS(blake2bp)};
-static const RmDigestSpec blake2s_spec = {"blake2s", 256, BLAKE_FUNCS(blake2s)};
-static const RmDigestSpec blake2sp_spec = {"blake2sp", 256, BLAKE_FUNCS(blake2sp)};
+static const RmDigestInterface blake2b_interface = {"blake2b", 512, BLAKE_FUNCS(blake2b)};
+static const RmDigestInterface blake2bp_interface = {"blake2bp", 512, BLAKE_FUNCS(blake2bp)};
+static const RmDigestInterface blake2s_interface = {"blake2s", 256, BLAKE_FUNCS(blake2s)};
+static const RmDigestInterface blake2sp_interface = {"blake2sp", 256, BLAKE_FUNCS(blake2sp)};
 
 ///////////////////////////
 //      ext  hash        //
@@ -610,7 +611,7 @@ static void rm_digest_ext_update(RmDigest *digest, const unsigned char *data, Rm
     }
 }
 
-static const RmDigestSpec ext_spec = {"ext", 0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
+static const RmDigestInterface ext_interface = {"ext", 0, rm_digest_ext_init, rm_digest_generic_free, rm_digest_ext_update, rm_digest_generic_copy, NULL};
 
 
 ///////////////////////////
@@ -658,50 +659,50 @@ static void rm_digest_paranoid_steal(RmDigest *digest, guint8 *result) {
 
 /* Note: paranoid update implementation is in rm_digest_buffered_update() below */
 
-static const RmDigestSpec paranoid_spec = { "paranoid", 0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, rm_digest_paranoid_steal};
+static const RmDigestInterface paranoid_interface = { "paranoid", 0, rm_digest_paranoid_init, rm_digest_paranoid_free, NULL, NULL, rm_digest_paranoid_steal};
 
 
 ////////////////////////////////
-//      RmDigestSpec map      //
+//   RmDigestInterface map    //
 ////////////////////////////////
 
 
-static const RmDigestSpec *rm_digest_spec(RmDigestType type) {
-    static const RmDigestSpec *digest_specs[] = {
+static const RmDigestInterface *rm_digest_interface(RmDigestType type) {
+    static const RmDigestInterface *digest_interfaces[] = {
         [RM_DIGEST_UNKNOWN]    = NULL,
-        [RM_DIGEST_MURMUR]     = &murmur_spec,
-        [RM_DIGEST_METRO]      = &metro_spec,
-        [RM_DIGEST_METRO256]   = &metro256_spec,
+        [RM_DIGEST_MURMUR]     = &murmur_interface,
+        [RM_DIGEST_METRO]      = &metro_interface,
+        [RM_DIGEST_METRO256]   = &metro256_interface,
     #if HAVE_SSE4
-        [RM_DIGEST_METROCRC]   = &metro_crc_spec,
-        [RM_DIGEST_METROCRC256]= &metro256_crc_spec,
+        [RM_DIGEST_METROCRC]   = &metro_crc_interface,
+        [RM_DIGEST_METROCRC256]= &metro256_crc_interface,
     #endif
-        [RM_DIGEST_MD5]        = &md5_spec,
-        [RM_DIGEST_SHA1]       = &sha1_spec,
-        [RM_DIGEST_SHA256]     = &sha256_spec,
+        [RM_DIGEST_MD5]        = &md5_interface,
+        [RM_DIGEST_SHA1]       = &sha1_interface,
+        [RM_DIGEST_SHA256]     = &sha256_interface,
     #if HAVE_SHA512
-        [RM_DIGEST_SHA512]     = &sha512_spec,
+        [RM_DIGEST_SHA512]     = &sha512_interface,
     #endif
-        [RM_DIGEST_SHA3_256]   = &sha3_256_spec,
-        [RM_DIGEST_SHA3_384]   = &sha3_384_spec,
-        [RM_DIGEST_SHA3_512]   = &sha3_512_spec,
-        [RM_DIGEST_BLAKE2S]    = &blake2s_spec,
-        [RM_DIGEST_BLAKE2B]    = &blake2b_spec,
-        [RM_DIGEST_BLAKE2SP]   = &blake2sp_spec,
-        [RM_DIGEST_BLAKE2BP]   = &blake2bp_spec,
-        [RM_DIGEST_EXT]        = &ext_spec,
-        [RM_DIGEST_CUMULATIVE] = &cumulative_spec,
-        [RM_DIGEST_PARANOID]   = &paranoid_spec,
-        [RM_DIGEST_XXHASH]     = &xxhash_spec,
-        [RM_DIGEST_HIGHWAY64]  = &highway64_spec,
-        [RM_DIGEST_HIGHWAY128] = &highway128_spec,
-        [RM_DIGEST_HIGHWAY256] = &highway256_spec,
+        [RM_DIGEST_SHA3_256]   = &sha3_256_interface,
+        [RM_DIGEST_SHA3_384]   = &sha3_384_interface,
+        [RM_DIGEST_SHA3_512]   = &sha3_512_interface,
+        [RM_DIGEST_BLAKE2S]    = &blake2s_interface,
+        [RM_DIGEST_BLAKE2B]    = &blake2b_interface,
+        [RM_DIGEST_BLAKE2SP]   = &blake2sp_interface,
+        [RM_DIGEST_BLAKE2BP]   = &blake2bp_interface,
+        [RM_DIGEST_EXT]        = &ext_interface,
+        [RM_DIGEST_CUMULATIVE] = &cumulative_interface,
+        [RM_DIGEST_PARANOID]   = &paranoid_interface,
+        [RM_DIGEST_XXHASH]     = &xxhash_interface,
+        [RM_DIGEST_HIGHWAY64]  = &highway64_interface,
+        [RM_DIGEST_HIGHWAY128] = &highway128_interface,
+        [RM_DIGEST_HIGHWAY256] = &highway256_interface,
     };
 
-    if(type < RM_DIGEST_SENTINEL && digest_specs[type]) {
-        return digest_specs[type];
+    if(type < RM_DIGEST_SENTINEL && digest_interfaces[type]) {
+        return digest_interfaces[type];
     }
-    rm_log_error_line("No digest spec for enum %i", type);
+    rm_log_error_line("No digest interface for enum %i", type);
     g_assert_not_reached();
 }
 
@@ -716,7 +717,7 @@ static gpointer rm_init_digest_type_table(GHashTable **code_table) {
 
     *code_table = g_hash_table_new(g_str_hash, g_str_equal);
     for(RmDigestType type=1; type<RM_DIGEST_SENTINEL; type++) {
-        rm_digest_table_insert(*code_table, (char*)rm_digest_spec(type)->name, type);
+        rm_digest_table_insert(*code_table, (char*)rm_digest_interface(type)->name, type);
     }
 
     /* add some synonyms */
@@ -744,8 +745,8 @@ RmDigestType rm_string_to_digest_type(const char *string) {
 }
 
 const char *rm_digest_type_to_string(RmDigestType type) {
-    const RmDigestSpec *spec = rm_digest_spec(type);
-    return spec->name;
+    const RmDigestInterface *interface = rm_digest_interface(type);
+    return interface->name;
 }
 
 /*  TODO: remove? */
@@ -762,11 +763,11 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed1, RmOff seed2, RmOff ext_s
                         bool use_shadow_hash) {
     g_assert(type != RM_DIGEST_UNKNOWN);
 
-    const RmDigestSpec *spec = rm_digest_spec(type);
+    const RmDigestInterface *interface = rm_digest_interface(type);
     RmDigest *digest = g_slice_new0(RmDigest);
     digest->type = type;
-    digest->bytes = spec->bits / 8;
-    spec->init(digest, seed1, seed2, ext_size, use_shadow_hash);
+    digest->bytes = interface->bits / 8;
+    interface->init(digest, seed1, seed2, ext_size, use_shadow_hash);
 
     return digest;
 }
@@ -780,14 +781,14 @@ void rm_digest_release_buffers(RmDigest *digest) {
 }
 
 void rm_digest_free(RmDigest *digest) {
-    const RmDigestSpec *spec = rm_digest_spec(digest->type);
-    spec->free(digest);
+    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    interface->free(digest);
     g_slice_free(RmDigest, digest);
 }
 
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
-    const RmDigestSpec *spec = rm_digest_spec(digest->type);
-    spec->update(digest, data, size);
+    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    interface->update(digest, data, size);
 }
 
 void rm_digest_buffered_update(RmBuffer *buffer) {
@@ -872,21 +873,21 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
 
     RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
 
-    const RmDigestSpec *spec = rm_digest_spec(digest->type);
-    spec->copy(digest, copy);
+    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    interface->copy(digest, copy);
 
     return copy;
 }
 
 guint8 *rm_digest_steal(RmDigest *digest) {
 
-    const RmDigestSpec *spec = rm_digest_spec(digest->type);
-    if(!spec->steal) {
+    const RmDigestInterface *interface = rm_digest_interface(digest->type);
+    if(!interface->steal) {
         return g_slice_copy(digest->bytes, digest->state);
     }
 
     guint8 *result = g_slice_alloc0(digest->bytes);
-    spec->steal(digest, result);
+    interface->steal(digest, result);
     return result;
 }
 
@@ -917,7 +918,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         return false;
     }
 
-    const RmDigestSpec *spec = rm_digest_spec(a->type);
+    const RmDigestInterface *interface = rm_digest_interface(a->type);
 
     if(a->type == RM_DIGEST_PARANOID) {
         RmParanoid *pa = a->state;
@@ -952,7 +953,7 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         }
 
         return (!a_iter && !b_iter);
-    } else if(spec->steal) {
+    } else if(interface->steal) {
         guint8 *buf_a = rm_digest_steal(a);
         guint8 *buf_b = rm_digest_steal(b);
         gboolean result = !memcmp(buf_a, buf_b, a->bytes);
