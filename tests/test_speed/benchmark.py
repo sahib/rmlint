@@ -275,7 +275,7 @@ class RmlintSpot(Rmlint):
 
 class RmlintSpotParanoid(RmlintSpot):
     def get_options(self, paths):
-        return '-pp ' + RmlintSpot.get_options(self, paths)
+        return '-p ' + RmlintSpot.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-spot-paranoid'
@@ -304,7 +304,7 @@ class Rmlint246(Rmlint):
 
 class Rmlint222Paranoid(Rmlint222):
     def get_options(self, paths):
-        return '-pp ' + Rmlint222.get_options(self, paths)
+        return '-p ' + Rmlint222.get_options(self, paths)
 
     def get_benchid(self):
         return Rmlint222.get_benchid(self) + '-paranoid'
@@ -363,7 +363,7 @@ class RmlintMurmur(Rmlint):
 class RmlintParanoid(Rmlint):
 
     def get_options(self, paths):
-        return '-pp ' + Rmlint.get_options(self, paths)
+        return '-p ' + Rmlint.get_options(self, paths)
 
     def get_benchid(self):
         return 'rmlint-paranoid'
