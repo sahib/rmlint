@@ -39,9 +39,9 @@ void metrohash64_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out
 void metrohash64_2(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out);
 
 // MetroHash 128-bit hash functions
-Metro128State *metrohash128_1_new(uint32_t seed);
-Metro128State *metrohash128_2_new(uint32_t seed);
-Metro256State *metrohash256_new(uint32_t seed);
+Metro128State *metrohash128_1_new(void);
+Metro128State *metrohash128_2_new(void);
+Metro256State *metrohash256_new(void);
 
 Metro128State *metrohash128_copy(Metro128State *state);
 Metro256State *metrohash256_copy(Metro256State *state);

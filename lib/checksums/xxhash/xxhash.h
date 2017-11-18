@@ -107,11 +107,10 @@ typedef struct {
     long long ll[11];
 } XXH64_state_t;
 
-/*
-These structures allow static allocation of XXH states.
-States must then be initialized using XXHnn_reset() before first use.
 
-If you prefer dynamic allocation, please refer to functions below.
+/*
+These functions create and release memory for XXH state.
+States must then be initialized using XXHnn_reset() before first use.
 */
 
 XXH32_state_t* XXH32_createState(void);
@@ -119,10 +118,11 @@ XXH_errorcode XXH32_freeState(XXH32_state_t* statePtr);
 
 XXH64_state_t* XXH64_createState(void);
 XXH_errorcode XXH64_freeState(XXH64_state_t* statePtr);
-
 /*
-These functions create and release memory for XXH state.
+These structures allow static allocation of XXH states.
 States must then be initialized using XXHnn_reset() before first use.
+
+If you prefer dynamic allocation, please refer to functions below.
 */
 
 XXH_errorcode XXH32_reset(XXH32_state_t* statePtr, unsigned seed);

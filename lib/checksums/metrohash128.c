@@ -45,16 +45,16 @@ static const uint64_t k1_1 = 0x8648DBDB;
 static const uint64_t k2_1 = 0x7BDEC03B;
 static const uint64_t k3_1 = 0x2F5870A5;
 
-static void metrohash128_1_init(Metro128State *state, uint32_t seed) {
-    state->v[0] = ((((uint64_t)seed) - k0_1) * k3_1);
-    state->v[1] = ((((uint64_t)seed) + k1_1) * k2_1);
-    state->v[2] = ((((uint64_t)seed) + k0_1) * k2_1);
-    state->v[3] = ((((uint64_t)seed) - k1_1) * k3_1);
+static void metrohash128_1_init(Metro128State *state) {
+    state->v[0] = -k0_1 * k3_1;
+    state->v[1] = k1_1 * k2_1;
+    state->v[2] = k0_1 * k2_1;
+    state->v[3] = - k1_1 * k3_1;
 }
 
-Metro128State *metrohash128_1_new(uint32_t seed) {
+Metro128State *metrohash128_1_new(void) {
     Metro128State *state = g_slice_new0(Metro128State);
-    metrohash128_1_init(state, seed);
+    metrohash128_1_init(state);
     return state;
 }
 
@@ -63,16 +63,16 @@ static const uint64_t k1_2 = 0xAD07C493;
 static const uint64_t k2_2 = 0x797A90BB;
 static const uint64_t k3_2 = 0x2E4B2E1B;
 
-static void metrohash128_2_init(Metro128State *state, uint32_t seed) {
-    state->v[0] = ((((uint64_t)seed) - k0_2) * k3_2);
-    state->v[1] = ((((uint64_t)seed) + k1_2) * k2_2);
-    state->v[2] = ((((uint64_t)seed) + k0_2) * k2_2);
-    state->v[3] = ((((uint64_t)seed) - k1_2) * k3_2);
+static void metrohash128_2_init(Metro128State *state) {
+    state->v[0] = -k0_2 * k3_2;
+    state->v[1] = k1_2 * k2_2;
+    state->v[2] = k0_2 * k2_2;
+    state->v[3] = -k1_2 * k3_2;
 }
 
-Metro128State *metrohash128_2_new(uint32_t seed) {
+Metro128State *metrohash128_2_new() {
     Metro128State *state = g_slice_new0(Metro128State);
-    metrohash128_2_init(state, seed);
+    metrohash128_2_init(state);
     return state;
 }
 
@@ -248,14 +248,16 @@ void metrohash128crc_2_steal(Metro128State *state, uint8_t *out) {
 }
 
 void metrohash128crc_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
-    Metro128State *state = metrohash128_1_new(seed);
+    Metro128State *state = metrohash128_1_new();
+    metrohash128crc_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128crc_update(state, key, len);
     metrohash128crc_1_steal(state, out);
     metrohash128_free(state);
 }
 
 void metrohash128crc_2(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
-    Metro128State *state = metrohash128_2_new(seed);
+    Metro128State *state = metrohash128_2_new();
+    metrohash128crc_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128crc_update(state, key, len);
     metrohash128crc_2_steal(state, out);
     metrohash128_free(state);
@@ -493,23 +495,25 @@ void metrohash128_2_steal(Metro128State *state, uint8_t *out) {
 }
 
 void metrohash128_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
-    Metro128State *state = metrohash128_1_new(seed);
+    Metro128State *state = metrohash128_1_new();
+    metrohash128_1_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128_1_update(state, key, len);
     metrohash128_1_steal(state, out);
     metrohash128_free(state);
 }
 
 void metrohash128_2(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
-    Metro128State *state = metrohash128_2_new(seed);
+    Metro128State *state = metrohash128_2_new();
+    metrohash128_2_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128_2_update(state, key, len);
     metrohash128_2_steal(state, out);
     metrohash128_free(state);
 }
 
-Metro256State *metrohash256_new(uint32_t seed) {
+Metro256State *metrohash256_new(void) {
     Metro256State *state = g_slice_new0(Metro256State);
-    metrohash128_1_init(&state->state1, seed);
-    metrohash128_2_init(&state->state2, seed);
+    metrohash128_1_init(&state->state1);
+    metrohash128_2_init(&state->state2);
     return state;
 }
 

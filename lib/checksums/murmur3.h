@@ -21,12 +21,11 @@ typedef struct _MurmurHash3_x64_128_state MurmurHash3_x64_128_state;
 // API
 
 /**
- * return newly initialised, seeded state
+ * return newly initialised state
  */
-MurmurHash3_x86_32_state *MurmurHash3_x86_32_new(uint32_t seed);
-MurmurHash3_x86_128_state *MurmurHash3_x86_128_new(uint32_t seed1, uint32_t seed2,
-                                                   uint32_t seed3, uint32_t seed4);
-MurmurHash3_x64_128_state *MurmurHash3_x64_128_new(uint64_t seed1, uint64_t seed2);
+MurmurHash3_x86_32_state *MurmurHash3_x86_32_new(void);
+MurmurHash3_x86_128_state *MurmurHash3_x86_128_new(void);
+MurmurHash3_x64_128_state *MurmurHash3_x64_128_new(void);
 
 /**
  * return duplicate copy of a state
