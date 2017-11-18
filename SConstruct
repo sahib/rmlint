@@ -363,18 +363,18 @@ def check_cygwin(context):
     context.Result(rc)
     return rc
 
-def check_sse4(context):
+def check_sse_4_2(context):
     rc = 0
 
-    context.Message('Checking for sse4 support...')
+    context.Message('Checking for SSE 4.2 support...')
     try:
-        if 'sse4' in open('/proc/cpuinfo').read():
+        if 'sse4_2' in open('/proc/cpuinfo').read():
             rc = 1
     except subprocess.CalledProcessError:
         # Oops.
         context.Message("read cpuinfo failed")
 
-    conf.env['HAVE_SSE4'] = rc
+    conf.env['HAVE_SSE_4_2'] = rc
     context.Result(rc)
     return rc
 
@@ -495,14 +495,6 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
         dest='with_' + suffix
     )
 
-AddOption(
-    '--with-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
-AddOption(
-    '--without-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
@@ -553,7 +545,7 @@ conf = Configure(env, custom_tests={
     'check_linux_fs_h': check_linux_fs_h,
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
-    'check_sse4': check_sse4,
+    'check_sse_4_2': check_sse_4_2,
     'check_sysmacro_h': check_sysmacro_h
 })
 
@@ -628,9 +620,9 @@ else:
     conf.env.Append(CCFLAGS=['-fPIC'])
 
 # check SSE4 support:
-conf.check_sse4()
-if conf.env['HAVE_SSE4']:
-    conf.env.Append(CCFLAGS=['-msse4'])
+conf.check_sse_4_2()
+if conf.env['HAVE_SSE_4_2']:
+    conf.env.Append(CCFLAGS=['-msse4.2'])
 
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings

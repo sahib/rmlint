@@ -34,7 +34,7 @@ def build_config_template(target, source, env):
             HAVE_LINUX_LIMITS=env['HAVE_LINUX_LIMITS'],
             HAVE_LINUX_FS_H=env['HAVE_LINUX_FS_H'],
             HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
-            HAVE_SSE4=env['HAVE_SSE4'],
+            HAVE_SSE_4_2=env['HAVE_SSE_4_2'],
             HAVE_FACCESSAT=env['HAVE_FACCESSAT'],
             HAVE_UNAME=env['HAVE_UNAME'],
             HAVE_SYSMACROS_H=env['HAVE_SYSMACROS_H'],

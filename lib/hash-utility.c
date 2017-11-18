@@ -166,7 +166,7 @@ int rm_hasher_main(int argc, const char **argv) {
                  "\n  Supported, but not useful:"
                  "\n    %s\n"),
                "sha{1,256,512}, sha3-{256,384,512}, blake{2s,2b,2sp,2bp}, highway{64,128,256}",
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
                "metrocrc, metrocrc256, "
 #endif
                "metro, metro256, xxhash, murmur",

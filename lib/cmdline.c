@@ -753,14 +753,14 @@ static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
     /* Handle the paranoia option */
     switch(paranoia_counter) {
     case -2:
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
         cfg->checksum_type = RM_DIGEST_METROCRC;    // 128-bit non-crypto
 #else
         cfg->checksum_type = RM_DIGEST_METRO;       // 128-bit non-crypto
 #endif
         break;
     case -1:
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
         cfg->checksum_type = RM_DIGEST_METROCRC256; // 256-bit non-crypto
 #else
         cfg->checksum_type = RM_DIGEST_METRO256;    // 256-bit non-crypto

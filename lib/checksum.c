@@ -168,7 +168,7 @@ static const RmDigestInterface metro256_interface = {
     .copy = (RmDigestCopyFunc)metrohash256_copy,
     .steal = (RmDigestStealFunc)metrohash256_steal};
 
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
 /* also define crc-optimised metro variants metrocrc and metrocrc256*/
 
 static const RmDigestInterface metrocrc_interface = {
@@ -694,7 +694,7 @@ static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
         [RM_DIGEST_MURMUR] = &murmur_interface,
         [RM_DIGEST_METRO] = &metro_interface,
         [RM_DIGEST_METRO256] = &metro256_interface,
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
         [RM_DIGEST_METROCRC] = &metrocrc_interface,
         [RM_DIGEST_METROCRC256] = &metrocrc256_interface,
 #endif

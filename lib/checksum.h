@@ -39,7 +39,7 @@ typedef enum RmDigestType {
     RM_DIGEST_MURMUR,
     RM_DIGEST_METRO,
     RM_DIGEST_METRO256,
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
     RM_DIGEST_METROCRC,
     RM_DIGEST_METROCRC256,
 #endif

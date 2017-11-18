@@ -27,7 +27,7 @@
 #include <nmmintrin.h>
 #include "metrohash.h"
 
-#if HAVE_SSE4
+#if HAVE_SSE_4_2
 
 struct _Metro128_state {
     uint64_t v[4];
