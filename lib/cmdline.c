@@ -50,6 +50,15 @@
 #include "treemerge.h"
 #include "utilities.h"
 
+/* define paranoia levels */
+static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
+                                                  RM_DIGEST_METRO256,
+                                                  RM_DIGEST_HIGHWAY256,
+                                                  RM_DEFAULT_DIGEST,
+                                                  RM_DIGEST_PARANOID};
+static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
+static const int RM_PARANOIA_MAX = 4;
+
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
@@ -751,33 +760,17 @@ static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
 static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
                                          GError **error) {
     /* Handle the paranoia option */
-    switch(paranoia_counter) {
-    case -2:
-#if HAVE_SSE_4_2
-        cfg->checksum_type = RM_DIGEST_METROCRC;    // 128-bit non-crypto
-#else
-        cfg->checksum_type = RM_DIGEST_METRO;       // 128-bit non-crypto
-#endif
-        break;
-    case -1:
-#if HAVE_SSE_4_2
-        cfg->checksum_type = RM_DIGEST_METROCRC256; // 256-bit non-crypto
-#else
-        cfg->checksum_type = RM_DIGEST_METRO256;    // 256-bit non-crypto
-#endif
-        break;
-    case 0:
-        /* leave users choice of -a (default) */
-        break;
-    case 1:
-        cfg->checksum_type = RM_DIGEST_PARANOID;
-        break;
-    default:
+    int index = paranoia_counter + RM_PARANOIA_NORMAL;
+
+    if(index < 0 || index > RM_PARANOIA_MAX) {
         if(error && *error == NULL) {
             g_set_error(error, RM_ERROR_QUARK, 0,
-                        _("Only up to -p or down to -PP flags allowed"));
+                        _("Only up to -%.*s or down to -%.*s flags allowed"),
+                        RM_PARANOIA_MAX - RM_PARANOIA_NORMAL, "ppppp", RM_PARANOIA_NORMAL,
+                        "PPPPP");
         }
-        break;
+    } else {
+        cfg->checksum_type = RM_PARANOIA_LEVELS[index];
     }
 }
 

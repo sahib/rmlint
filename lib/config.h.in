@@ -24,7 +24,9 @@
 #define HAVE_SYSMACROS_H   ({HAVE_SYSMACROS_H})
 #define HAVE_SSE_4_2       ({HAVE_SSE_4_2})
 
-#define RM_DEFAULT_DIGEST RM_DIGEST_SHA512
+/* define here so rmlint and hash utility can both access */
+#define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B
+
 #define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
 #define RM_VERSION_MAJOR {VERSION_MAJOR}
 #define RM_VERSION_MINOR {VERSION_MINOR}

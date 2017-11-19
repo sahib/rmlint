@@ -149,7 +149,7 @@ General Options
 
     ``$ rmlint -z rx $(echo $PATH | tr ":" " ")  # Look at all executable files in $PATH``
 
-:``-a --algorithm=name`` (**default\:** *sha512*):
+:``-a --algorithm=name`` (**default\:** *blake2b*):
 
     Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
@@ -175,8 +175,9 @@ General Options
 
     * **-p** is equivalent to **--algorithm=paranoid**
 
-    * **-P** is equivalent to **--algorithm=metro256**
-    * **-PP** is equivalent to **--algorithm=metro**
+    * **-P** is equivalent to **--algorithm=highway256**
+    * **-PP** is equivalent to **--algorithm=metro256**
+    * **-PPP** is equivalent to **--algorithm=metro**
 
 :``-v --loud`` / ``-V --quiet``:
 
@@ -851,12 +852,12 @@ PROBLEMS
 
 1. **False Positives:** Depending on the options you use, there is a very slight risk
    of false positives (files that are erroneously detected as duplicate).
-   The default hash function (sha512) is very safe but in theory it is possible for
+   The default hash function (blake2b) is very safe but in theory it is possible for
    two files to have then same hash. If you had 10^73 different files, all the same
    size, then the chance of a false positive is still less than 1 in a billion.
    If you're concerned just use the ``--paranoid`` (``-pp``)
    option. This will compare all the files byte-by-byte and is not much slower than
-   sha512 (it may even be faster), although it is a lot more memory-hungry.
+   blake2b (it may even be faster), although it is a lot more memory-hungry.
 
 2. **File modification during or after rmlint run:** It is possible that a file
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in
