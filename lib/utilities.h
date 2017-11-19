@@ -510,4 +510,9 @@ void rm_running_mean_add(RmRunningMean *m, gdouble value);
  */
 gdouble rm_running_mean_get(RmRunningMean *m);
 
+/**
+ * @brief Release internal mem used to store values.
+ */
+void rm_running_mean_unref(RmRunningMean *m);
+
 #endif /* RM_UTILITIES_H_INCLUDE*/

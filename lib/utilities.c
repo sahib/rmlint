@@ -1360,3 +1360,10 @@ gdouble rm_running_mean_get(RmRunningMean *m) {
 
     return m->sum / n;
 }
+
+void rm_running_mean_unref(RmRunningMean *m) {
+    if(m->values) {
+        g_free(m->values);
+        m->values = NULL;
+    }
+}
