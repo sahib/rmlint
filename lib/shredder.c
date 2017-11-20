@@ -1397,7 +1397,6 @@ static void rm_shred_tag_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTa
      * originals */
     for(GList *i_orig = group->held_files->head; i_orig; i_orig = i_orig->next) {
         RmFile *orig = i_orig->data;
-        rm_log_info_line("orig: %s", orig->folder->basename);
         if(!orig->is_original) {
             /* have gone past last original */
             break;
