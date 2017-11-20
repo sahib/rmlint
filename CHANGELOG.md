@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.6.2 Toothless Taipan] -- unreleased
+
+### Added
+
+* New checksum types metro and highway
+* Additional unit tests
+* New option --keep-hardlinked
+* --dedupe option can deduplicate twins on any reflick-capable filesystem
+* --dedupe-readonly option can dedupe files on read-only btrfs snapshots
+
+### Changed
+
+* Checksum types for -P... options (see https://github.com/sahib/rmlint/issues/261)
+* Under-the-hood changes for checksum.c
+
+### Deprecated
+
+* Option --btrfs-clone (use --dedupe)
+* Paranoia option -pp (use -p)
+
+### Removed
+
+* Checksum types bastard, spooky, city & farmhash
+
+### Fixed
+
+* Fix scons 3 compatibility issue (https://github.com/sahib/rmlint/issues/258)
+* Fix compile error on systems with no FIEMAP (https://github.com/sahib/rmlint/issues/252)
+* Fix handling of bad uids/gids in python output formatter (https://github.com/sahib/rmlint/issues/239)
+* Fix escaping of dirnames in rmlint.sh test for new emptydirs (https://github.com/sahib/rmlint/issues/241)
+
+
 ## [2.6.1 Penetrating Pineapple] -- 2017-06-13
 
 ### Fixed
@@ -178,7 +210,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Added
 
 - A fully working graphical user interface which is installed as a python module
-  by default (can be disabled via compile option ie ``scons --without-gui``). 
+  by default (can be disabled via compile option ie ``scons --without-gui``).
   It can be started via  ``rmlint --gui``.
 - Support for automatic deduplication on btrfs using  ``BTRFS_IOC_FILE_EXTENT_SAME``.
   The Shellscript now will contain calls to  ``rmlint  --btrfs $source $dest``
@@ -220,7 +252,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Added
 
-- ``--replay``: Re-output a previously written json file. Allow filtering 
+- ``--replay``: Re-output a previously written json file. Allow filtering
   by using all other standard options (like size or directory filtering).
 - ``--sort-by``: Similar to ``-S``, but sorts groups of files. So showing
   the group with the biggest size sucker is as easy as ``-y s``.
