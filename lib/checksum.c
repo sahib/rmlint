@@ -81,10 +81,12 @@ typedef void (*RmDigestFreeFunc)(gpointer state);
 typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data, gsize size);
 typedef gpointer (*RmDigestCopyFunc)(gpointer state);
 typedef void (*RmDigestStealFunc)(gpointer state, guint8 *result);
+typedef guint (*RmDigestLenFunc)(gpointer state);
 
 typedef struct RmDigestInterface {
     const char *name;           // hash name
-    const uint bits;            // length of the output checksum in bits
+    const guint bits;           // length of the output checksum in bits (if const)
+    RmDigestLenFunc len;        // return length of the output checksum in bytes
     RmDigestNewFunc new;        // returns new digest->state
     RmDigestFreeFunc free;      // frees state allocated by new()
     RmDigestUpdateFunc update;  // hashes data into state
@@ -115,6 +117,7 @@ static void rm_digest_xxhash_steal(gpointer state, guint8 *result) {
 static const RmDigestInterface xxhash_interface = {
     .name = "xxhash",
     .bits = 64,
+    .len = NULL,
     .new = (RmDigestNewFunc)rm_digest_xxhash_new,
     .free = (RmDigestFreeFunc)XXH64_freeState,
     .update = (RmDigestUpdateFunc)XXH64_update,
@@ -128,6 +131,7 @@ static const RmDigestInterface xxhash_interface = {
 static const RmDigestInterface murmur_interface = {
     .name = "murmur",
     .bits = 128,
+    .len = NULL,
 #if RM_PLATFORM_32
     .new = (RmDigestNewFunc)MurmurHash3_x86_128_new,
     .free = (RmDigestFreeFunc)MurmurHash3_x86_128_free,
@@ -153,6 +157,7 @@ static const RmDigestInterface murmur_interface = {
 static const RmDigestInterface metro_interface = {
     .name = "metro",
     .bits = 128,
+    .len = NULL,
     .new = (RmDigestNewFunc)metrohash128_1_new,
     .free = (RmDigestFreeFunc)metrohash128_free,
     .update = (RmDigestUpdateFunc)metrohash128_1_update,
@@ -162,6 +167,7 @@ static const RmDigestInterface metro_interface = {
 static const RmDigestInterface metro256_interface = {
     .name = "metro256",
     .bits = 256,
+    .len = NULL,
     .new = (RmDigestNewFunc)metrohash256_new,
     .free = (RmDigestFreeFunc)metrohash256_free,
     .update = (RmDigestUpdateFunc)metrohash256_update,
@@ -171,9 +177,11 @@ static const RmDigestInterface metro256_interface = {
 #if HAVE_SSE_4_2
 /* also define crc-optimised metro variants metrocrc and metrocrc256*/
 
+
 static const RmDigestInterface metrocrc_interface = {
     .name = "metrocrc",
     .bits = 128,
+    .len = NULL,
     .new = (RmDigestNewFunc)metrohash128_1_new,  /* <-same */
     .free = (RmDigestFreeFunc)metrohash128_free, /* <-same */
     .update = (RmDigestUpdateFunc)metrohash128crc_update,
@@ -183,6 +191,7 @@ static const RmDigestInterface metrocrc_interface = {
 static const RmDigestInterface metrocrc256_interface = {
     .name = "metrocrc256",
     .bits = 256,
+    .len = NULL,
     .new = (RmDigestNewFunc)metrohash256_new,    /* <-same */
     .free = (RmDigestFreeFunc)metrohash256_free, /* <-same */
     .update = (RmDigestUpdateFunc)metrohash256crc_update,
@@ -195,7 +204,7 @@ static const RmDigestInterface metrocrc256_interface = {
 //      cumulative       //
 ///////////////////////////
 
-#define RM_DIGEST_CUMULATIVE_LEN 16 /* must be power of 2 and >= 8 */
+#define RM_DIGEST_CUMULATIVE_MAX_BYTES 64
 
 #if RM_PLATFORM_64
 
@@ -215,29 +224,45 @@ static const RmDigestInterface metrocrc256_interface = {
 
 typedef struct RmDigestCumulative {
     union {
-        guint8 data[RM_DIGEST_CUMULATIVE_LEN];
-        RM_DIGEST_CUMULATIVE_T bigdata[RM_DIGEST_CUMULATIVE_INTS];
+        guint8 *data;
+        RM_DIGEST_CUMULATIVE_T *bigdata;
     };
+    RM_DIGEST_CUMULATIVE_T bytes; /* data length */
     RM_DIGEST_CUMULATIVE_T pos; /* byte offset within data */
 } RmDigestCumulative;
+
+static guint rm_digest_cumulative_len(RmDigestCumulative *state) {
+    return state->bytes;
+}
 
 static RmDigestCumulative *rm_digest_cumulative_new(void) {
     return g_slice_new0(RmDigestCumulative);
 }
 
 static void rm_digest_cumulative_free(RmDigestCumulative *state) {
+    if(state->data) {
+        g_slice_free1(state->bytes, state->data);
+    }
     g_slice_free(RmDigestCumulative, state);
 }
 
 static void rm_digest_cumulative_update(RmDigestCumulative *state,
                                         const unsigned char *data, RmOff size) {
+    if(!state->data) {
+        /* first update sets checksum length */
+        state->bytes = RM_DIGEST_CUMULATIVE_ALIGN * CLAMP(size / RM_DIGEST_CUMULATIVE_ALIGN, 1, RM_DIGEST_CUMULATIVE_MAX_BYTES / RM_DIGEST_CUMULATIVE_ALIGN);
+        state->data = g_slice_alloc0(state->bytes);
+    }
+        
     guint8 *ptr = (guint8 *)data;
     guint8 *stop = ptr + size;
 
     /* align so we can use [32|64]-bit xor */
     while((state->pos % RM_DIGEST_CUMULATIVE_ALIGN != 0) && ptr < stop) {
         state->data[state->pos++] ^= *(ptr++);
-        state->pos &= (RM_DIGEST_CUMULATIVE_LEN - 1);
+        if(state->pos == state->bytes) {
+            state->pos = 0;
+        }
     }
 
     RM_DIGEST_CUMULATIVE_T *ptr_big = (RM_DIGEST_CUMULATIVE_T *)ptr;
@@ -247,33 +272,40 @@ static void rm_digest_cumulative_update(RmDigestCumulative *state,
     /* plough through body of data efficiently */
     while(ptr_big < stop_big) {
         state->bigdata[state->pos / RM_DIGEST_CUMULATIVE_ALIGN] ^= *ptr_big++;
-        state->pos =
-            (state->pos + RM_DIGEST_CUMULATIVE_ALIGN) & (RM_DIGEST_CUMULATIVE_ALIGN - 1);
+        state->pos = state->pos + RM_DIGEST_CUMULATIVE_ALIGN;
+        if(state->pos == state->bytes) {
+            state->pos = 0;
+        }
     }
 
     /* process remaining date byte-wise */
     ptr = (guint8 *)ptr_big;
     while(ptr < stop) {
         state->data[state->pos++] ^= *(ptr++);
-        state->pos &= (RM_DIGEST_CUMULATIVE_LEN - 1);
+        if(state->pos == state->bytes) {
+            state->pos = 0;
+        }
     }
 }
 
 static RmDigestCumulative *rm_digest_cumulative_copy(RmDigestCumulative *state) {
-    return g_slice_copy(sizeof(RmDigestCumulative), state);
+    RmDigestCumulative *copy = g_slice_copy(sizeof(RmDigestCumulative), state);
+    copy->data = g_slice_copy(state->bytes, state->data);
+    return copy;
 }
 
 static void rm_digest_cumulative_steal(RmDigestCumulative *state, guint8 *result) {
-    memcpy(result, state->data, RM_DIGEST_CUMULATIVE_LEN);
+    memcpy(result, state->data, state->bytes);
 }
 
 static const RmDigestInterface cumulative_interface = {
     .name = "cumulative",
-    .bits = 8 * RM_DIGEST_CUMULATIVE_LEN,
-    .new = (RmDigestNewFunc)rm_digest_cumulative_new,    /* <-same */
-    .free = (RmDigestFreeFunc)rm_digest_cumulative_free, /* <-same */
+    .bits = 0,
+    .len = (RmDigestLenFunc)rm_digest_cumulative_len,
+    .new = (RmDigestNewFunc)rm_digest_cumulative_new,
+    .free = (RmDigestFreeFunc)rm_digest_cumulative_free,
     .update = (RmDigestUpdateFunc)rm_digest_cumulative_update,
-    .copy = (RmDigestCopyFunc)rm_digest_cumulative_copy, /* <-same */
+    .copy = (RmDigestCopyFunc)rm_digest_cumulative_copy,
     .steal = (RmDigestStealFunc)rm_digest_cumulative_steal};
 
 ///////////////////////////
@@ -309,6 +341,7 @@ static void rm_digest_highway64_steal(HighwayHashCat *state, guint8 *result) {
 static const RmDigestInterface highway64_interface = {
     .name = "highway64",
     .bits = 64,
+    .len = NULL,
     .new = (RmDigestNewFunc)rm_digest_highway_new,
     .free = (RmDigestFreeFunc)rm_digest_highway_free,
     .update = (RmDigestUpdateFunc)rm_digest_highway_update,
@@ -318,6 +351,7 @@ static const RmDigestInterface highway64_interface = {
 static const RmDigestInterface highway128_interface = {
     .name = "highway128",
     .bits = 128,
+    .len = NULL,
     .new = (RmDigestNewFunc)rm_digest_highway_new,
     .free = (RmDigestFreeFunc)rm_digest_highway_free,
     .update = (RmDigestUpdateFunc)rm_digest_highway_update,
@@ -327,6 +361,7 @@ static const RmDigestInterface highway128_interface = {
 static const RmDigestInterface highway256_interface = {
     .name = "highway256",
     .bits = 256,
+    .len = NULL,
     .new = (RmDigestNewFunc)rm_digest_highway_new,
     .free = (RmDigestFreeFunc)rm_digest_highway_free,
     .update = (RmDigestUpdateFunc)rm_digest_highway_update,
@@ -347,6 +382,7 @@ static void rm_digest_glib_steal(GChecksum *state, guint8 *result, gsize *len) {
     static const RmDigestInterface NAME##_interface = {  \
         .name = #NAME,                                   \
         .bits = BITS,                                    \
+        .len = NULL,                                     \
         .new = (RmDigestNewFunc)rm_digest_##NAME##_new,  \
         .free = (RmDigestFreeFunc)g_checksum_free,       \
         .update = (RmDigestUpdateFunc)g_checksum_update, \
@@ -388,8 +424,9 @@ static void rm_digest_sha256_steal(GChecksum *state, guint8 *result) {
 
 RM_DIGEST_DEFINE_GLIB(sha256, 256);
 
-/* sha512 */
 #if HAVE_SHA512
+
+/* sha512 */
 static GChecksum *rm_digest_sha512_new(void) {
     return g_checksum_new(G_CHECKSUM_SHA512);
 }
@@ -453,7 +490,8 @@ static void rm_digest_sha3_512_steal(sha3_context *state, guint8 *result) {
 #define RM_DIGEST_DEFINE_SHA3(BITS)                            \
     static const RmDigestInterface sha3_##BITS##_interface = { \
         .name = ("sha3-" #BITS),                               \
-        .bits = (BITS),                                        \
+        .bits = BITS, \
+        .len = NULL, \
         .new = (RmDigestNewFunc)rm_digest_sha3_##BITS##_new,   \
         .free = (RmDigestFreeFunc)rm_digest_sha3_free,         \
         .update = (RmDigestUpdateFunc)sha3_Update,             \
@@ -467,6 +505,8 @@ RM_DIGEST_DEFINE_SHA3(512)
 ///////////////////////////
 //      blake hashes     //
 ///////////////////////////
+
+
 
 #define CREATE_BLAKE_INTERFACE(ALGO, ALGO_BIG)                                  \
                                                                                 \
@@ -493,6 +533,7 @@ RM_DIGEST_DEFINE_SHA3(512)
     static const RmDigestInterface ALGO##_interface = {                         \
         .name = #ALGO,                                                          \
         .bits = 8 * ALGO_BIG##_OUTBYTES,                                        \
+        .len = NULL,                                                            \
         .new = (RmDigestNewFunc)rm_digest_##ALGO##_new,                         \
         .free = (RmDigestFreeFunc)rm_digest_##ALGO##_free,                      \
         .update = (RmDigestUpdateFunc)ALGO##_update,                            \
@@ -512,6 +553,10 @@ typedef struct RmDigestExt {
     guint8 len;
     guint8 *data;
 } RmDigestExt;
+
+static guint rm_digest_ext_len(RmDigestExt *state) {
+    return state->len;
+}
 
 static RmDigestExt *rm_digest_ext_new(void) {
     return g_slice_new0(RmDigestExt);
@@ -550,7 +595,7 @@ static void rm_digest_ext_update(RmDigestExt *state, const unsigned char *data,
 }
 
 static RmDigestExt *rm_digest_ext_copy(RmDigestExt *state) {
-    RmDigestExt *copy = g_slice_copy(sizeof(*state), state);
+    RmDigestExt *copy = g_slice_copy(sizeof(RmDigestExt), state);
     copy->data = g_slice_copy(state->len, state->data);
     return copy;
 }
@@ -561,7 +606,8 @@ static void rm_digest_ext_steal(RmDigestExt *state, guint8 *result) {
 
 static const RmDigestInterface ext_interface = {
     .name = "ext",
-    .bits = 512,
+    .bits = 0,
+    .len = (RmDigestLenFunc) rm_digest_ext_len,
     .new = (RmDigestNewFunc)rm_digest_ext_new,
     .free = (RmDigestFreeFunc)rm_digest_ext_free,
     .update = (RmDigestUpdateFunc)rm_digest_ext_update,
@@ -669,7 +715,6 @@ static void rm_digest_paranoid_buffered_update(RmParanoid *paranoid, RmBuffer *b
 
 static void rm_digest_paranoid_steal(RmParanoid *paranoid, guint8 *result) {
     RmDigest *shadow_hash = paranoid->shadow_hash;
-    // rm_log_warning_line("rm_digest_paranoid_steal %d bytes", shadow_hash->bytes);
     rm_digest_xxhash_steal(shadow_hash->state, result);
 }
 
@@ -678,6 +723,7 @@ static void rm_digest_paranoid_steal(RmParanoid *paranoid, guint8 *result) {
 static const RmDigestInterface paranoid_interface = {
     .name = "paranoid",
     .bits = 64, /* must match shadow hash length */
+    .len = NULL,
     .new = (RmDigestNewFunc)rm_digest_paranoid_new,
     .free = (RmDigestFreeFunc)rm_digest_paranoid_free,
     .update = NULL,
@@ -814,6 +860,9 @@ void rm_digest_free(RmDigest *digest) {
 void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     interface->update(digest->state, data, size);
+    if(digest->bytes == 0) {
+        digest->bytes = interface->len(digest->state);
+    }
 }
 
 void rm_digest_buffered_update(RmBuffer *buffer) {
@@ -843,6 +892,7 @@ guint8 *rm_digest_steal(RmDigest *digest) {
     const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     guint8 *result = g_slice_alloc0(digest->bytes);
     interface->steal(digest->state, result);
+    
     return result;
 }
 

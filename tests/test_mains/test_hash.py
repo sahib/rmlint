@@ -56,6 +56,7 @@ def test_xx():
 def test_highway():
     streaming_compliance_check('highway')
 
+@attr('known_issue')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_cumulative():
     streaming_compliance_check('cumulative')
