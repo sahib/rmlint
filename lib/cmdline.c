@@ -55,6 +55,7 @@ static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
                                                   RM_DIGEST_METRO256,
                                                   RM_DIGEST_HIGHWAY256,
                                                   RM_DEFAULT_DIGEST,
+                                                  RM_DIGEST_PARANOID,
                                                   RM_DIGEST_PARANOID};
 static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
 static const int RM_PARANOIA_MAX = 4;
