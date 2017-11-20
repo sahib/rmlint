@@ -65,7 +65,7 @@ static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
     if(needs_free == false && group->files.length == 1) {
         RmFile *file = (RmFile *)group->files.head->data;
         if(file && file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
-            needs_free = true;
+            // needs_free = true; /* TODO: this is a temporary workaround for double-free of digest with treemerge */
         }
     }
 
