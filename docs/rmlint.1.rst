@@ -401,6 +401,9 @@ Original Detection Options
     Only look for duplicates of which at least one is in one of the tagged paths.
     (Paths that were named after **//**).
 
+    Note that the combinations of ``-kM`` and ``-Km`` are prohibited by ``rmlint``.
+    See https://github.com/sahib/rmlint/issues/244 for more information.
+
 :``-S --rank-by=criteria`` (**default\:** *pOma*):
 
     Sort the files in a group of duplicates into originals and duplicates by

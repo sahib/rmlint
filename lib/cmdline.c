@@ -1489,6 +1489,24 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(cfg->follow_symlinks && cfg->see_symlinks) {
         rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
         rm_assert_gentle_not_reached();
+    } else if(cfg->keep_all_tagged && cfg->must_match_untagged) {
+        error = \
+            g_error_new(
+                RM_ERROR_QUARK, 0,
+                _(
+                    "-k and -M should not be specified at the same time " \
+                    "(see also: https://github.com/sahib/rmlint/issues/244)"
+                )
+        );
+    } else if(cfg->keep_all_untagged && cfg->must_match_tagged) {
+        error = \
+            g_error_new(
+                RM_ERROR_QUARK, 0,
+                _(
+                    "-K and -m should not be specified at the same time " \
+                    "(see also: https://github.com/sahib/rmlint/issues/244)"
+                )
+        );
     }
 
 cleanup:
