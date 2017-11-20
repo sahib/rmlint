@@ -70,11 +70,8 @@ static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
     }
 
     if(needs_free) {
-        gboolean is_first = TRUE;
         for(GList *iter = group->files.head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            file->free_digest = is_first;
-            is_first = FALSE;
             rm_file_destroy(file);
         }
     }
