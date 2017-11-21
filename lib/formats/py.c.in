@@ -52,7 +52,7 @@ typedef struct RmFmtHandlerPy {
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
 
-    if(fwrite(PY_SOURCE, 1, sizeof(PY_SOURCE), out) <= 0) {
+    if(fwrite(PY_SOURCE, 1, sizeof(PY_SOURCE) - 1, out) <= 0) {
         rm_log_perror("Failed to write python script");
         return;
     }

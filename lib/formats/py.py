@@ -26,6 +26,10 @@ Authors:
 # The 200 lines source presented below is meant to be clean and hackable.
 # It is intended to be used for corner cases where the built-in sh formatter
 # is not enough or as an alternative to it. By default it works the same.
+#
+# Disable a few pylint warnings, in case someone integrates into scripts:
+# pylint: disable=unused-argument,missing-docstring,invalid-name
+# pylint: disable=redefined-outer-name,unused-variable
 
 # Python2 compat:
 from __future__ import print_function
@@ -146,7 +150,8 @@ def exec_operation(item, original=None, args=None):
             item['path'], original=original, item=item, args=args)
     except OSError as err:
         print('{c[red]}# {err}{c[reset]}'.format(
-            item=item, err=err, c=COLORS), file=sys.stderr)
+            err=err, c=COLORS
+        ), file=sys.stderr)
 
 
 MESSAGES = {
@@ -251,21 +256,28 @@ if __name__ == '__main__':
             print(err, file=sys.stderr)
             sys.exit(-1)
         except ValueError as err:   # File is not valid JSON
-            print('{}: {}'.format(err, doc), file=sys.stderr)
+            print('{}: {}'.format(err, json_file), file=sys.stderr)
             sys.exit(-1)
 
     try:
         if args.dry_run:
-            print('{c[green]}#{c[reset]} '
-                  'This is a dry run. Nothing will be modified.'.format(
-                    c=COLORS))
+            print(
+                '{c[green]}#{c[reset]} '
+                'This is a dry run. Nothing will be modified.'.format(
+                    c=COLORS
+                )
+            )
 
         for json_doc in json_docs:
             main(args, json_doc)
 
         if args.dry_run:
-            print('{c[green]}#{c[reset]} '
-                  'This was a dry run. Nothing was modified.'.format(
-                    c=COLORS))
+            print(
+                '{c[green]}#{c[reset]} '
+                'This was a dry run. Nothing was modified.'.format(
+                    c=COLORS
+                )
+            )
     except KeyboardInterrupt:
         print('\ncanceled.')
+
