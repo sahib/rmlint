@@ -148,17 +148,6 @@ void rm_buffer_free(RmBuffer *buf);
  */
 RmDigestType rm_string_to_digest_type(const char *string);
 
-/* Hash type to MultiHash ID.
- * Idea of Multihash to encode hash algorithm and size into
- * the first two bytes of the hash.
- *
- * There is no standard yet, I used this one and randomly assigned
- * the other numbers:
- *
- *   https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18
- */
-int rm_digest_type_to_multihash_id(RmDigestType type);
-
 /**
  * @brief Convert a RmDigestType to a human readable string.
  *

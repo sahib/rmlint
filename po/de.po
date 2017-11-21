@@ -384,10 +384,6 @@ msgstr "Prüfsummentyp [BLAKE2B]"
 msgid "Number of hashing threads [8]"
 msgstr "Anzahl der Hashing Threads [8]"
 
-#: lib/hash-utility.c:141
-msgid "Print hash as self identifying multihash"
-msgstr "Zeige Hash als selbstidentifizierenden Multihash an."
-
 #: lib/hash-utility.c:142
 msgid "Megabytes read buffer [256 MB]"
 msgstr "Größe des Lesepuffers [256 MB]"

@@ -27,6 +27,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Removed
 
 * Checksum types bastard, spooky, city & farmhash
+* Multihash output option
 
 ### Fixed
 

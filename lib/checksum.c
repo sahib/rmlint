@@ -822,16 +822,6 @@ const char *rm_digest_type_to_string(RmDigestType type) {
     return interface->name;
 }
 
-/*  TODO: update or remove? */
-int rm_digest_type_to_multihash_id(RmDigestType type) {
-    static int ids[] = {[RM_DIGEST_UNKNOWN] = -1,    [RM_DIGEST_MURMUR] = 17,
-                        [RM_DIGEST_MD5] = 1,         [RM_DIGEST_SHA1] = 2,
-                        [RM_DIGEST_SHA256] = 4,      [RM_DIGEST_SHA512] = 6,
-                        [RM_DIGEST_CUMULATIVE] = 13, [RM_DIGEST_PARANOID] = 14};
-
-    return ids[MIN(type, sizeof(ids) / sizeof(ids[0]))];
-}
-
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed) {
     const RmDigestInterface *interface = rm_digest_get_interface(type);
 

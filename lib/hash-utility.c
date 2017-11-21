@@ -43,7 +43,6 @@ typedef struct RmHasherSession {
     /* Options */
     RmDigestType digest_type;
     gboolean print_in_order;
-    gboolean print_multihash;
 } RmHasherSession;
 
 static gboolean rm_hasher_parse_type(_UNUSED const char *option_name,
@@ -59,7 +58,7 @@ static gboolean rm_hasher_parse_type(_UNUSED const char *option_name,
     return TRUE;
 }
 
-static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) {
+static void rm_hasher_print(RmDigest *digest, char *path) {
     gsize size = rm_digest_get_bytes(digest) * 2 + 1;
 
     char checksum_str[size];
@@ -67,11 +66,6 @@ static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) 
     checksum_str[size - 1] = 0;
 
     rm_digest_hexstring(digest, checksum_str);
-
-    if(print_multihash) {
-        g_print("%02x%02x@", rm_digest_type_to_multihash_id(digest->type),
-                rm_digest_get_bytes(digest));
-    }
 
     g_print("%s  %s\n", checksum_str, path);
 }
@@ -95,8 +89,7 @@ static int rm_hasher_callback(_UNUSED RmHasher *hasher,
                     if(session->read_succesful[session->path_index]) {
                         rm_hasher_print(
                             session->completed_digests_buffer[session->path_index],
-                            session->paths[session->path_index],
-                            session->print_multihash);
+                            session->paths[session->path_index]);
                     }
                     rm_digest_free(
                         session->completed_digests_buffer[session->path_index]);
@@ -106,7 +99,7 @@ static int rm_hasher_callback(_UNUSED RmHasher *hasher,
             }
         } else if(digest) {
             if(session->read_succesful[session->path_index]) {
-                rm_hasher_print(digest, session->paths[index], session->print_multihash);
+                rm_hasher_print(digest, session->paths[index]);
             }
         }
     }
@@ -123,9 +116,6 @@ int rm_hasher_main(int argc, const char **argv) {
     /* Print hashes in the same order as files in command line args */
     tag.print_in_order = TRUE;
 
-    /* Print a hash with builtin identifier */
-    tag.print_multihash = FALSE;
-
     /* Digest type */
     tag.digest_type = RM_DEFAULT_DIGEST;
     gint threads = 8;
@@ -139,7 +129,6 @@ int rm_hasher_main(int argc, const char **argv) {
     const GOptionEntry entries[] = {
         {"algorithm"      , 'a'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _("Digest type [BLAKE2B]")                                                        , "[TYPE]"}   ,
         {"num-threads"    , 't'  , 0                      , G_OPTION_ARG_INT             , &threads                              , _("Number of hashing threads [8]")                                                 , "N"}        ,
-        {"multihash"      , 'm'  , 0                      , G_OPTION_ARG_NONE            , &tag.print_multihash                  , _("Print hash as self identifying multihash")                                      , NULL}       ,
         {"buffer-mbytes"  , 'b'  , 0                      , G_OPTION_ARG_INT64           , &buffer_mbytes                        , _("Megabytes read buffer [256 MB]")                                                , "MB"}       ,
         {"increment"      , 'x'  , G_OPTION_FLAG_HIDDEN   , G_OPTION_ARG_INT64           , &increment                            , _("bytes to hash at a time [4096]")                                                , "MB"}       ,
         {"ignore-order"   , 'i'  , G_OPTION_FLAG_REVERSE  , G_OPTION_ARG_NONE            , &tag.print_in_order                   , _("Print hashes in order completed, not in order entered (reduces memory usage)")  , NULL}       ,
