@@ -1335,6 +1335,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"fake-abort"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_abort             , "Simulate interrupt after 10% shredder progress"              , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
         {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
+        {"no-sse"                 , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->no_sse                 , "Don't use SSE accelerations"                                 , NULL}   ,
         {"no-mount-table"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->list_mounts            , "Do not try to optimize by listing mounted volumes"           , NULL}   ,
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
@@ -1482,6 +1483,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
         rm_assert_gentle_not_reached();
     }
+
+    rm_digest_enable_sse(!cfg->no_sse && __builtin_cpu_supports("sse4.2"));
 
 cleanup:
     if(error != NULL) {

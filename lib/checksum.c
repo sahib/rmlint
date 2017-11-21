@@ -51,6 +51,8 @@
 
 #define _RM_CHECKSUM_DEBUG 0
 
+static int RM_DIGEST_USE_SSE = 0;
+
 //////////////////////////////////
 //    BUFFER IMPLEMENTATION     //
 //////////////////////////////////
@@ -154,11 +156,27 @@ static const RmDigestInterface murmur_interface = {
 //         metro         //
 ///////////////////////////
 
+static Metro128State *rm_digest_metro_new(void) {
+    return metrohash128_1_new(FALSE);
+}
+
+static Metro128State *rm_digest_metrocrc_new(void) {
+    return metrohash128_1_new(g_atomic_int_get(&RM_DIGEST_USE_SSE));
+}
+
+static Metro256State *rm_digest_metro256_new(void) {
+    return metrohash256_new(FALSE);
+}
+
+static Metro256State *rm_digest_metrocrc256_new(void) {
+    return metrohash256_new(g_atomic_int_get(&RM_DIGEST_USE_SSE));
+}
+
 static const RmDigestInterface metro_interface = {
     .name = "metro",
     .bits = 128,
     .len = NULL,
-    .new = (RmDigestNewFunc)metrohash128_1_new,
+    .new = (RmDigestNewFunc)rm_digest_metro_new,
     .free = (RmDigestFreeFunc)metrohash128_free,
     .update = (RmDigestUpdateFunc)metrohash128_1_update,
     .copy = (RmDigestCopyFunc)metrohash128_copy,
@@ -168,7 +186,7 @@ static const RmDigestInterface metro256_interface = {
     .name = "metro256",
     .bits = 256,
     .len = NULL,
-    .new = (RmDigestNewFunc)metrohash256_new,
+    .new = (RmDigestNewFunc)rm_digest_metro256_new,
     .free = (RmDigestFreeFunc)metrohash256_free,
     .update = (RmDigestUpdateFunc)metrohash256_update,
     .copy = (RmDigestCopyFunc)metrohash256_copy,
@@ -182,9 +200,9 @@ static const RmDigestInterface metrocrc_interface = {
     .name = "metrocrc",
     .bits = 128,
     .len = NULL,
-    .new = (RmDigestNewFunc)metrohash128_1_new,  /* <-same */
+    .new = (RmDigestNewFunc)rm_digest_metrocrc_new,
     .free = (RmDigestFreeFunc)metrohash128_free, /* <-same */
-    .update = (RmDigestUpdateFunc)metrohash128crc_update,
+    .update = (RmDigestUpdateFunc)metrohash128crc_1_update,
     .copy = (RmDigestCopyFunc)metrohash128_copy, /* <-same */
     .steal = (RmDigestStealFunc)metrohash128crc_1_steal};
 
@@ -192,7 +210,7 @@ static const RmDigestInterface metrocrc256_interface = {
     .name = "metrocrc256",
     .bits = 256,
     .len = NULL,
-    .new = (RmDigestNewFunc)metrohash256_new,    /* <-same */
+    .new = (RmDigestNewFunc)rm_digest_metrocrc256_new,
     .free = (RmDigestFreeFunc)metrohash256_free, /* <-same */
     .update = (RmDigestUpdateFunc)metrohash256crc_update,
     .copy = (RmDigestCopyFunc)metrohash256_copy, /* <-same */
@@ -1001,4 +1019,22 @@ guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *o
 
     rm_digest_free(digest);
     return buf;
+}
+
+void rm_digest_enable_sse(gboolean use_sse) {
+#if HAVE_SSE_4_2
+    if (use_sse && __builtin_cpu_supports("sse4.2")) {
+        g_atomic_int_set(&RM_DIGEST_USE_SSE, TRUE);
+    } else {
+        g_atomic_int_set(&RM_DIGEST_USE_SSE, FALSE);
+        if (use_sse) {
+            rm_log_warning_line("Can't enable sse4.2");
+        }
+    }
+#else
+    if (use_sse) {
+        rm_log_warning_line("Can't enable sse4.2");
+        g_atomic_int_set(&RM_DIGEST_USE_SSE, FALSE);
+    }
+#endif    
 }

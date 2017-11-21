@@ -194,6 +194,10 @@ int rm_hasher_main(int argc, const char **argv) {
 
     ////////// Implementation //////
 
+#if HAVE_SSE_4_2
+    rm_digest_enable_sse(TRUE);
+#endif
+
     int buf_size = (g_strv_length(tag.paths) + 1) * sizeof(RmDigest *);
     tag.read_succesful = g_slice_alloc0(buf_size);
 

@@ -159,6 +159,9 @@ typedef struct RmCfg {
     /* for --is-reflink option */
     bool is_reflink;
 
+    /* don't use sse accelerations */
+    bool no_sse;
+
 } RmCfg;
 
 /**

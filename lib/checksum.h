@@ -272,4 +272,10 @@ void rm_digest_release_buffers(RmDigest *digest);
  */
 void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate);
 
+/**
+ * @brief Enable or disable SSE optimisations.
+ * @note will also check __builtin_cpu_supports("sse4.2") before enabling
+ */
+void rm_digest_enable_sse(gboolean use_sse);
+
 #endif /* end of include guard */
