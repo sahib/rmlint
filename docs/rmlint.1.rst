@@ -153,20 +153,36 @@ General Options
 
     Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
-    algorithms to identify duplicates.  The following cryptographic algorithms are available:
+    algorithms to identify duplicates.  The following hash families are available (in
+    approximate descending order of cryptographic strength):
 
-    **highway128**, **highway256**,
-    **sha1** (160 bit), **sha256**, **sha512**,
-    **sha3-256**, **sha3-384**, **sha3-512**,
-    **blake2s/blake2sp** (256), **blake2b/blake2bp** (512).
+    **sha3**, **blake**,
 
-    For improved run time / reduced CPU load, the following non-cryptographic
-    hashes are also available:
-    **murmur** (128 bit), **metro** (128), **metro256**,
-    **metrocrc** (128), **metrocrc256** (if cpu supports crc)
+    **sha**,
 
-    There are also some 64-bit hashes; we strongly advise against using these:
-    * **highway64** (cryptographic), **xxhash**.
+    **highway**, **md**
+
+    **metro**, **murmur**, *xxhash**
+
+    The weaker hash functions still offer excellent distribution properties, but are potentially
+    more vulnerable to *malicious* crafting of duplicate files.
+
+    The full list of hash functions (in decreasing order of checksum length) is:
+
+    512-bit: **blake2b**, **blake2bp**, **sha3-512, **sha512**
+
+    384-bit: **sha3-384**,
+
+    256-bit: **blake2s**, **blake2sp**, **sha3-256**, **sha256**, **highway256**, **metro256**, **metrocrc256**
+
+    160-bit: **sha1**
+
+    128-bit: **md5**, **murmur**, **metro**, **metrocrc**
+
+    64-bit: **highway64**, **xxhash**.
+
+    The use of 64-bit hash length for detecting duplicate files is not recommended, due to the
+    probability of a random hash collision.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
