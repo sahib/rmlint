@@ -4,12 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.6.2 Toothless Taipan] -- unreleased
+## [2.7.0 Toothless Taipan] -- unreleased
 
 ### Added
 
 * New checksum types metro and highway
-* Additional unit tests
 * New option --keep-hardlinked
 * --dedupe option can deduplicate twins on any reflick-capable filesystem
 * --dedupe-readonly option can dedupe files on read-only btrfs snapshots
@@ -17,7 +16,6 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Changed
 
 * Checksum types for -P... options (see https://github.com/sahib/rmlint/issues/261)
-* Under-the-hood changes for checksum.c
 
 ### Deprecated
 
