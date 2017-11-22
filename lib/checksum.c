@@ -160,16 +160,8 @@ static Metro128State *rm_digest_metro_new(void) {
     return metrohash128_1_new(FALSE);
 }
 
-static Metro128State *rm_digest_metrocrc_new(void) {
-    return metrohash128_1_new(g_atomic_int_get(&RM_DIGEST_USE_SSE));
-}
-
 static Metro256State *rm_digest_metro256_new(void) {
     return metrohash256_new(FALSE);
-}
-
-static Metro256State *rm_digest_metrocrc256_new(void) {
-    return metrohash256_new(g_atomic_int_get(&RM_DIGEST_USE_SSE));
 }
 
 static const RmDigestInterface metro_interface = {
@@ -192,9 +184,16 @@ static const RmDigestInterface metro256_interface = {
     .copy = (RmDigestCopyFunc)metrohash256_copy,
     .steal = (RmDigestStealFunc)metrohash256_steal};
 
-#if HAVE_SSE_4_2
+#if HAVE_MM_CRC32_U64
 /* also define crc-optimised metro variants metrocrc and metrocrc256*/
 
+static Metro128State *rm_digest_metrocrc_new(void) {
+    return metrohash128_1_new(g_atomic_int_get(&RM_DIGEST_USE_SSE));
+}
+
+static Metro256State *rm_digest_metrocrc256_new(void) {
+    return metrohash256_new(g_atomic_int_get(&RM_DIGEST_USE_SSE));
+}
 
 static const RmDigestInterface metrocrc_interface = {
     .name = "metrocrc",
@@ -758,7 +757,7 @@ static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
         [RM_DIGEST_MURMUR] = &murmur_interface,
         [RM_DIGEST_METRO] = &metro_interface,
         [RM_DIGEST_METRO256] = &metro256_interface,
-#if HAVE_SSE_4_2
+#if HAVE_MM_CRC32_U64
         [RM_DIGEST_METROCRC] = &metrocrc_interface,
         [RM_DIGEST_METROCRC256] = &metrocrc256_interface,
 #endif
@@ -1022,7 +1021,7 @@ guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *o
 }
 
 void rm_digest_enable_sse(gboolean use_sse) {
-#if HAVE_SSE_4_2
+#if HAVE_MM_CRC32_U64
     if (use_sse && __builtin_cpu_supports("sse4.2")) {
         g_atomic_int_set(&RM_DIGEST_USE_SSE, TRUE);
     } else {

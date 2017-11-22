@@ -363,18 +363,16 @@ def check_cygwin(context):
     context.Result(rc)
     return rc
 
-def check_sse_4_2(context):
-    rc = 0
+def check_mm_crc32_u64(context):
 
-    context.Message('Checking for SSE 4.2 support...')
-    try:
-        if 'sse4_2' in open('/proc/cpuinfo').read():
-            rc = 1
-    except subprocess.CalledProcessError:
-        # Oops.
-        context.Message("read cpuinfo failed")
+    rc = 0 if tests.CheckDeclaration(
+            context,
+            symbol='_mm_crc32_u64',
+            includes='#include <nmmintrin.h>\n'
+            ) else 1
 
-    conf.env['HAVE_SSE_4_2'] = rc
+    conf.env['HAVE_MM_CRC32_U64'] = rc
+    context.did_show_result = True
     context.Result(rc)
     return rc
 
@@ -545,7 +543,7 @@ conf = Configure(env, custom_tests={
     'check_linux_fs_h': check_linux_fs_h,
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
-    'check_sse_4_2': check_sse_4_2,
+    'check_mm_crc32_u64': check_mm_crc32_u64,
     'check_sysmacro_h': check_sysmacro_h
 })
 
@@ -620,8 +618,8 @@ else:
     conf.env.Append(CCFLAGS=['-fPIC'])
 
 # check SSE4 support:
-conf.check_sse_4_2()
-if conf.env['HAVE_SSE_4_2']:
+conf.check_mm_crc32_u64()
+if conf.env['HAVE_MM_CRC32_U64']:
     conf.env.Append(CCFLAGS=['-msse4.2'])
 
 if 'clang' in os.path.basename(conf.env['CC']):
