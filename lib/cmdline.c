@@ -1484,7 +1484,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         rm_assert_gentle_not_reached();
     }
 
+#if HAVE_BUILTIN_CPU_SUPPORTS
     rm_digest_enable_sse(!cfg->no_sse && __builtin_cpu_supports("sse4.2"));
+#endif
 
 cleanup:
     if(error != NULL) {

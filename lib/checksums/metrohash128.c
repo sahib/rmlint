@@ -24,7 +24,6 @@
 //
 
 #include <glib.h>
-#include <nmmintrin.h>
 #include "metrohash.h"
 
 struct _Metro128_state {
@@ -93,6 +92,9 @@ Metro128State *metrohash128_copy(Metro128State *state) {
     data += bytes;
 
 #if HAVE_MM_CRC32_U64
+
+#include <nmmintrin.h>
+
 void metrohash128crc_1_update(Metro128State *state, const uint8_t *key, uint64_t len) {
     if(!state->use_sse) {
         metrohash128_1_update(state, key, len);

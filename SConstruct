@@ -376,6 +376,17 @@ def check_mm_crc32_u64(context):
     context.Result(rc)
     return rc
 
+def check_builtin_cpu_supports(context):
+    rc = 0 if tests.CheckDeclaration(
+            context,
+            symbol='__builtin_cpu_supports'
+            ) else 1
+
+    conf.env['HAVE_BUILTIN_CPU_SUPPORTS'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -544,6 +555,7 @@ conf = Configure(env, custom_tests={
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
     'check_mm_crc32_u64': check_mm_crc32_u64,
+    'check_builtin_cpu_supports': check_builtin_cpu_supports,
     'check_sysmacro_h': check_sysmacro_h
 })
 
@@ -617,7 +629,7 @@ if conf.env['IS_CYGWIN']:
 else:
     conf.env.Append(CCFLAGS=['-fPIC'])
 
-# check SSE4 support:
+# check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
 if conf.env['HAVE_MM_CRC32_U64']:
     conf.env.Append(CCFLAGS=['-msse4.2'])
@@ -642,6 +654,7 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_builtin_cpu_supports()
 conf.check_blkid()
 conf.check_sys_block()
 conf.check_libelf()

@@ -23,6 +23,7 @@
 #define HAVE_UNAME         ({HAVE_UNAME})
 #define HAVE_SYSMACROS_H   ({HAVE_SYSMACROS_H})
 #define HAVE_MM_CRC32_U64  ({HAVE_MM_CRC32_U64})
+#define HAVE_BUILTIN_CPU_SUPPORTS ({HAVE_BUILTIN_CPU_SUPPORTS})
 
 /* define here so rmlint and hash utility can both access */
 #define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B

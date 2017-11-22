@@ -1021,7 +1021,7 @@ guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *o
 }
 
 void rm_digest_enable_sse(gboolean use_sse) {
-#if HAVE_MM_CRC32_U64
+#if HAVE_MM_CRC32_U64 && HAVE_BUILTIN_CPU_SUPPORTS
     if (use_sse && __builtin_cpu_supports("sse4.2")) {
         g_atomic_int_set(&RM_DIGEST_USE_SSE, TRUE);
     } else {
