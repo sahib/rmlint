@@ -27,10 +27,10 @@
 #include "metrohash.h"
 
 struct _Metro128_state {
-    bool use_sse;
-    uint64_t v[4];
     uint8_t xs[32]; /* unhashed data from last increment */
     uint8_t xs_len;
+    uint64_t v[4];
+    bool use_sse;
 };
 
 struct _Metro256_state {
@@ -85,8 +85,7 @@ Metro128State *metrohash128_copy(Metro128State *state) {
 }
 
 #define METRO_FILL_XS(xs, xs_len, xs_cap, data, data_len)                         \
-    const int bytes =                                                             \
-        (data_len + xs_len > xs_cap) ? (int)xs_cap - (int)xs_len : (int)data_len; \
+    const int bytes =  ((int)data_len + (int)xs_len > (int)xs_cap) ? (int)xs_cap - (int)xs_len : (int)data_len; \
     memcpy(xs + xs_len, data, bytes);                                             \
     xs_len += bytes;                                                              \
     data += bytes;
@@ -95,7 +94,7 @@ Metro128State *metrohash128_copy(Metro128State *state) {
 
 #include <nmmintrin.h>
 
-void metrohash128crc_1_update(Metro128State *state, const uint8_t *key, uint64_t len) {
+void metrohash128crc_1_update(Metro128State *state, const uint8_t *key, size_t len) {
     if(!state->use_sse) {
         metrohash128_1_update(state, key, len);
         return;
@@ -141,7 +140,7 @@ void metrohash128crc_1_update(Metro128State *state, const uint8_t *key, uint64_t
     }
 }
 
-void metrohash128crc_2_update(Metro128State *state, const uint8_t *key, uint64_t len) {
+void metrohash128crc_2_update(Metro128State *state, const uint8_t *key, size_t len) {
     if(!state->use_sse) {
         metrohash128_2_update(state, key, len);
     } else {
@@ -272,7 +271,7 @@ void metrohash128crc_2_steal(Metro128State *state, uint8_t *out) {
     memcpy(out, v, 16);
 }
 
-void metrohash128crc_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
+void metrohash128crc_1(const uint8_t *key, size_t len, uint32_t seed, uint8_t *out) {
     Metro128State *state = metrohash128_1_new(TRUE);
     metrohash128crc_1_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128crc_1_update(state, key, len);
@@ -280,7 +279,7 @@ void metrohash128crc_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t 
     metrohash128_free(state);
 }
 
-void metrohash128crc_2(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
+void metrohash128crc_2(const uint8_t *key, size_t len, uint32_t seed, uint8_t *out) {
     Metro128State *state = metrohash128_2_new(TRUE);
     metrohash128crc_2_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128crc_2_update(state, key, len);
@@ -288,7 +287,7 @@ void metrohash128crc_2(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t 
     metrohash128_free(state);
 }
 
-void metrohash256crc_update(Metro256State *state, const uint8_t *key, uint64_t len) {
+void metrohash256crc_update(Metro256State *state, const uint8_t *key, size_t len) {
     metrohash128crc_1_update(&state->state1, key, len);
     metrohash128crc_2_update(&state->state2, key, len);
 }
@@ -300,7 +299,8 @@ void metrohash256crc_steal(Metro256State *state, uint8_t *out) {
 
 #endif
 
-void metrohash128_1_update(Metro128State *state, const uint8_t *key, uint64_t len) {
+void metrohash128_1_update(Metro128State *state, const uint8_t *key, size_t len) {
+
     uint8_t *data = (uint8_t *)key;
     const uint8_t *stop = data + len;
 
@@ -348,7 +348,7 @@ void metrohash128_1_update(Metro128State *state, const uint8_t *key, uint64_t le
         memcpy(state->xs, data, state->xs_len);
     }
 }
-void metrohash128_2_update(Metro128State *state, const uint8_t *key, uint64_t len) {
+void metrohash128_2_update(Metro128State *state, const uint8_t *key, size_t len) {
     uint8_t *data = (uint8_t *)key;
     const uint8_t *stop = data + len;
 
@@ -517,7 +517,7 @@ void metrohash128_2_steal(Metro128State *state, uint8_t *out) {
     memcpy(out, v, 16);
 }
 
-void metrohash128_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
+void metrohash128_1(const uint8_t *key, size_t len, uint32_t seed, uint8_t *out) {
     Metro128State *state = metrohash128_1_new(FALSE);
     metrohash128_1_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128_1_update(state, key, len);
@@ -525,7 +525,7 @@ void metrohash128_1(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *ou
     metrohash128_free(state);
 }
 
-void metrohash128_2(const uint8_t *key, uint64_t len, uint32_t seed, uint8_t *out) {
+void metrohash128_2(const uint8_t *key, size_t len, uint32_t seed, uint8_t *out) {
     Metro128State *state = metrohash128_2_new(FALSE);
     metrohash128_2_update(state, (const uint8_t*)&seed, sizeof(seed));
     metrohash128_2_update(state, key, len);
@@ -550,7 +550,7 @@ Metro256State *metrohash256_copy(Metro256State *state) {
     return g_slice_copy(sizeof(Metro256State), state);
 }
 
-void metrohash256_update(Metro256State *state, const uint8_t *key, uint64_t len) {
+void metrohash256_update(Metro256State *state, const uint8_t *key, size_t len) {
     metrohash128_1_update(&state->state1, key, len);
     metrohash128_2_update(&state->state2, key, len);
 }

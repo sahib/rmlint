@@ -80,7 +80,7 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 /* Each digest type must have an RmDigestInterface defined as follows: */
 typedef gpointer (*RmDigestNewFunc)(void);
 typedef void (*RmDigestFreeFunc)(gpointer state);
-typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data, gsize size);
+typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data, size_t size);
 typedef gpointer (*RmDigestCopyFunc)(gpointer state);
 typedef void (*RmDigestStealFunc)(gpointer state, guint8 *result);
 typedef guint (*RmDigestLenFunc)(gpointer state);
