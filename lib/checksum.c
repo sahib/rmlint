@@ -264,7 +264,7 @@ static void rm_digest_cumulative_free(RmDigestCumulative *state) {
 }
 
 static void rm_digest_cumulative_update(RmDigestCumulative *state,
-                                        const unsigned char *data, RmOff size) {
+                                        const unsigned char *data, size_t size) {
     if(!state->data) {
         /* first update sets checksum length */
         state->bytes = RM_DIGEST_CUMULATIVE_ALIGN * CLAMP(size / RM_DIGEST_CUMULATIVE_ALIGN, 1, RM_DIGEST_CUMULATIVE_MAX_BYTES / RM_DIGEST_CUMULATIVE_ALIGN);
