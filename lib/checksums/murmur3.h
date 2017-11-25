@@ -9,6 +9,7 @@
 #define _MURMURHASH3_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
 //-----------------------------------------------------------------------------
 // opaque structs for intermediate checksum states
@@ -38,11 +39,11 @@ MurmurHash3_x64_128_state *MurmurHash3_x64_128_copy(MurmurHash3_x64_128_state *s
  * streaming update of checksum
  */
 void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const restrict state,
-                               const void *restrict key, const uint32_t len);
+                               const void *restrict key, const size_t len);
 void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const restrict state,
-                                const void *restrict key, const uint32_t len);
+                                const void *restrict key, const size_t len);
 void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
-                                const void *restrict key, const uint64_t len);
+                                const void *restrict key, const size_t len);
 
 /**
  * output checksum result; does not modify underlying state
@@ -71,9 +72,9 @@ void MurmurHash3_x64_128_free(MurmurHash3_x64_128_state *state);
 /**
  * convenience single-buffer hash
  */
-uint32_t MurmurHash3_x86_32(const void *key, uint32_t len, uint32_t seed);
-void MurmurHash3_x86_128(const void *key, uint32_t len, uint32_t seed, void *out);
-void MurmurHash3_x64_128(const void *key, uint64_t len, uint32_t seed, void *out);
+uint32_t MurmurHash3_x86_32(const void *key, size_t len, uint32_t seed);
+void MurmurHash3_x86_128(const void *key, size_t len, uint32_t seed, void *out);
+void MurmurHash3_x64_128(const void *key, size_t len, uint32_t seed, void *out);
 
 //-----------------------------------------------------------------------------
 
