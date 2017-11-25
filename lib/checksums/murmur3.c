@@ -90,20 +90,35 @@ static inline uint64_t fmix64(uint64_t k) {
 
     //-----------------------------------------------------------------------------
 
-#define MURMUR_UPDATE(h, k, rotl, ca, cb) \
-    k *= ca;                              \
+#define MURMUR_UPDATE_X86(h, k, rotl, ca, cb) \
+	k *= ca;  \
+	k = ROTL32(k, rotl);  \
+	k *= cb;  \
+	h ^= k;
+
+#define MURMUR_MIX_X86(ha, hb, rotl, c) \
+	ha = ROTL32(ha, rotl); \
+	ha += hb;   \
+	ha = ha * 5 + c;
+
+
+#define MURMUR_UPDATE_X64(h, k, rotl, ca, cb) \
+    k = k * ca;                              \
     k = ROTL64(k, rotl);                  \
     k *= cb;                              \
-    h ^= k;
+    h ^= k;										\
 
-#define MURMUR_MIX(ha, hb, rotl, c) \
+
+#define MURMUR_MIX_X64(ha, hb, rotl, c) \
     ha = ROTL64(ha, rotl);          \
     ha += hb;                       \
-    ha = ha * 5 + c;
+    ha = ha * 5 + c;  \
+
+
 
 #define MURMUR_FILL_XS(xs, xs_len, xs_cap, data, data_len)                        \
     const int bytes =                                                             \
-        (data_len + xs_len > xs_cap) ? (int)xs_cap - (int)xs_len : (int)data_len; \
+        ((int)data_len + (int)xs_len > (int)xs_cap) ? (int)xs_cap - (int)xs_len : (int)data_len; \
     memcpy(xs + xs_len, data, bytes);                                             \
     xs_len += bytes;                                                              \
     data += bytes;
@@ -118,7 +133,7 @@ MurmurHash3_x86_32_state *MurmurHash3_x86_32_copy(MurmurHash3_x86_32_state *stat
     return g_slice_copy(sizeof(MurmurHash3_x86_32_state), state);
 }
 
-#define MURMUR_UPDATE_H1_X86_32(H1) MURMUR_UPDATE(H1, k1, 15, 0xcc9e2d51, 0x1b873593);
+#define MURMUR_UPDATE_H1_X86_32(H1, K1) MURMUR_UPDATE_X86(H1, K1, 15, 0xcc9e2d51, 0x1b873593);
 
 void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state,
                                const void *restrict key, const size_t len) {
@@ -144,8 +159,8 @@ void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state,
             data += 4;
         }
 
-        MURMUR_UPDATE_H1_X86_32(state->h1);
-        MURMUR_MIX(state->h1, 0, 13, 0xe6546b64);
+        MURMUR_UPDATE_H1_X86_32(state->h1, k1);
+        MURMUR_MIX_X86(state->h1, 0, 13, 0xe6546b64);
     }
 
     if(state->xs_len == 0 && stop > data) {
@@ -170,7 +185,7 @@ void MurmurHash3_x86_32_steal(const MurmurHash3_x86_32_state *const restrict sta
     case 1:
         k1 ^= state->xs[0];
 
-        MURMUR_UPDATE_H1_X86_32(h1);
+        MURMUR_UPDATE_H1_X86_32(h1, k1);
     };
 
     //----------
@@ -213,10 +228,11 @@ MurmurHash3_x86_128_state *MurmurHash3_x86_128_copy(MurmurHash3_x86_128_state *s
     return g_slice_copy(sizeof(MurmurHash3_x86_128_state), state);
 }
 
-#define MURMUR_UPDATE_H1_X86_128(H1) MURMUR_UPDATE(H1, k1, 15, 0x239b961b, 0xab0e9789);
-#define MURMUR_UPDATE_H2_X86_128(H2) MURMUR_UPDATE(H2, k2, 16, 0xab0e9789, 0x38b34ae5);
-#define MURMUR_UPDATE_H3_X86_128(H3) MURMUR_UPDATE(H3, k3, 17, 0x38b34ae5, 0xa1e38b93);
-#define MURMUR_UPDATE_H4_X86_128(H4) MURMUR_UPDATE(H4, k4, 18, 0xa1e38b93, 0x239b961b);
+
+#define MURMUR_UPDATE_H1_X86_128(H, K) MURMUR_UPDATE_X86(H, K, 15, 0x239b961b, 0xab0e9789);
+#define MURMUR_UPDATE_H2_X86_128(H, K) MURMUR_UPDATE_X86(H, K, 16, 0xab0e9789, 0x38b34ae5);
+#define MURMUR_UPDATE_H3_X86_128(H, K) MURMUR_UPDATE_X86(H, K, 17, 0x38b34ae5, 0xa1e38b93);
+#define MURMUR_UPDATE_H4_X86_128(H, K) MURMUR_UPDATE_X86(H, K, 18, 0xa1e38b93, 0x239b961b);
 
 void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state,
                                 const void *restrict key, const size_t len) {
@@ -251,17 +267,17 @@ void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state,
             data += 16;
         }
 
-        MURMUR_UPDATE_H1_X86_128(state->h1);
-        MURMUR_MIX(state->h1, state->h2, 19, 0x561ccd1b);
+        MURMUR_UPDATE_H1_X86_128(state->h1, k1);
+        MURMUR_MIX_X86(state->h1, state->h2, 19, 0x561ccd1b);
 
-        MURMUR_UPDATE_H2_X86_128(state->h2);
-        MURMUR_MIX(state->h2, state->h3, 17, 0x0bcaa747);
+        MURMUR_UPDATE_H2_X86_128(state->h2, k2);
+        MURMUR_MIX_X86(state->h2, state->h3, 17, 0x0bcaa747);
 
-        MURMUR_UPDATE_H3_X86_128(state->h3);
-        MURMUR_MIX(state->h3, state->h4, 15, 0x96cd1c35);
+        MURMUR_UPDATE_H3_X86_128(state->h3, k3);
+        MURMUR_MIX_X86(state->h3, state->h4, 15, 0x96cd1c35);
 
-        MURMUR_UPDATE_H4_X86_128(state->h4);
-        MURMUR_MIX(state->h4, state->h1, 13, 0x32ac3b17);
+        MURMUR_UPDATE_H4_X86_128(state->h4, k4);
+        MURMUR_MIX_X86(state->h4, state->h1, 13, 0x32ac3b17);
     }
 
     if(state->xs_len == 0 && stop > data) {
@@ -292,7 +308,7 @@ void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict s
     case 13:
         k4 ^= state->xs[12] << 0;
 
-        MURMUR_UPDATE_H4_X86_128(h4);
+        MURMUR_UPDATE_H4_X86_128(h4, k4);
 
     case 12:
         k3 ^= state->xs[11] << 24;
@@ -303,7 +319,7 @@ void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict s
     case 9:
         k3 ^= state->xs[8] << 0;
 
-        MURMUR_UPDATE_H3_X86_128(h3);
+        MURMUR_UPDATE_H3_X86_128(h3, k3);
 
     case 8:
         k2 ^= state->xs[7] << 24;
@@ -314,7 +330,7 @@ void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict s
     case 5:
         k2 ^= state->xs[4] << 0;
 
-        MURMUR_UPDATE_H2_X86_128(h2);
+        MURMUR_UPDATE_H2_X86_128(h2, k2);
 
     case 4:
         k1 ^= state->xs[3] << 24;
@@ -325,7 +341,7 @@ void MurmurHash3_x86_128_steal(const MurmurHash3_x86_128_state *const restrict s
     case 1:
         k1 ^= state->xs[0] << 0;
 
-        MURMUR_UPDATE_H1_X86_128(h1);
+        MURMUR_UPDATE_H1_X86_128(h1, k1);
     };
 
     //----------
@@ -390,14 +406,14 @@ MurmurHash3_x64_128_state *MurmurHash3_x64_128_copy(MurmurHash3_x64_128_state *s
 }
 
 #define MURMUR_UPDATE_H1_X64_128(H1)                            \
-    MURMUR_UPDATE(H1, k1, 31, BIG_CONSTANT(0x87c37b91114253d5), \
+    MURMUR_UPDATE_X64(H1, k1, 31, BIG_CONSTANT(0x87c37b91114253d5), \
                   BIG_CONSTANT(0x4cf5ad432745937f));
 #define MURMUR_UPDATE_H2_X64_128(H2)                            \
-    MURMUR_UPDATE(H2, k2, 33, BIG_CONSTANT(0x4cf5ad432745937f), \
+    MURMUR_UPDATE_X64(H2, k2, 33, BIG_CONSTANT(0x4cf5ad432745937f), \
                   BIG_CONSTANT(0x87c37b91114253d5));
 
 void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
-                                const void *restrict key, const uint64_t len) {
+                                const void *restrict key, const size_t len) {
     state->len += len;
     uint8_t *data = (uint8_t *)key;
     const uint8_t *stop = data + len;
@@ -424,10 +440,10 @@ void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
         }
 
         MURMUR_UPDATE_H1_X64_128(state->h1);
-        MURMUR_MIX(state->h1, state->h2, 27, 0x52dce729);
+        MURMUR_MIX_X64(state->h1, state->h2, 27, 0x52dce729);
 
         MURMUR_UPDATE_H2_X64_128(state->h2);
-        MURMUR_MIX(state->h2, state->h1, 31, 0x38495ab5);
+        MURMUR_MIX_X64(state->h2, state->h1, 31, 0x38495ab5);
     }
 
     if(state->xs_len == 0 && stop > data) {
