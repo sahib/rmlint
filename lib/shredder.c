@@ -1739,24 +1739,11 @@ void rm_shred_run(RmSession *session) {
     rm_log_debug_line("Read buffer Mem: %" LLU, read_buffer_mem);
 
     /* Initialise hasher */
-    /* Optimum buffer size based on /usr without dropping caches:
-     * SHRED_PAGE_SIZE * 1 => 5.29 seconds
-     * SHRED_PAGE_SIZE * 2 => 5.11 seconds
-     * SHRED_PAGE_SIZE * 4 => 5.04 seconds
-     * SHRED_PAGE_SIZE * 8 => 5.08 seconds
-     * With dropped caches:
-     * SHRED_PAGE_SIZE * 1 => 45.2 seconds
-     * SHRED_PAGE_SIZE * 4 => 45.0 seconds
-     * Optimum buffer size using a rotational disk and paranoid hash:
-     * SHRED_PAGE_SIZE * 1 => 16.5 seconds
-     * SHRED_PAGE_SIZE * 2 => 16.5 seconds
-     * SHRED_PAGE_SIZE * 4 => 15.9 seconds
-     * SHRED_PAGE_SIZE * 8 => 15.8 seconds */
 
     tag.hasher = rm_hasher_new(cfg->checksum_type,
                                cfg->threads,
                                cfg->use_buffered_read,
-                               SHRED_PAGE_SIZE * 4,
+                               cfg->read_buf_len,
                                read_buffer_mem,
                                (RmHasherCallback)rm_shred_hash_callback,
                                &tag);

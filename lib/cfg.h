@@ -132,6 +132,9 @@ typedef struct RmCfg {
     /* total number of bytes we are allowed to use (target only) */
     RmOff total_mem;
 
+    /* length of read buffers */
+    RmOff read_buf_len;
+
     /* number of bytes to read before going back to start of disk
      * (too big a sweep risks metadata getting pushed out of ram)*/
     RmOff sweep_size;

@@ -832,6 +832,12 @@ static gboolean rm_cmd_parse_limit_mem(_UNUSED const char *option_name,
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
 }
 
+static gboolean rm_cmd_parse_read_buf_len(_UNUSED const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buf_len));
+}
+
 static gboolean rm_cmd_parse_sweep_size(_UNUSED const char *option_name,
                                         const gchar *size_spec, RmSession *session,
                                         GError **error) {
@@ -1318,6 +1324,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"clamp-low"              , 'q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)              , "Limit lower reading barrier"                                 , "P"}    ,
         {"clamp-top"              , 'Q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)              , "Limit upper reading barrier"                                 , "P"}    ,
         {"limit-mem"              , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(limit_mem)              , "Specify max. memory usage target"                            , "S"}    ,
+        {"read-buffer-len"        , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(read_buf_len)           , "Specify read buffer length in bytes"                         , "S"}    ,
         {"sweep-size"             , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_size)             , "Specify max. bytes per pass when scanning disks"             , "S"}    ,
         {"sweep-files"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
