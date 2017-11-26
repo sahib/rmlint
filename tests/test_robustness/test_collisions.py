@@ -5,7 +5,11 @@ from nose import with_setup
 from tests.utils import *
 
 
-BLACKLIST = [ ]
+# current shredder algorithm does not handle large size-groups at all
+# well, due to pre-matching "optimisation"
+# https://github.com/SeeSpotRun/rmlint/blob/448cb0c76cbb6178105556ede2bfd864c6f83af3/lib/checksum.c#L678-L730
+# which degenerates into an inefficient O(n^2) lookup with large size groups
+BLACKLIST = ['paranoid']
 
 @attr('slow')
 @with_setup(usual_setup_func, usual_teardown_func)
