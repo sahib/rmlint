@@ -11,6 +11,7 @@ import time
 import pprint
 import shutil
 import shlex
+import struct
 import subprocess
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
@@ -303,7 +304,7 @@ def create_link(path, target, symlink=False):
     )
 
 
-def create_file(data, name, mtime=None):
+def create_file(data, name, mtime=None, write_binary=False):
     full_path = os.path.join(TESTDIR_NAME, name)
     if '/' in name:
         try:
@@ -311,8 +312,14 @@ def create_file(data, name, mtime=None):
         except OSError:
             pass
 
-    with open(full_path, 'w') as handle:
-        handle.write(data)
+    with open(full_path, 'wb' if write_binary else 'w') as handle:
+        if write_binary:
+            if isinstance(data, int):
+                handle.write(struct.pack('i', data))
+            else:
+                assert False, "Unhandled data type for binary write: " + data
+        else:
+            handle.write(data)
 
     if not mtime is None:
         subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
