@@ -705,7 +705,7 @@ def get_cpu_count():
 # or `scons --jobs=<n>`
 SetOption('num_jobs', get_cpu_count())
 
-print "Running with --jobs=" + repr(GetOption('num_jobs'))
+print ("Running with --jobs=" + repr(GetOption('num_jobs')))
 
 library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')
