@@ -40,7 +40,10 @@ static inline uint64_t rotl64(uint64_t x, int8_t r) {
 
 struct _MurmurHash3_x86_32_state {
     uint32_t h1;
-    uint8_t xs[4]; /* unhashed data from last increment */
+    union {
+		uint8_t xs[4]; /* unhashed data from last increment */
+		uint32_t xs32;
+	};
     uint8_t xs_len;
     size_t len;
 };
@@ -50,7 +53,10 @@ struct _MurmurHash3_x86_128_state {
     uint32_t h2;
     uint32_t h3;
     uint32_t h4;
-    uint8_t xs[16]; /* unhashed data from last increment */
+    union {
+		uint8_t xs[16]; /* unhashed data from last increment */
+		uint32_t xs32[4];
+	};
     uint8_t xs_len;
     size_t len;
 };
@@ -58,7 +64,10 @@ struct _MurmurHash3_x86_128_state {
 struct _MurmurHash3_x64_128_state {
     uint64_t h1;
     uint64_t h2;
-    uint8_t xs[16]; /* unhashed data from last increment */
+    union {
+		uint8_t xs[16]; /* unhashed data from last increment */
+		uint64_t xs64[2];
+	};
     uint8_t xs_len;
     size_t len;
 };
@@ -151,7 +160,7 @@ void MurmurHash3_x86_32_update(MurmurHash3_x86_32_state *const state,
 
         if(state->xs_len == 4) {
             /* process remnant data from previous update */
-            k1 = GET_UINT32(&state->xs[0]);
+            k1 = state->xs32;
             state->xs_len = 0;
         } else {
             /* process new data */
@@ -253,10 +262,10 @@ void MurmurHash3_x86_128_update(MurmurHash3_x86_128_state *const state,
 
         if(state->xs_len == 16) {
             /* process remnant data from previous update */
-            k1 = GET_UINT32(&state->xs[0]);
-            k2 = GET_UINT32(&state->xs[4]);
-            k3 = GET_UINT32(&state->xs[8]);
-            k4 = GET_UINT32(&state->xs[12]);
+            k1 = state->xs32[0];
+            k2 = state->xs32[1];
+            k3 = state->xs32[2];
+            k4 = state->xs32[3];
             state->xs_len = 0;
         } else {
             /* process new data */
@@ -429,8 +438,8 @@ void MurmurHash3_x64_128_update(MurmurHash3_x64_128_state *const restrict state,
 
         if(state->xs_len == 16) {
             /* process remnant data from previous update */
-            k1 = GET_UINT64(&state->xs[0]);
-            k2 = GET_UINT64(&state->xs[8]);
+            k1 = state->xs64[0];
+            k2 = state->xs64[1];
             state->xs_len = 0;
         } else {
             /* process new data */

@@ -449,9 +449,9 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
 }
 
 gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset,
-                             guint64 bytes_to_read, gboolean is_symlink,
-                             RmOff *bytes_read_out) {
-    guint64 bytes_read = 0;
+                             gsize bytes_to_read, gboolean is_symlink,
+                             gsize *bytes_read_out) {
+    gsize bytes_read = 0;
     gboolean success = false;
 
     if(is_symlink) {

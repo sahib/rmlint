@@ -205,7 +205,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
 
     if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) < 0) {
         /* Data is too old and not useful, autoclean it */
-        rm_log_debug_line("Checksum too old for %s, %li < %li",
+        rm_log_debug_line("Checksum too old for %s, %" G_GINT64_FORMAT " < %" G_GINT64_FORMAT,
                           file->folder->basename,
                           g_ascii_strtoll(mtime_buf, NULL, 10),
                           (gint64)file->mtime);

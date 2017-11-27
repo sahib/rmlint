@@ -1180,7 +1180,8 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
     }
 
     if(stat1.st_size != stat2.st_size) {
-        rm_log_debug_line("Files have different sizes: %lu <> %lu", stat1.st_size,
+        rm_log_debug_line("Files have different sizes: %" G_GUINT64_FORMAT
+                          " <> %" G_GUINT64_FORMAT, stat1.st_size,
                           stat2.st_size);
         RM_RETURN(RM_LINK_WRONG_SIZE);
     }
@@ -1215,12 +1216,14 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
 
         if(physical_1 != physical_2) {
-            rm_log_debug_line("Files differ at offset %lu: %lu <> %lu", logical_current,
-                              physical_1, physical_2);
+            rm_log_debug_line("Files differ at offset %" G_GUINT64_FORMAT
+                              ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, physical_1, physical_2);
             RM_RETURN(RM_LINK_NONE);
         }
         if(logical_next_1 != logical_next_2) {
-            rm_log_debug_line("Next offsets differ after %lu: %lu <> %lu",
+            rm_log_debug_line("Next offsets differ after %" G_GUINT64_FORMAT
+                              ": %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
                               logical_current, logical_next_1, logical_next_2);
             RM_RETURN(RM_LINK_NONE);
         }
@@ -1231,8 +1234,9 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
             RM_RETURN(RM_LINK_MAYBE_REFLINK);
         }
 
-        rm_log_debug_line("Offsets match at logical=%lu, physical=%lu", logical_current,
-                          physical_1);
+        rm_log_debug_line("Offsets match at logical=%" G_GUINT64_FORMAT
+                          ", physical=%" G_GUINT64_FORMAT,
+                          logical_current, physical_1);
 
         if(logical_next_1 == logical_current) {
             rm_log_debug_line(

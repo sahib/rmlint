@@ -1622,7 +1622,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
              (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
 
-        RmOff bytes_read = 0;
+        gsize bytes_read = 0;
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink, &bytes_read)) {
