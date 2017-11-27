@@ -194,7 +194,7 @@ int rm_hasher_main(int argc, const char **argv) {
 
     ////////// Implementation //////
 
-#if HAVE_MM_CRC32_U64
+#if HAVE_MM_CRC32_U64 && HAVE_BUILTIN_CPU_SUPPORTS
     rm_digest_enable_sse(TRUE);
 #endif
 
