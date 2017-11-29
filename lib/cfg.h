@@ -132,6 +132,9 @@ typedef struct RmCfg {
     /* total number of bytes we are allowed to use (target only) */
     RmOff total_mem;
 
+    /* length of read buffers */
+    RmOff read_buf_len;
+
     /* number of bytes to read before going back to start of disk
      * (too big a sweep risks metadata getting pushed out of ram)*/
     RmOff sweep_size;
@@ -158,6 +161,9 @@ typedef struct RmCfg {
 
     /* for --is-reflink option */
     bool is_reflink;
+
+    /* don't use sse accelerations */
+    bool no_sse;
 
 } RmCfg;
 

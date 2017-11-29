@@ -380,10 +380,6 @@ msgstr "Asimilación tipo [BLAKE2B]"
 msgid "Number of hashing threads [8]"
 msgstr "Número de hilos rastreados [8]"
 
-#: lib/hash-utility.c:141
-msgid "Print hash as self identifying multihash"
-msgstr "Muestra el rastreo como un multirastreo auto identificado"
-
 #: lib/hash-utility.c:142
 msgid "Megabytes read buffer [256 MB]"
 msgstr "Almacenamiento temporal de lectura de Megabytes [256]"

@@ -114,8 +114,7 @@ typedef struct RmSession {
     RmOff offset_fails;
 
     /* Daniels paranoia */
-    RmOff hash_seed1;
-    RmOff hash_seed2;
+    RmOff hash_seed;
 
     /* count used for determining the verbosity level */
     int verbosity_count;

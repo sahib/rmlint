@@ -11,6 +11,8 @@ import SCons
 import SCons.Conftest as tests
 from SCons.Script.SConscript import SConsEnvironment
 
+DEFAULT_OPTIMISATION='s'  # compile with -Os
+
 pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
 
 def read_version():
@@ -361,6 +363,30 @@ def check_cygwin(context):
     context.Result(rc)
     return rc
 
+def check_mm_crc32_u64(context):
+
+    rc = 0 if tests.CheckDeclaration(
+            context,
+            symbol='_mm_crc32_u64',
+            includes='#include <nmmintrin.h>\n'
+            ) else 1
+
+    conf.env['HAVE_MM_CRC32_U64'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+def check_builtin_cpu_supports(context):
+    rc = 0 if tests.CheckDeclaration(
+            context,
+            symbol='__builtin_cpu_supports'
+            ) else 1
+
+    conf.env['HAVE_BUILTIN_CPU_SUPPORTS'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -478,14 +504,6 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
         dest='with_' + suffix
     )
 
-AddOption(
-    '--with-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
-AddOption(
-    '--without-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
@@ -536,6 +554,8 @@ conf = Configure(env, custom_tests={
     'check_linux_fs_h': check_linux_fs_h,
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
+    'check_mm_crc32_u64': check_mm_crc32_u64,
+    'check_builtin_cpu_supports': check_builtin_cpu_supports,
     'check_sysmacro_h': check_sysmacro_h
 })
 
@@ -609,13 +629,10 @@ if conf.env['IS_CYGWIN']:
 else:
     conf.env.Append(CCFLAGS=['-fPIC'])
 
-
-if ARGUMENTS.get('DEBUG') == "1":
-    conf.env.Append(CCFLAGS=['-ggdb3'])
-else:
-    # Generic compiler:
-    conf.env.Append(CCFLAGS=['-Os'])
-    conf.env.Append(LINKFLAGS=['-s'])
+# check _mm_crc32_u64 (SSE4.2) support:
+conf.check_mm_crc32_u64()
+if conf.env['HAVE_MM_CRC32_U64']:
+    conf.env.Append(CCFLAGS=['-msse4.2'])
 
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
@@ -629,7 +646,7 @@ conf.env.Append(CFLAGS=[
     '-Wmissing-include-dirs',
     '-Wuninitialized',
     '-Wstrict-prototypes',
-    '-Wno-implicit-fallthrough'
+    '-Wno-implicit-fallthrough',
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
@@ -637,6 +654,7 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_builtin_cpu_supports()
 conf.check_blkid()
 conf.check_sys_block()
 conf.check_libelf()
@@ -655,6 +673,20 @@ conf.check_sysmacro_h()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+# compiler optimisation and debug symbols:
+cc_O_option = '-O'
+if ARGUMENTS.get('DEBUG') == "1":
+    print("Compiling with gdb extra debug symbols")
+    conf.env.Append(CCFLAGS=['-ggdb3', '-fno-inline'])
+    cc_O_option += (ARGUMENTS.get('O') or '0')
+else:
+    conf.env.Append(LINKFLAGS=['-s'])
+    cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
+
+print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
+conf.env.Append(CCFLAGS=[cc_O_option])
+
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,

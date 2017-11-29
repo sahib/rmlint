@@ -378,10 +378,6 @@ msgstr "Type digest [BLAKE2B]"
 msgid "Number of hashing threads [8]"
 msgstr "Nombre de tâches de hachage [8]"
 
-#: lib/hash-utility.c:141
-msgid "Print hash as self identifying multihash"
-msgstr "Affichage du hachage identifié comme une fonction multiple de hachage"
-
 #: lib/hash-utility.c:142
 msgid "Megabytes read buffer [256 MB]"
 msgstr "Lecture du buffer en mégaoctets [256 MB]"
