@@ -1272,6 +1272,16 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files,
     }
 }
 
+static gboolean rm_shred_has_duplicates(GQueue *group) {
+    for(GList *iter=group->head; iter; iter=iter->next) {
+        RmFile *file = iter->data;
+        if(!file->is_original) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     rm_assert_gentle(group);
     rm_assert_gentle(group->head);
@@ -1283,9 +1293,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 #endif
 
     /* Hand it over to the printing module */
-    for(GList *iter = group->head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        rm_fmt_write(file, session->formats, group->length);
+    if(rm_shred_has_duplicates(group)) {
+        for(GList *iter = group->head; iter; iter = iter->next) {
+            RmFile *file = iter->data;
+            rm_fmt_write(file, session->formats, group->length);
+        }
     }
 }
 

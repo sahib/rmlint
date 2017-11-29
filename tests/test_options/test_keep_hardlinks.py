@@ -73,12 +73,5 @@ def test_keep_hardlinks_multiple_originals():
     head, *data, footer = run_rmlint('--keep-hardlinked -k -m -S a ' + search_paths, use_default_dir=False)
     # files in folder a are tagged so should both be preserved;
     # files in folder b are hardlinks of the two originals so should also be preserved
-    assert len(data)==4
-    assert data[0]["path"].endswith("file_a")
-    assert data[0]["is_original"] is True
-    assert data[1]["path"].endswith("file_y")
-    assert data[1]["is_original"] is True
-    assert data[2]["path"].endswith("file_b")
-    assert data[2]["is_original"] is True
-    assert data[3]["path"].endswith("file_z")
-    assert data[3]["is_original"] is True
+    # therefore all files are originals and so don't get reported
+    assert len(data)==0
