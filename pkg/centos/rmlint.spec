@@ -5,13 +5,21 @@ Summary:        rmlint finds space waste and other broken things on your filesys
 Group:          Applications/System
 License:        GPLv3
 URL:            http://rmlint.rtfd.org
-Source0:        https://github.com/sahib/rmlint/archive/rmlint-%{version}.tar.gz
+Source0:        https://github.com/sahib/rmlint/archive/v%{version}/rmlint-%{version}.tar.gz
 Requires:       glib2 libblkid elfutils-libelf json-glib
 BuildRequires:  scons gettext libblkid-devel elfutils-libelf-devel glib2-devel json-glib-devel
 
 %description
 rmlint finds space waste and other broken things and offers to remove it. It is
 especially an extremely fast tool to remove duplicates from your filesystem.
+
+%package shredder
+Summary:  GUI for rmlint
+Group:    Applications/System
+Requires: rmlint
+
+%description shredder
+shredder is a GUI frontend to the rmlint utility.
 
 %prep
 %setup -q
@@ -39,7 +47,16 @@ rm -rf %{buildroot}
 # %{_libdir}/*
 # %{_includedir}/*
 
+%files shredder
+%{python3_sitelib}/*
+%{_datadir}/applications/shredder.desktop
+%{_datadir}/glib-2.0/schemas/*
+%{_datadir}/icons/hicolor/scalable/apps/shredder.svg
+
 %changelog
+* Sat Dec 16 2017 Patrick Hemmer <patrick.hemmer@gmail.com> - 2.6.1
+- Fix source URL.
+- Split shredder into subpackage.
 * Fri Oct 27 2017 Vince Mele <vincentmele@gmail.com> - 2.6.1
 - Update to version 2.6.1. Remove python-sphinx3 dependency.
 - Use setup -q.
