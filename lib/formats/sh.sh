@@ -9,6 +9,14 @@ PROGRESS_TOTAL=0
 
 RMLINT_BINARY="%s"
 
+# Only use sudo if we're not root yet:
+# (See: https://github.com/sahib/rmlint/issues/27://github.com/sahib/rmlint/issues/271)
+SUDO_COMMAND="sudo"
+if [ "$EUID" -eq 0 ]
+then
+  SUDO_COMMAND=""
+fi
+
 # In special cases --equal needs special args to mimic
 # the behaviour that lead to finding the duplicates below.
 RMLINT_EQUAL_EXTRA_ARGS="%s"
@@ -208,7 +216,7 @@ clone() {
     echo "${COL_YELLOW}Cloning to: ${COL_RESET}" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            sudo $RMLINT_BINARY --dedupe -r "$2" "$1"
+            $SUDO_COMMAND $RMLINT_BINARY --dedupe -r "$2" "$1"
         else
             $RMLINT_BINARY --dedupe "$2" "$1"
         fi
