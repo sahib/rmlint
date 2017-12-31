@@ -43,7 +43,6 @@ typedef struct RmHasherSession {
     /* Options */
     RmDigestType digest_type;
     gboolean print_in_order;
-    gboolean print_multihash;
 } RmHasherSession;
 
 static gboolean rm_hasher_parse_type(_UNUSED const char *option_name,
@@ -59,7 +58,7 @@ static gboolean rm_hasher_parse_type(_UNUSED const char *option_name,
     return TRUE;
 }
 
-static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) {
+static void rm_hasher_print(RmDigest *digest, char *path) {
     gsize size = rm_digest_get_bytes(digest) * 2 + 1;
 
     char checksum_str[size];
@@ -67,11 +66,6 @@ static void rm_hasher_print(RmDigest *digest, char *path, bool print_multihash) 
     checksum_str[size - 1] = 0;
 
     rm_digest_hexstring(digest, checksum_str);
-
-    if(print_multihash) {
-        g_print("%02x%02x@", rm_digest_type_to_multihash_id(digest->type),
-                rm_digest_get_bytes(digest));
-    }
 
     g_print("%s  %s\n", checksum_str, path);
 }
@@ -95,8 +89,7 @@ static int rm_hasher_callback(_UNUSED RmHasher *hasher,
                     if(session->read_succesful[session->path_index]) {
                         rm_hasher_print(
                             session->completed_digests_buffer[session->path_index],
-                            session->paths[session->path_index],
-                            session->print_multihash);
+                            session->paths[session->path_index]);
                     }
                     rm_digest_free(
                         session->completed_digests_buffer[session->path_index]);
@@ -106,7 +99,7 @@ static int rm_hasher_callback(_UNUSED RmHasher *hasher,
             }
         } else if(digest) {
             if(session->read_succesful[session->path_index]) {
-                rm_hasher_print(digest, session->paths[index], session->print_multihash);
+                rm_hasher_print(digest, session->paths[index]);
             }
         }
     }
@@ -123,23 +116,21 @@ int rm_hasher_main(int argc, const char **argv) {
     /* Print hashes in the same order as files in command line args */
     tag.print_in_order = TRUE;
 
-    /* Print a hash with builtin identifier */
-    tag.print_multihash = FALSE;
-
     /* Digest type */
     tag.digest_type = RM_DEFAULT_DIGEST;
     gint threads = 8;
     gint64 buffer_mbytes = 256;
+    guint64 increment = 4096;
 
     ////////////// Option Parsing ///////////////
 
     /* clang-format off */
 
     const GOptionEntry entries[] = {
-        {"digest-type"    , 'd'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _("Digest type [BLAKE2B]")                                                        , "[TYPE]"}   ,
+        {"algorithm"      , 'a'  , 0                      , G_OPTION_ARG_CALLBACK        , (GOptionArgFunc)rm_hasher_parse_type  , _("Digest type [BLAKE2B]")                                                        , "[TYPE]"}   ,
         {"num-threads"    , 't'  , 0                      , G_OPTION_ARG_INT             , &threads                              , _("Number of hashing threads [8]")                                                 , "N"}        ,
-        {"multihash"      , 'm'  , 0                      , G_OPTION_ARG_NONE            , &tag.print_multihash                  , _("Print hash as self identifying multihash")                                      , NULL}       ,
         {"buffer-mbytes"  , 'b'  , 0                      , G_OPTION_ARG_INT64           , &buffer_mbytes                        , _("Megabytes read buffer [256 MB]")                                                , "MB"}       ,
+        {"increment"      , 'x'  , G_OPTION_FLAG_HIDDEN   , G_OPTION_ARG_INT64           , &increment                            , _("bytes to hash at a time [4096]")                                                , "MB"}       ,
         {"ignore-order"   , 'i'  , G_OPTION_FLAG_REVERSE  , G_OPTION_ARG_NONE            , &tag.print_in_order                   , _("Print hashes in order completed, not in order entered (reduces memory usage)")  , NULL}       ,
         {""               , 0    , 0                      , G_OPTION_ARG_FILENAME_ARRAY  , &tag.paths                            , _("Space-separated list of files")                                                 , "[FILE…]"}  ,
         {NULL             , 0    , 0                      , 0                            , NULL                                  , NULL                                                                               , NULL}};
@@ -157,14 +148,18 @@ int rm_hasher_main(int argc, const char **argv) {
     g_snprintf(summary, sizeof(summary),
                _("Multi-threaded file digest (hash) calculator.\n"
                  "\n  Available digest types:"
+                 "\n  Cryptographic:"
                  "\n    %s\n"
-                 "\n  Versions with different bit numbers:"
+                 "\n  Non-cryptographic:"
                  "\n    %s\n"
                  "\n  Supported, but not useful:"
                  "\n    %s\n"),
-               "spooky, city, xxhash, sha{1,256,512}, md5, murmur",
-               "spooky{32,64,128}, city{128,256,512}, murmur{512}",
-               "farmhash, cumulative, paranoid, ext, bastard");
+               "sha{1,256,512}, sha3-{256,384,512}, blake{2s,2b,2sp,2bp}, highway{64,128,256}",
+#if HAVE_MM_CRC32_U64
+               "metrocrc, metrocrc256, "
+#endif
+               "metro, metro256, xxhash, murmur",
+               "cumulative, paranoid, ext");
 
     g_option_group_add_entries(main_group, entries);
     g_option_context_set_main_group(context, main_group);
@@ -199,6 +194,10 @@ int rm_hasher_main(int argc, const char **argv) {
 
     ////////// Implementation //////
 
+#if HAVE_MM_CRC32_U64 && HAVE_BUILTIN_CPU_SUPPORTS
+    rm_digest_enable_sse(TRUE);
+#endif
+
     int buf_size = (g_strv_length(tag.paths) + 1) * sizeof(RmDigest *);
     tag.read_succesful = g_slice_alloc0(buf_size);
 
@@ -213,7 +212,7 @@ int rm_hasher_main(int argc, const char **argv) {
     RmHasher *hasher = rm_hasher_new(tag.digest_type,
                                      threads,
                                      FALSE,
-                                     4096,
+                                     increment,
                                      1024 * 1024 * buffer_mbytes,
                                      (RmHasherCallback)rm_hasher_callback,
                                      &tag);

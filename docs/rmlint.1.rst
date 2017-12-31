@@ -153,28 +153,47 @@ General Options
 
     Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
-    algorithms to identify duplicates.  The following well-known algorithms are available:
+    algorithms to identify duplicates.  The following hash families are available (in
+    approximate descending order of cryptographic strength):
 
-    **spooky**, **city**, **murmur**, **xxhash**, **md5**, **sha1**, **sha256**,
-    **sha512**, **farmhash**, **sha3**, **sha3-256**, **sha3-384**, **sha3-512**,
-    **blake2s**, **blake2b**, **blake2sp**, **blake2bp**.
+    **sha3**, **blake**,
 
-    There are also some compound variations of the above functions:
+    **sha**,
 
-    * **bastard:** 256bit, combining **city**, and **murmur**.
-    * **city256, city512, murmur256, murmur512:** Use multiple 128-bit hashes with different seeds.
-    * **spooky32, spooky64:** Faster version of **spooky** with less bits. We strongly advise against using these.
+    **highway**, **md**
+
+    **metro**, **murmur**, *xxhash**
+
+    The weaker hash functions still offer excellent distribution properties, but are potentially
+    more vulnerable to *malicious* crafting of duplicate files.
+
+    The full list of hash functions (in decreasing order of checksum length) is:
+
+    512-bit: **blake2b**, **blake2bp**, **sha3-512, **sha512**
+
+    384-bit: **sha3-384**,
+
+    256-bit: **blake2s**, **blake2sp**, **sha3-256**, **sha256**, **highway256**, **metro256**, **metrocrc256**
+
+    160-bit: **sha1**
+
+    128-bit: **md5**, **murmur**, **metro**, **metrocrc**
+
+    64-bit: **highway64**, **xxhash**.
+
+    The use of 64-bit hash length for detecting duplicate files is not recommended, due to the
+    probability of a random hash collision.
 
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
     Use ``-pp`` if you want byte-by-byte comparison without any hashing.
 
-    * **-p** is equivalent to **--algorithm=sha512**
-    * **-pp** is equivalent to **--algorithm=paranoid**
+    * **-p** is equivalent to **--algorithm=paranoid**
 
-    * **-P** is equivalent to **--algorithm bastard**
-    * **-PP** is equivalent to **--algorithm spooky**
+    * **-P** is equivalent to **--algorithm=highway256**
+    * **-PP** is equivalent to **--algorithm=metro256**
+    * **-PPP** is equivalent to **--algorithm=metro**
 
 :``-v --loud`` / ``-V --quiet``:
 
@@ -848,10 +867,12 @@ PROBLEMS
 
 1. **False Positives:** Depending on the options you use, there is a very slight risk
    of false positives (files that are erroneously detected as duplicate).
-   The default hash function (SHA1) is pretty safe but in theory it is possible for
-   two files to have then same hash. This happens about once in 2 ** 80 files, so
-   it is very very unlikely. If you're concerned just use the ``--paranoid`` (``-pp``)
-   option. This will compare all the files byte-by-byte and is not much slower than SHA1.
+   The default hash function (blake2b) is very safe but in theory it is possible for
+   two files to have then same hash. If you had 10^73 different files, all the same
+   size, then the chance of a false positive is still less than 1 in a billion.
+   If you're concerned just use the ``--paranoid`` (``-pp``)
+   option. This will compare all the files byte-by-byte and is not much slower than
+   blake2b (it may even be faster), although it is a lot more memory-hungry.
 
 2. **File modification during or after rmlint run:** It is possible that a file
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in

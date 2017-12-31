@@ -444,6 +444,8 @@ static void rm_fmt_prog(RmSession *session,
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
         g_timer_destroy(self->timer);
+        rm_running_mean_unref(&self->read_diff_mean);
+        rm_running_mean_unref(&self->eta_mean);
     }
 }
 

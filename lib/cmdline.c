@@ -50,6 +50,16 @@
 #include "treemerge.h"
 #include "utilities.h"
 
+/* define paranoia levels */
+static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
+                                                  RM_DIGEST_METRO256,
+                                                  RM_DIGEST_HIGHWAY256,
+                                                  RM_DEFAULT_DIGEST,
+                                                  RM_DIGEST_PARANOID,
+                                                  RM_DIGEST_PARANOID};
+static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
+static const int RM_PARANOIA_MAX = 4;
+
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
@@ -751,32 +761,17 @@ static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
 static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
                                          GError **error) {
     /* Handle the paranoia option */
-    switch(paranoia_counter) {
-    case -2:
-        cfg->checksum_type = RM_DIGEST_XXHASH;
-        break;
-    case -1:
-        cfg->checksum_type = RM_DIGEST_BASTARD;
-        break;
-    case 0:
-        /* leave users choice of -a (default) */
-        break;
-    case 1:
-#if HAVE_SHA512
-        cfg->checksum_type = RM_DIGEST_SHA512;
-#else
-        cfg->checksum_type = RM_DIGEST_SHA256;
-#endif
-        break;
-    case 2:
-        cfg->checksum_type = RM_DIGEST_PARANOID;
-        break;
-    default:
+    int index = paranoia_counter + RM_PARANOIA_NORMAL;
+
+    if(index < 0 || index > RM_PARANOIA_MAX) {
         if(error && *error == NULL) {
             g_set_error(error, RM_ERROR_QUARK, 0,
-                        _("Only up to -pp or down to -PP flags allowed"));
+                        _("Only up to -%.*s or down to -%.*s flags allowed"),
+                        RM_PARANOIA_MAX - RM_PARANOIA_NORMAL, "ppppp", RM_PARANOIA_NORMAL,
+                        "PPPPP");
         }
-        break;
+    } else {
+        cfg->checksum_type = RM_PARANOIA_LEVELS[index];
     }
 }
 
@@ -799,9 +794,6 @@ static gboolean rm_cmd_parse_algorithm(_UNUSED const char *option_name,
     if(cfg->checksum_type == RM_DIGEST_UNKNOWN) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Unknown hash algorithm: '%s'"), value);
         return false;
-    } else if(cfg->checksum_type == RM_DIGEST_BASTARD) {
-        session->hash_seed1 = time(NULL) * (GPOINTER_TO_UINT(session));
-        session->hash_seed2 = GPOINTER_TO_UINT(&session);
     }
     return true;
 }
@@ -838,6 +830,12 @@ static gboolean rm_cmd_parse_limit_mem(_UNUSED const char *option_name,
                                        const gchar *size_spec, RmSession *session,
                                        GError **error) {
     return (rm_cmd_parse_mem(size_spec, error, &session->cfg->total_mem));
+}
+
+static gboolean rm_cmd_parse_read_buf_len(_UNUSED const char *option_name,
+                                          const gchar *size_spec, RmSession *session,
+                                          GError **error) {
+    return (rm_cmd_parse_mem(size_spec, error, &session->cfg->read_buf_len));
 }
 
 static gboolean rm_cmd_parse_sweep_size(_UNUSED const char *option_name,
@@ -1326,6 +1324,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"clamp-low"              , 'q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)              , "Limit lower reading barrier"                                 , "P"}    ,
         {"clamp-top"              , 'Q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)              , "Limit upper reading barrier"                                 , "P"}    ,
         {"limit-mem"              , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(limit_mem)              , "Specify max. memory usage target"                            , "S"}    ,
+        {"read-buffer-len"        , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(read_buf_len)           , "Specify read buffer length in bytes"                         , "S"}    ,
         {"sweep-size"             , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_size)             , "Specify max. bytes per pass when scanning disks"             , "S"}    ,
         {"sweep-files"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
@@ -1343,6 +1342,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"fake-abort"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_abort             , "Simulate interrupt after 10% shredder progress"              , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
         {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
+        {"no-sse"                 , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->no_sse                 , "Don't use SSE accelerations"                                 , NULL}   ,
         {"no-mount-table"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->list_mounts            , "Do not try to optimize by listing mounted volumes"           , NULL}   ,
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
@@ -1508,6 +1508,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
                 )
         );
     }
+
+#if HAVE_BUILTIN_CPU_SUPPORTS && HAVE_MM_CRC32_U64
+    rm_digest_enable_sse(!cfg->no_sse && __builtin_cpu_supports("sse4.2"));
+#endif
 
 cleanup:
     if(error != NULL) {

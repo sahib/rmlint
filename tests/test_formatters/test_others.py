@@ -23,7 +23,7 @@ def test_just_call_it():
     subprocess.check_output(['./rmlint', '-g',  '-O' , 'fdupes', TESTDIR_NAME])
     subprocess.check_output(['./rmlint', '-g', TESTDIR_NAME])
 
-    for silly_option in ['-ppp', '-PPP']:
+    for silly_option in ['-pp', '-PPPP']:
         try:
             subprocess.check_output(['./rmlint', '-VVV', silly_option, TESTDIR_NAME])
         except subprocess.CalledProcessError:

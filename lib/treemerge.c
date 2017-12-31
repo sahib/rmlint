@@ -313,7 +313,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
      * order in which the file hashes were added.
      * It is not used as full hash, but as sorting speedup.
      */
-    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0, 0, 0, false);
+    self->digest = rm_digest_new(RM_DIGEST_CUMULATIVE, 0);
 
     g_queue_init(&self->known_files);
     g_queue_init(&self->children);
@@ -423,13 +423,8 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
 
-    if(file->digest->type == RM_DIGEST_PARANOID) {
-        file_digest = rm_digest_steal(file->digest->paranoid->shadow_hash);
-        digest_bytes = file->digest->paranoid->shadow_hash->bytes;
-    } else {
-        file_digest = rm_digest_steal(file->digest);
-        digest_bytes = file->digest->bytes;
-    }
+    file_digest = rm_digest_steal(file->digest);
+    digest_bytes = file->digest->bytes;
 
     /* Update the directorie's hash with the file's hash
        Since we cannot be sure in which order the files come in

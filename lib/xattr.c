@@ -103,12 +103,7 @@ static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
     memset(buf, '0', buf_size);
     buf[buf_size - 1] = 0;
 
-    if(file->digest->type == RM_DIGEST_PARANOID) {
-        rm_assert_gentle(file->digest->paranoid->shadow_hash);
-        return rm_digest_hexstring(file->digest->paranoid->shadow_hash, buf);
-    } else {
-        return rm_digest_hexstring(file->digest, buf);
-    }
+    return rm_digest_hexstring(file->digest, buf);
 }
 
 static int rm_xattr_is_fail(const char *name, int rc) {
@@ -204,13 +199,13 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    if(cksum_hex_str == NULL || strcmp(cksum_hex_str, "")==0) {
+    if(cksum_hex_str[0] == 0 || strcmp(cksum_hex_str, "")==0) {
         return FALSE;
     }
 
     if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) < 0) {
         /* Data is too old and not useful, autoclean it */
-        rm_log_debug_line("Checksum too old for %s, %li < %li",
+        rm_log_debug_line("Checksum too old for %s, %" G_GINT64_FORMAT " < %" G_GINT64_FORMAT,
                           file->folder->basename,
                           g_ascii_strtoll(mtime_buf, NULL, 10),
                           (gint64)file->mtime);
