@@ -346,6 +346,11 @@ do
   esac
 done
 
+if [ -z $DO_REMOVE ]
+then
+    echo "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}"
+fi
+
 if [ -z $DO_ASK ]
 then
   usage
