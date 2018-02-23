@@ -12,7 +12,7 @@ RMLINT_BINARY="%s"
 # Only use sudo if we're not root yet:
 # (See: https://github.com/sahib/rmlint/issues/27://github.com/sahib/rmlint/issues/271)
 SUDO_COMMAND="sudo"
-if [ "$EUID" -eq 0 ]
+if [ "$(id -u)" -eq "0" ]
 then
   SUDO_COMMAND=""
 fi
