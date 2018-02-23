@@ -331,9 +331,9 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         session->cfg->iwd,
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
         (session->cfg->full_argv0_path) ? (session->cfg->full_argv0_path) : "$(which rmlint)",
-        equal_extra_args,
         rm_util_get_username(),
         rm_util_get_groupname(),
+        equal_extra_args,
         (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "unknown_commandline"
     );

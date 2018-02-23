@@ -17,10 +17,6 @@ then
   SUDO_COMMAND=""
 fi
 
-# In special cases --equal needs special args to mimic
-# the behaviour that lead to finding the duplicates below.
-RMLINT_EQUAL_EXTRA_ARGS="%s"
-
 USER='%s'
 GROUP='%s'
 
@@ -131,7 +127,7 @@ check_for_equality() {
         echo $?
     else
         # Fallback to `rmlint --equal` for directories:
-        $RMLINT_BINARY -pp --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"
+        "$RMLINT_BINARY" -pp --equal %s "$1" "$2"
         echo $?
     fi
 }
