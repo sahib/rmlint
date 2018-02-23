@@ -315,7 +315,7 @@ do
   case $OPTION in
      h)
        usage
-       exit 1
+       exit 0
        ;;
      d)
        DO_ASK=false
@@ -340,6 +340,9 @@ do
      q)
        DO_SHOW_PROGRESS=
        ;;
+     *)
+       usage
+       exit 1
   esac
 done
 
