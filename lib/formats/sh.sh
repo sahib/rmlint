@@ -281,7 +281,7 @@ Rmlint was executed in the following way:
 Execute this script with -d to disable this informational message.
 Type any string to continue; CTRL-C, Enter or CTRL-D to abort immediately
 EOF
-    read eof_check
+    read -r eof_check
     if [ -z "$eof_check" ]
     then
         # Count Ctrl-D and Enter as aborted too.
