@@ -1165,8 +1165,9 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
-            /* option '-' means read paths from stdin */
             cfg->read_stdin = TRUE;
+            /* remember whether to treat stdin paths as preferred paths */
+            stdin_paths_preferred = is_prefd;
         } else if(strcmp(paths[i], "//") == 0) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
@@ -1178,8 +1179,9 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     g_strfreev(paths);
 
     if(cfg->read_stdin || cfg->read_stdin0) {
+        /* option '-' means read paths from stdin */
         all_paths_valid &=
-            rm_cmd_read_paths_from_stdin(session, is_prefd, cfg->read_stdin0);
+            rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
     }
 
     if(cfg->path_count == 0 && all_paths_valid) {
