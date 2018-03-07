@@ -395,7 +395,7 @@ Traversal Options
     original and duplicate are newer than ``timestamp`` you can use
     ``find(1)``:
 
-    * ``find -mtime -1 | rmlint - # find all files younger than a day``
+    * ``find -mtime -1 -print0 | rmlint -0 # pass all files younger than a day to rmlint``
 
     *Note:* you can make rmlint write out a compatible timestamp with:
 
@@ -827,6 +827,8 @@ This is a collection of common usecases and other tricks:
 * Do more complex traversal using ``find(1)``.
 
   ``$ find /usr/lib -iname '*.so' -type f | rmlint - # find all duplicate .so files``
+
+  ``$ find /usr/lib -iname '*.so' -type f -print0 | rmlint -0 # as above but handles filenames with newline character in them``
 
   ``$ find ~/pics -iname '*.png' | ./rmlint - # compare png files only``
 
