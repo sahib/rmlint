@@ -1161,13 +1161,14 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     bool is_prefd = false;
     bool all_paths_valid = true;
+    bool stdin_paths_preferred = false;
 
     RmCfg *cfg = session->cfg;
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
-            cfg->read_stdin = TRUE;
+            cfg->read_stdin = true;
             /* remember whether to treat stdin paths as preferred paths */
             stdin_paths_preferred = is_prefd;
         } else if(strcmp(paths[i], "//") == 0) {
