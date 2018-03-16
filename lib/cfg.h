@@ -87,6 +87,8 @@ typedef struct RmCfg {
     gboolean progress_enabled;
     gboolean list_mounts;
     gboolean replay;
+    gboolean read_stdin;
+    gboolean read_stdin0;
 
     int permissions;
 

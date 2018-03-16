@@ -358,18 +358,29 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [3] = G_LOG_LEVEL_MESSAGE |
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
+static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
+                                         bool null_separated) {
+    char delim = null_separated ? 0 : '\n';
 
-static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd) {
-    char path_buf[PATH_MAX];
-    char *tokbuf = NULL;
+    size_t buf_len = PATH_MAX;
+    char *path_buf = malloc(buf_len * sizeof(char));
+
     bool all_paths_read = true;
 
+    int path_len;
+
     /* Still read all paths on errors, so the user knows all paths that failed */
-    while(fgets(path_buf, PATH_MAX, stdin)) {
-        all_paths_read &=
-            rm_cfg_add_path(session->cfg, is_prefd, strtok_r(path_buf, "\n", &tokbuf));
+    while((path_len = getdelim(&path_buf, &buf_len, delim, stdin)) >= 0) {
+        if(path_len > 0) {
+            /* replace returned delimiter with null */
+            if (path_buf[path_len - 1] == delim) {
+                path_buf[path_len - 1] = 0;
+            }
+            all_paths_read &= rm_cfg_add_path(session->cfg, is_prefd, path_buf);
+        }
     }
 
+    free(path_buf);
     return all_paths_read;
 }
 
@@ -1150,14 +1161,16 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     bool is_prefd = false;
     bool all_paths_valid = true;
+    bool stdin_paths_preferred = false;
 
     RmCfg *cfg = session->cfg;
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
-            /* option '-' means read paths from stdin */
-            all_paths_valid &= rm_cmd_read_paths_from_stdin(session, is_prefd);
+            cfg->read_stdin = true;
+            /* remember whether to treat stdin paths as preferred paths */
+            stdin_paths_preferred = is_prefd;
         } else if(strcmp(paths[i], "//") == 0) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
@@ -1167,6 +1180,12 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
     }
 
     g_strfreev(paths);
+
+    if(cfg->read_stdin || cfg->read_stdin0) {
+        /* option '-' means read paths from stdin */
+        all_paths_valid &=
+            rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
+    }
 
     if(cfg->path_count == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
@@ -1284,6 +1303,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"keep-hardlinked"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->keep_hardlinked_dupes    , _("Keep hardlink that are linked to any original")                        , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
+        {"stdin0"                   , '0'  , 0         , G_OPTION_ARG_NONE      , &cfg->read_stdin0              , _("Read null-separated file list from stdin")                             , NULL}      ,
 
         /* COW filesystem deduplication support */
         {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,

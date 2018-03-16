@@ -87,6 +87,7 @@ can also use external tools to feed ``rmlint's stdin``:
 .. code-block:: bash
 
    $ find pics/ -iname '*.png' | rmlint -
+   $ find pics/ -iname '*.png' -print0 | rmlint -0 # (also handles filenames with newline characters)
 
 Limit files by size using ``--size``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -775,7 +776,7 @@ Here's just a list of options that are nice to know, but not essential:
   .. code-block:: bash
 
       $ # find all files except everything under .git or .svn folders
-      $ find . -type d | grep -v '\(.git\|.svn\)' | rmlint - --hidden
+      $ find . -type d | grep -v '\(.git\|.svn\)' -print0 | rmlint -0 --hidden
 
   But you would have checked the output anyways, wouldn't you?
 
