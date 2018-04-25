@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PROGRESS_CURR=0
-PROGRESS_TOTAL=                            
+PROGRESS_TOTAL=0                           
 
 # This file was autowritten by rmlint
 # rmlint was executed from: %s
@@ -9,9 +9,13 @@ PROGRESS_TOTAL=
 
 RMLINT_BINARY="%s"
 
-# In special cases --equal needs special args to mimic
-# the behaviour that lead to finding the duplicates below.
-RMLINT_EQUAL_EXTRA_ARGS="%s"
+# Only use sudo if we're not root yet:
+# (See: https://github.com/sahib/rmlint/issues/27://github.com/sahib/rmlint/issues/271)
+SUDO_COMMAND="sudo"
+if [ "$(id -u)" -eq "0" ]
+then
+  SUDO_COMMAND=""
+fi
 
 USER='%s'
 GROUP='%s'
@@ -47,14 +51,18 @@ print_progress_prefix() {
         if [ $((PROGRESS_TOTAL)) -gt 0 ]; then
             PROGRESS_PERC=$((PROGRESS_CURR * 100 / PROGRESS_TOTAL))
         fi
-        printf "$COL_BLUE[% 3d%%]$COL_RESET " $PROGRESS_PERC
-        PROGRESS_CURR=$((PROGRESS_CURR+1))
+        printf "${COL_BLUE}[% 3d%%]${COL_RESET} $PROGRESS_PERC"
+        if [ $# -eq "1" ]; then
+            PROGRESS_CURR=$((PROGRESS_CURR+$1))
+        else
+            PROGRESS_CURR=$((PROGRESS_CURR+1))
+        fi
     fi
 }
 
 handle_emptyfile() {
     print_progress_prefix
-    echo "${COL_GREEN}Deleting empty file:${COL_RESET}" "$1"
+    echo "${COL_GREEN}Deleting empty file:${COL_RESET} $1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
     fi
@@ -62,7 +70,7 @@ handle_emptyfile() {
 
 handle_emptydir() {
     print_progress_prefix
-    echo "${COL_GREEN}Deleting empty directory: ${COL_RESET}" "$1"
+    echo "${COL_GREEN}Deleting empty directory: ${COL_RESET}$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rmdir "$1"
     fi
@@ -70,7 +78,7 @@ handle_emptydir() {
 
 handle_bad_symlink() {
     print_progress_prefix
-    echo "${COL_GREEN} Deleting symlink pointing nowhere: ${COL_RESET}" "$1"
+    echo "${COL_GREEN} Deleting symlink pointing nowhere: ${COL_RESET}$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
     fi
@@ -78,7 +86,7 @@ handle_bad_symlink() {
 
 handle_unstripped_binary() {
     print_progress_prefix
-    echo "${COL_GREEN} Stripping debug symbols of: ${COL_RESET}" "$1"
+    echo "${COL_GREEN} Stripping debug symbols of: ${COL_RESET}$1"
     if [ -z "$DO_DRY_RUN" ]; then
         strip -s "$1"
     fi
@@ -86,7 +94,7 @@ handle_unstripped_binary() {
 
 handle_bad_user_id() {
     print_progress_prefix
-    echo "${COL_GREEN}chown ${USER}${COL_RESET}" "$1"
+    echo "${COL_GREEN}chown ${USER}${COL_RESET} $1"
     if [ -z "$DO_DRY_RUN" ]; then
         chown "$USER" "$1"
     fi
@@ -94,7 +102,7 @@ handle_bad_user_id() {
 
 handle_bad_group_id() {
     print_progress_prefix
-    echo "${COL_GREEN}chgrp ${GROUP}${COL_RESET}" "$1"
+    echo "${COL_GREEN}chgrp ${GROUP}${COL_RESET} $1"
     if [ -z "$DO_DRY_RUN" ]; then
         chgrp "$GROUP" "$1"
     fi
@@ -102,7 +110,7 @@ handle_bad_group_id() {
 
 handle_bad_user_and_group_id() {
     print_progress_prefix
-    echo "${COL_GREEN}chown ${USER}:${GROUP}${COL_RESET}" "$1"
+    echo "${COL_GREEN}chown ${USER}:${GROUP}${COL_RESET} $1"
     if [ -z "$DO_DRY_RUN" ]; then
         chown "$USER:$GROUP" "$1"
     fi
@@ -119,25 +127,25 @@ check_for_equality() {
         echo $?
     else
         # Fallback to `rmlint --equal` for directories:
-        $RMLINT_BINARY -pp --equal $RMLINT_EQUAL_EXTRA_ARGS "$1" "$2"
+        "$RMLINT_BINARY" -pp --equal %s "$1" "$2"
         echo $?
     fi
 }
 
 original_check() {
     if [ ! -e "$2" ]; then
-        echo $COL_RED "^^^^^^ Error: original has disappeared - cancelling....." $COL_RESET
+        echo "${COL_RED}^^^^^^ Error: original has disappeared - cancelling.....${COL_RESET}"
         return 1
     fi
 
     if [ ! -e "$1" ]; then
-        echo $COL_RED "^^^^^^ Error: duplicate has disappeared - cancelling....." $COL_RESET
+        echo "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling.....${COL_RESET}"
         return 1
     fi
 
     # Check they are not the exact same file (hardlinks allowed):
     if [ "$1" = "$2" ]; then
-        echo $COL_RED "^^^^^^ Error: original and duplicate point to the *same* path - cancelling....." $COL_RESET
+        echo "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....{COL_RESET}"
         return 1
     fi
 
@@ -145,15 +153,15 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if [ $(check_for_equality "$1" "$2") -ne 0 ]; then
-            echo $COL_RED "^^^^^^ Error: files no longer identical - cancelling....." $COL_RESET
+        if [ "$(check_for_equality "$1" "$2")" -ne "0" ]; then
+            echo "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}"
         fi
     fi
 }
 
 cp_hardlink() {
     print_progress_prefix
-    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}" "$1"
+    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             # If it's a directory cp will create a new copy into
@@ -168,7 +176,7 @@ cp_hardlink() {
 
 cp_symlink() {
     print_progress_prefix
-    echo "${COL_YELLOW}Symlinking to original: ${COL_RESET}" "$1"
+    echo "${COL_YELLOW}Symlinking to original: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
@@ -184,7 +192,7 @@ cp_symlink() {
 cp_reflink() {
     print_progress_prefix
     # reflink $1 to $2's data, preserving $1's  mtime
-    echo "${COL_YELLOW}Reflinking to original: ${COL_RESET}" "$1"
+    echo "${COL_YELLOW}Reflinking to original: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             touch -mr "$1" "$0"
@@ -200,24 +208,25 @@ cp_reflink() {
 clone() {
     print_progress_prefix
     # clone $1 from $2's data
-    echo "${COL_YELLOW}Cloning to: ${COL_RESET}" "$1"
+    # note: no original_check() call because rmlint --dedupe takes care of this
+    echo "${COL_YELLOW}Cloning to: ${COL_RESET}$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            sudo $RMLINT_BINARY --btrfs-clone -r "$2" "$1"
+            $SUDO_COMMAND $RMLINT_BINARY --dedupe -r "$2" "$1"
         else
-            $RMLINT_BINARY --btrfs-clone "$2" "$1"
+            $RMLINT_BINARY --dedupe "$2" "$1"
         fi
     fi
 }
 
 skip_hardlink() {
     print_progress_prefix
-    echo "${COL_BLUE}Leaving as-is (already hardlinked to original): ${COL_RESET}" "$1"
+    echo "${COL_BLUE}Leaving as-is (already hardlinked to original): ${COL_RESET}$1"
 }
 
 skip_reflink() {
     print_progress_prefix
-    echo "{$COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}" "$1"
+    echo "{$COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}$1"
 }
 
 user_command() {
@@ -228,14 +237,16 @@ user_command() {
 
 remove_cmd() {
     print_progress_prefix
-    echo "${COL_YELLOW}Deleting: ${COL_RESET}" "$1"
+    echo "${COL_YELLOW}Deleting: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             rm -rf "$1"
 
             if [ ! -z "$DO_DELETE_EMPTY_DIRS" ]; then
                 DIR=$(dirname "$1")
-                while [ ! "$(ls -A $DIR)" ]; do
+                while [ ! "$(ls -A "$DIR")" ]; do
+                    print_progress_prefix 0
+                    echo "${COL_GREEN}Deleting resulting empty dir: ${COL_RESET}$DIR"
                     rmdir "$DIR"
                     DIR=$(dirname "$DIR")
                 done
@@ -246,7 +257,7 @@ remove_cmd() {
 
 original_cmd() {
     print_progress_prefix
-    echo "${COL_GREEN}Keeping:  ${COL_RESET}" "$1"
+    echo "${COL_GREEN}Keeping:  ${COL_RESET}$1"
 }
 
 ##################
@@ -266,11 +277,11 @@ Rmlint was executed in the following way:
 Execute this script with -d to disable this informational message.
 Type any string to continue; CTRL-C, Enter or CTRL-D to abort immediately
 EOF
-    read eof_check
+    read -r eof_check
     if [ -z "$eof_check" ]
     then
         # Count Ctrl-D and Enter as aborted too.
-        echo $COL_RED "Aborted on behalf of the user." $COL_RESET
+        echo "${COL_RED}Aborted on behalf of the user.${COL_RESET}"
         exit 1;
     fi
 }
@@ -285,7 +296,7 @@ OPTIONS:
   -d   Do not ask before running.
   -x   Keep rmlint.sh; do not autodelete it.
   -p   Recheck that files are still identical before removing duplicates.
-  -r   Allow btrfs-clone to clone to read-only snapshots. (requires sudo)
+  -r   Allow deduplication of files on read-only btrfs snapshots. (requires sudo)
   -n   Do not perform any modifications, just print what would be done. (implies -d and -x)
   -c   Clean up empty directories while deleting duplicates.
   -q   Do not show progress.
@@ -300,7 +311,7 @@ do
   case $OPTION in
      h)
        usage
-       exit 1
+       exit 0
        ;;
      d)
        DO_ASK=false
@@ -325,8 +336,16 @@ do
      q)
        DO_SHOW_PROGRESS=
        ;;
+     *)
+       usage
+       exit 1
   esac
 done
+
+if [ -z $DO_REMOVE ]
+then
+    echo "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}"
+fi
 
 if [ -z $DO_ASK ]
 then
@@ -336,9 +355,9 @@ fi
 
 if [ ! -z $DO_DRY_RUN  ]
 then
-    echo "#$COL_YELLOW ////////////////////////////////////////////////////////////" $COL_RESET
-    echo "#$COL_YELLOW ///" $COL_RESET "This is only a dry run; nothing will be modified! " $COL_YELLOW "///" $COL_RESET
-    echo "#$COL_YELLOW ////////////////////////////////////////////////////////////" $COL_RESET
+    echo "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
+    echo "#${COL_YELLOW} /// ${COL_RESET} This is only a dry run; nothing will be modified! ${COL_YELLOW}///${COL_RESET}"
+    echo "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
 fi
 
 ######### START OF AUTOGENERATED OUTPUT #########

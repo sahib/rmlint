@@ -375,10 +375,6 @@ msgstr ""
 msgid "Number of hashing threads [8]"
 msgstr ""
 
-#: lib/hash-utility.c:141
-msgid "Print hash as self identifying multihash"
-msgstr ""
-
 #: lib/hash-utility.c:142
 msgid "Megabytes read buffer [256 MB]"
 msgstr ""
@@ -458,16 +454,16 @@ msgid ""
 msgstr ""
 
 #: lib/cmdline.c:237
-msgid "Usage: rmlint --btrfs-clone [-r] source dest\n"
+msgid "Usage: rmlint --dedupe [-r] source dest\n"
 msgstr ""
 
 #: lib/cmdline.c:251
-msgid "btrfs clone: failed to open source file"
+msgid "dedupe: failed to open source file"
 msgstr ""
 
 #: lib/cmdline.c:257
 #, c-format
-msgid "btrfs clone: error %i: failed to open dest file.%s"
+msgid "dedupe: error %i: failed to open dest file.%s"
 msgstr ""
 
 #: lib/cmdline.c:259

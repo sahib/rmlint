@@ -55,6 +55,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->find_badids = true;
     cfg->find_badlinks = true;
     cfg->find_hardlinked_dupes = true;
+    cfg->keep_hardlinked_dupes = false;
     cfg->build_fiemap = true;
     cfg->crossdev = true;
     cfg->list_mounts = true;
@@ -70,6 +71,21 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->threads_per_disk = 2;
     cfg->verbosity = G_LOG_LEVEL_INFO;
     cfg->follow_symlinks = false;
+
+    /* Optimum buffer size based on /usr without dropping caches:
+     * 4k  => 5.29 seconds
+     * 8k  => 5.11 seconds
+     * 16k => 5.04 seconds
+     * 32k => 5.08 seconds
+     * With dropped caches:
+     * 4k  => 45.2 seconds
+     * 16k => 45.0 seconds
+     * Optimum buffer size using a rotational disk and paranoid hash:
+     * 4k  => 16.5 seconds
+     * 8k  => 16.5 seconds
+     * 16k => 15.9 seconds
+     * 32k => 15.8 seconds */
+    cfg->read_buf_len = 16 * 1024;
 
     cfg->total_mem = (RmOff)1024 * 1024 * 1024;
     cfg->sweep_size = 1024 * 1024 * 1024;

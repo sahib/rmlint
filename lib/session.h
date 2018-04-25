@@ -114,8 +114,7 @@ typedef struct RmSession {
     RmOff offset_fails;
 
     /* Daniels paranoia */
-    RmOff hash_seed1;
-    RmOff hash_seed2;
+    RmOff hash_seed;
 
     /* count used for determining the verbosity level */
     int verbosity_count;
@@ -135,12 +134,9 @@ typedef struct RmSession {
     /* true once traverse finished running */
     bool traverse_finished;
 
-    /* Version of the linux kernel (0 on other operating systems) */
-    int kernel_version[2];
-
-	/*  When run with --equal this holds the exit code for rmlint
-	 *  (the exit code is determined by the _equal formatter) */
-	int equal_exit_code;
+    /*  When run with --equal this holds the exit code for rmlint
+     *  (the exit code is determined by the _equal formatter) */
+    int equal_exit_code;
 } RmSession;
 
 /**
@@ -179,7 +175,22 @@ bool rm_session_was_aborted(void);
  *
  * @return True if the kernel is recent enough.
  */
-bool rm_session_check_kernel_version(RmSession *session, int major, int minor);
+bool rm_session_check_kernel_version(int need_major, int need_minor);
+
+/**
+ * @brief Trigger rmlint in --dedupe mode.
+ *
+ * @return exit_status for exit()
+ */
+int rm_session_dedupe_main(RmCfg *cfg);
+
+
+/**
+ * @brief Trigger rmlint in --is-reflink mode.
+ *
+ * @return 0 if is reflink, 1 if not, ?? if can't tell
+ */
+int rm_session_is_reflink_main(RmCfg *cfg);
 
 /* Maybe colors, for use outside of the rm_log macros,
  * in order to work with the --with-no-color option

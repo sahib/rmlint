@@ -569,7 +569,7 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
 
         /* hardlink cluster are counted as filtered files since they are either
          * ignored or treated as automatic duplicates depending on settings (so
-         * no effort eaither way); rm_pp_handle_hardlink will either free or bundle
+         * no effort either way); rm_pp_handle_hardlink will either free or bundle
          * the hardlinks depending on value of headfile->hardlinks.is_head.
          */
         session->total_filtered_files -= rm_util_queue_foreach_remove(

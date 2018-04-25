@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char *PY_SOURCE = "<<PYTHON_SOURCE>>";
+static const char PY_SOURCE[] = "<<PYTHON_SOURCE>>";
 
 typedef struct RmFmtHandlerPy {
     /* must be first */
@@ -52,7 +52,11 @@ typedef struct RmFmtHandlerPy {
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerPy *self = (RmFmtHandlerPy *)parent;
 
-    fprintf(out, "%s", PY_SOURCE);
+    if(fwrite(PY_SOURCE, 1, sizeof(PY_SOURCE) - 1, out) <= 0) {
+        rm_log_perror("Failed to write python script");
+        return;
+    }
+
     if(fchmod(fileno(out), S_IRUSR | S_IWUSR | S_IXUSR) == -1) {
         rm_log_perror("Could not chmod +x python-script");
     }

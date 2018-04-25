@@ -11,9 +11,33 @@ import time
 import pprint
 import shutil
 import shlex
+import struct
 import subprocess
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
+
+CKSUM_TYPES = [
+    'murmur',
+    'metro',
+    'metro256',
+    'md5',
+    'sha1',
+    'sha256',
+    'sha3-256',
+    'sha3-384',
+    'sha3-512',
+    'blake2s',
+    'blake2b',
+    'blake2sp',
+    'blake2bp',
+    'xxhash',
+    'highway64',
+    'highway128',
+    'highway256',
+    #'cumulative',
+    #'ext',
+    'paranoid',
+]
 
 def runs_as_root():
     return os.geteuid() is 0
@@ -64,7 +88,14 @@ def has_feature(feature):
     ).decode('utf-8')
 
 
-def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, directly_return_output=False, use_shell=False):
+def run_rmlint_once(*args,
+                    dir_suffix=None,
+                    use_default_dir=True,
+                    outputs=None,
+                    with_json=True,
+                    directly_return_output=False,
+                    use_shell=False,
+                    verbosity="-V"):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -87,10 +118,11 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, 
         env, cmd = {}, []
 
     cmd += [
-        './rmlint', target_dir, '-V',
-    ] + shlex.split(' '.join(args)) + [
-        '-o', 'json:/tmp/out.json', '-c', 'json:oneline'
-    ]
+        './rmlint', target_dir, verbosity,
+    ] + shlex.split(' '.join(args))
+
+    if with_json:
+        cmd += ['-o', 'json:/tmp/out.json', '-c', 'json:oneline']
 
     for idx, output in enumerate(outputs or []):
         cmd.append('-o')
@@ -124,8 +156,11 @@ def run_rmlint_once(*args, dir_suffix=None, use_default_dir=True, outputs=None, 
     if directly_return_output:
         return output
 
-    with open('/tmp/out.json', 'r') as f:
-        json_data = json.loads(f.read())
+    if with_json:
+        with open('/tmp/out.json', 'r') as f:
+            json_data = json.loads(f.read())
+    else:
+        json_data = []
 
     read_outputs = []
     for idx, output in enumerate(outputs or []):
@@ -201,20 +236,17 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--no-mount-table'
     ]
 
-    cksum_types = [
-        'paranoid', 'sha1', 'sha256', 'spooky', 'bastard', 'city',
-        'md5', 'city256', 'city512', 'murmur', 'murmur256', 'murmur512',
-        'spooky32', 'spooky64', 'xxhash', 'farmhash',
-        'sha3-256', 'sha3-384', 'sha3-512',
-        'blake2s', 'blake2b', 'blake2sp', 'blake2bp',
-    ]
 
     # Note: sha512 is supported on all system which have
     #       no recent enough glib with. God forsaken debian people.
     if has_feature('sha512'):
-        cksum_types.append('sha512')
+        CKSUM_TYPES.append('sha512')
 
-    for cksum_type in cksum_types:
+    if has_feature('sse4'):
+        CKSUM_TYPES.append('metrocrc')
+        CKSUM_TYPES.append('metrocrc256')
+
+    for cksum_type in CKSUM_TYPES:
         options.append('--algorithm=' + cksum_type)
 
     data = None
@@ -254,7 +286,14 @@ def run_rmlint(*args, force_no_pendantic=False, **kwargs):
 
 
 def create_dirs(path):
-    os.makedirs(os.path.join(TESTDIR_NAME, path))
+    full_path = os.path.join(TESTDIR_NAME, path)
+
+    try:
+        os.makedirs(full_path)
+    except OSError:
+        pass
+
+    return full_path
 
 
 def create_link(path, target, symlink=False):
@@ -265,7 +304,7 @@ def create_link(path, target, symlink=False):
     )
 
 
-def create_file(data, name, mtime=None):
+def create_file(data, name, mtime=None, write_binary=False):
     full_path = os.path.join(TESTDIR_NAME, name)
     if '/' in name:
         try:
@@ -273,8 +312,14 @@ def create_file(data, name, mtime=None):
         except OSError:
             pass
 
-    with open(full_path, 'w') as handle:
-        handle.write(data)
+    with open(full_path, 'wb' if write_binary else 'w') as handle:
+        if write_binary:
+            if isinstance(data, int):
+                handle.write(struct.pack('i', data))
+            else:
+                assert False, "Unhandled data type for binary write: " + data
+        else:
+            handle.write(data)
 
     if not mtime is None:
         subprocess.call(['touch', '-m', '-d', str(mtime), full_path])

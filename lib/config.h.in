@@ -18,11 +18,16 @@
 #define HAVE_LINUX_LIMITS  ({HAVE_LINUX_LIMITS})
 #define HAVE_POSIX_FADVISE ({HAVE_POSIX_FADVISE})
 #define HAVE_BTRFS_H       ({HAVE_BTRFS_H})
+#define HAVE_LINUX_FS_H    ({HAVE_LINUX_FS_H})
 #define HAVE_FACCESSAT     ({HAVE_FACCESSAT})
 #define HAVE_UNAME         ({HAVE_UNAME})
-#define HAVE_SYSMACROS_H    ({HAVE_SYSMACROS_H})
+#define HAVE_SYSMACROS_H   ({HAVE_SYSMACROS_H})
+#define HAVE_MM_CRC32_U64  ({HAVE_MM_CRC32_U64})
+#define HAVE_BUILTIN_CPU_SUPPORTS ({HAVE_BUILTIN_CPU_SUPPORTS})
 
+/* define here so rmlint and hash utility can both access */
 #define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B
+
 #define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
 #define RM_VERSION_MAJOR {VERSION_MAJOR}
 #define RM_VERSION_MINOR {VERSION_MINOR}
@@ -69,6 +74,15 @@
     if(errno) {{                                                                         \
         rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, message, g_strerror(errno)); \
     }}                                                                                   \
+
+#define rm_log_perrorf(message, ...)                                \
+    if(errno) {{                                                    \
+        int _errsv = errno;                                         \
+        char *msg = g_strdup_printf(message, __VA_ARGS__);          \
+        rm_log_error_line("%s:%d: %s: %s", __FILE__, __LINE__, msg, \
+                          g_strerror(_errsv));                      \
+        g_free(msg);                                                \
+    }}
 
 #define _UNUSED G_GNUC_UNUSED
 #define LLU G_GUINT64_FORMAT
@@ -161,7 +175,7 @@ typedef guint64 RmOff;
         rm_log_error_line("     Will try to continue in 2 seconds. Expect crashes.");         \
         g_usleep(2 * 1000 * 1000);                                                            \
     }}
-    
+
 
 #define RM_NOT_REACHED (0)
 #define rm_assert_gentle_not_reached() rm_assert_gentle(RM_NOT_REACHED)

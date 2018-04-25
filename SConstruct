@@ -11,6 +11,8 @@ import SCons
 import SCons.Conftest as tests
 from SCons.Script.SConscript import SConsEnvironment
 
+DEFAULT_OPTIMISATION='s'  # compile with -Os
+
 pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
 
 def read_version():
@@ -325,6 +327,15 @@ def check_btrfs_h(context):
     context.Result(rc)
     return rc
 
+def check_linux_fs_h(context):
+    rc = 1
+    if tests.CheckHeader(context, 'linux/fs.h'):
+        rc = 0
+
+    conf.env['HAVE_LINUX_FS_H'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
 
 def check_linux_limits(context):
     rc = 1
@@ -349,6 +360,30 @@ def check_cygwin(context):
         context.Message("platform.uname() failed")
 
     conf.env['IS_CYGWIN'] = rc
+    context.Result(rc)
+    return rc
+
+def check_mm_crc32_u64(context):
+
+    rc = 0 if tests.CheckDeclaration(
+            context,
+            symbol='_mm_crc32_u64',
+            includes='#include <nmmintrin.h>\n'
+            ) else 1
+
+    conf.env['HAVE_MM_CRC32_U64'] = rc
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+def check_builtin_cpu_supports(context):
+    rc = 0 if tests.CheckDeclaration(
+            context,
+            symbol='__builtin_cpu_supports'
+            ) else 1
+
+    conf.env['HAVE_BUILTIN_CPU_SUPPORTS'] = rc
+    context.did_show_result = True
     context.Result(rc)
     return rc
 
@@ -469,14 +504,6 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
         dest='with_' + suffix
     )
 
-AddOption(
-    '--with-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
-AddOption(
-    '--without-sse', action='store_const', default=False, const=False, dest='with_sse'
-)
-
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
@@ -524,8 +551,11 @@ conf = Configure(env, custom_tests={
     'check_gettext': check_gettext,
     'check_linux_limits': check_linux_limits,
     'check_btrfs_h': check_btrfs_h,
+    'check_linux_fs_h': check_linux_fs_h,
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
+    'check_mm_crc32_u64': check_mm_crc32_u64,
+    'check_builtin_cpu_supports': check_builtin_cpu_supports,
     'check_sysmacro_h': check_sysmacro_h
 })
 
@@ -599,13 +629,10 @@ if conf.env['IS_CYGWIN']:
 else:
     conf.env.Append(CCFLAGS=['-fPIC'])
 
-
-if ARGUMENTS.get('DEBUG') == "1":
-    conf.env.Append(CCFLAGS=['-ggdb3'])
-else:
-    # Generic compiler:
-    conf.env.Append(CCFLAGS=['-Os'])
-    conf.env.Append(LINKFLAGS=['-s'])
+# check _mm_crc32_u64 (SSE4.2) support:
+conf.check_mm_crc32_u64()
+if conf.env['HAVE_MM_CRC32_U64']:
+    conf.env.Append(CCFLAGS=['-msse4.2'])
 
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
@@ -619,7 +646,7 @@ conf.env.Append(CFLAGS=[
     '-Wmissing-include-dirs',
     '-Wuninitialized',
     '-Wstrict-prototypes',
-    '-Wno-implicit-fallthrough'
+    '-Wno-implicit-fallthrough',
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
@@ -627,6 +654,7 @@ env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 conf.env.Append(_LIBFLAGS=['-lm'])
 
+conf.check_builtin_cpu_supports()
 conf.check_blkid()
 conf.check_sys_block()
 conf.check_libelf()
@@ -639,11 +667,26 @@ conf.check_linux_limits()
 conf.check_posix_fadvise()
 conf.check_faccessat()
 conf.check_btrfs_h()
+conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+# compiler optimisation and debug symbols:
+cc_O_option = '-O'
+if ARGUMENTS.get('DEBUG') == "1":
+    print("Compiling with gdb extra debug symbols")
+    conf.env.Append(CCFLAGS=['-ggdb3', '-fno-inline'])
+    cc_O_option += (ARGUMENTS.get('O') or '0')
+else:
+    conf.env.Append(LINKFLAGS=['-s'])
+    cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
+
+print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
+conf.env.Append(CCFLAGS=[cc_O_option])
+
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
@@ -662,6 +705,39 @@ SConsEnvironment.InstallPerm = InstallPerm
 
 # Your extra checks here
 env = conf.Finish()
+
+def get_cpu_count():
+    # priority: environ('NUM_CPU'), else try to read actual cpu count, else fallback
+    fallback = 4
+
+    if 'NUM_CPU' in os.environ:
+        return int(os.environ.get('NUM_CPU'))
+
+    # try multiprocessing.cpu_count() (Python 2.6+)
+    try:
+        import multiprocessing
+        return multiprocessing.cpu_count()
+    except (ImportError, NotImplementedError):
+        pass
+
+   # try psutil.cpu_count()
+    try:
+        import psutil
+        return psutil.cpu_count()
+    except (ImportError, AttributeError):
+        pass
+
+    # default value
+    return fallback
+
+
+# set number of parallel jobs during build
+# note: while not particularly intuitive or obvious from the documentation,
+# SetOption() will *not* over-ride commandline option passed by `scons -j<n>`
+# or `scons --jobs=<n>`
+SetOption('num_jobs', get_cpu_count())
+
+print ("Running with --jobs=" + repr(GetOption('num_jobs')))
 
 library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')

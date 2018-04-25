@@ -38,7 +38,7 @@ def test_equal_files():
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '-pp', '--equal', path_a, path_b,
+            '-p', '--equal', path_a, path_b,
             use_default_dir=False
         )
 
@@ -107,7 +107,7 @@ def test_equal_directories():
 
     with assert_exit_code(0):
         head, *data, footer = run_rmlint(
-            '-pp', '--equal', path_a, path_b,
+            '-p', '--equal', path_a, path_b,
             use_default_dir=False
         )
 

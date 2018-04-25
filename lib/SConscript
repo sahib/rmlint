@@ -32,7 +32,10 @@ def build_config_template(target, source, env):
             HAVE_BLKID=env['HAVE_BLKID'],
             HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
             HAVE_LINUX_LIMITS=env['HAVE_LINUX_LIMITS'],
+            HAVE_LINUX_FS_H=env['HAVE_LINUX_FS_H'],
             HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
+            HAVE_MM_CRC32_U64=env['HAVE_MM_CRC32_U64'],
+            HAVE_BUILTIN_CPU_SUPPORTS=env['HAVE_BUILTIN_CPU_SUPPORTS'],
             HAVE_FACCESSAT=env['HAVE_FACCESSAT'],
             HAVE_UNAME=env['HAVE_UNAME'],
             HAVE_SYSMACROS_H=env['HAVE_SYSMACROS_H'],
@@ -46,13 +49,16 @@ def build_config_template(target, source, env):
         handle.write(config_h)
 
 
-def prepare_c_source(text):
+def prepare_c_source(text, escape_percentages=True):
     # Prepare the Python source to be compatible with C-strings
     text = text.replace('"', '\\"')
     text = text.replace('\\n', '\\\\n')
-    text = text.replace('%', '%%')
-    text = text.replace('%%s', '%s')
     text = '\\n"\n"'.join(text.splitlines())
+
+    if escape_percentages:
+        text = text.replace('%', '%%')
+        text = text.replace('%%s', '%s')
+
     return text
 
 
@@ -60,7 +66,7 @@ def build_python_formatter(target, source, env):
     text = source[0].get_text_contents()
 
     with codecs.open('lib/formats/py.py', 'r') as handle:
-        py_source = prepare_c_source(handle.read())
+        py_source = prepare_c_source(handle.read(), False)
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
         handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))

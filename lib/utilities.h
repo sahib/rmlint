@@ -38,6 +38,22 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
+/* return values for rm_offsets_match */
+typedef enum RmLinkType {
+    RM_LINK_REFLINK         = EXIT_SUCCESS,
+    RM_LINK_NONE            = EXIT_FAILURE,
+    RM_LINK_NOT_FILE        = 3,
+    RM_LINK_WRONG_SIZE      = 4,
+    RM_LINK_MAYBE_REFLINK   = 5,
+    RM_LINK_SAME_FILE       = 6,
+    RM_LINK_PATH_DOUBLE     = 7,
+    RM_LINK_HARDLINK        = 8,
+    RM_LINK_XDEV            = 9,
+    RM_LINK_SYMLINK         = 10,
+    RM_LINK_ERROR           = 11,
+} RmLinkType;
+
+
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
 #else
@@ -116,11 +132,13 @@ static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
 #if RM_IS_APPLE || RM_IS_CYGWIN
     if(lseek(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
+        return 0;
     }
     return readv(fd, iov, iovcnt);
 #elif RM_PLATFORM_32
     if(lseek64(fd, offset, SEEK_SET) == -1) {
         rm_log_perror("seek in emulated preadv failed");
+        return 0;
     }
     return readv(fd, iov, iovcnt);
 #else
@@ -410,8 +428,9 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 
 /**
  * @brief Test if two files have identical fiemaps.
+ * @retval see RmOffsetsMatchCode enum definition.
  */
-bool rm_offsets_match(char *path1, char *path2);
+RmLinkType rm_util_link_type(char *path1, char *path2);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //
@@ -490,5 +509,10 @@ void rm_running_mean_add(RmRunningMean *m, gdouble value);
  * @return The current mean (0.0 if no values available)
  */
 gdouble rm_running_mean_get(RmRunningMean *m);
+
+/**
+ * @brief Release internal mem used to store values.
+ */
+void rm_running_mean_unref(RmRunningMean *m);
 
 #endif /* RM_UTILITIES_H_INCLUDE*/

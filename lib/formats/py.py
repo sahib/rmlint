@@ -24,8 +24,12 @@ Authors:
 
 # This is the python remover utility shipped inside the rmlint binary.
 # The 200 lines source presented below is meant to be clean and hackable.
-# It is intented to be used for corner cases where the built-in sh formatter
+# It is intended to be used for corner cases where the built-in sh formatter
 # is not enough or as an alternative to it. By default it works the same.
+#
+# Disable a few pylint warnings, in case someone integrates into scripts:
+# pylint: disable=unused-argument,missing-docstring,invalid-name
+# pylint: disable=redefined-outer-name,unused-variable
 
 # Python2 compat:
 from __future__ import print_function
@@ -39,14 +43,16 @@ import filecmp
 import argparse
 import subprocess
 
+CURRENT_UID = os.geteuid()
+CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
 
 USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
 COLORS = {
-    'red':    "\x1b[31;01m" if USE_COLOR else "",
-    'yellow': "\x1b[33;01m" if USE_COLOR else "",
+    'red':    "\x1b[0;31m" if USE_COLOR else "",
+    'blue':   "\x1b[1;34m" if USE_COLOR else "",
+    'green':  "\x1b[0;32m" if USE_COLOR else "",
+    'yellow': "\x1b[0;33m" if USE_COLOR else "",
     'reset':  "\x1b[0m" if USE_COLOR else "",
-    'green':  "\x1b[32;01m" if USE_COLOR else "",
-    'blue':   "\x1b[34;01m" if USE_COLOR else ""
 }
 
 
@@ -55,20 +61,17 @@ def original_check(path, original, be_paranoid=True):
         stat_p, stat_o = os.stat(path), os.stat(original)
         if (stat_p.st_dev, stat_p.st_ino) == (stat_o.st_dev, stat_o.st_ino):
             print('{c[red]}Same inode; ignoring:{c[reset]} {o} <=> {p}'.format(
-                c=COLORS, o=original, p=path
-            ))
+                c=COLORS, o=original, p=path))
             return False
 
         if stat_p.st_size != stat_o.st_size:
-            print('{c[red]}Size differs; ignoring:{c[reset]} {o} <=> {p}'.format(
-                c=COLORS, o=original, p=path
-            ))
+            print('{c[red]}Size differs; ignoring:{c[reset]} '
+                  '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
 
         if be_paranoid and not filecmp.cmp(path, original):
-            print('{c[red]}Content differs; ignoring:{c[reset]} {o} <=> {p}'.format(
-                c=COLORS, o=original, p=path
-            ))
+            print('{c[red]}Content differs; ignoring:{c[reset]} '
+                  '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
 
         return True
@@ -78,12 +81,14 @@ def original_check(path, original, be_paranoid=True):
 
 
 def handle_duplicate_dir(path, original, **kwargs):
-    shutil.rmtree(path)
+    if not args.dry_run:
+        shutil.rmtree(path)
 
 
 def handle_duplicate_file(path, original, args, **kwargs):
     if original_check(path, original['path'], be_paranoid=args.paranoid):
-        os.remove(path)
+        if not args.dry_run:
+            os.remove(path)
 
 
 def handle_unfinished_cksum(path, **kwargs):
@@ -91,35 +96,38 @@ def handle_unfinished_cksum(path, **kwargs):
 
 
 def handle_empty_dir(path, **kwargs):
-    os.rmdir(path)
+    if not args.dry_run:
+        os.rmdir(path)
 
 
-def handle_empy_file(path, **kwargs):
-    os.remove(path)
+def handle_empty_file(path, **kwargs):
+    if not args.dry_run:
+        os.remove(path)
 
 
 def handle_nonstripped(path, **kwargs):
-    subprocess.call(["strip", "--strip-debug", path])
+    if not args.dry_run:
+        subprocess.call(["strip", "--strip-debug", path])
 
 
 def handle_badlink(path, **kwargs):
-    os.remove(path)
-
-
-CURRENT_UID = os.geteuid()
-CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
+    if not args.dry_run:
+        os.remove(path)
 
 
 def handle_baduid(path, **kwargs):
-    os.chmod(path, CURRENT_UID, -1)
+    if not args.dry_run:
+        os.chown(path, args.user, -1)
 
 
 def handle_badgid(path, **kwargs):
-    os.chmod(path, -1, CURRENT_GID)
+    if not args.dry_run:
+        os.chown(path, -1, args.group)
 
 
 def handle_badugid(path, **kwargs):
-    os.chmod(path, CURRENT_UID, CURRENT_GID)
+    if not args.dry_run:
+        os.chown(path, args.user, args.group)
 
 
 OPERATIONS = {
@@ -127,7 +135,7 @@ OPERATIONS = {
     "duplicate_file": handle_duplicate_file,
     "unfinished_cksum": handle_unfinished_cksum,
     "emptydir": handle_empty_dir,
-    "emptyfile": handle_empy_file,
+    "emptyfile": handle_empty_file,
     "nonstripped": handle_nonstripped,
     "badlink": handle_badlink,
     "baduid": handle_baduid,
@@ -135,108 +143,141 @@ OPERATIONS = {
     "badugid": handle_badugid,
 }
 
-MESSAGES = {
-    "duplicate_dir": "removing tree",
-    "duplicate_file": "removing",
-    "unfinished_cksum": "checking",
-    "emptydir": "removing",
-    "emptyfile": "removing",
-    "nonstripped": "stripping",
-    "badlink": "removing",
-    "baduid": "changing uid",
-    "badgid": "changing gid",
-    "badugid": "changing uid & gid",
-}
-
 
 def exec_operation(item, original=None, args=None):
     try:
-        OPERATIONS[item['type']](item['path'], original=original, item=item, args=args)
+        OPERATIONS[item['type']](
+            item['path'], original=original, item=item, args=args)
     except OSError as err:
-        print(
-            '{c[red]}#{c[reset]} Error on `{item[path]}`:\n{c[red]}#{c[reset]}    {err}'.format(
-                item=item, err=err, c=COLORS
-            ),
-            file=sys.stderr
-        )
+        print('{c[red]}# {err}{c[reset]}'.format(
+            err=err, c=COLORS
+        ), file=sys.stderr)
 
 
-def main(args, header, data, footer):
-    seen_cksums = set()
+MESSAGES = {
+    'duplicate_dir':    '{c[yellow]}Deleting duplicate directory:',
+    'duplicate_file':   '{c[yellow]}Deleting duplicate:',
+    'unfinished_cksum': 'checking',
+    'emptydir':         '{c[green]}Deleting empty directory:',
+    'emptyfile':        '{c[green]}Deleting empty file:',
+    'nonstripped':      '{c[green]}Stripping debug symbols:',
+    'badlink':          '{c[green]}Deleting bad symlink:',
+    'baduid':           '{c[green]}chown {u}',
+    'badgid':           '{c[green]}chgrp {g}',
+    'badugid':          '{c[green]}chown {u}:{g}',
+}
+
+ORIGINAL_MESSAGES = {
+    'duplicate_file':   '{c[green]}Keeping original:  ',
+    'duplicate_dir':    '{c[green]}Keeping original directory:  ',
+}
+
+
+def main(args, data):
     last_original_item = None
 
-    for item in data:
-        if item['type'].startswith('duplicate_') and item['is_original']:
-            print(
-                "\n{c[green]}#{c[reset]} Deleting twins of {item[path]} ".format(
-                    item=item, c=COLORS
-                )
-            )
-            last_original_item = item
+    # Process header and footer, if present
+    header, footer = [], []
+    if data[0].get('description'):
+        header = data.pop(0)
+    if data[-1].get('total_files'):
+        footer = data.pop(-1)
 
+    if not args.no_ask and not args.dry_run:
+        print('rmlint was executed in the following way:\n',
+              header.get('args'),
+              '\n\nPress Enter to continue and perform modifications, '
+              'or CTRL-C to exit.'
+              '\nExecute this script with -d to disable this message.',
+              file=sys.stderr)
+        sys.stdin.read(1)
+
+    for item in data:
+        progress_prefix = '{c[blue]}[{p:3}%]{c[reset]} '.format(
+            c=COLORS, p=item['progress'])
+
+        if item['is_original']:
+            msg = ORIGINAL_MESSAGES[item['type']].format(c=COLORS)
+            print('{prog}{v}{c[reset]} {path}'.format(
+                c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
+            last_original_item = item
             # Do not handle originals.
             continue
 
-        if not args.dry_run:
-            exec_operation(item, original=last_original_item, args=args)
+        msg = MESSAGES[item['type']].format(
+            c=COLORS, u=args.user, g=args.group)
+        print('{prog}{v}{c[reset]} {path}'.format(
+            c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
+        exec_operation(item, original=last_original_item, args=args)
 
-        print('{c[blue]}#{c[reset]} Handling ({t} -> {v}): {p}'.format(
-            c=COLORS, t=item['type'], v=MESSAGES[item['type']], p=item['path'])
-        )
+    print('{c[blue]}[100%] Done!{c[reset]}'.format(c=COLORS))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Handle the files stored in rmlints json output'
+        description='Handle the files in a JSON output of rmlint.'
     )
 
     parser.add_argument(
-        'json_docs', metavar='json_doc', type=open, nargs='*',
-        help='A json output of rmlint to handle (can be given many times)'
+        'json_files', metavar='json_file', nargs='*', default=['.rmlint.json'],
+        help='A JSON output of rmlint to handle (can be given multiple times)'
     )
     parser.add_argument(
         '-n', '--dry-run', action='store_true',
-        help='Only print what would be done.'
+        help='Do not perform any modifications, just print what would be '
+             'done. (implies -d)'
     )
     parser.add_argument(
         '-d', '--no-ask', action='store_true', default=False,
-        help='ask for confirmation before running (does nothing for -n)'
+        help='Do not ask for confirmation before running.'
     )
     parser.add_argument(
         '-p', '--paranoid', action='store_true', default=False,
-        help='Do an extra byte-by-byte compare before deleting duplicates'
+        help='Recheck that files are still identical before removing '
+             'duplicates.'
+    )
+    parser.add_argument(
+        '-u', '--user', type=int, default=CURRENT_UID,
+        help='Numerical uid for chown operations'
+    )
+    parser.add_argument(
+        '-g', '--group', type=int, default=CURRENT_GID,
+        help='Numerical gid for chgrp operations'
     )
 
-    try:
-        args = parser.parse_args()
-    except OSError as err:
-        print(err)
-        sys.exit(-1)
-
-    if not args.json_docs:
-        # None given on the commandline
+    args = parser.parse_args()
+    json_docs = []
+    for json_file in args.json_files:
         try:
-            args.json_docs.append(open('.rmlint.json', 'r'))
-        except OSError as err:
-            print('Cannot load default json document: ', str(err), file=sys.stderr)
-            sys.exit(-2)
-
-    json_docus = [json.load(doc) for doc in args.json_docs]
-    json_elems = [item for sublist in json_docus for item in sublist]
+            with open(json_file) as f:
+                j = json.load(f)
+            json_docs.append(j)
+        except IOError as err:      # Cannot open file
+            print(err, file=sys.stderr)
+            sys.exit(-1)
+        except ValueError as err:   # File is not valid JSON
+            print('{}: {}'.format(err, json_file), file=sys.stderr)
+            sys.exit(-1)
 
     try:
-        if not args.no_ask and not args.dry_run:
-            print('\nPlease hit any key before continuing to shredder your data.', file=sys.stderr)
-            sys.stdin.read(1)
+        if args.dry_run:
+            print(
+                '{c[green]}#{c[reset]} '
+                'This is a dry run. Nothing will be modified.'.format(
+                    c=COLORS
+                )
+            )
 
-        for json_doc in json_docus:
-            main(args, json_doc[0], json_doc[1:-1], json_doc[-1])
+        for json_doc in json_docs:
+            main(args, json_doc)
 
         if args.dry_run:
             print(
-                '\n{c[green]}#{c[reset]} This was a dry run. Nothing modified.'.format(
+                '{c[green]}#{c[reset]} '
+                'This was a dry run. Nothing was modified.'.format(
                     c=COLORS
                 )
             )
     except KeyboardInterrupt:
-        print('canceled.')
+        print('\ncanceled.')
+

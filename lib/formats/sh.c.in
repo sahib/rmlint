@@ -90,25 +90,33 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     }
 
     /* Needs to have at least kernel 4.2 */
-    if(!rm_session_check_kernel_version(self->session, 4, 2)) {
+    if(!rm_session_check_kernel_version(4, 2)) {
         return false;
     }
 
-    bool offsets_match = rm_offsets_match(dupe_path, orig_path);
-    char *reflink_type = g_hash_table_lookup(
-            self->session->mounts->reflinkfs_table,
-            GUINT_TO_POINTER(file->dev)
-    );
-
-    if (offsets_match) {
+    int link_type = rm_util_link_type(dupe_path, orig_path);
+    switch(link_type) {
+    case RM_LINK_REFLINK:
         *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
-    } else if(!g_strcmp0("btrfs", reflink_type)) {
+        return TRUE;
+    case RM_LINK_SAME_FILE:
+    case RM_LINK_NOT_FILE:
+    case RM_LINK_WRONG_SIZE:
+    case RM_LINK_PATH_DOUBLE:
+    case RM_LINK_ERROR:
+    case RM_LINK_XDEV:
+    case RM_LINK_SYMLINK:
+        rm_log_warning_line("Unexpected return code %d from rm_util_link_type()", link_type);
+        return FALSE;
+    case RM_LINK_HARDLINK:
+    case RM_LINK_MAYBE_REFLINK:
+    case RM_LINK_NONE:
         *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
-    } else {
-        return false;
+        return TRUE;
+    default:
+        rm_assert_gentle_not_reached();
+        return FALSE;
     }
-
-    return true;
 }
 
 static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, RmFile *file, char *dupe_path, char *orig_path, char *dupe_escaped, char *orig_escaped) {
@@ -120,12 +128,29 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
         return false;
     }
 
-    if (rm_offsets_match(dupe_path, orig_path)) {
+    int link_type = rm_util_link_type(dupe_path, orig_path);
+    switch(link_type) {
+    case RM_LINK_REFLINK:
         *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
-    } else {
+        return TRUE;
+    case RM_LINK_SAME_FILE:
+    case RM_LINK_NOT_FILE:
+    case RM_LINK_WRONG_SIZE:
+    case RM_LINK_PATH_DOUBLE:
+    case RM_LINK_XDEV:
+    case RM_LINK_ERROR:
+        rm_log_warning_line("Unexpected return code %d from rm_util_link_type()", link_type);
+        return FALSE;
+    case RM_LINK_HARDLINK:
+    case RM_LINK_SYMLINK:
+    case RM_LINK_MAYBE_REFLINK:
+    case RM_LINK_NONE:
         *out = g_strdup_printf("cp_reflink '%s' '%s'", dupe_escaped, orig_escaped);
+        return TRUE;
+    default:
+        rm_assert_gentle_not_reached();
+        return FALSE;
     }
-    return true;
 }
 
 static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
@@ -276,16 +301,16 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         /* user specified handlers */
         rm_sh_parse_handlers(self, handler_cfg);
     } else if(rm_fmt_get_config_value(session->formats, "sh", "clone") != NULL) {
-        /* Preset: try clone, then reflinks, then symlinks then hardlinks */
+        /* Preset: try clone, then reflinks, then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "clone,reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
-        /* Preset: try reflinks, then symlinks then hardlinks */
+        /* Preset: try reflinks, then then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
-        /* Preset: try symlinks before using hardlinks */
+        /* Preset: try hardlinks before using symlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "symlink") != NULL) {
-        /* Preset: only do hardlinks */
+        /* Preset: only do symlinks */
         rm_sh_parse_handlers(self, "symlink");
     } else {
         /* Default: remove the file */
@@ -306,9 +331,9 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         session->cfg->iwd,
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "[unknown]",
         (session->cfg->full_argv0_path) ? (session->cfg->full_argv0_path) : "$(which rmlint)",
-        equal_extra_args,
         rm_util_get_username(),
         rm_util_get_groupname(),
+        equal_extra_args,
         (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "unknown_commandline"
     );

@@ -133,7 +133,13 @@ int main(int argc, const char **argv) {
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
-        exit_state = rm_cmd_main(&session);
+        if(cfg.dedupe) {
+            exit_state = rm_session_dedupe_main(&cfg);
+        } else if(cfg.is_reflink) {
+            exit_state = rm_session_is_reflink_main(&cfg);
+        } else {
+            exit_state = rm_cmd_main(&session);
+        }
     }
 
     rm_session_clear(&session);

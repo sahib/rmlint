@@ -25,7 +25,7 @@ pkgver() {
 
 build() {
     cd "${srcdir}/${pkgname}"
-    scons -j4 DEBUG=1 --prefix=${pkgdir}/usr --actual-prefix=/usr
+    scons DEBUG=1 --prefix=${pkgdir}/usr --actual-prefix=/usr
 }
  
 package() {

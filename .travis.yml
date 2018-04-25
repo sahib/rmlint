@@ -1,8 +1,10 @@
 language: c
+
 install:
     - sudo apt-get update
     - sudo apt-get install python3-sphinx gettext python3-setuptools
     - sudo apt-get install libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev
+    - sudo apt-get install clang
     - sudo easy_install3 $(cat test-requirements.txt)
 
 compiler:

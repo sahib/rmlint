@@ -380,10 +380,6 @@ msgstr "Asimilación tipo [BLAKE2B]"
 msgid "Number of hashing threads [8]"
 msgstr "Número de hilos rastreados [8]"
 
-#: lib/hash-utility.c:141
-msgid "Print hash as self identifying multihash"
-msgstr "Muestra el rastreo como un multirastreo auto identificado"
-
 #: lib/hash-utility.c:142
 msgid "Megabytes read buffer [256 MB]"
 msgstr "Almacenamiento temporal de lectura de Megabytes [256]"
@@ -480,17 +476,17 @@ msgstr ""
 
 #: lib/cmdline.c:237
 #, fuzzy
-msgid "Usage: rmlint --btrfs-clone [-r] source dest\n"
-msgstr "Uso: rmlint --btrfs-clone fuente dest\n"
+msgid "Usage: rmlint --dedupe [-r] source dest\n"
+msgstr "Uso: rmlint --dedupe fuente dest\n"
 
 #: lib/cmdline.c:251
-msgid "btrfs clone: failed to open source file"
-msgstr "btrfs clone: no logró abrir el archivo fuente."
+msgid "dedupe: failed to open source file"
+msgstr "dedupe: no logró abrir el archivo fuente."
 
 #: lib/cmdline.c:257
 #, fuzzy, c-format
-msgid "btrfs clone: error %i: failed to open dest file.%s"
-msgstr "btrfs clone: no logró abrir el archivo dest."
+msgid "dedupe: error %i: failed to open dest file.%s"
+msgstr "dedupe: no logró abrir el archivo dest."
 
 #: lib/cmdline.c:259
 msgid ""

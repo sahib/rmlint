@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.
  * We only include it here, because it fixes some recent warning...
@@ -40,9 +41,9 @@
 #endif
 
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <grp.h>
 #include <pwd.h>
@@ -75,7 +76,7 @@
 #endif
 
 #if HAVE_BLKID
-#include <blkid.h>
+#include <blkid/blkid.h>
 #endif
 
 #if HAVE_JSON_GLIB
@@ -1006,6 +1007,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
 
+    fsync(fd);
+
     while(!done) {
         /* read in one extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
@@ -1078,41 +1081,6 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
     return result;
 }
 
-bool rm_offsets_match(char *path1, char *path2) {
-    bool result = FALSE;
-    int fd1 = rm_sys_open(path1, O_RDONLY);
-    if(fd1 == -1) {
-        rm_log_info_line("Error opening %s in rm_offsets_match", path1);
-        return FALSE;
-    }
-
-    int fd2 = rm_sys_open(path2, O_RDONLY);
-    if(fd2 == -1) {
-        rm_log_info_line("Error opening %s in rm_offsets_match", path2);
-        rm_sys_close(fd1);
-        return FALSE;
-    }
-
-    RmOff file1_offset_next = 0;
-    RmOff file2_offset_next = 0;
-    RmOff file_offset_current = 0;
-    while(!result &&
-          (rm_offset_get_from_fd(fd1, file_offset_current, &file1_offset_next) ==
-           rm_offset_get_from_fd(fd2, file_offset_current, &file2_offset_next)) &&
-          file1_offset_next != 0 && file1_offset_next == file2_offset_next) {
-        if(file1_offset_next == file_offset_current) {
-            /* phew, we got to the end */
-            result = TRUE;
-            break;
-        }
-        file_offset_current = file1_offset_next;
-    }
-
-    rm_sys_close(fd2);
-    rm_sys_close(fd1);
-    return result;
-}
-
 #else /* Probably FreeBSD */
 
 RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
@@ -1125,11 +1093,173 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
     return 0;
 }
 
-bool rm_offsets_match(char *path1, char *path2) {
-    return (path1 == path2);
+#endif
+
+static gboolean rm_util_is_path_double(char *path1, char *path2) {
+    char *basename1 = rm_util_basename(path1);
+    char *basename2 = rm_util_basename(path2);
+    return (strcmp(basename1, basename2) == 0 &&
+            rm_util_parent_node(path1) == rm_util_parent_node(path2));
 }
 
+/* test if two file paths are on the same device (even if on different
+ * mountpoints)
+ */
+static gboolean rm_util_same_device(const char *path1, const char *path2) {
+    const char *best1 = NULL;
+    const char *best2 = NULL;
+    int len1 = 0;
+    int len2 = 0;
+
+    GList *mounts = g_unix_mounts_get(NULL);
+    for(GList *iter = mounts; iter; iter = iter->next) {
+        GUnixMountEntry *mount = iter->data;
+        const char *mountpath = g_unix_mount_get_mount_path(mount);
+        int len = strlen(mountpath);
+        if(len > len1 && strncmp(mountpath, path1, len) == 0) {
+            best1 = g_unix_mount_get_device_path(mount);
+            len1 = len;
+        }
+        if(len > len2 && strncmp(mountpath, path2, len) == 0) {
+            best2 = g_unix_mount_get_device_path(mount);
+            len2 = len;
+        }
+    }
+    gboolean result = (best1 && best2 && strcmp(best1, best2) == 0);
+    g_list_free_full(mounts, (GDestroyNotify)g_unix_mount_free);
+    return result;
+}
+
+RmLinkType rm_util_link_type(char *path1, char *path2) {
+    int fd1 = rm_sys_open(path1, O_RDONLY);
+    if(fd1 == -1) {
+        rm_log_perrorf("Error opening %s in rm_offsets_match", path1);
+        return RM_LINK_ERROR;
+    }
+
+#define RM_RETURN(value)   \
+    {                      \
+        rm_sys_close(fd1); \
+        return (value);    \
+    }
+
+    RmStat stat1;
+    int stat_state = rm_sys_stat(path1, &stat1);
+    if(stat_state == -1) {
+        rm_log_perrorf("Unable to stat file %s", path1);
+        RM_RETURN(RM_LINK_ERROR);
+    }
+
+    if(!S_ISREG(stat1.st_mode)) {
+        RM_RETURN(RM_LINK_NOT_FILE);
+    }
+
+    int fd2 = rm_sys_open(path2, O_RDONLY);
+    if(fd2 == -1) {
+        rm_log_perrorf("Error opening %s in rm_offsets_match", path2);
+        RM_RETURN(RM_LINK_ERROR);
+    }
+
+#undef RM_RETURN
+#define RM_RETURN(value)   \
+    {                      \
+        rm_sys_close(fd1); \
+        rm_sys_close(fd2); \
+        return (value);    \
+    }
+
+    RmStat stat2;
+    stat_state = rm_sys_stat(path2, &stat2);
+    if(stat_state == -1) {
+        rm_log_perrorf("Unable to stat file %s", path2);
+        RM_RETURN(RM_LINK_ERROR);
+    }
+
+    if(!S_ISREG(stat2.st_mode)) {
+        RM_RETURN(RM_LINK_NOT_FILE);
+    }
+
+    if(stat1.st_size != stat2.st_size) {
+        rm_log_debug_line("Files have different sizes: %" G_GUINT64_FORMAT
+                          " <> %" G_GUINT64_FORMAT, stat1.st_size,
+                          stat2.st_size);
+        RM_RETURN(RM_LINK_WRONG_SIZE);
+    }
+
+    if(stat1.st_dev == stat2.st_dev && stat1.st_ino == stat2.st_ino) {
+        /* hardlinks or maybe even same file */
+        if(strcmp(path1, path2) == 0) {
+            RM_RETURN(RM_LINK_SAME_FILE);
+        } else if(rm_util_is_path_double(path1, path2)) {
+            RM_RETURN(RM_LINK_PATH_DOUBLE);
+        } else {
+            RM_RETURN(RM_LINK_HARDLINK);
+        }
+    }
+
+    if(stat1.st_dev != stat2.st_dev) {
+        /* reflinks must be on same filesystem but not necessarily
+         * same st_dev (btrfs subvolumes have different st_dev's) */
+        if(!rm_util_same_device(path1, path2)) {
+            RM_RETURN(RM_LINK_XDEV);
+        }
+    }
+
+#if HAVE_FIEMAP
+
+    RmOff logical_current = 0;
+
+    while(!rm_session_was_aborted()) {
+        RmOff logical_next_1 = 0;
+        RmOff logical_next_2 = 0;
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
+
+        if(physical_1 != physical_2) {
+            rm_log_debug_line("Files differ at offset %" G_GUINT64_FORMAT
+                              ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, physical_1, physical_2);
+            RM_RETURN(RM_LINK_NONE);
+        }
+        if(logical_next_1 != logical_next_2) {
+            rm_log_debug_line("Next offsets differ after %" G_GUINT64_FORMAT
+                              ": %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, logical_next_1, logical_next_2);
+            RM_RETURN(RM_LINK_NONE);
+        }
+
+        if(physical_1 == 0) {
+            rm_log_debug_line(
+                "Can't determine whether files are clones (maybe inline extents?)");
+            RM_RETURN(RM_LINK_MAYBE_REFLINK);
+        }
+
+        rm_log_debug_line("Offsets match at logical=%" G_GUINT64_FORMAT
+                          ", physical=%" G_GUINT64_FORMAT,
+                          logical_current, physical_1);
+
+        if(logical_next_1 == logical_current) {
+            rm_log_debug_line(
+                "rm_offsets_match() giving up: file1_offset_next==file_offset_current");
+            RM_RETURN(RM_LINK_ERROR)
+        }
+
+        if(logical_next_1 >= (RmOff)stat1.st_size) {
+            /* phew, we got to the end */
+            RM_RETURN(RM_LINK_REFLINK)
+        }
+
+        logical_current = logical_next_1;
+    }
+
+    RM_RETURN(RM_LINK_ERROR);
+#else
+    RM_RETURN(RM_LINK_NONE);
 #endif
+
+#undef RM_RETURN
+}
+
 
 /////////////////////////////////
 //  GTHREADPOOL WRAPPERS       //
@@ -1233,4 +1363,11 @@ gdouble rm_running_mean_get(RmRunningMean *m) {
     }
 
     return m->sum / n;
+}
+
+void rm_running_mean_unref(RmRunningMean *m) {
+    if(m->values) {
+        g_free(m->values);
+        m->values = NULL;
+    }
 }

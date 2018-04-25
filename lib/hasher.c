@@ -54,7 +54,6 @@ struct _RmHasher {
     gboolean use_buffered_read;
     guint64 cache_quota_bytes;
     gpointer session_user_data;
-    RmBufferPool *mem_pool;
     RmHasherCallback callback;
 
     GAsyncQueue *hashpipe_pool;
@@ -103,7 +102,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
         rm_hasher_task_free(task);
-        rm_buffer_release(buffer);
+        rm_buffer_free(buffer);
 
         g_mutex_lock(&hasher->lock);
         {
@@ -131,121 +130,115 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
 #endif
 }
 
-static gint64 rm_hasher_symlink_read(RmHasher *hasher, RmDigest *digest, char *path) {
-    /* Fake an IO operation on the symlink.  */
-    RmBuffer *buf = rm_buffer_get(hasher->mem_pool);
-    buf->len = 256;
-    memset(buf->data, 0, buf->len);
+static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
+                                       RmDigest *digest, char *path,
+                                       gsize *bytes_actually_read) {
+    /* Read contents of symlink (i.e. path of symlink's target).  */
 
-    RmStat stat_buf;
-    if(rm_sys_stat(path, &stat_buf) == -1) {
-        /* Oops, that did not work out, report as an error */
-        rm_log_perror("Cannot stat symbolic link");
-        return -1;
+    RmBuffer *buffer = rm_buffer_new(hasher->buf_size);
+    gint len = readlink(path, (char *)buffer->data, hasher->buf_size);
+
+    if (len < 0) {
+        rm_log_perror("Cannot read symbolic link");
+        rm_buffer_free(buffer);
+        return FALSE;
     }
 
-    gint data_size = snprintf((char *)buf->data, rm_buffer_size(hasher->mem_pool),
-                              "%ld:%ld", (long)stat_buf.st_dev, (long)stat_buf.st_ino);
-    buf->len = data_size;
-    buf->digest = digest;
+    *bytes_actually_read = len;
+    buffer->len = len;
+    buffer->digest = digest;
+    buffer->user_data = NULL;
+    rm_util_thread_pool_push(hashpipe, buffer);
 
-    rm_digest_buffered_update(buf);
-
-    /* In case of paranoia: shrink the used data buffer, so comparasion works
-     * as expected. Otherwise a full buffer is used with possibly different
-     * content */
-    if(digest->type == RM_DIGEST_PARANOID) {
-        rm_digest_paranoia_shrink(digest, data_size);
-    }
-    return 0;
+    return TRUE;
 }
 
-/* Reads data from file and sends to hasher threadpool
- * returns number of bytes successfully read */
+/* Reads data from file and sends to hasher threadpool;
+ * returns true if no errors encountered;
+ * increments *bytes_read by the actual bytes read */
 
-static gint64 rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
-                                      RmDigest *digest, char *path, gsize start_offset,
-                                      gsize bytes_to_read) {
+static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
+                                        RmDigest *digest, char *path, gsize start_offset,
+                                        gsize bytes_to_read, gsize *bytes_actually_read) {
     FILE *fd = NULL;
-    if(bytes_to_read == 0) {
-        bytes_to_read = G_MAXSIZE;
-    }
-
-    gsize total_bytes_read = 0;
-
-    if((fd = fopen(path, "rb")) == NULL) {
+    fd = fopen(path, "rb");
+    if(fd == NULL) {
         rm_log_info("fopen(3) failed for %s: %s\n", path, g_strerror(errno));
-        goto finish;
+        return FALSE;
     }
 
-    gint32 bytes_read = 0;
-
-    rm_hasher_request_readahead(fileno(fd), start_offset, bytes_to_read);
+    gboolean read_to_eof = (bytes_to_read == 0);
+    rm_hasher_request_readahead(fileno(fd), start_offset,
+                                read_to_eof ? G_MAXSIZE : bytes_to_read);
 
     if(fseek(fd, start_offset, SEEK_SET) == -1) {
         rm_log_perror("fseek(3) failed");
-        goto finish;
+        fclose(fd);
+        return FALSE;
     }
 
-    RmBuffer *buffer = rm_buffer_get(hasher->mem_pool);
+    gboolean success = FALSE;
+    gsize bytes_remaining = bytes_to_read;
 
-    while((bytes_read =
-               fread(buffer->data, 1, MIN(bytes_to_read, hasher->buf_size), fd)) > 0) {
-        bytes_to_read -= bytes_read;
+    while(TRUE) {
+        RmBuffer *buffer = rm_buffer_new(hasher->buf_size);
+
+        gsize want_bytes = MIN(bytes_remaining, hasher->buf_size);
+
+        gsize bytes_read = fread(buffer->data, 1, want_bytes, fd);
+
+        if(ferror(fd) != 0) {
+            rm_log_perror("fread(3) failed");
+            rm_buffer_free(buffer);
+            break;
+        }
+
+        bytes_remaining -= bytes_read;
+        *bytes_actually_read += bytes_read;
 
         buffer->len = bytes_read;
         buffer->digest = digest;
         buffer->user_data = NULL;
-
         rm_util_thread_pool_push(hashpipe, buffer);
 
-        total_bytes_read += bytes_read;
-        buffer = rm_buffer_get(hasher->mem_pool);
-    }
-    rm_buffer_release(buffer);
-
-    if(ferror(fd) != 0) {
-        rm_log_perror("fread(3) failed");
-        if(total_bytes_read == bytes_to_read) {
-            /* signal error to caller */
-            total_bytes_read++;
+        if(read_to_eof && feof(fd)) {
+            success = TRUE;
+            break;
+        } else if(bytes_remaining == 0) {
+            success = TRUE;
+            break;
+        } else if(feof(fd)) {
+            rm_log_error_line("Unexpected EOF in rm_hasher_buffered_read");
+            break;
+        } else if(bytes_read == 0) {
+            rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
+                                "got %li; ignoring"),
+                              path, (long int)bytes_to_read,
+                              (long int)*bytes_actually_read);
+            break;
         }
     }
-
-finish:
-    if(fd != NULL) {
-        fclose(fd);
-    }
-    return total_bytes_read;
+    fclose(fd);
+    return success;
 }
 
 /* Reads data from file and sends to hasher threadpool
- * returns number of bytes successfully read */
+ * returns true if no errors encountered;
+ * increments *bytes_read by the actual bytes read */
 
-static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
-                                        RmDigest *digest, char *path, gint64 start_offset,
-                                        gint64 bytes_to_read) {
+static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
+                                          RmDigest *digest, char *path,
+                                          gint64 start_offset, gint64 bytes_to_read,
+                                          gsize *bytes_actually_read) {
     gint32 bytes_read = 0;
-    gint64 total_bytes_read = 0;
     guint64 file_offset = start_offset;
 
-    if(bytes_to_read == 0) {
-        RmStat stat_buf;
-        if(rm_sys_stat(path, &stat_buf) != -1) {
-            bytes_to_read = MAX(stat_buf.st_size - start_offset, 0);
-        }
-    }
+    gboolean read_to_eof = (bytes_to_read == 0);
 
-    /* how many buffers to read? */
-    const gint16 N_BUFFERS = MIN(4, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
-    struct iovec readvec[N_BUFFERS + 1];
-
-    int fd = 0;
-
-    fd = rm_sys_open(path, O_RDONLY);
+    int fd = rm_sys_open(path, O_RDONLY);
     if(fd == -1) {
         rm_log_info("open(2) failed for %s: %s\n", path, g_strerror(errno));
-        goto finish;
+        return FALSE;
     }
 
     /* preadv() is beneficial for large files since it can cut the
@@ -262,68 +255,85 @@ static gint64 rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
     /* Give the kernel scheduler some hints */
     rm_hasher_request_readahead(fd, start_offset, bytes_to_read);
 
-    /* Initialize the buffers to begin with.
-     * After a buffer is full, a new one is retrieved.
-     */
+    /* how many buffers to read? */
+    guint16 N_BUFFERS = 4;
+    if(bytes_to_read > 0) {
+        N_BUFFERS = MIN(N_BUFFERS, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
+    }
+
+    /* Allocate buffer vector */
     RmBuffer **buffers;
     buffers = g_slice_alloc(sizeof(*buffers) * N_BUFFERS);
 
+    struct iovec readvec[N_BUFFERS + 1];
     memset(readvec, 0, sizeof(readvec));
-    for(int i = 0; i < N_BUFFERS; ++i) {
-        /* buffer is one contignous memory block */
-        buffers[i] = rm_buffer_get(hasher->mem_pool);
-        readvec[i].iov_base = buffers[i]->data;
-        readvec[i].iov_len = hasher->buf_size;
-    }
 
-    while((bytes_to_read == 0 || total_bytes_read < bytes_to_read) &&
-          (bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset)) > 0) {
-        bytes_read =
-            MIN(bytes_read, bytes_to_read - total_bytes_read); /* ignore over-reads */
+    gboolean success = FALSE;
+    gsize bytes_remaining = bytes_to_read;
 
-        int blocks = DIVIDE_CEIL(bytes_read, hasher->buf_size);
-        rm_assert_gentle(blocks <= N_BUFFERS);
-
-        total_bytes_read += bytes_read;
-        file_offset += bytes_read;
-
-        for(int i = 0; i < blocks; ++i) {
-            /* Get the RmBuffer from the datapointer */
-            RmBuffer *buffer = buffers[i];
-            buffer->len = MIN(hasher->buf_size, bytes_read - i * hasher->buf_size);
-            buffer->digest = digest;
-            buffer->user_data = NULL;
-
-            /* Send it to the hasher */
-            rm_util_thread_pool_push(hashpipe, buffer);
-
-            /* Allocate a new buffer - hasher will release the old buffer */
-            buffers[i] = rm_buffer_get(hasher->mem_pool);
+    while(TRUE) {
+        /* allocate buffers for preadv */
+        for(int i = 0; i < N_BUFFERS; ++i) {
+            buffers[i] = rm_buffer_new(hasher->buf_size);
             readvec[i].iov_base = buffers[i]->data;
             readvec[i].iov_len = hasher->buf_size;
         }
+
+        bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset);
+
+        if(bytes_read == -1) {
+            /* error occurred */
+            rm_log_perror("preadv failed");
+            /* Release the buffers and give up*/
+            for(int i = 0; i < N_BUFFERS; ++i) {
+                rm_buffer_free(buffers[i]);
+            }
+            break;
+        }
+
+        /* ignore over-reads */
+        bytes_read = MIN((gsize)bytes_read, bytes_remaining);
+
+        /* update totals */
+        file_offset += bytes_read;
+        *bytes_actually_read += bytes_read;
+        bytes_remaining -= bytes_read;
+
+        /* send buffers */
+        for(int i = 0; i < N_BUFFERS; ++i) {
+            RmBuffer *buffer = buffers[i];
+
+            buffer->len = CLAMP(bytes_read - i * (gint32)hasher->buf_size, 0,
+                                (gint32)hasher->buf_size);
+            if(buffer->len > 0) {
+                /* Send it to the hasher */
+                buffer->digest = digest;
+                buffer->user_data = NULL;
+                rm_util_thread_pool_push(hashpipe, buffer);
+            } else {
+                rm_buffer_free(buffer);
+            }
+        }
+
+        if(read_to_eof && bytes_read == 0) {
+            success = TRUE;
+            break;
+        } else if(bytes_remaining == 0) {
+            success = TRUE;
+            break;
+        } else if(bytes_read == 0) {
+            rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
+                                "got %li; ignoring"),
+                              path, (long int)bytes_to_read,
+                              (long int)*bytes_actually_read);
+            break;
+        }
     }
 
-    if(bytes_read == -1) {
-        rm_log_perror("preadv failed");
-    } else if(total_bytes_read != bytes_to_read) {
-        rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
-                            "got %li; ignoring"),
-                          path, (long int)bytes_to_read, (long int)total_bytes_read);
-    }
-
-    /* Release the rest of the buffers */
-    for(int i = 0; i < N_BUFFERS; ++i) {
-        rm_buffer_release(buffers[i]);
-    }
     g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);
+    rm_sys_close(fd);
 
-finish:
-    if(fd > 0) {
-        rm_sys_close(fd);
-    }
-
-    return total_bytes_read;
+    return success;
 }
 
 //////////////////////////////////////
@@ -373,10 +383,7 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     /* initialise mutex & cond */
     g_mutex_init(&self->lock);
     g_cond_init(&self->cond);
-
-    /* Create buffer mem pool */
-    self->mem_pool = rm_buffer_pool_init(buf_size, cache_quota_bytes);
-
+    
     /* Create a pool of hashing thread "pools" - each "pool" can only have
      * one thread because hashing must be done in order */
     self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
@@ -402,7 +409,6 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
 
     g_async_queue_unref(hasher->hashpipe_pool);
 
-    rm_buffer_pool_destroy(hasher->mem_pool);
     g_cond_clear(&hasher->cond);
     g_mutex_clear(&hasher->lock);
     g_slice_free(RmHasher, hasher);
@@ -419,8 +425,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
     if(digest) {
         self->digest = digest;
     } else {
-        self->digest = rm_digest_new(hasher->digest_type, 0, 0, 0,
-                                     hasher->digest_type == RM_DIGEST_PARANOID);
+        self->digest = rm_digest_new(hasher->digest_type, 0);
     }
 
     /* get a recycled hashpipe if available */
@@ -444,31 +449,35 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
 }
 
 gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset,
-                             guint64 bytes_to_read, gboolean is_symlink,
-                             RmOff *bytes_read_out) {
-    guint64 bytes_read = 0;
+                             gsize bytes_to_read, gboolean is_symlink,
+                             gsize *bytes_read_out) {
+    gsize bytes_read = 0;
+    gboolean success = false;
+
     if(is_symlink) {
-        bytes_read = rm_hasher_symlink_read(task->hasher, task->digest, path);
+        success = rm_hasher_symlink_read(task->hasher, task->hashpipe, task->digest,
+                                         path, &bytes_read);
     } else if(task->hasher->use_buffered_read) {
-        bytes_read = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest,
-                                             path, start_offset, bytes_to_read);
+        success = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest,
+                                          path, start_offset, bytes_to_read, &bytes_read);
     } else {
-        bytes_read = rm_hasher_unbuffered_read(task->hasher, task->hashpipe, task->digest,
-                                               path, start_offset, bytes_to_read);
+        success =
+            rm_hasher_unbuffered_read(task->hasher, task->hashpipe, task->digest, path,
+                                      start_offset, bytes_to_read, &bytes_read);
     }
 
     if(bytes_read_out != NULL) {
-        *bytes_read_out = bytes_to_read;
+        *bytes_read_out = bytes_read;
     }
 
-    return ((is_symlink && bytes_read == 0) || bytes_read == bytes_to_read);
+    return success;
 }
 
 RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
     /* get a dummy buffer to use to signal the hasher thread that this increment is
      * finished */
     RmHasher *hasher = task->hasher;
-    RmBuffer *finisher = rm_buffer_get(task->hasher->mem_pool);
+    RmBuffer *finisher = rm_buffer_new(task->hasher->buf_size);
     finisher->digest = task->digest;
     finisher->len = 0;
     finisher->user_data = task;

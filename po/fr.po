@@ -378,10 +378,6 @@ msgstr "Type digest [BLAKE2B]"
 msgid "Number of hashing threads [8]"
 msgstr "Nombre de tâches de hachage [8]"
 
-#: lib/hash-utility.c:141
-msgid "Print hash as self identifying multihash"
-msgstr "Affichage du hachage identifié comme une fonction multiple de hachage"
-
 #: lib/hash-utility.c:142
 msgid "Megabytes read buffer [256 MB]"
 msgstr "Lecture du buffer en mégaoctets [256 MB]"
@@ -468,17 +464,17 @@ msgstr ""
 
 #: lib/cmdline.c:237
 #, fuzzy
-msgid "Usage: rmlint --btrfs-clone [-r] source dest\n"
-msgstr "Utilisation: rmlint --btrfs-clone source dest\n"
+msgid "Usage: rmlint --dedupe [-r] source dest\n"
+msgstr "Utilisation: rmlint --dedupe source dest\n"
 
 #: lib/cmdline.c:251
-msgid "btrfs clone: failed to open source file"
-msgstr "btrfs clone: échec de l'ouverture du fichier source."
+msgid "dedupe: failed to open source file"
+msgstr "dedupe: échec de l'ouverture du fichier source."
 
 #: lib/cmdline.c:257
 #, fuzzy, c-format
-msgid "btrfs clone: error %i: failed to open dest file.%s"
-msgstr "btrfs clone: échec de l'ouverture du fichier de destination."
+msgid "dedupe: error %i: failed to open dest file.%s"
+msgstr "dedupe: échec de l'ouverture du fichier de destination."
 
 #: lib/cmdline.c:259
 msgid ""
