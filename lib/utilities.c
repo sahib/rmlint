@@ -579,6 +579,23 @@ static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
     }
 }
 
+static bool fs_supports_reflinks(char *fstype, char *mountpoint) {
+    if(strcmp(fstype, "btrfs")==0) {
+        return true;
+    }
+    if(strcmp(fstype, "ocfs2")==0) {
+        return true;
+    }
+    if(strcmp(fstype, "xfs")==0) {
+        /* xfs *might* support reflinks...*/
+        char *cmd = g_strdup_printf("xfs_info '%s' | grep -q 'reflink=1'", mountpoint);
+        int res = system(cmd);
+        g_free(cmd);
+        return(res==0);
+    }
+    return false;
+}
+
 static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
     RmMountEntries *self = g_slice_new(RmMountEntries);
 
@@ -625,21 +642,11 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                             {"debugfs", 0},
                             {NULL, 0}};
 
-        /* btrfs and ocfs2 filesystems support reflinks for deduplication */
-        static const char *reflinkfs_types[] = {"btrfs", "ocfs2", NULL};
 
         const struct RmEvilFs *evilfs_found = NULL;
         for(int i = 0; evilfs_types[i].name && !evilfs_found; ++i) {
             if(strcmp(evilfs_types[i].name, wrap_entry->type) == 0) {
                 evilfs_found = &evilfs_types[i];
-            }
-        }
-
-        const char *reflinkfs_found = NULL;
-        for(int i = 0; reflinkfs_types[i] && !reflinkfs_found; ++i) {
-            if(strcmp(reflinkfs_types[i], wrap_entry->type) == 0) {
-                reflinkfs_found = reflinkfs_types[i];
-                break;
             }
         }
 
@@ -664,15 +671,15 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                   evilfs_found->name, wrap_entry->dir, (unsigned)dir_stat.st_dev);
         }
 
-        rm_log_debug_line("Filesystem %s: %s", wrap_entry->dir,
-                          (reflinkfs_found) ? "reflink" : "normal");
-
-        if(reflinkfs_found != NULL) {
+        if(fs_supports_reflinks(wrap_entry->type, wrap_entry->dir)) {
             RmStat dir_stat;
             rm_sys_stat(wrap_entry->dir, &dir_stat);
             g_hash_table_insert(table->reflinkfs_table,
                                 GUINT_TO_POINTER(dir_stat.st_dev),
-                                (gpointer)reflinkfs_found);
+                                wrap_entry->type);
+            rm_log_debug_line("Filesystem %s: reflink capable", wrap_entry->dir);
+        } else {
+            rm_log_debug_line("Filesystem %s: not reflink capable", wrap_entry->dir);
         }
     }
 
