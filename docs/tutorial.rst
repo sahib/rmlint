@@ -309,9 +309,9 @@ Here's the list of currently available formatters and their config options:
 
     **Config values:**
 
-    - *clone*: ``btrfs`` only. Try to clone both files with the
-      BTRFS_IOC_FILE_EXTENT_SAME ``ioctl(3p)``. This will physically delete
-      duplicate extents. Needs at least kernel 4.2.
+    - *clone*: reflink-capable filesystems only. Try to clone both files with the
+      FIDEDUPERANGE ``ioctl(3p)`` (or BTRFS_IOC_FILE_EXTENT_SAME on older kernels).
+      This will free up duplicate extents. Needs at least kernel 4.2.
     - *reflink*: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
       it.

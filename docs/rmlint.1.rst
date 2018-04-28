@@ -629,9 +629,9 @@ FORMATTERS
     files in that given order until one handler succeeds. Handlers are just the
     name of a way of getting rid of the file and can be any of the following:
 
-    * ``clone``: For ``btrfs`` only. Try to clone both files with the
-      BTRFS_IOC_FILE_EXTENT_SAME ``ioctl(3p)``. This will physically delete
-      duplicate extents. Needs at least kernel 4.2.
+    * ``clone``: For reflink-capable filesystems only. Try to clone both files with the
+      FIDEDUPERANGE ``ioctl(3p)`` (or BTRFS_IOC_FILE_EXTENT_SAME on older kernels).
+      This will free up duplicate extents. Needs at least kernel 4.2.
     * ``reflink``: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
       it.
@@ -842,8 +842,8 @@ This is a collection of common usecases and other tricks:
 
   ``$ rmlint --perms wx``
 
-* Reflink on btrfs, else try to hardlink duplicates to original. If that does
-  not work, replace duplicate with a symbolic link:
+* Reflink if possible, else hardlink duplicates to original if possible, else replace
+  duplicate with a symbolic link:
 
   ``$ rmlint -c sh:link``
 
