@@ -294,19 +294,19 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         ret = ioctl(source_fd, _DEDUPE_IOCTL, &dedupe);
 
         if(ret != 0) {
-            rm_log_perrorf(_("%s returned error: (%d)"), _DEDUPE_IOCTL_NAME, ret);
             break;
         } else if(dedupe.info.status == _DATA_DIFFERS) {
             if(dedupe_chunk != min_dedupe_chunk) {
                 dedupe_chunk = min_dedupe_chunk;
                 rm_log_debug_line("Dropping to %lu byte chunks after %lu bytes",
                                   dedupe_chunk, bytes_deduped);
+                continue;
             } else {
                 break;
             }
         } else if(dedupe.info.status != 0) {
-            rm_log_error_line("%s returned status %d", _DEDUPE_IOCTL_NAME,
-                              dedupe.info.status);
+            ret=-dedupe.info.status;
+            errno=ret;
             break;
         } else if(dedupe.info.bytes_deduped == 0) {
             break;
@@ -314,8 +314,11 @@ int rm_session_dedupe_main(RmCfg *cfg) {
 
         bytes_deduped += dedupe.info.bytes_deduped;
     }
+    rm_log_debug_line("Bytes deduped: %lu", bytes_deduped);
 
-    if(bytes_deduped == 0) {
+    if (ret!=0) {
+        rm_log_perrorf(_("%s returned error: (%d)"), _DEDUPE_IOCTL_NAME, ret);
+    } else if(bytes_deduped == 0) {
         rm_log_info_line(_("Files don't match - not deduped"));
     } else if(bytes_deduped < source_stat.st_size) {
         rm_log_info_line(_("Only first %lu bytes deduped - files not fully identical"),
