@@ -129,8 +129,8 @@ Authors
 ``rmlint`` was and is written by: 
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2015
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2015
+*Christopher Pahl*                   https://github.com/sahib      2010-2018
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2018
 ===================================  ============================= ===========================================
 
 Additional thanks to:
@@ -138,9 +138,7 @@ Additional thanks to:
 .. hlist::
     :columns: 3
 
-    - qitta_ (Ideas & Testing)
     - `vvs-`_ (Scalability testing)
-    - `My cats`_.
     - *Attila* Toth 
     - All sane bugreporters (there are not many)
     - All packagers, porters and patchers.
