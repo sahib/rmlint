@@ -133,8 +133,19 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
 static void rm_hasher_forget_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
 /* Give the kernel scheduler some hints */
 #if HAVE_POSIX_FADVISE && HASHER_FADVISE_FLAGS
-    RmOff readahead = bytes_to_read * 8;
-    posix_fadvise(fd, seek_offset, readahead, POSIX_FADV_DONTNEED);
+    int page_size = getpagesize();
+    if(page_size == 0) {
+        return;
+    }
+
+    // Align the offset and bytes to read with the page size
+    // as it's requested by the man page of fadvise().
+    posix_fadvise(
+        fd,
+        (seek_offset / page_size) * page_size,
+        (bytes_to_read / page_size) * page_size,
+        POSIX_FADV_DONTNEED
+    );
 #else
     (void)fd;
     (void)seek_offset;
