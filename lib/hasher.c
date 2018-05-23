@@ -130,6 +130,18 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
 #endif
 }
 
+static void rm_hasher_forget_readahead(int fd, RmOff seek_offset, RmOff bytes_to_read) {
+/* Give the kernel scheduler some hints */
+#if HAVE_POSIX_FADVISE && HASHER_FADVISE_FLAGS
+    RmOff readahead = bytes_to_read * 8;
+    posix_fadvise(fd, seek_offset, readahead, POSIX_FADV_DONTNEED);
+#else
+    (void)fd;
+    (void)seek_offset;
+    (void)bytes_to_read;
+#endif
+}
+
 static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
                                        RmDigest *digest, char *path,
                                        gsize *bytes_actually_read) {
@@ -218,6 +230,10 @@ static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             break;
         }
     }
+
+    rm_hasher_forget_readahead(fileno(fd), start_offset,
+                                read_to_eof ? G_MAXSIZE : bytes_to_read);
+
     fclose(fd);
     return success;
 }
@@ -331,8 +347,11 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
     }
 
     g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);
-    rm_sys_close(fd);
 
+    /* Tell the kernel that we don't need the data we just read anymore */
+    rm_hasher_forget_readahead(fd, start_offset, bytes_to_read);
+
+    rm_sys_close(fd);
     return success;
 }
 
