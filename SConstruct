@@ -647,6 +647,7 @@ conf.env.Append(CFLAGS=[
     '-Wuninitialized',
     '-Wstrict-prototypes',
     '-Wno-implicit-fallthrough',
+    '-Wno-cast-function-type'
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))

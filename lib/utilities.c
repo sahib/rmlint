@@ -501,9 +501,8 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     gchar is_rotational = -1;
 
 #if HAVE_SYSBLOCK /* this works only on linux */
-    char sys_path[PATH_MAX];
-
-    snprintf(sys_path, PATH_MAX, "/sys/block/%s/queue/rotational", dev);
+    char sys_path[PATH_MAX + 30];
+    snprintf(sys_path, sizeof(sys_path) - 1, "/sys/block/%s/queue/rotational", dev);
 
     FILE *sys_fdes = fopen(sys_path, "r");
     if(sys_fdes == NULL) {
