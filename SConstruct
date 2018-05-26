@@ -637,6 +637,9 @@ if conf.env['HAVE_MM_CRC32_U64']:
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
+    conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
+else:
+    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CFLAGS=[
@@ -647,7 +650,6 @@ conf.env.Append(CFLAGS=[
     '-Wuninitialized',
     '-Wstrict-prototypes',
     '-Wno-implicit-fallthrough',
-    '-Wno-cast-function-type'
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
