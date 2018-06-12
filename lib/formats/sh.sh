@@ -51,7 +51,7 @@ print_progress_prefix() {
         if [ $((PROGRESS_TOTAL)) -gt 0 ]; then
             PROGRESS_PERC=$((PROGRESS_CURR * 100 / PROGRESS_TOTAL))
         fi
-        printf "${COL_BLUE}[% 3d%%]${COL_RESET} $PROGRESS_PERC"
+        printf "${COL_BLUE}[% 3d%%]${COL_RESET} " $PROGRESS_PERC
         if [ $# -eq "1" ]; then
             PROGRESS_CURR=$((PROGRESS_CURR+$1))
         else
