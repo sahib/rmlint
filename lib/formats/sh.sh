@@ -159,21 +159,6 @@ original_check() {
     fi
 }
 
-cp_hardlink() {
-    print_progress_prefix
-    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
-    if original_check "$1" "$2"; then
-        if [ -z "$DO_DRY_RUN" ]; then
-            # If it's a directory cp will create a new copy into
-            # the destination path. This would lead to more wasted space...
-            if [ -d "$1" ]; then
-                rm -rf "$1"
-            fi
-            cp --remove-destination --archive --link "$2" "$1"
-        fi
-    fi
-}
-
 cp_symlink() {
     print_progress_prefix
     echo "${COL_YELLOW}Symlinking to original: ${COL_RESET}$1"
@@ -184,6 +169,23 @@ cp_symlink() {
             ln -s "$2" "$1"
             # make the symlink's mtime the same as the original
             touch -mr "$2" -h "$1"
+        fi
+    fi
+}
+
+cp_hardlink() {
+    print_progress_prefix
+    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
+    if original_check "$1" "$2"; then
+        if [ -z "$DO_DRY_RUN" ]; then
+            # If it's a directory cp will create a new copy into
+            # the destination path. This would lead to more wasted space...
+            if [ -d "$1" ]; then
+                rm -rf "$1"
+            fi
+            # replace duplicate with hardlink
+            rm "$1"
+            ln "$2" "$1"
         fi
     fi
 }
