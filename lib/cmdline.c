@@ -876,7 +876,8 @@ static gboolean rm_cmd_parse_clamp_top(_UNUSED const char *option_name, const gc
 static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
                                       _UNUSED const gchar *value, RmSession *session,
                                       _UNUSED GError **error) {
-    rm_fmt_clear(session->formats);
+    rm_fmt_remove_by_name(session->formats, "pretty");
+
     rm_fmt_add(session->formats, "progressbar", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
 
