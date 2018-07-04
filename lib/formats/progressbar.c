@@ -398,10 +398,32 @@ static void rm_fmt_prog(RmSession *session,
         }
     }
 
+    /* Try to get terminal width, might fail on some terminals. */
+    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
+
+    // Adjust the text width if we have not a lot of space.
+    // Favour text over progress bar in this case until we run out of space.
+    float text_width_percentage = 0.7;
+    if(self->terminal.ws_col <= 120) {
+        // This function will give 100% to text with <= 60 chars width.
+        text_width_percentage = 1.0 - CLAMP(0.005 * self->terminal.ws_col - 0.3, 0.0, 0.3);
+    }
+
+    float progress_bar_percentage = 1.0 - text_width_percentage;
+    int progress_bar_width = MAX(0, floor(self->terminal.ws_col * progress_bar_percentage) - 1.0);
+    int text_width = MAX(0, ceil(self->terminal.ws_col * text_width_percentage) - 1.0);
+
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         self->percent = 1.05;
         if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-            rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+            if(progress_bar_width > 0) {
+                rm_fmt_progress_print_bar(
+                    session,
+                    self,
+                    progress_bar_width,
+                    out
+                );
+            }
             fprintf(out, "\n");
         }
         g_timer_start(self->timer);
@@ -415,17 +437,10 @@ static void rm_fmt_prog(RmSession *session,
         force_draw = true;
     }
 
-    /* Try to get terminal width, might fail on some terminals. */
-    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
     self->last_state = state;
-
-    // g_printerr(".\n");
 
     gdouble elapsed_sec = g_timer_elapsed(self->timer, NULL);
     if(force_draw || elapsed_sec * 1000.0 >= self->update_interval) {
-        /* Max. 70% (-1 char) are allowed for the text */
-        int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
-
         rm_fmt_progress_format_text(session, self, text_width, elapsed_sec, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
@@ -433,7 +448,15 @@ static void rm_fmt_prog(RmSession *session,
             text_width = 0;
         }
 
-        rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+        if(progress_bar_width > 0) {
+            rm_fmt_progress_print_bar(
+                    session,
+                    self,
+                    progress_bar_width,
+                    out
+            );
+        }
+
         rm_fmt_progress_print_text(self, text_width, out);
 
         fprintf(out, "%s\r", MAYBE_RESET(out, session));
