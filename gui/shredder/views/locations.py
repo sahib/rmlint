@@ -327,12 +327,19 @@ class LocationView(View):
             if mount.get_root().get_path() is None:
                 continue
 
-            info = mount.get_root().query_filesystem_info(
-                ','.join([
-                    Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE,
-                    Gio.FILE_ATTRIBUTE_FILESYSTEM_USED
-                ])
-            )
+            try:
+                info = mount.get_root().query_filesystem_info(
+                    ','.join([
+                        Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE,
+                        Gio.FILE_ATTRIBUTE_FILESYSTEM_USED
+                    ])
+                )
+            except Exception as exc:
+                LOGGER.warning("Failed to get fs info for {}: {}".format(
+                    mount.get_name(),
+                    exc,
+                ))
+                continue
 
             self.add_entry(
                 mount.get_name(),
