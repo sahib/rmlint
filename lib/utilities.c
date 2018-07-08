@@ -1326,19 +1326,19 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
 char *rm_format_elapsed_time(gfloat elapsed_sec, int sec_precision) {
     GString *buf = g_string_new(NULL);
 
-    if(elapsed_sec >= SECONDS_PER_DAY) {
+    if(elapsed_sec > SECONDS_PER_DAY) {
         gint days = elapsed_sec / SECONDS_PER_DAY;
         elapsed_sec -= days * SECONDS_PER_DAY;
         g_string_append_printf(buf, "%2dd ", days);
     }
 
-    if(elapsed_sec >= SECONDS_PER_HOUR) {
+    if(elapsed_sec > SECONDS_PER_HOUR) {
         gint hours = elapsed_sec / SECONDS_PER_HOUR;
         elapsed_sec -= hours * SECONDS_PER_HOUR;
         g_string_append_printf(buf, "%2dh ", hours);
     }
 
-    if(elapsed_sec >= SECONDS_PER_MINUTE) {
+    if(elapsed_sec > SECONDS_PER_MINUTE) {
         gint minutes = elapsed_sec / SECONDS_PER_MINUTE;
         elapsed_sec -= minutes * SECONDS_PER_MINUTE;
         g_string_append_printf(buf, "%2dm ", minutes);

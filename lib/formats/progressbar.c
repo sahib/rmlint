@@ -143,7 +143,7 @@ static char *rm_fmt_progress_get_cached_eta(
     }
 
     char *eta_info = rm_format_elapsed_time(eta_sec, 0);
-    strncpy(self->last_eta, eta_info, 1024);
+    strncpy(self->last_eta, eta_info, sizeof(self->last_eta) - 1);
     self->last_eta_update = now;
     g_free(eta_info);
     return self->last_eta;
@@ -396,7 +396,7 @@ static void rm_fmt_prog(RmSession *session,
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
         rm_running_mean_init(&self->read_diff_mean, 10);
-        rm_running_mean_init(&self->eta_mean, 25);
+        rm_running_mean_init(&self->eta_mean, 50);
         self->last_shred_bytes_remaining = 0;
 
         self->plain = true;
