@@ -61,6 +61,10 @@ typedef struct RmFmtHandlerProgress {
     RmRunningMean read_diff_mean;
     RmRunningMean eta_mean;
     RmOff last_shred_bytes_remaining;
+
+    /* Last calculation of ETA for caching purpose */
+    char last_eta[1024];
+    gint64 last_eta_update;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
@@ -110,6 +114,41 @@ static gdouble rm_fmt_progress_calculated_eta(
     return rm_running_mean_get(&self->eta_mean);
 }
 
+static char *rm_fmt_progress_get_cached_eta(
+        RmSession *session,
+        RmFmtHandlerProgress *self,
+        gfloat elapsed_sec
+    ) {
+    /* If there was already an ETA calculation in the last 500ms,
+     * use that one to avoid flickering (see issue #292)
+     */
+
+    gdouble eta_sec = rm_fmt_progress_calculated_eta(
+            session,
+            self,
+            elapsed_sec,
+            self->last_state
+    );
+
+    gint64 now = g_get_real_time();
+    if(self->last_eta != NULL) {
+        if(ABS(now - self->last_eta_update) <= 500 * 1000) {
+            return self->last_eta;
+        }
+    }
+
+    /*  New display string needed */
+    if(eta_sec < 0) {
+        return "...";
+    }
+
+    char *eta_info = rm_format_elapsed_time(eta_sec, 0);
+    strncpy(self->last_eta, eta_info, 1024);
+    self->last_eta_update = now;
+    g_free(eta_info);
+    return self->last_eta;
+}
+
 static void rm_fmt_progress_format_text(
         RmSession *session,
         RmFmtHandlerProgress *self,
@@ -149,12 +188,7 @@ static void rm_fmt_progress_format_text(
         self->percent = 1.0 - ((gdouble)session->shred_bytes_remaining /
                                (gdouble)session->shred_bytes_after_preprocess);
 
-        gdouble eta_sec = rm_fmt_progress_calculated_eta(session, self, elapsed_sec, self->last_state);
-        char *eta_info = NULL;
-        if(eta_sec >= 0) {
-            eta_info = rm_format_elapsed_time(eta_sec, 0);
-        }
-
+        char *eta_info = rm_fmt_progress_get_cached_eta(session, self, elapsed_sec);
         rm_util_size_to_human_readable(
                 session->shred_bytes_remaining, num_buf,
                 sizeof(num_buf)
@@ -172,7 +206,6 @@ static void rm_fmt_progress_format_text(
                     MAYBE_GREEN(out, session), (eta_info) ? eta_info : "0s", MAYBE_RESET(out, session)
             );
 
-        g_free(eta_info);
         break;
     case RM_PROGRESS_STATE_MERGE:
         self->percent = 1.0;
@@ -363,7 +396,7 @@ static void rm_fmt_prog(RmSession *session,
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
         rm_running_mean_init(&self->read_diff_mean, 10);
-        rm_running_mean_init(&self->eta_mean, 50);
+        rm_running_mean_init(&self->eta_mean, 25);
         self->last_shred_bytes_remaining = 0;
 
         self->plain = true;
@@ -493,6 +526,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .use_unicode_glyphs = true,
     .plain = true,
     .stripe_offset = 0,
+    .last_eta = {0},
+    .last_eta_update = 0,
     .last_state = RM_PROGRESS_STATE_INIT};
 
 RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *)&PROGRESS_HANDLER_IMPL;
