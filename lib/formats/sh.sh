@@ -127,7 +127,7 @@ check_for_equality() {
         echo $?
     else
         # Fallback to `rmlint --equal` for directories:
-        "$RMLINT_BINARY" -pp --equal %s "$1" "$2"
+        "$RMLINT_BINARY" -p --equal %s "$1" "$2"
         echo $?
     fi
 }

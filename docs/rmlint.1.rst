@@ -187,7 +187,7 @@ General Options
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
-    Use ``-pp`` if you want byte-by-byte comparison without any hashing.
+    Use ``-p`` if you want byte-by-byte comparison without any hashing.
 
     * **-p** is equivalent to **--algorithm=paranoid**
 

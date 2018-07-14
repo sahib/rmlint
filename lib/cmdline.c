@@ -58,7 +58,7 @@ static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
                                                   RM_DIGEST_PARANOID,
                                                   RM_DIGEST_PARANOID};
 static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
-static const int RM_PARANOIA_MAX = 4;
+static const int RM_PARANOIA_MAX = 5;
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
