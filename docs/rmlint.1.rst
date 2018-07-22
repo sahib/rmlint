@@ -133,8 +133,8 @@ General Options
 
     Examples: ::
 
-    ``$ rmlint -c sh:link            # Smartly link duplicates instead of removing``
-    ``$ rmlint -c progressbar:fancy  # Use a different theme for the progressbar``
+    $ rmlint -c sh:link            # Smartly link duplicates instead of removing
+    $ rmlint -c progressbar:fancy  # Use a different theme for the progressbar
 
 :``-z --perms[=[rwx]]`` (**default\:** *no check*):
 
