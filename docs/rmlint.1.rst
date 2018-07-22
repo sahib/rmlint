@@ -99,7 +99,7 @@ General Options
     double quotes. In obscure cases argument parsing might fail in weird ways,
     especially when using spaces as separator.
 
-    Example:
+    Example: ::
 
     ``$ rmlint -T "df,dd"        # Only search for duplicate files and directories``
     ``$ rmlint -T "all -df -dd"  # Search for all lint except duplicate files and dirs.``
@@ -118,7 +118,7 @@ General Options
     specified multiple times to get multiple outputs, including multiple
     outputs of the same format.
 
-    Examples:
+    Examples: ::
 
     ``$ rmlint -o json                 # Stream the json output to stdout``
     ``$ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp``
@@ -131,7 +131,7 @@ General Options
 
     If the value is omitted it is set to a value meaning "enabled".
 
-    Examples:
+    Examples: ::
 
     ``$ rmlint -c sh:link            # Smartly link duplicates instead of removing``
     ``$ rmlint -c progressbar:fancy  # Use a different theme for the progressbar``
@@ -502,12 +502,12 @@ Caching
 
     By design, some options will not have any effect. Those are:
 
-    - `--followlinks`
-    - `--algorithm`
-    - `--paranoid`
-    - `--clamp-low`
-    - `--hardlinked`
-    - `--write-unfinished`
+    - ``--followlinks``
+    - ``--algorithm``
+    - ``--paranoid``
+    - ``--clamp-low``
+    - ``--hardlinked``
+    - ``--write-unfinished``
     - ... and all other caching options below.
 
     *NOTE:* In ``--replay`` mode, a new ``.json`` file will be written to
@@ -562,7 +562,7 @@ Rarely used, miscellaneous options
     The ``size``-description has the same format as for **--size**, therefore you
     can do something like this (use this if you have 1GB of memory available):
 
-    ``$ rmlint -u 512M  # Limit paranoid mem usage to 512 MB```
+    ``$ rmlint -u 512M  # Limit paranoid mem usage to 512 MB``
 
 :``-q --clamp-low=[fac.tor|percent%|offset]`` (**default\:** *0*) / ``-Q --clamp-top=[fac.tor|percent%|offset]`` (**default\:** *1.0*):
 
