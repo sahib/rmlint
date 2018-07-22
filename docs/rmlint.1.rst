@@ -101,8 +101,8 @@ General Options
 
     Example: ::
 
-    ``$ rmlint -T "df,dd"        # Only search for duplicate files and directories``
-    ``$ rmlint -T "all -df -dd"  # Search for all lint except duplicate files and dirs.``
+    $ rmlint -T "df,dd"        # Only search for duplicate files and directories
+    $ rmlint -T "all -df -dd"  # Search for all lint except duplicate files and dirs.
 
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout -o json\:rmlint.json*):
 
@@ -120,8 +120,8 @@ General Options
 
     Examples: ::
 
-    ``$ rmlint -o json                 # Stream the json output to stdout``
-    ``$ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp``
+    $ rmlint -o json                 # Stream the json output to stdout
+    $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp
 
 :``-c --config=spec[=value]`` (**default\:** *none*):
 
