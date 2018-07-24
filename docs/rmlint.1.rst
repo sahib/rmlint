@@ -100,7 +100,7 @@ General Options
     double quotes. In obscure cases argument parsing might fail in weird ways,
     especially when using spaces as separator.
 
-    Example: ::
+    Example::
 
     $ rmlint -T "df,dd"        # Only search for duplicate files and directories
     $ rmlint -T "all -df -dd"  # Search for all lint except duplicate files and dirs.
@@ -119,7 +119,7 @@ General Options
     specified multiple times to get multiple outputs, including multiple
     outputs of the same format.
 
-    Examples: ::
+    Examples::
 
     $ rmlint -o json                 # Stream the json output to stdout
     $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp
@@ -132,7 +132,7 @@ General Options
 
     If the value is omitted it is set to a value meaning "enabled".
 
-    Examples: ::
+    Examples::
 
     $ rmlint -c sh:link            # Smartly link duplicates instead of removing
     $ rmlint -c progressbar:fancy  # Use a different theme for the progressbar
@@ -163,14 +163,14 @@ General Options
 
     **highway**, **md**
 
-    **metro**, **murmur**, *xxhash**
+    **metro**, **murmur**, **xxhash**
 
     The weaker hash functions still offer excellent distribution properties, but are potentially
     more vulnerable to *malicious* crafting of duplicate files.
 
     The full list of hash functions (in decreasing order of checksum length) is:
 
-    512-bit: **blake2b**, **blake2bp**, **sha3-512, **sha512**
+    512-bit: **blake2b**, **blake2bp**, **sha3-512**, **sha512**
 
     384-bit: **sha3-384**,
 
@@ -527,7 +527,7 @@ Caching
     Also, this is a linux specific feature that works not on all filesystems and
     only if you have write permissions to the file.
 
-    Usage example: ::
+    Usage example::
 
         $ rmlint large_file_cluster/ -U --xattr-write   # first run.
         $ rmlint large_file_cluster/ --xattr-read       # second run.
