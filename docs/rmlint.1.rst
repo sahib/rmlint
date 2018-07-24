@@ -33,20 +33,21 @@ output (for example a shell script) to help you delete the files if you want
 to. Another design principle is that it should work well together with other
 tools like ``find``. Therefore we do not replicate features of other well know
 programs, as for example pattern matching and finding duplicate filenames.
-However we provide many convinience options for common usecases that are hard
+However we provide many convinience options for common use cases that are hard
 to build from scratch with standard tools.
 
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
 If no directories or files were given, the current working directory is assumed.
 By default, ``rmlint`` will ignore hidden files and will not follow symlinks (see
-traversal options below).  ``rmlint`` will first find "other lint" and then search
+`Traversal Options`_).  ``rmlint`` will first find "other lint" and then search
 the remaining files for duplicates.
 
 ``rmlint`` tries to be helpful by guessing what file of a group of duplicates
 is the **original** (i.e. the file that should not be deleted). It does this by using
 different sorting strategies that can be controlled via the ``-S`` option. By
 default it chooses the first-named path on the commandline. If two duplicates
-come from the same path, it will also apply different fallback sort strategies (See the documentation of the ``-S`` strategy).
+come from the same path, it will also apply different fallback sort strategies
+(See the documentation of the ``-S`` strategy).
 
 This behaviour can be also overwritten if you know that a certain directory
 contains duplicates and another one originals. In this case you write the
