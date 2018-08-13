@@ -33,20 +33,21 @@ output (for example a shell script) to help you delete the files if you want
 to. Another design principle is that it should work well together with other
 tools like ``find``. Therefore we do not replicate features of other well know
 programs, as for example pattern matching and finding duplicate filenames.
-However we provide many convinience options for common usecases that are hard
+However we provide many convinience options for common use cases that are hard
 to build from scratch with standard tools.
 
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
 If no directories or files were given, the current working directory is assumed.
 By default, ``rmlint`` will ignore hidden files and will not follow symlinks (see
-traversal options below).  ``rmlint`` will first find "other lint" and then search
+`Traversal Options`_).  ``rmlint`` will first find "other lint" and then search
 the remaining files for duplicates.
 
 ``rmlint`` tries to be helpful by guessing what file of a group of duplicates
 is the **original** (i.e. the file that should not be deleted). It does this by using
 different sorting strategies that can be controlled via the ``-S`` option. By
 default it chooses the first-named path on the commandline. If two duplicates
-come from the same path, it will also apply different fallback sort strategies (See the documentation of the ``-S`` strategy).
+come from the same path, it will also apply different fallback sort strategies
+(See the documentation of the ``-S`` strategy).
 
 This behaviour can be also overwritten if you know that a certain directory
 contains duplicates and another one originals. In this case you write the
@@ -99,7 +100,7 @@ General Options
     double quotes. In obscure cases argument parsing might fail in weird ways,
     especially when using spaces as separator.
 
-    Example: ::
+    Example::
 
     $ rmlint -T "df,dd"        # Only search for duplicate files and directories
     $ rmlint -T "all -df -dd"  # Search for all lint except duplicate files and dirs.
@@ -118,7 +119,7 @@ General Options
     specified multiple times to get multiple outputs, including multiple
     outputs of the same format.
 
-    Examples: ::
+    Examples::
 
     $ rmlint -o json                 # Stream the json output to stdout
     $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp
@@ -131,7 +132,7 @@ General Options
 
     If the value is omitted it is set to a value meaning "enabled".
 
-    Examples: ::
+    Examples::
 
     $ rmlint -c sh:link            # Smartly link duplicates instead of removing
     $ rmlint -c progressbar:fancy  # Use a different theme for the progressbar
@@ -162,14 +163,14 @@ General Options
 
     **highway**, **md**
 
-    **metro**, **murmur**, *xxhash**
+    **metro**, **murmur**, **xxhash**
 
     The weaker hash functions still offer excellent distribution properties, but are potentially
     more vulnerable to *malicious* crafting of duplicate files.
 
     The full list of hash functions (in decreasing order of checksum length) is:
 
-    512-bit: **blake2b**, **blake2bp**, **sha3-512, **sha512**
+    512-bit: **blake2b**, **blake2bp**, **sha3-512**, **sha512**
 
     384-bit: **sha3-384**,
 
@@ -526,7 +527,7 @@ Caching
     Also, this is a linux specific feature that works not on all filesystems and
     only if you have write permissions to the file.
 
-    Usage example: ::
+    Usage example::
 
         $ rmlint large_file_cluster/ -U --xattr-write   # first run.
         $ rmlint large_file_cluster/ --xattr-read       # second run.
