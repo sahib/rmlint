@@ -326,6 +326,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     char *equal_extra_args = rm_fmt_sh_get_extra_equal_args(session);
 
     /* Fill in all placeholders in the script template */
+    /* This is a brittle hack of which the author should be ashamed. */
     fprintf(
         out, SH_SCRIPT_TEMPLATE_HEAD,
         session->cfg->iwd,
@@ -333,6 +334,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         (session->cfg->full_argv0_path) ? (session->cfg->full_argv0_path) : "$(which rmlint)",
         rm_util_get_username(),
         rm_util_get_groupname(),
+        "'%s[%3d%%]%s '", /* The progress format */
         equal_extra_args,
         (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "unknown_commandline"
