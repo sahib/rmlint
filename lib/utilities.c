@@ -1006,7 +1006,7 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
  * the next non-contiguous extent (fragment) is encountered and writes the corresponding
  * file offset to &file_offset_next.
  * */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, const char *path) {
     RmOff result = 0;
     bool done = FALSE;
 
@@ -1028,13 +1028,19 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
             if(fm->fm_mapped_extents > 0) {
                 /* retrieve data from fiemap */
                 struct fiemap_extent *fm_ext = fm->fm_extents;
-                file_offset += fm_ext[0].fe_length;
                 if(result == 0) {
                     /* this is the first extent */
                     result = fm_ext[0].fe_physical;
                     if(result == 0) {
                         /* looks suspicious - let's get out of here */
                         done = TRUE;
+                        if(file_offset == 0) {
+                            rm_log_debug_line("Looks like an inline extent");
+                        } else {
+                            /* odd that we go back to zero? */
+                            rm_log_warning_line("fm_ext[0].fe_physical==0 and not start of %s; abandoning", path);
+                        }
+                        *file_offset_next = 0;
                     }
                 } else if(fm_ext[0].fe_physical > expected ||
                           fm_ext[0].fe_physical < result) {
@@ -1045,6 +1051,7 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
                         *file_offset_next = fm_ext[0].fe_logical;
                     }
                 }
+                file_offset += fm_ext[0].fe_length;
                 if(fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
                     if(!done) {
                         done = TRUE;
@@ -1066,7 +1073,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
                 if(file_offset_next) {
                     /* caller wants to know logical offset of next fragment but
                      * we have an error... */
-                    *file_offset_next = 0;
+                    rm_log_warning_line("rm_offset_get_fiemap: got no extents for %s", path);
+                    *file_offset_next = (RmOff)-1;
                 }
             }
             g_free(fm);
@@ -1082,7 +1090,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, path);
     rm_sys_close(fd);
     return result;
 }
@@ -1137,9 +1145,10 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
 }
 
 RmLinkType rm_util_link_type(char *path1, char *path2) {
+    rm_log_debug_line("Checking link type for %s vs %s", path1, path2);
     int fd1 = rm_sys_open(path1, O_RDONLY);
     if(fd1 == -1) {
-        rm_log_perrorf("Error opening %s in rm_offsets_match", path1);
+        rm_log_perrorf("Error opening %s in rm_util_link_type", path1);
         return RM_LINK_ERROR;
     }
 
@@ -1162,7 +1171,7 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
 
     int fd2 = rm_sys_open(path2, O_RDONLY);
     if(fd2 == -1) {
-        rm_log_perrorf("Error opening %s in rm_offsets_match", path2);
+        rm_log_perrorf("Error opening %s in rm_util_link_type", path2);
         RM_RETURN(RM_LINK_ERROR);
     }
 
@@ -1218,8 +1227,8 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
     while(!rm_session_was_aborted()) {
         RmOff logical_next_1 = 0;
         RmOff logical_next_2 = 0;
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, path1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, path2);
 
         if(physical_1 != physical_2) {
             rm_log_debug_line("Files differ at offset %" G_GUINT64_FORMAT
@@ -1245,14 +1254,21 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
                           logical_current, physical_1);
 
         if(logical_next_1 == logical_current) {
-            rm_log_debug_line(
-                "rm_offsets_match() giving up: file1_offset_next==file_offset_current");
+            rm_log_warning_line(
+                "rm_util_link_type() giving up: file1_offset_next==file_offset_current for %s vs %s", path1, path2);
             RM_RETURN(RM_LINK_ERROR)
         }
 
         if(logical_next_1 >= (RmOff)stat1.st_size) {
             /* phew, we got to the end */
             RM_RETURN(RM_LINK_REFLINK)
+        }
+
+        if(logical_next_1 <= logical_current) {
+            /* oops we seem to have gone backwards */
+            rm_log_warning_line(
+                "rm_util_link_type() giving up: logical_next_1 <= logical_current for %s vs %s", path1, path2);
+            RM_RETURN(RM_LINK_ERROR);
         }
 
         logical_current = logical_next_1;
