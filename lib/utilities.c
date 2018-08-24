@@ -1220,14 +1220,14 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, path2);
 
         if(physical_1 != physical_2) {
-            rm_log_debug_line("Files differ at offset %" G_GUINT64_FORMAT
+            rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
                               ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
                               logical_current, physical_1, physical_2);
             RM_RETURN(RM_LINK_NONE);
         }
         if(logical_next_1 != logical_next_2) {
-            rm_log_debug_line("Next offsets differ after %" G_GUINT64_FORMAT
-                              ": %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+            rm_log_debug_line("File offsets differ after %" G_GUINT64_FORMAT
+                              " bytes: %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
                               logical_current, logical_next_1, logical_next_2);
             RM_RETURN(RM_LINK_NONE);
         }
@@ -1242,22 +1242,17 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
                           ", physical=%" G_GUINT64_FORMAT,
                           logical_current, physical_1);
 
-        if(logical_next_1 == logical_current) {
+        if(logical_next_1 <= logical_current) {
+            /* oops we seem to be getting nowhere! */
             rm_log_warning_line(
-                "rm_util_link_type() giving up: file1_offset_next==file_offset_current for %s vs %s", path1, path2);
+                "rm_util_link_type() giving up: file1_offset_next<=file_offset_current for %s vs %s", path1, path2);
             RM_RETURN(RM_LINK_ERROR)
         }
 
         if(logical_next_1 >= (RmOff)stat1.st_size) {
             /* phew, we got to the end */
+            rm_log_debug_line("Files are clones (share same data)")
             RM_RETURN(RM_LINK_REFLINK)
-        }
-
-        if(logical_next_1 <= logical_current) {
-            /* oops we seem to have gone backwards */
-            rm_log_warning_line(
-                "rm_util_link_type() giving up: logical_next_1 <= logical_current for %s vs %s", path1, path2);
-            RM_RETURN(RM_LINK_ERROR);
         }
 
         logical_current = logical_next_1;
