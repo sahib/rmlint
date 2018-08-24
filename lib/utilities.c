@@ -1007,8 +1007,10 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
  * file offset to &file_offset_next.
  * */
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, const char *path) {
+
     RmOff result = 0;
     bool done = FALSE;
+    bool first = TRUE;
 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
@@ -1016,70 +1018,57 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
     fsync(fd);
 
     while(!done) {
-        /* read in one extent */
+        /* read in next extent */
         struct fiemap *fm = rm_offset_get_fiemap(fd, 1, file_offset);
-        if(!fm) {
+
+        if(fm==NULL) {
+            /* got no extent data */
+            rm_log_warning_line("rm_offset_get_fiemap: got no fiemap for %s", path);
+            break;
+        }
+
+        if (fm->fm_mapped_extents == 0) {
+            rm_log_warning_line("rm_offset_get_fiemap: got no extents for %s", path);
             done = TRUE;
         } else {
-            if(!file_offset_next) {
-                /* no need to find end of fragment so one loop is enough*/
+
+            /* retrieve data from fiemap */
+            struct fiemap_extent fm_ext = fm->fm_extents[0];
+
+            if (first) {
+                /* remember disk location of start of data */
+                result = fm_ext.fe_physical;
+                first=FALSE;
+            } else {
+                /* check if subsequent extents are contiguous */
+                if(fm_ext.fe_physical != expected)  {
+                    /* current extent is not contiguous with previous, so we can stop */
+                    done = TRUE;
+                }
+            }
+
+            if (!done && file_offset_next != NULL) {
+                /* update logical offset of next fragment */
+                *file_offset_next = fm_ext.fe_logical + fm_ext.fe_length;
+            }
+
+            if(fm_ext.fe_flags & FIEMAP_EXTENT_LAST) {
                 done = TRUE;
             }
-            if(fm->fm_mapped_extents > 0) {
-                /* retrieve data from fiemap */
-                struct fiemap_extent *fm_ext = fm->fm_extents;
-                if(result == 0) {
-                    /* this is the first extent */
-                    result = fm_ext[0].fe_physical;
-                    if(result == 0) {
-                        /* looks suspicious - let's get out of here */
-                        done = TRUE;
-                        if(file_offset == 0) {
-                            rm_log_debug_line("Looks like an inline extent");
-                        } else {
-                            /* odd that we go back to zero? */
-                            rm_log_warning_line("fm_ext[0].fe_physical==0 and not start of %s; abandoning", path);
-                        }
-                        *file_offset_next = 0;
-                    }
-                } else if(fm_ext[0].fe_physical > expected ||
-                          fm_ext[0].fe_physical < result) {
-                    /* current extent is not contiguous with previous, so we can stop*/
-                    done = TRUE;
-                    if(file_offset_next) {
-                        /* caller wants to know logical offset of next fragment */
-                        *file_offset_next = fm_ext[0].fe_logical;
-                    }
-                }
-                file_offset += fm_ext[0].fe_length;
-                if(fm_ext[0].fe_flags & FIEMAP_EXTENT_LAST) {
-                    if(!done) {
-                        done = TRUE;
-                        if(file_offset_next) {
-                            /* caller wants to know logical offset of next fragment -
-                             * signal
-                             * that it is EOF */
-                            *file_offset_next =
-                                fm_ext[0].fe_logical + fm_ext[0].fe_length;
-                        }
-                    }
-                }
-                if(!done) {
-                    expected = fm_ext[0].fe_physical + fm_ext[0].fe_length;
-                }
-            } else {
-                /* got no extents from rm_offset_get_fiemap */
-                done = true;
-                if(file_offset_next) {
-                    /* caller wants to know logical offset of next fragment but
-                     * we have an error... */
-                    rm_log_warning_line("rm_offset_get_fiemap: got no extents for %s", path);
-                    *file_offset_next = (RmOff)-1;
-                }
-            }
-            g_free(fm);
+
+            /* move offsets in preparation for reading next extent */
+            file_offset += fm_ext.fe_length;
+            expected = fm_ext.fe_physical + fm_ext.fe_length;
         }
+
+        g_free(fm);
     }
+
+    if (file_offset_next != NULL) {
+        /* return value of *file_offset_next: */
+        *file_offset_next = file_offset;
+    }
+
     return result;
 }
 
