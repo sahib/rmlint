@@ -1056,6 +1056,11 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
                 done = TRUE;
             }
 
+            if(fm_ext.fe_length <= 0) {
+                /* going nowhere; bail out rather than looping indefinitely */
+                done = TRUE;
+            }
+
             /* move offsets in preparation for reading next extent */
             file_offset += fm_ext.fe_length;
             expected = fm_ext.fe_physical + fm_ext.fe_length;
