@@ -88,6 +88,9 @@ def has_feature(feature):
     ).decode('utf-8')
 
 
+RMLINT_BINARY_DIR = os.getcwd()
+
+
 def run_rmlint_once(*args,
                     dir_suffix=None,
                     use_default_dir=True,
@@ -118,8 +121,11 @@ def run_rmlint_once(*args,
         env, cmd = {}, []
 
     cmd += [
-        './rmlint', target_dir, verbosity,
+        os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity,
     ] + shlex.split(' '.join(args))
+
+    if target_dir:
+        cmd.append(target_dir)
 
     if with_json:
         cmd += ['-o', 'json:/tmp/out.json', '-c', 'json:oneline']

@@ -203,6 +203,36 @@ def test_sorting():
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_no_dir():
+    # Regression test for #305.
+    # --replay did not replay anything when not specifying some path.
+    # (The current working directory was not set in this case correctly)
+
+    create_file('xxx', 'sub/a')
+    create_file('xxx', 'sub/b')
+    create_file('xxx', 'c')
+
+    current_cwd = os.getcwd()
+
+    try:
+        os.chdir(TESTDIR_NAME)
+        replay_path = '/tmp/replay.json'
+        head, *data, footer = run_rmlint(
+                '-o json:{p}'.format(p=replay_path),
+                use_default_dir=False,
+        )
+        assert len(data) == 3
+
+        head, *data, footer = run_rmlint(
+                '--replay {}'.format(replay_path),
+                use_default_dir=False,
+        )
+        assert len(data) == 3
+    finally:
+        os.chdir(current_cwd)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
 def test_replay_unicode_fuckup():
     names = '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
 
