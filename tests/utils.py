@@ -120,13 +120,11 @@ def run_rmlint_once(*args,
     else:
         env, cmd = {}, []
 
-    cmd += [
-        os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity,
-    ] + shlex.split(' '.join(args))
-
+    cmd = [os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity]
     if target_dir:
         cmd.append(target_dir)
 
+    cmd += shlex.split(' '.join(args))
     if with_json:
         cmd += ['-o', 'json:/tmp/out.json', '-c', 'json:oneline']
 

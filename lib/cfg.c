@@ -128,6 +128,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     RmPath *rmpath = g_slice_new(RmPath);
     rmpath->path = real_path;
     rmpath->is_prefd = is_prefd;
+    rmpath->idx = cfg->path_count++;
     rmpath->treat_as_single_vol = strncmp(path, "//", 2) == 0;
 
     if(cfg->replay && g_str_has_suffix(rmpath->path, ".json")) {
@@ -135,7 +136,6 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
         return 1;
     }
 
-    rmpath->idx = cfg->path_count++;
     cfg->paths = g_slist_prepend(cfg->paths, rmpath);
     return 1;
 }

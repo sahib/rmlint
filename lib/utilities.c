@@ -1008,8 +1008,7 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
  * the next non-contiguous extent (fragment) is encountered and writes the corresponding
  * file offset to &file_offset_next.
  * */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, const char *path) {
-
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
     RmOff result = 0;
     bool done = FALSE;
     bool first = TRUE;
@@ -1090,7 +1089,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, path);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next);
     rm_sys_close(fd);
     return result;
 }
@@ -1231,8 +1230,8 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
     while(!rm_session_was_aborted()) {
         RmOff logical_next_1 = 0;
         RmOff logical_next_2 = 0;
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, path1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, path2);
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
 
         if(physical_1 != physical_2) {
 #if _RM_OFFSET_DEBUG

@@ -1189,7 +1189,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
             rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
     }
 
-    if(cfg->path_count == 0 && all_paths_valid) {
+    if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
     }
