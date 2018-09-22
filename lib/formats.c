@@ -207,6 +207,23 @@ void rm_fmt_clear(RmFmtTable *self) {
     g_queue_clear(self->handler_order);
 }
 
+void rm_fmt_backup_old_result_file(const char *old_path) {
+    GTimeVal current_time;
+    g_get_current_time(&current_time);
+    char *timestamp = g_time_val_to_iso8601(&current_time);
+    char *new_path = g_strdup_printf("%s.%s", old_path, timestamp);
+
+    rm_log_warning_line("Old result `%s` already exists.", old_path);
+    rm_log_warning_line("Moving old file to `%s`. Use --no-backup to disable this.", new_path);
+
+    if(rename(old_path, new_path) < 0) {
+        rm_log_perror("failed to rename old result file");
+    }
+
+    g_free(new_path);
+    g_free(timestamp);
+}
+
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
     g_hash_table_insert(self->name_to_handler, (char *)handler->name, handler);
     g_mutex_init(&handler->print_mtx);
@@ -261,6 +278,9 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         needs_full_path = true;
         if(access(path, F_OK) == 0) {
             file_existed_already = true;
+            if(!self->session->cfg->no_backup) {
+                rm_fmt_backup_old_result_file(path);
+            }
         }
 
         file_handle = fopen(path, "w");
