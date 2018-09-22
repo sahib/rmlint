@@ -213,11 +213,11 @@ void rm_fmt_backup_old_result_file(const char *old_path) {
     char *timestamp = g_time_val_to_iso8601(&current_time);
     char *new_path = g_strdup_printf("%s.%s", old_path, timestamp);
 
-    rm_log_warning_line("Old result `%s` already exists.", old_path);
-    rm_log_warning_line("Moving old file to `%s`. Use --no-backup to disable this.", new_path);
+    rm_log_warning_line(_("Old result `%s` already exists."), old_path);
+    rm_log_warning_line(_("Moving old file to `%s`. Use --no-backup to disable this."), new_path);
 
     if(rename(old_path, new_path) < 0) {
-        rm_log_perror("failed to rename old result file");
+        rm_log_perror(_("failed to rename old result file"));
     }
 
     g_free(new_path);
