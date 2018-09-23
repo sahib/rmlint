@@ -207,11 +207,24 @@ void rm_fmt_clear(RmFmtTable *self) {
     g_queue_clear(self->handler_order);
 }
 
-void rm_fmt_backup_old_result_file(const char *old_path) {
-    GTimeVal current_time;
-    g_get_current_time(&current_time);
-    char *timestamp = g_time_val_to_iso8601(&current_time);
-    char *new_path = g_strdup_printf("%s.%s", old_path, timestamp);
+void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
+    if(self->first_backup_timestamp.tv_sec == 0L) {
+        g_get_current_time(&self->first_backup_timestamp);
+    }
+
+    char *new_path = NULL;
+    char *timestamp = g_time_val_to_iso8601(&self->first_backup_timestamp);
+
+    // Split the extension, if possible and place it before the timestamp suffix.
+    char *extension = g_utf8_strrchr(old_path, -1, '.');
+    if(extension != NULL) {
+        char *old_path_prefix = g_strndup(old_path, extension - old_path);
+        new_path = g_strdup_printf("%s.%s.%s", old_path_prefix, timestamp, extension + 1);
+        g_free(old_path_prefix);
+    } else {
+        new_path = g_strdup_printf("%s.%s", old_path, timestamp);
+    }
+
 
     rm_log_warning_line(_("Old result `%s` already exists."), old_path);
     rm_log_warning_line(_("Moving old file to `%s`. Use --no-backup to disable this."), new_path);
@@ -279,7 +292,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         if(access(path, F_OK) == 0) {
             file_existed_already = true;
             if(!self->session->cfg->no_backup) {
-                rm_fmt_backup_old_result_file(path);
+                rm_fmt_backup_old_result_file(self, path);
             }
         }
 
