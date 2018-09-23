@@ -23,13 +23,14 @@ def test_backup():
             assert len(data) == 2
 
         for path in os.listdir(temp_dir):
-            assert path.startswith("xxx.json")
+            assert path.startswith("xxx.")
 
             if path == "xxx.json":
-                continue 
+                continue
+
             assert re.match(
                 r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z',
-                path[len("xxx.json."):]
+                path[len("xxx."):-len(".json")]
             ) is not None
     finally:
         shutil.rmtree(temp_dir)
