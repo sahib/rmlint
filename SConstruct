@@ -36,6 +36,28 @@ Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 #                                Utilities                                #
 ###########################################################################
 
+def check_gcc_version(context):
+    context.Message('Checking for GCC version... ')
+
+    try:
+        v = subprocess.check_output("printf '%s\n' __GNUC__ | gcc -E - | tail -n -1", shell=True)
+        try:
+            v = int(v)
+            context.Result(str(v))
+        except ValueError:
+            print('Expected a number, but got: ' + v)
+            v = 0
+    except subprocess.CalledProcessError:
+        print('Unable to find GCC version.')
+        v = 0
+    except AttributeError:
+        print('Not allowed.')
+        v = 0
+
+    conf.env['__GNUC__'] = v
+    return v
+
+
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
     command = pkg_config + ' --atleast-pkgconfig-version=' + version
@@ -535,6 +557,7 @@ Export('env')
 
 # Configuration:
 conf = Configure(env, custom_tests={
+    'check_gcc_version': check_gcc_version,
     'check_pkgconfig': check_pkgconfig,
     'check_pkg': check_pkg,
     'check_git_rev': check_git_rev,
@@ -639,7 +662,9 @@ if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
 else:
-    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
+    gcc_version = conf.check_gcc_version()
+    if gcc_version >= 8:
+        conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CFLAGS=[
