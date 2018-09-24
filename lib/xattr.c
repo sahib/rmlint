@@ -86,6 +86,7 @@ static int rm_xattr_build_key(RmSession *session,
     rm_assert_gentle(session);
 
     /* Be safe, assume caller is not concentrated. */
+    g_assert(buf);
     memset(buf, 0, sizeof(buf_size));
 
     const char *digest_name = rm_digest_type_to_string(session->cfg->checksum_type);
@@ -93,6 +94,7 @@ static int rm_xattr_build_key(RmSession *session,
         digest_name = rm_digest_type_to_string(RM_DEFAULT_DIGEST);
     }
 
+    g_assert(suffix);
     return snprintf(buf, buf_size, "user.rmlint.%s.%s", digest_name, suffix) < 0;
 }
 
@@ -100,6 +102,7 @@ static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
     rm_assert_gentle(file);
     rm_assert_gentle(file->digest);
 
+    g_assert(buf);
     memset(buf, '0', buf_size);
     buf[buf_size - 1] = 0;
 

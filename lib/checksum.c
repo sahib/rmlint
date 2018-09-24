@@ -753,7 +753,6 @@ static const RmDigestInterface paranoid_interface = {
 
 static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
     static const RmDigestInterface *digest_interfaces[] = {
-        [RM_DIGEST_UNKNOWN] = NULL,
         [RM_DIGEST_MURMUR] = &murmur_interface,
         [RM_DIGEST_METRO] = &metro_interface,
         [RM_DIGEST_METRO256] = &metro256_interface,
@@ -783,19 +782,16 @@ static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
         [RM_DIGEST_HIGHWAY256] = &highway256_interface,
     };
 
-    if(type != RM_DIGEST_UNKNOWN && type < RM_DIGEST_SENTINEL &&
-       digest_interfaces[type]) {
-        return digest_interfaces[type];
-    }
-    rm_log_error_line("No digest interface for enum %i", type);
-    g_assert_not_reached();
+    g_assert(type < RM_DIGEST_SENTINEL);
+    g_assert(type != RM_DIGEST_UNKNOWN);
+    g_assert(digest_interfaces[type]);
+
+    return digest_interfaces[type];
 }
 
 static void rm_digest_table_insert(GHashTable *code_table, char *name,
                                    RmDigestType type) {
-    if(g_hash_table_contains(code_table, name)) {
-        rm_log_error_line("Duplicate entry for %s in rm_init_digest_type_table()", name);
-    }
+    g_assert(!g_hash_table_contains(code_table, name));
     g_hash_table_insert(code_table, name, GUINT_TO_POINTER(type));
 }
 

@@ -90,6 +90,7 @@ static void rm_hasher_task_free(RmHasherTask *self) {
 
 /* GThreadPool Worker for hashing */
 static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
+    g_assert(buffer);
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
         rm_assert_gentle(buffer->user_data == NULL);
@@ -99,6 +100,7 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
         RmHasherTask *task = buffer->user_data;
         rm_assert_gentle(task->digest == buffer->digest);
 
+        g_assert(hasher);
         hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
         rm_hasher_task_free(task);

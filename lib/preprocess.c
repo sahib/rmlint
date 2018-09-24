@@ -500,8 +500,8 @@ static gboolean rm_pp_check_path_double(RmFile *file, GHashTable *unique_paths_t
         g_hash_table_add(unique_paths_table, key);
         return FALSE;
     }
-    RmFile *match_double = match_double_key->file;
-    rm_assert_gentle(match_double != file);
+
+    rm_assert_gentle(match_double_key->file != file);
 
     rm_path_double_free(key);
     rm_file_destroy(file);

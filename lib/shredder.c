@@ -491,12 +491,14 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
 
 /* Compute optimal size for next hash increment call this with group locked */
 static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
+    g_assert(file);
     RmShredGroup *group = file->shred_group;
     rm_assert_gentle(group);
 
     gint32 result = 0;
 
     /* calculate next_offset property of the RmShredGroup */
+    g_assert(tag);
     RmOff balanced_bytes = tag->page_size * SHRED_BALANCED_PAGES;
     RmOff target_bytes = balanced_bytes * group->offset_factor;
     if(group->next_offset == 2) {
@@ -734,6 +736,7 @@ static void rm_shred_push_queue(RmFile *file) {
 /* Free RmShredGroup and any dormant files still in its queue
  */
 static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
+    g_assert(self);
     rm_assert_gentle(self->parent == NULL); /* children should outlive their parents! */
     rm_assert_gentle(self->num_pending == 0);
 
@@ -1278,6 +1281,7 @@ static gboolean rm_shred_has_duplicates(GQueue *group) {
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
+    g_assert(session);
     rm_assert_gentle(group);
     rm_assert_gentle(group->head);
 
@@ -1338,7 +1342,8 @@ static RmShredGroup *rm_shred_create_rejects(RmShredGroup *group, RmFile *file) 
 static void rm_shred_group_transfer(RmFile *file, RmShredGroup *source,
                                     RmShredGroup *dest) {
     rm_shred_group_push_file(dest, file, FALSE);
-    rm_assert_gentle(g_queue_remove(source->held_files, file));
+    gboolean success = g_queue_remove(source->held_files, file);
+    rm_assert_gentle(success); (void)success;
     source->num_files--;
     source->n_pref -= file->is_prefd;
     source->n_npref -= !file->is_prefd;

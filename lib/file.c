@@ -180,6 +180,8 @@ static gint rm_file_foreach_hardlink(RmFile *f, RmRFunc func, gpointer user_data
 }
 
 void rm_file_cluster_add(RmFile *host, RmFile *guest) {
+    g_assert(host);
+    g_assert(guest);
     rm_assert_gentle(!guest->cluster || host == guest);
     if(!host->cluster) {
         host->cluster = g_queue_new();
@@ -192,6 +194,7 @@ void rm_file_cluster_add(RmFile *host, RmFile *guest) {
 }
 
 void rm_file_cluster_remove(RmFile *file) {
+    g_assert(file);
     rm_assert_gentle(file->cluster);
 
     g_queue_remove(file->cluster, file);
@@ -231,7 +234,7 @@ static gint rm_file_count(RmFile *file, gint type) {
     case RM_FILE_COUNT_NEW:
         return file->is_new;
     default:
-        rm_assert_gentle(FALSE);
+        rm_assert_gentle_not_reached();
         return 0;
     }
 }
