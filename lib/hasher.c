@@ -93,12 +93,12 @@ static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
     g_assert(buffer);
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
-        rm_assert_gentle(buffer->user_data == NULL);
+        g_assert(buffer->user_data == NULL);
         rm_digest_buffered_update(buffer);
     } else if(buffer->user_data) {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
-        rm_assert_gentle(task->digest == buffer->digest);
+        g_assert(task->digest == buffer->digest);
 
         g_assert(hasher);
         hasher->callback(hasher, task->digest, hasher->session_user_data,
@@ -389,7 +389,7 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     /* Create a pool of hashing thread "pools" - each "pool" can only have
      * one thread because hashing must be done in order */
     self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
-    rm_assert_gentle(num_threads > 0);
+    g_assert(num_threads > 0);
     self->unalloc_hashpipes = num_threads;
     return self;
 }
@@ -444,7 +444,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
             self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
         }
     }
-    rm_assert_gentle(self->hashpipe);
+    g_assert(self->hashpipe);
 
     self->task_user_data = task_user_data;
     return self;

@@ -386,8 +386,8 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
                                      GError **error) {
-    rm_assert_gentle(session);
-    rm_assert_gentle(pair);
+    g_assert(session);
+    g_assert(pair);
 
     char *separator = strchr(pair, ':');
     char *full_path = NULL;
@@ -1608,7 +1608,7 @@ int rm_cmd_main(RmSession *session) {
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
-        rm_assert_gentle(cfg->cache_file_structs);
+        g_assert(cfg->cache_file_structs);
 
         /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
          * on two dupicate directories which is likely not a valid assumption.

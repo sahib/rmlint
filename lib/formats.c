@@ -81,7 +81,7 @@ static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
 }
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
-    rm_assert_gentle(handler);
+    g_assert(handler);
 
     g_free(handler->path);
     g_free(handler);

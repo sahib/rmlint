@@ -850,7 +850,7 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed) {
 }
 
 void rm_digest_release_buffers(RmDigest *digest) {
-    rm_assert_gentle(digest->type == RM_DIGEST_PARANOID);
+    g_assert(digest->type == RM_DIGEST_PARANOID);
     rm_digest_paranoid_release_buffers(digest->state);
 }
 
@@ -869,7 +869,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
 }
 
 void rm_digest_buffered_update(RmBuffer *buffer) {
-    rm_assert_gentle(buffer);
+    g_assert(buffer);
     RmDigest *digest = buffer->digest;
     if(digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
@@ -881,7 +881,7 @@ void rm_digest_buffered_update(RmBuffer *buffer) {
 }
 
 RmDigest *rm_digest_copy(RmDigest *digest) {
-    rm_assert_gentle(digest);
+    g_assert(digest);
 
     RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
 
@@ -908,7 +908,7 @@ guint rm_digest_hash(RmDigest *digest) {
     bytes = digest->bytes;
 
     if(buf != NULL) {
-        rm_assert_gentle(bytes >= sizeof(guint));
+        g_assert(bytes >= sizeof(guint));
         hash = *(guint *)buf;
         g_slice_free1(bytes, buf);
     }
@@ -916,7 +916,7 @@ guint rm_digest_hash(RmDigest *digest) {
 }
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
-    rm_assert_gentle(a && b);
+    g_assert(a && b);
 
     if(a->type != b->type) {
         return false;

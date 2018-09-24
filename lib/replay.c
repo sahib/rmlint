@@ -213,7 +213,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     if(hardlink_of != NULL) {
         rm_file_hardlink_add(polly->last_original, file);
     } else {
-        rm_assert_gentle(!file->hardlinks);
+        g_assert(!file->hardlinks);
     }
 
     return file;
