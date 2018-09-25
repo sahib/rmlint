@@ -675,6 +675,7 @@ conf.env.Append(CFLAGS=[
     '-Wuninitialized',
     '-Wstrict-prototypes',
     '-Wno-implicit-fallthrough',
+    '-Winline'
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))

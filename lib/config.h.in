@@ -169,4 +169,20 @@ typedef guint64 RmOff;
 /* Domain for reporting errors. Needed by GOptions */
 #define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
 
+#ifndef RM_DEBUG
+    #ifdef __GNUC__
+        #define INLINE inline __attribute__((__always_inline__))
+    #elif defined(__CLANG__)
+        #if __has_attribute(__always_inline__)
+            #define INLINE inline __attribute__((__always_inline__))
+        #endif
+    #elif defined(_MSC_VER)
+        #define INLINE __forceinline
+    #endif
+#endif
+
+#ifndef INLINE
+    #define INLINE inline
+#endif
+
 #endif
