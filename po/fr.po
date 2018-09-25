@@ -97,7 +97,7 @@ msgstr "autre(s) éléments, dont la taille peut varier, trouvé(s).\n"
 
 #: lib/formats/summary.c:107
 #, c-format
-msgid "Scanning took in total %s%s%s. Is that good enough?\n"
+msgid "Scanning took in total %s%s%s.\n"
 msgstr ""
 
 #: lib/formats/summary.c:143

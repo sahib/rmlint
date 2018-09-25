@@ -95,8 +95,8 @@ msgstr "andere merkwürdige Datei(en) gefunden, die in ihrer Größe variieren.\
 
 #: lib/formats/summary.c:107
 #, c-format
-msgid "Scanning took in total %s%s%s. Is that good enough?\n"
-msgstr "Das ganze hat %s%s%s gedauert. War das ausreichend schnell?\n"
+msgid "Scanning took in total %s%s%s.\n"
+msgstr "Das ganze hat %s%s%s gedauert.\n"
 
 #: lib/formats/summary.c:143
 #, c-format
