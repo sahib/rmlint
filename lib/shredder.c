@@ -491,12 +491,14 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
 
 /* Compute optimal size for next hash increment call this with group locked */
 static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
+    g_assert(file);
     RmShredGroup *group = file->shred_group;
-    rm_assert_gentle(group);
+    g_assert(group);
 
     gint32 result = 0;
 
     /* calculate next_offset property of the RmShredGroup */
+    g_assert(tag);
     RmOff balanced_bytes = tag->page_size * SHRED_BALANCED_PAGES;
     RmOff target_bytes = balanced_bytes * group->offset_factor;
     if(group->next_offset == 2) {
@@ -549,7 +551,7 @@ static void rm_shred_mem_return(RmShredGroup *group) {
 #endif
             tag->mem_refusing = FALSE;
             if(group->digest) {
-                rm_assert_gentle(group->digest->type == RM_DIGEST_PARANOID);
+                g_assert(group->digest->type == RM_DIGEST_PARANOID);
                 rm_digest_free(group->digest);
                 group->digest = NULL;
             }
@@ -734,8 +736,9 @@ static void rm_shred_push_queue(RmFile *file) {
 /* Free RmShredGroup and any dormant files still in its queue
  */
 static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
-    rm_assert_gentle(self->parent == NULL); /* children should outlive their parents! */
-    rm_assert_gentle(self->num_pending == 0);
+    g_assert(self);
+    g_assert(self->parent == NULL); /* children should outlive their parents! */
+    g_assert(self->num_pending == 0);
 
     RmCfg *cfg = self->session->cfg;
 
@@ -766,7 +769,7 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
         g_hash_table_unref(self->children);
     }
 
-    rm_assert_gentle(!self->in_progress_digests);
+    g_assert(!self->in_progress_digests);
 
     g_mutex_clear(&self->lock);
 
@@ -818,7 +821,7 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
         break;
     case RM_SHRED_GROUP_FINISHED:
     default:
-        rm_assert_gentle_not_reached();
+        g_assert_not_reached();
     }
 }
 
@@ -895,7 +898,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->n_clusters++;
         shred_group->n_inodes += RM_FILE_INODE_COUNT(file);
 
-        rm_assert_gentle(file->hash_offset == shred_group->hash_offset);
+        g_assert(file->hash_offset == shred_group->hash_offset);
 
         rm_shred_group_update_status(shred_group);
         switch(shred_group->status) {
@@ -929,7 +932,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             break;
         case RM_SHRED_GROUP_FINISHED:
         default:
-            rm_assert_gentle_not_reached();
+            g_assert_not_reached();
         }
     }
     g_mutex_unlock(&shred_group->lock);
@@ -948,9 +951,9 @@ static RmFile *rm_shred_sift(RmFile *file) {
     RmFile *result = NULL;
     gboolean current_group_finished = FALSE;
 
-    rm_assert_gentle(file);
+    g_assert(file);
     RmShredGroup *current_group = file->shred_group;
-    rm_assert_gentle(current_group);
+    g_assert(current_group);
 
     g_mutex_lock(&current_group->lock);
     {
@@ -969,7 +972,7 @@ static RmFile *rm_shred_sift(RmFile *file) {
             rm_shred_discard_file(file, true);
 
         } else {
-            rm_assert_gentle(file->digest);
+            g_assert(file->digest);
 
             /* check is child group hashtable has been created yet */
             if(current_group->children == NULL) {
@@ -1019,8 +1022,8 @@ static void rm_shred_hash_callback(_UNUSED RmHasher *hasher, RmDigest *digest,
     if(!file->digest) {
         file->digest = digest;
     }
-    rm_assert_gentle(file->digest == digest);
-    rm_assert_gentle(file->hash_offset == file->shred_group->next_offset);
+    g_assert(file->digest == digest);
+    g_assert(file->hash_offset == file->shred_group->next_offset);
 
     if(file->status != RM_FILE_STATE_IGNORE) {
         /* remember that checksum */
@@ -1060,8 +1063,8 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     RmShredTag *shredder = session->shredder;
     RmCfg *cfg = session->cfg;
 
-    rm_assert_gentle(file);
-    rm_assert_gentle(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
+    g_assert(file);
+    g_assert(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
 
     /* Create an empty checksum for empty files */
     if(file->file_size == 0) {
@@ -1125,8 +1128,8 @@ static gint rm_shred_cmp_ext_cksum(RmFile *a, RmFile *b) {
 }
 
 static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
-    rm_assert_gentle(files);
-    rm_assert_gentle(files->data);
+    g_assert(files);
+    g_assert(files->data);
 
     /* cluster hardlinks and ext_cksum matches;
      * Initially I over-complicated this until I realised that hardlinks
@@ -1278,8 +1281,9 @@ static gboolean rm_shred_has_duplicates(GQueue *group) {
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
-    rm_assert_gentle(group);
-    rm_assert_gentle(group->head);
+    g_assert(session);
+    g_assert(group);
+    g_assert(group->head);
 
 #if _RM_SHRED_DEBUG
     RmFile *head = group->head->data;
@@ -1338,7 +1342,8 @@ static RmShredGroup *rm_shred_create_rejects(RmShredGroup *group, RmFile *file) 
 static void rm_shred_group_transfer(RmFile *file, RmShredGroup *source,
                                     RmShredGroup *dest) {
     rm_shred_group_push_file(dest, file, FALSE);
-    rm_assert_gentle(g_queue_remove(source->held_files, file));
+    gboolean success = g_queue_remove(source->held_files, file);
+    g_assert(success); (void)success;
     source->num_files--;
     source->n_pref -= file->is_prefd;
     source->n_npref -= !file->is_prefd;
@@ -1432,7 +1437,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     }
     RmCfg *cfg = tag->session->cfg;
 
-    rm_assert_gentle(group->held_files);
+    g_assert(group->held_files);
 
     /* Features like --mtime-window require post processing, i.e. the shred group
      * needs to be split up further by criteria like "mtime difference too high".
@@ -1557,7 +1562,7 @@ static bool rm_shred_reassign_checksum(RmShredTag *main, RmFile *file) {
             if(group->next_offset == 0) {
                 (void)rm_shred_get_read_size(file, main);
             }
-            rm_assert_gentle(group->hash_offset == file->hash_offset);
+            g_assert(group->hash_offset == file->hash_offset);
         }
         g_mutex_unlock(&group->lock);
 
@@ -1689,8 +1694,8 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
 }
 
 void rm_shred_run(RmSession *session) {
-    rm_assert_gentle(session);
-    rm_assert_gentle(session->tables);
+    g_assert(session);
+    g_assert(session->tables);
 
     RmCfg *cfg = session->cfg;
 

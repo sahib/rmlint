@@ -421,7 +421,7 @@ RmUserList *rm_userlist_new(void) {
 
 bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
                           bool *valid_uid, bool *valid_gid) {
-    rm_assert_gentle(self);
+    g_assert(self);
     bool gid_found = FALSE;
     bool uid_found = FALSE;
 
@@ -446,7 +446,7 @@ bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
 }
 
 void rm_userlist_destroy(RmUserList *self) {
-    rm_assert_gentle(self);
+    g_assert(self);
 
     g_sequence_free(self->users);
     g_sequence_free(self->groups);
@@ -547,7 +547,7 @@ typedef struct RmMountEntries {
 } RmMountEntries;
 
 static void rm_mount_list_close(RmMountEntries *self) {
-    rm_assert_gentle(self);
+    g_assert(self);
 
     for(GList *iter = self->entries; iter; iter = iter->next) {
         RmMountEntry *entry = iter->data;
@@ -563,7 +563,7 @@ static void rm_mount_list_close(RmMountEntries *self) {
 }
 
 static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
-    rm_assert_gentle(self);
+    g_assert(self);
 
     if(self->current) {
         self->current = self->current->next;
@@ -952,7 +952,7 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check) {
 }
 
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
-    rm_assert_gentle(self);
+    g_assert(self);
     if(g_hash_table_contains(self->reflinkfs_table, GUINT_TO_POINTER(source))) {
         if(source == dest) {
             return true;
@@ -961,8 +961,8 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
                 g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
             RmPartitionInfo *dest_part =
                 g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
-            rm_assert_gentle(source_part);
-            rm_assert_gentle(dest_part);
+            g_assert(source_part);
+            g_assert(dest_part);
             return (strcmp(source_part->fsname, dest_part->fsname) == 0);
         }
     } else {
