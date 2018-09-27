@@ -35,6 +35,8 @@ def xgettext(target=None, source=None, env=None):
     Exit(subprocess.call(
         'xgettext --package-name rmlint -k_ -kN_ ' \
         '--package-version {}.{}.{} --default-domain rmlint ' \
+        '--add-location=file ' \
+        '--join-existing ' \
         '--output po/rmlint.pot ' \
         '--from-code UTF-8 ' \
         '$(find src lib -iname "*.[ch]") &&' \
