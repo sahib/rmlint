@@ -1586,7 +1586,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
 
-    if(session->cfg->replay) {
+    if(cfg->replay) {
         return rm_cmd_replay_main(session);
     }
 

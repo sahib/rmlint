@@ -178,8 +178,11 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
     return 0;
 }
 
-static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *session) {
+static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, const RmCfg *const cfg) {
     /* put paths into format expected by fts */
+
+    g_assert(cfg);
+
     guint path_count = g_slist_length(paths);
     char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
     for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
@@ -231,8 +234,8 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
         case FTS_SLNONE:
         case FTS_DEFAULT:
             /* Save this path as countable file, but only if we consider empty files */
-            if(!(session->cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
-                if(!(session->cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
+            if(!(cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
+                if(!(cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
                     rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
                 }
             }
@@ -518,7 +521,7 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->cfg->paths, session);
+    rm_tm_count_files(&self->count_tree, session->cfg->paths, session->cfg);
 
     return self;
 }

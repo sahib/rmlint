@@ -473,7 +473,7 @@ void rm_traverse_tree(RmSession *session) {
                      (RmMDSFunc)rm_traverse_directory,
                      trav_session,
                      0,
-                     session->cfg->threads_per_disk,
+                     cfg->threads_per_disk,
                      NULL);
 
     /* iterate through paths */
