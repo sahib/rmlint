@@ -183,9 +183,15 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
 
     g_assert(cfg);
     guint path_count = cfg->path_count;
+    g_assert(path_count);
 
     typedef const char *Path;
-    Path *const path_vec = g_malloc0(sizeof(Path) * (path_count + 1));
+    Path *const path_vec = malloc(sizeof(Path) * (path_count + 1));
+
+    if(!path_vec) {
+        rm_log_error(_("Failed to allocate memory. Out of memory?"));
+        return false;
+    }
 
     Path *path = path_vec;
     for(const GSList *paths = cfg->paths; path_count--; paths = paths->next) {
@@ -193,12 +199,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
         g_assert(paths->data);
         *(path++) = ((RmPath *)paths->data)->path;
     }
-
-    if(*path_vec == NULL) {
-        rm_log_error("No paths passed to rm_tm_count_files\n");
-        g_free(path_vec);
-        return false;
-    }
+    *path = 0;
 
     /* This tree stores the full file paths.
        It is joined into a full directory tree later.
@@ -526,7 +527,9 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->cfg);
+    if(!rm_tm_count_files(&self->count_tree, session->cfg)) {
+        return 0;
+    }
 
     return self;
 }
