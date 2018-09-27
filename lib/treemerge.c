@@ -185,7 +185,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     guint path_count = cfg->path_count;
     const GSList *paths = cfg->paths;
 
-    char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
+    const char **const path_vec = g_malloc0(sizeof(*path_vec) * (path_count + 1));
     for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
         path_vec[idx] = ((RmPath *)paths->data)->path;
     }
