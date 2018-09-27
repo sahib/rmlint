@@ -145,35 +145,27 @@ void rm_session_clear(RmSession *session) {
     rm_trie_destroy(&cfg->file_trie);
 }
 
-volatile int SESSION_ABORTED;
+volatile int rm_session_abort_count = 0;
 
-void rm_session_abort(void) {
-    g_atomic_int_add(&SESSION_ABORTED, 1);
+void rm_session_acknowledge_abort(const gint abort_count) {
+    g_assert(abort_count);
+    static bool message_not_yet_shown = true;
+    static GMutex m;
+
+    g_mutex_lock(&m);
+        if(message_not_yet_shown) {
+            rm_log_warning("\n");
+            rm_log_warning_line(_("Received interrupt; stopping..."));
+            message_not_yet_shown = false;
+        }
+        if(abort_count > 1) {
+            rm_log_warning("\n");
+            rm_log_warning_line(_("Received second interrupt; stopping hard."));
+            exit(EXIT_FAILURE);
+        }
+    g_mutex_unlock(&m);
 }
 
-static gpointer rm_session_print_first_abort_warn(_UNUSED gpointer data) {
-    rm_log_warning("\r");
-    rm_log_warning_line(_("Received Interrupt, stopping..."));
-    return NULL;
-}
-
-bool rm_session_was_aborted() {
-    gint rc = g_atomic_int_get(&SESSION_ABORTED);
-
-    static GOnce print_once = G_ONCE_INIT;
-
-    switch(rc) {
-    case 1:
-        g_once(&print_once, rm_session_print_first_abort_warn, NULL);
-        break;
-    case 2:
-        rm_log_warning_line(_("Received second Interrupt, stopping hard."));
-        exit(EXIT_FAILURE);
-        break;
-    }
-
-    return rc;
-}
 /**
  * *********** dedupe session main ************
  **/

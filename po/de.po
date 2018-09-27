@@ -354,12 +354,12 @@ msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
 
 #: lib/session.c:142
-msgid "Received Interrupt, stopping..."
-msgstr "Wurde unterbrochen, ich höre auf..."
+msgid "Received interrupt; stopping..."
+msgstr "Wurde unterbrochen; ich höre auf..."
 
 #: lib/session.c:156
-msgid "Received second Interrupt, stopping hard."
-msgstr "Wurde nochmal unterbrochen, mache sofort Schluss."
+msgid "Received second interrupt; stopping hard."
+msgstr "Wurde nochmal unterbrochen; mache sofort Schluss."
 
 #: lib/formats.c:219
 #, c-format

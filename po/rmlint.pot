@@ -345,11 +345,11 @@ msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr ""
 
 #: lib/session.c:142
-msgid "Received Interrupt, stopping..."
+msgid "Received interrupt; stopping..."
 msgstr ""
 
 #: lib/session.c:156
-msgid "Received second Interrupt, stopping hard."
+msgid "Received second interrupt; stopping hard."
 msgstr ""
 
 #: lib/formats.c:219
