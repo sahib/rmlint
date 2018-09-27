@@ -143,7 +143,8 @@ extern "C" {
 #endif
 FTSENT *fts_children(FTS *, int);
 int fts_close(FTS *);
-FTS *fts_open(char *const *, int, int (*)(const FTSENT **, const FTSENT **));
+typedef const char *Path;
+FTS *fts_open(const Path *, int, int (*)(const FTSENT **, const FTSENT **));
 FTSENT *fts_read(FTS *);
 int fts_set(FTS *, FTSENT *, int);
 #ifdef __cplusplus
