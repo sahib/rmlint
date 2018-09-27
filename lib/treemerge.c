@@ -183,12 +183,14 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
 
     g_assert(cfg);
     guint path_count = cfg->path_count;
-    const GSList *paths = cfg->paths;
 
     const char **const path_vec = g_malloc0(sizeof(*path_vec) * (path_count + 1));
-    for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
-        path_vec[idx] = ((RmPath *)paths->data)->path;
-    }
+
+    const char **path = path_vec;
+    for(const GSList *paths = cfg->paths; paths; paths = paths->next) {
+        g_assert(paths->data);
+        *(path++) = ((RmPath *)paths->data)->path;
+    } g_assert(path == path_vec + path_count);
 
     if(*path_vec == NULL) {
         rm_log_error("No paths passed to rm_tm_count_files\n");
@@ -263,9 +265,9 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
      * otherwise we would continue merging till / with fatal consequences,
      * since / does not have more files than path_vec[0]
      */
-    for(int i = 0; path_vec[i]; ++i) {
+    for(path = path_vec; *path; ++path) {
         /* Just call the callback directly */
-        RmNode *node = rm_trie_search_node(&file_tree, path_vec[i]);
+        RmNode *node = rm_trie_search_node(&file_tree, *path);
         if(node != NULL) {
             node->data = GINT_TO_POINTER(true);
             rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
