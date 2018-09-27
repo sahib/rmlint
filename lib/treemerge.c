@@ -178,12 +178,13 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
     return 0;
 }
 
-static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, const RmCfg *const cfg) {
+static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     /* put paths into format expected by fts */
 
     g_assert(cfg);
+    guint path_count = cfg->path_count;
+    const GSList *paths = cfg->paths;
 
-    guint path_count = g_slist_length(paths);
     char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
     for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
         path_vec[idx] = ((RmPath *)paths->data)->path;
@@ -260,7 +261,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, const RmCfg *co
 
     /* Now flag everything as a no-go over the given paths,
      * otherwise we would continue merging till / with fatal consequences,
-     * since / does not have more files as paths[0]
+     * since / does not have more files than path_vec[0]
      */
     for(int i = 0; path_vec[i]; ++i) {
         /* Just call the callback directly */
@@ -521,7 +522,7 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->cfg->paths, session->cfg);
+    rm_tm_count_files(&self->count_tree, session->cfg);
 
     return self;
 }
