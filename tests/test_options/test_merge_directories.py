@@ -235,19 +235,11 @@ def test_symlinks():
 
     head, *data, footer = run_rmlint('-p -D -S a -f')
 
-    assert len(data) == 4
+    assert len(data) == 2
     assert data[0]['path'].endswith('/a')
     assert data[0]['is_original']
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
-
-    # z must come first, since it's the physical real file
-    assert data[2]['path'].endswith('/a/z')
-    assert data[2]['is_original']
-
-    # x is a duplicate of z when following links
-    assert data[3]['path'].endswith('/a/x')
-    assert not data[3]['is_original']
 
 
 def mount_bind_teardown_func():

@@ -192,20 +192,13 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
         return false;
     }
 
-    int fts_flags = FTS_COMFOLLOW;
-    if(session->cfg->follow_symlinks) {
-        fts_flags |= FTS_LOGICAL;
-    } else {
-        fts_flags |= FTS_PHYSICAL;
-    }
-
     /* This tree stores the full file paths.
        It is joined into a full directory tree later.
      */
     RmTrie file_tree;
     rm_trie_init(&file_tree);
 
-    FTS *fts = fts_open(path_vec, fts_flags, NULL);
+    FTS *fts = fts_open(path_vec, FTS_COMFOLLOW | FTS_PHYSICAL, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
         g_free(path_vec);
@@ -239,7 +232,9 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
         case FTS_DEFAULT:
             /* Save this path as countable file, but only if we consider empty files */
             if(!(session->cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
-                rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
+                if(!(session->cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
+                    rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
+                }
             }
         case FTS_D:
         case FTS_DNR:
