@@ -632,6 +632,8 @@ FORMATTERS
     * ``clone``: For reflink-capable filesystems only. Try to clone both files with the
       FIDEDUPERANGE ``ioctl(3p)`` (or BTRFS_IOC_FILE_EXTENT_SAME on older kernels).
       This will free up duplicate extents. Needs at least kernel 4.2.
+      Use this option when you only have read-only acess to a btrfs filesystem but still
+      want to deduplicate it. This is usually the case for snapshots.
     * ``reflink``: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
       it.
