@@ -255,8 +255,10 @@ static void rm_mds_factory(RmMDSDevice *device, RmMDS *mds) {
 /** @brief Push an RmMDSDevice to the threadpool
  **/
 void rm_mds_device_start(RmMDSDevice *device, RmMDS *mds) {
-    rm_assert_gentle(device->threads == 0);
+    g_assert(device);
+    g_assert(device->threads == 0);
 
+    g_assert(mds);
     device->threads = mds->threads_per_disk;
     g_mutex_lock(&device->lock);
     {
@@ -283,9 +285,10 @@ void rm_mds_start(RmMDS *mds) {
 
 static RmMDSDevice *rm_mds_device_get_by_disk(RmMDS *mds, const dev_t disk) {
     RmMDSDevice *result = NULL;
+    g_assert(mds);
     g_mutex_lock(&mds->lock);
     {
-        rm_assert_gentle(mds->disks);
+        g_assert(mds->disks);
 
         result = g_hash_table_lookup(mds->disks, GINT_TO_POINTER(disk));
         if(!result) {
@@ -331,7 +334,8 @@ void rm_mds_configure(RmMDS *self,
                       const gint pass_quota,
                       const gint threads_per_disk,
                       RmMDSSortFunc prioritiser) {
-    rm_assert_gentle(self->running == FALSE);
+    g_assert(self);
+    g_assert(self->running == FALSE);
     self->func = func;
     self->user_data = user_data;
     self->threads_per_disk = threads_per_disk;

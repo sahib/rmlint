@@ -386,8 +386,8 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
                                      GError **error) {
-    rm_assert_gentle(session);
-    rm_assert_gentle(pair);
+    g_assert(session);
+    g_assert(pair);
 
     char *separator = strchr(pair, ':');
     char *full_path = NULL;
@@ -1500,6 +1500,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
 
+    g_assert(!(cfg->follow_symlinks && cfg->see_symlinks));
+
     if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
             RM_ERROR_QUARK, 0,
@@ -1509,9 +1511,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
-    } else if(cfg->follow_symlinks && cfg->see_symlinks) {
-        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
-        rm_assert_gentle_not_reached();
     } else if(cfg->keep_all_tagged && cfg->must_match_untagged) {
         error = \
             g_error_new(
@@ -1609,7 +1608,7 @@ int rm_cmd_main(RmSession *session) {
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
-        rm_assert_gentle(cfg->cache_file_structs);
+        g_assert(cfg->cache_file_structs);
 
         /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
          * on two dupicate directories which is likely not a valid assumption.

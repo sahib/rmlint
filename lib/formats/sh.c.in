@@ -114,7 +114,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
         return TRUE;
     default:
-        rm_assert_gentle_not_reached();
+        g_assert_not_reached();
         return FALSE;
     }
 }
@@ -148,7 +148,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
         *out = g_strdup_printf("cp_reflink '%s' '%s'", dupe_escaped, orig_escaped);
         return TRUE;
     default:
-        rm_assert_gentle_not_reached();
+        g_assert_not_reached();
         return FALSE;
     }
 }

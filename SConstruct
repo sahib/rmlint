@@ -36,6 +36,28 @@ Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 #                                Utilities                                #
 ###########################################################################
 
+def check_gcc_version(context):
+    context.Message('Checking for GCC version... ')
+
+    try:
+        v = subprocess.check_output("printf '%s\n' __GNUC__ | gcc -E -P -", shell=True)
+        try:
+            v = int(v)
+            context.Result(str(v))
+        except ValueError:
+            print('Expected a number, but got: ' + v)
+            v = 0
+    except subprocess.CalledProcessError:
+        print('Unable to find GCC version.')
+        v = 0
+    except AttributeError:
+        print('Not allowed.')
+        v = 0
+
+    conf.env['__GNUC__'] = v
+    return v
+
+
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
     command = pkg_config + ' --atleast-pkgconfig-version=' + version
@@ -535,6 +557,7 @@ Export('env')
 
 # Configuration:
 conf = Configure(env, custom_tests={
+    'check_gcc_version': check_gcc_version,
     'check_pkgconfig': check_pkgconfig,
     'check_pkg': check_pkg,
     'check_git_rev': check_git_rev,
@@ -639,7 +662,9 @@ if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
 else:
-    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
+    gcc_version = conf.check_gcc_version()
+    if gcc_version >= 8:
+        conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CFLAGS=[
@@ -650,6 +675,7 @@ conf.env.Append(CFLAGS=[
     '-Wuninitialized',
     '-Wstrict-prototypes',
     '-Wno-implicit-fallthrough',
+    '-Winline'
 ])
 
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
@@ -681,9 +707,10 @@ if conf.env['HAVE_LIBELF']:
 cc_O_option = '-O'
 if ARGUMENTS.get('DEBUG') == "1":
     print("Compiling with gdb extra debug symbols")
-    conf.env.Append(CCFLAGS=['-ggdb3', '-fno-inline'])
+    conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-ggdb3', '-fno-inline'])
     cc_O_option += (ARGUMENTS.get('O') or '0')
 else:
+    conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT'])
     conf.env.Append(LINKFLAGS=['-s'])
     cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
 

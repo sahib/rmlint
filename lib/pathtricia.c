@@ -78,7 +78,7 @@ static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
 ///////////////////////////
 
 void rm_trie_init(RmTrie *self) {
-    rm_assert_gentle(self);
+    g_assert(self);
     self->root = rm_node_new(self, NULL);
 
     /* Average path len is 93.633236.
@@ -120,8 +120,8 @@ char *rm_path_iter_next(RmPathIter *iter) {
 }
 
 RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
-    rm_assert_gentle(self);
-    rm_assert_gentle(path);
+    g_assert(self);
+    g_assert(path);
 
     RmPathIter iter;
     rm_path_iter_init(&iter, path);
@@ -147,8 +147,8 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
 }
 
 RmNode *rm_trie_search_node(RmTrie *self, const char *path) {
-    rm_assert_gentle(self);
-    rm_assert_gentle(path);
+    g_assert(self);
+    g_assert(path);
 
     RmPathIter iter;
     rm_path_iter_init(&iter, path);

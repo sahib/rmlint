@@ -416,9 +416,9 @@ static guint rm_directory_hash(const RmDirectory *d) {
 }
 
 static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile *file) {
-    rm_assert_gentle(file);
-    rm_assert_gentle(file->digest);
-    rm_assert_gentle(directory);
+    g_assert(file);
+    g_assert(file->digest);
+    g_assert(directory);
 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
