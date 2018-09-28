@@ -737,19 +737,26 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         memset(stamp_buf, 0, sizeof(stamp_buf));
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            success = rm_cmd_parse_timestamp(option_name, g_strstrip(stamp_buf), session,
-                                             error);
+            success = rm_cmd_parse_timestamp(
+                option_name,
+                g_strstrip(stamp_buf),
+                session,
+                error
+            );
+
+            if(!success) {
+                return false;
+            }
+
             plain = rm_cmd_timestamp_is_plain(stamp_buf);
         }
 
         fclose(stamp_file);
     } else {
-        /* Cannot read... */
+        /* Cannot read a stamp file, assume we gonna creae it. */
         plain = false;
-    }
-
-    if(!success) {
-        return false;
+        success = true;
+        rm_log_info_line(_("No stamp file at `%s`, will create one after this run."), timestamp_path);
     }
 
     rm_fmt_add(session->formats, "stamp", timestamp_path);
