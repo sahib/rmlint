@@ -193,13 +193,13 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
         return false;
     }
 
-    Path *path = path_vec;
+    Path *path = path_vec + path_count;
+    *path = 0;
     for(const GSList *paths = cfg->paths; path_count--; paths = paths->next) {
         g_assert(paths);
         g_assert(paths->data);
-        *(path++) = ((RmPath *)paths->data)->path;
+        *(--path) = ((RmPath *)paths->data)->path;
     }
-    *path = 0;
 
     /* This tree stores the full file paths.
        It is joined into a full directory tree later.
@@ -268,7 +268,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
      * otherwise we would continue merging till / with fatal consequences,
      * since / does not have more files than path_vec[0]
      */
-    for(path = path_vec; *path; ++path) {
+    for(/*path = path_vec*/; *path; ++path) {
         /* Just call the callback directly */
         RmNode *node = rm_trie_search_node(&file_tree, *path);
         if(node != NULL) {
