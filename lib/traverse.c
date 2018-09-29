@@ -264,7 +264,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         rm_log_debug_line("Treating files under %s as a single volume", rmpath->path);
     }
 
-    FTS *ftsp = fts_open((char *[2]){rmpath->path, NULL}, fts_flags, NULL);
+    typedef const char *Path;
+    FTS *ftsp = fts_open((const Path[2]){rmpath->path, NULL}, fts_flags, NULL);
 
     if(ftsp == NULL) {
         rm_log_error_line("fts_open() == NULL");
@@ -473,7 +474,7 @@ void rm_traverse_tree(RmSession *session) {
                      (RmMDSFunc)rm_traverse_directory,
                      trav_session,
                      0,
-                     session->cfg->threads_per_disk,
+                     cfg->threads_per_disk,
                      NULL);
 
     /* iterate through paths */

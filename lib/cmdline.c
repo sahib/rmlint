@@ -1593,7 +1593,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
 
-    if(session->cfg->replay) {
+    if(cfg->replay) {
         return rm_cmd_replay_main(session);
     }
 
@@ -1634,7 +1634,11 @@ int rm_cmd_main(RmSession *session) {
             return EXIT_FAILURE;
         }
 
-        session->dir_merger = rm_tm_new(session);
+        RmTreeMerger *t = session->dir_merger = rm_tm_new(session);
+        if(!t) {
+            rm_log_error_line(_("Failed to complete setup for merging directories"));
+            return EXIT_FAILURE;
+        }
     }
 
     if(session->total_files < 2 && session->cfg->run_equal_mode) {

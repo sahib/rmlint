@@ -178,18 +178,27 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
     return 0;
 }
 
-static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *session) {
+static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     /* put paths into format expected by fts */
-    guint path_count = g_slist_length(paths);
-    char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
-    for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
-        path_vec[idx] = ((RmPath *)paths->data)->path;
+
+    g_assert(cfg);
+    guint path_count = cfg->path_count;
+    g_assert(path_count);
+
+    typedef const char *Path;
+    Path *const path_vec = malloc(sizeof(Path) * (path_count + 1));
+
+    if(!path_vec) {
+        rm_log_error(_("Failed to allocate memory. Out of memory?"));
+        return false;
     }
 
-    if(*path_vec == NULL) {
-        rm_log_error("No paths passed to rm_tm_count_files\n");
-        g_free(path_vec);
-        return false;
+    Path *path = path_vec + path_count;
+    *path = 0;
+    for(const GSList *paths = cfg->paths; path_count--; paths = paths->next) {
+        g_assert(paths);
+        g_assert(paths->data);
+        *(--path) = ((RmPath *)paths->data)->path;
     }
 
     /* This tree stores the full file paths.
@@ -231,8 +240,8 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
         case FTS_SLNONE:
         case FTS_DEFAULT:
             /* Save this path as countable file, but only if we consider empty files */
-            if(!(session->cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
-                if(!(session->cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
+            if(!(cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
+                if(!(cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
                     rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
                 }
             }
@@ -257,11 +266,11 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
 
     /* Now flag everything as a no-go over the given paths,
      * otherwise we would continue merging till / with fatal consequences,
-     * since / does not have more files as paths[0]
+     * since / does not have more files than path_vec[0]
      */
-    for(int i = 0; path_vec[i]; ++i) {
+    for(/*path = path_vec*/; *path; ++path) {
         /* Just call the callback directly */
-        RmNode *node = rm_trie_search_node(&file_tree, path_vec[i]);
+        RmNode *node = rm_trie_search_node(&file_tree, *path);
         if(node != NULL) {
             node->data = GINT_TO_POINTER(true);
             rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
@@ -518,7 +527,9 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->cfg->paths, session);
+    if(!rm_tm_count_files(&self->count_tree, session->cfg)) {
+        return 0;
+    }
 
     return self;
 }

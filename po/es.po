@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.4.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-09-27 22:59+0000\n"
+"POT-Creation-Date: 2018-09-27 23:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -986,6 +986,14 @@ msgstr ""
 msgid ""
 "-K and -m should not be specified at the same time (see also: https://github."
 "com/sahib/rmlint/issues/244)"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Failed to complete setup for merging directories"
+msgstr ""
+
+#: lib/treemerge.c
+msgid "Failed to allocate memory. Out of memory?"
 msgstr ""
 
 #~ msgid "caching is not supported due to missing json-glib library."
