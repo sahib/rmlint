@@ -206,8 +206,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     FTS *fts = fts_open(path_vec, FTS_COMFOLLOW | FTS_PHYSICAL, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
-        g_free(path_vec);
-        return false;
+        goto fail;
     }
 
     FTSENT *ent = NULL;
@@ -254,8 +253,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
 
     if(fts_close(fts) != 0) {
         rm_log_perror("fts_close failed");
-        g_free(path_vec);
-        return false;
+        goto fail;
     }
 
     rm_trie_iter(&file_tree, NULL, true, false, rm_tm_count_art_callback, count_tree);
@@ -276,6 +274,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     rm_trie_destroy(&file_tree);
     g_free(path_vec);
     return true;
+
+    fail:
+        g_free(path_vec);
+        return false;
 }
 
 ///////////////////////////////
