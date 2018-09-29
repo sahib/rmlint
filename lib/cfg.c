@@ -103,7 +103,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     rm_trie_init(&cfg->file_trie);
 }
 
-guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
+bool rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = 0;
 
 #if HAVE_FACCESSAT
@@ -115,14 +115,14 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     if(rc != 0) {
         rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
                             strerror(errno));
-        return 0;
+        return false;
     }
 
     char *real_path = realpath(path, NULL);
     if(real_path == NULL) {
         rm_log_warning_line(_("Can't get real path for directory or file \"%s\": %s"),
                             path, strerror(errno));
-        return 0;
+        return false;
     }
 
     RmPath *rmpath = g_slice_new(RmPath);
@@ -133,11 +133,11 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
 
     if(cfg->replay && g_str_has_suffix(rmpath->path, ".json")) {
         cfg->json_paths = g_slist_prepend(cfg->json_paths, rmpath);
-        return 1;
+        return true;
     }
 
     cfg->paths = g_slist_prepend(cfg->paths, rmpath);
-    return 1;
+    return true;
 }
 
 void rm_cfg_free_paths(RmCfg *const cfg) {

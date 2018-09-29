@@ -194,7 +194,7 @@ void rm_cfg_set_default(RmCfg *cfg);
 /**
  * @brief check and add a path to cfg->paths.
  */
-guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
+bool rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
 
 /**
  * @brief free all data associated with cfg->paths.
