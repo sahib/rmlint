@@ -1207,6 +1207,7 @@ bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
 static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     g_assert(cfg);
 
+    bool read_stdin = false;
     bool is_prefd = false;
     RmCmdSetPathVars v = {
         .cfg = cfg,
@@ -1216,7 +1217,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
-            cfg->read_stdin = true;
+            read_stdin = true;
             /* remember whether to treat stdin paths as preferred paths */
             v.stdin_paths_preferred = is_prefd;
         } else if(strcmp(paths[i], "//") == 0) {
@@ -1229,7 +1230,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     g_strfreev(paths);
 
-    if(cfg->read_stdin || cfg->read_stdin0) {
+    if(read_stdin || cfg->read_stdin0) {
         /* option '-' means read paths from stdin */
         if(!rm_cmd_set_paths_from_stdin(&v)) {
             rm_log_error_line(_("Could not process path arguments"));
