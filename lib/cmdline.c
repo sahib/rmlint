@@ -1158,8 +1158,12 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
     return true;
 }
 
-static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
-                                         bool null_separated) {
+static INLINE
+bool rm_cmd_set_paths_from_stdin(
+    RmCfg *const cfg,
+    const bool is_prefd,
+    const bool null_separated
+) {
     char delim = null_separated ? 0 : '\n';
 
     size_t buf_len = PATH_MAX;
@@ -1176,7 +1180,7 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
             if(path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
-            all_paths_read &= rm_cfg_prepend_path(session->cfg, path_buf, is_prefd);
+            all_paths_read &= rm_cfg_prepend_path(cfg, path_buf, is_prefd);
         }
     }
 
@@ -1184,12 +1188,12 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
     return all_paths_read;
 }
 
-static bool rm_cmd_set_paths(RmSession *session, char **paths) {
+static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
+    g_assert(cfg);
+
     bool is_prefd = false;
     bool all_paths_valid = true;
     bool stdin_paths_preferred = false;
-
-    RmCfg *cfg = session->cfg;
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
@@ -1209,13 +1213,14 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     if(cfg->read_stdin || cfg->read_stdin0) {
         /* option '-' means read paths from stdin */
-        all_paths_valid &=
-            rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
+        all_paths_valid &= rm_cmd_set_paths_from_stdin(
+            cfg, stdin_paths_preferred, cfg->read_stdin0
+        );
     }
 
     if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
-        rm_cfg_prepend_path(session->cfg, cfg->iwd, is_prefd);
+        rm_cfg_prepend_path(cfg, cfg->iwd, is_prefd);
     }
 
     /* Only return success if everything is fine. */
@@ -1480,7 +1485,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto cleanup;
     }
 
-    if(!rm_cmd_set_paths(session, paths)) {
+    if(!rm_cmd_set_paths(cfg, paths)) {
         error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
         goto cleanup;
     }
