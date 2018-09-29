@@ -1161,6 +1161,7 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 typedef struct RmCmdSetPathVars {
     RmCfg *const cfg;
     bool stdin_paths_preferred;
+    const bool null_separated;
     bool all_paths_valid;
 } RmCmdSetPathVars;
 
@@ -1171,9 +1172,8 @@ bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
 
     RmCfg *const cfg = v->cfg;
     const bool is_prefd = v->stdin_paths_preferred;
-    const bool null_separated = cfg->read_stdin0;
 
-    char delim = null_separated ? 0 : '\n';
+    char delim = v->null_separated ? 0 : '\n';
 
     size_t buf_len = PATH_MAX;
     char *path_buf = malloc(buf_len);
@@ -1207,10 +1207,12 @@ bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
 static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     g_assert(cfg);
 
-    bool read_stdin = false;
+    const bool read_stdin0 = cfg->read_stdin0;
+    bool read_stdin = read_stdin0;
     bool is_prefd = false;
     RmCmdSetPathVars v = {
         .cfg = cfg,
+        .null_separated = read_stdin0,
         .all_paths_valid = true
     };
 
@@ -1230,7 +1232,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     g_strfreev(paths);
 
-    if(read_stdin || cfg->read_stdin0) {
+    if(read_stdin) {
         /* option '-' means read paths from stdin */
         if(!rm_cmd_set_paths_from_stdin(&v)) {
             rm_log_error_line(_("Could not process path arguments"));
