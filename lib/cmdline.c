@@ -1097,11 +1097,25 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
                                     const gchar *json_path, RmSession *session,
-                                    _UNUSED GError **error) {
+                                    GError **error) {
+    g_assert(session);
+    g_assert(session->cfg);
     session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
-    rm_cfg_add_path(session->cfg, false, json_path);
-    return true;
+
+    if(rm_cfg_add_path(session->cfg, false, json_path)) {
+        return true;
+    }
+
+    g_assert(error);
+    g_assert(*error == NULL);
+
+    g_set_error(
+        error, RM_ERROR_QUARK, 0,
+        _("Failed to include this replay file: %s"), json_path
+    );
+
+    return false;
 }
 
 static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
