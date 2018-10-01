@@ -131,7 +131,7 @@ static char *rm_fmt_progress_get_cached_eta(
     );
 
     gint64 now = g_get_real_time();
-    if(self->last_eta != NULL) {
+    if(self->last_eta[0] != 0) {
         if(ABS(now - self->last_eta_update) <= 500 * 1000) {
             return self->last_eta;
         }
