@@ -1031,6 +1031,7 @@ msgstr ""
 #: lib/cmdline.c
 #, c-format
 msgid "Failed to include this replay file: %s"
+msgstr ""
 
 #: lib/path-funcs.h
 #, c-format
