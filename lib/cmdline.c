@@ -49,6 +49,7 @@
 #include "traverse.h"
 #include "treemerge.h"
 #include "utilities.h"
+#include "path.h"
 
 /* define paranoia levels */
 static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
@@ -1096,14 +1097,14 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
-                                    const gchar *json_path, RmSession *session,
+                                    const gchar *path, RmSession *session,
                                     GError **error) {
     g_assert(session);
     g_assert(session->cfg);
     session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
 
-    if(rm_cfg_add_path(session->cfg, false, json_path)) {
+    if(rm_cfg_prepend_json(session->cfg, path)) {
         return true;
     }
 
@@ -1112,7 +1113,7 @@ static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
 
     g_set_error(
         error, RM_ERROR_QUARK, 0,
-        _("Failed to include this replay file: %s"), json_path
+        _("Failed to include this replay file: %s"), path
     );
 
     return false;

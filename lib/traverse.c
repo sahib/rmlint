@@ -38,6 +38,7 @@
 #include "preprocess.h"
 #include "utilities.h"
 #include "xattr.h"
+#include "path.h"
 
 #include "fts/fts.h"
 

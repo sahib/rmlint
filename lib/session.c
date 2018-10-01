@@ -32,6 +32,7 @@
 #include "preprocess.h"
 #include "session.h"
 #include "traverse.h"
+#include "path.h"
 
 #if HAVE_BTRFS_H
 #include <linux/btrfs.h>

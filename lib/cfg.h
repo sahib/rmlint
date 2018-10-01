@@ -22,29 +22,15 @@
 * Hosted on http://github.com/sahib/rmlint
 **/
 
-#ifndef RM_SETTINGS_H
-#define RM_SETTINGS_H
+#ifndef RM_CFG_H
+#define RM_CFG_H
 
-#include <stdio.h>
+#include <stdbool.h>    // bool
+#include <glib.h>       // gboolean, gdouble, gint, GSList, guint
 
-#include "checksum.h"
-#include "pathtricia.h"
-#include "utilities.h"
-
-/* Struct for paths passed to rmlint from command line (or stdin) */
-typedef struct RmPath {
-    /* the RealPath of the passed string */
-    char *path;
-
-    /* index number (command line order) */
-    guint idx;
-
-    /* whether path was tagged as preferred path */
-    bool is_prefd;
-
-    /* whether to treat all files under path as one filesystem */
-    bool treat_as_single_vol;
-} RmPath;
+#include "config.h"     // RmOff
+#include "pathtricia.h" // RmTrie
+#include "checksum.h"   // RmDigestType
 
 /* Storage struct for all options settable in cmdline. */
 typedef struct RmCfg {
@@ -186,19 +172,19 @@ typedef struct RmCfg {
 
 } RmCfg;
 
-/**
- * @brief Reset RmCfg to default cfg and all other vars to 0.
- */
 void rm_cfg_set_default(RmCfg *cfg);
 
-/**
- * @brief check and add a path to cfg->paths.
- */
-bool rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
+bool rm_cfg_prepend_json(
+    RmCfg *const cfg,
+    const char *const path
+);
 
-/**
- * @brief free all data associated with cfg->paths.
- */
+bool rm_cfg_add_path(
+    RmCfg *const cfg,
+    const bool preferred,
+    const char *const path
+);
+
 void rm_cfg_free_paths(RmCfg *const cfg);
 
 #endif /* end of include guard */

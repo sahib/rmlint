@@ -337,12 +337,12 @@ msgstr "Drapeau fts_info %d inconnu pour le fichier %s"
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': échec de fts_read pour %s"
 
-#: lib/cfg.c lib/hash-utility.c
+#: lib/hash-utility.c lib/path-funcs.h
 #, fuzzy, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
 
-#: lib/cfg.c
+#: lib/path-funcs.h
 #, fuzzy, c-format
 msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
@@ -1004,6 +1004,15 @@ msgstr ""
 #: lib/cmdline.c
 #, c-format
 msgid "Failed to include this replay file: %s"
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Invalid path \"%s\""
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Could not get metadata for path \"%s\": %s"
 msgstr ""
 
 #~ msgid "caching is not supported due to missing json-glib library."

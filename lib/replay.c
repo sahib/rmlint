@@ -31,6 +31,7 @@
 #include "preprocess.h"
 #include "session.h"
 #include "shredder.h"
+#include "path.h"
 
 /* External libraries */
 #include <glib.h>
