@@ -631,6 +631,17 @@ if 'LDFLAGS' in os.environ:
     conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
+if 'AR' in os.environ:
+    conf.env.Replace(AR=os.environ['AR'])
+    print(">> Using ar: " + os.environ['AR'])
+
+if 'NM' in os.environ:
+    conf.env.Replace(NM=os.environ['NM'])
+    print(">> Using nm: " + os.environ['NM'])
+
+if 'RANLIB' in os.environ:
+    conf.env.Replace(RANLIB=os.environ['RANLIB'])
+    print(">> Using ranlib: " + os.environ['RANLIB'])
 
 # Support museums or other debian flavours:
 conf.check_c11()
