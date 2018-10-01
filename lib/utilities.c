@@ -374,9 +374,9 @@ char *rm_util_get_groupname(void) {
 void rm_util_size_to_human_readable(RmOff num, char *in, gsize len) {
     if(num < 512) {
         snprintf(in, len, "%" LLU " B", num);
-    } else if(num < 512 * 1024) {
+    } else if(num < 512L * 1024) {
         snprintf(in, len, "%.2f KB", num / 1024.0);
-    } else if(num < 512 * 1024 * 1024) {
+    } else if(num < 512L * 1024 * 1024) {
         snprintf(in, len, "%.2f MB", num / (1024.0 * 1024.0));
     } else {
         snprintf(in, len, "%.2f GB", num / (1024.0 * 1024.0 * 1024.0));
@@ -1342,7 +1342,7 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
     return false;
 }
 
-#define SECONDS_PER_DAY (24 * 60 * 60)
+#define SECONDS_PER_DAY (24L * 60 * 60)
 #define SECONDS_PER_HOUR (60 * 60)
 #define SECONDS_PER_MINUTE (60)
 
