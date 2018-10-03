@@ -122,8 +122,8 @@ bool rm_cfg_prepend_json(
 
 bool rm_cfg_prepend_path(
     RmCfg *const cfg,
-    const bool preferred,
-    const char *const path
+    const char *const path,
+    const bool preferred
 ) {
     g_assert(cfg);
     char *real_path;

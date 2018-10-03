@@ -377,7 +377,7 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
             if (path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
-            all_paths_read &= rm_cfg_prepend_path(session->cfg, is_prefd, path_buf);
+            all_paths_read &= rm_cfg_prepend_path(session->cfg, path_buf, is_prefd);
         }
     }
 
@@ -1199,7 +1199,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
         } else {
-            all_paths_valid &= rm_cfg_prepend_path(cfg, is_prefd, paths[i]);
+            all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
         }
     }
 
@@ -1213,7 +1213,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
-        rm_cfg_prepend_path(session->cfg, is_prefd, cfg->iwd);
+        rm_cfg_prepend_path(session->cfg, cfg->iwd, is_prefd);
     }
 
     /* Only return success if everything is fine. */

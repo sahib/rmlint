@@ -181,8 +181,8 @@ bool rm_cfg_prepend_json(
 
 bool rm_cfg_prepend_path(
     RmCfg *const cfg,
-    const bool preferred,
-    const char *const path
+    const char *const path,
+    const bool preferred
 );
 
 void rm_cfg_free_paths(RmCfg *const cfg);
