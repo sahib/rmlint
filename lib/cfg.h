@@ -179,7 +179,7 @@ bool rm_cfg_prepend_json(
     const char *const path
 );
 
-bool rm_cfg_add_path(
+bool rm_cfg_prepend_path(
     RmCfg *const cfg,
     const bool preferred,
     const char *const path
