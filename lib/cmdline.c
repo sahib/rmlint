@@ -1216,8 +1216,8 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
         .all_paths_valid = true
     };
 
-    /* Check the directory to be valid */
-    for(int i = 0; paths && paths[i]; ++i) {
+    if(paths) {
+    for(int i = 0; paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
             read_stdin = true;
             /* remember whether to treat stdin paths as preferred paths */
@@ -1231,6 +1231,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     }
 
     g_strfreev(paths);
+    }
 
     if(read_stdin) {
         /* option '-' means read paths from stdin */
