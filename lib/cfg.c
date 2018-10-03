@@ -140,7 +140,8 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     return 1;
 }
 
-void rm_cfg_free_paths(RmCfg *cfg) {
+void rm_cfg_free_paths(RmCfg *const cfg) {
+    g_assert(cfg);
     g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
     cfg->paths = NULL;
     g_slist_free_full(cfg->json_paths, (GDestroyNotify)rm_path_free);

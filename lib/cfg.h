@@ -199,6 +199,6 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
 /**
  * @brief free all data associated with cfg->paths.
  */
-void rm_cfg_free_paths(RmCfg *cfg);
+void rm_cfg_free_paths(RmCfg *const cfg);
 
 #endif /* end of include guard */
