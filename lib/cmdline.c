@@ -1217,16 +1217,16 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     };
 
     if(paths) {
-        for(int i = 0; paths[i]; ++i) {
-            if(strcmp(paths[i], "-") == 0) {
+        for(char *path, **list = paths; (path = *list); ++list) {
+            if(strcmp(path, "-") == 0) {
                 read_stdin = true;
                 /* remember whether to treat stdin paths as preferred paths */
                 v.stdin_paths_preferred = is_prefd;
-            } else if(strcmp(paths[i], "//") == 0) {
+            } else if(strcmp(path, "//") == 0) {
                 /* the '//' separator separates non-preferred paths from preferred */
                 is_prefd = !is_prefd;
             } else {
-                v.all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
+                v.all_paths_valid &= rm_cfg_prepend_path(cfg, path, is_prefd);
             }
         }
 
