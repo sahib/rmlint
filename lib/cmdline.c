@@ -1228,9 +1228,9 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
             } else {
                 v.all_paths_valid &= rm_cfg_prepend_path(cfg, path, is_prefd);
             }
+            g_free(path);
         }
-
-        g_strfreev(paths);
+        g_free(paths);
     }
 
     if(read_stdin) {
