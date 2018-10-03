@@ -1217,20 +1217,20 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     };
 
     if(paths) {
-    for(int i = 0; paths[i]; ++i) {
-        if(strcmp(paths[i], "-") == 0) {
-            read_stdin = true;
-            /* remember whether to treat stdin paths as preferred paths */
-            v.stdin_paths_preferred = is_prefd;
-        } else if(strcmp(paths[i], "//") == 0) {
-            /* the '//' separator separates non-preferred paths from preferred */
-            is_prefd = !is_prefd;
-        } else {
-            v.all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
+        for(int i = 0; paths[i]; ++i) {
+            if(strcmp(paths[i], "-") == 0) {
+                read_stdin = true;
+                /* remember whether to treat stdin paths as preferred paths */
+                v.stdin_paths_preferred = is_prefd;
+            } else if(strcmp(paths[i], "//") == 0) {
+                /* the '//' separator separates non-preferred paths from preferred */
+                is_prefd = !is_prefd;
+            } else {
+                v.all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
+            }
         }
-    }
 
-    g_strfreev(paths);
+        g_strfreev(paths);
     }
 
     if(read_stdin) {
