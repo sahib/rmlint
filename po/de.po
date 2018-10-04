@@ -810,7 +810,7 @@ msgstr "Kann Kommandozeilenargumente nicht auslesen. (huh?)"
 
 #: lib/cmdline.c
 msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
-msgstr "[ZIEL_ORDERN_ODER_DATEIEN …] [//] [ZIEL_ORDERN_ODER_DATEIEN …] [-]"
+msgstr "[ZIEL_ORDNER_ODER_DATEIEN …] [//] [ZIEL_ORDNER_ODER_DATEIEN …] [-]"
 
 #: lib/cmdline.c
 msgid ""

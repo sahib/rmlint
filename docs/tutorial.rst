@@ -24,7 +24,7 @@ so we gonna explain them to you here.
 
     A file that matches the original.  Note that depending
     on rmlint settings, "match" may mean an exact match or
-    just that the files have matching hash values (see XXX)
+    just that the files have matching hash values.
 
 
 

@@ -4,13 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.7.0 Toothless Taipan] -- unreleased
+## [2.7.0 Toothless Taipan] -- 2017-04-25
 
 ### Added
 
 * New checksum types metro and highway
 * New option --keep-hardlinked
-* --dedupe option can deduplicate twins on any reflick-capable filesystem
+* --dedupe option can deduplicate twins on any reflick-capable filesystems
 * --dedupe-readonly option can dedupe files on read-only btrfs snapshots
 
 ### Changed
@@ -33,7 +33,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Fix compile error on systems with no FIEMAP (https://github.com/sahib/rmlint/issues/252)
 * Fix handling of bad uids/gids in python output formatter (https://github.com/sahib/rmlint/issues/239)
 * Fix escaping of dirnames in rmlint.sh test for new emptydirs (https://github.com/sahib/rmlint/issues/241)
-
+* Fix another quoting issue (https://github.com/sahib/rmlint/issues/272)
 
 ## [2.6.1 Penetrating Pineapple] -- 2017-06-13
 

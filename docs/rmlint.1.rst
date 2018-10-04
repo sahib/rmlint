@@ -220,7 +220,7 @@ General Options
 
     IMPORTANT: Definition of equal: Two directories are considered equal by
     ``rmlint`` if they contain the exact same data, no matter how the files
-    contaning the data are named. Imagine that ``rmlint`` creates a long,
+    containing the data are named. Imagine that ``rmlint`` creates a long,
     sorted stream out of the data found in the directory and compares this in
     a magic way to another directory. This means that the layout of the
     directory is not considered to be important by default. Also empty files
