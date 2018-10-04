@@ -131,16 +131,18 @@ static INLINE
 bool rm_cfg_prepend_path(
     RmCfg *const cfg,
     const char *const path,
+    const unsigned int index,
+    const bool replay,
     const bool preferred
 ) {
     g_assert(cfg);
     char *real_path;
     if(rm_path_is_valid(path, &real_path)) {
         rm_path_prepend(
-            (cfg->replay && rm_path_is_json(path)) ?
+            (replay && rm_path_is_json(path)) ?
                 &cfg->json_paths : &cfg->paths,
             real_path,
-            cfg->path_count++,
+            index,
             preferred
         );
         return true;

@@ -1191,7 +1191,9 @@ bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
             if(path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
-            v->all_paths_valid &= rm_cfg_prepend_path(cfg, path_buf, is_prefd);
+            v->all_paths_valid &= rm_cfg_prepend_path(
+                cfg, path_buf, cfg->path_count++, cfg->replay, is_prefd
+            );
         }
     }
 
@@ -1226,7 +1228,9 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
                 /* the '//' separator separates non-preferred paths from preferred */
                 is_prefd = !is_prefd;
             } else {
-                v.all_paths_valid &= rm_cfg_prepend_path(cfg, path, is_prefd);
+                v.all_paths_valid &= rm_cfg_prepend_path(
+                    cfg, path, cfg->path_count++, cfg->replay, is_prefd
+                );
             }
             g_free(path);
         }
@@ -1243,7 +1247,9 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     if(g_slist_length(cfg->paths) == 0 && v.all_paths_valid) {
         /* Still no path set? - use `pwd` */
-        rm_cfg_prepend_path(cfg, cfg->iwd, is_prefd);
+        rm_cfg_prepend_path(
+            cfg, cfg->iwd, cfg->path_count++, /* replay */ false, is_prefd
+        );
     }
 
     /* Only return success if everything is fine. */
