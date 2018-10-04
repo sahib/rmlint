@@ -1160,11 +1160,40 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 
 typedef struct RmCmdSetPathVars {
     RmCfg *const cfg;
+    char **const paths;
     unsigned int index;
+    bool is_prefd;
+    bool read_stdin;
     bool stdin_paths_preferred;
     const bool null_separated;
     bool all_paths_valid;
 } RmCmdSetPathVars;
+
+static INLINE
+void rm_cmd_set_paths_from_cmdline(
+    RmCmdSetPathVars *const v,
+    const bool replay
+) {
+    g_assert(v);
+    g_assert(v->paths);
+
+    for(char *path, **list = v->paths; (path = *list); ++list) {
+        if(strcmp(path, "-") == 0) {
+            v->read_stdin = true;
+            /* remember whether to treat stdin paths as preferred paths */
+            v->stdin_paths_preferred = v->is_prefd;
+        } else if(strcmp(path, "//") == 0) {
+            /* the '//' separator separates non-preferred paths from preferred */
+            v->is_prefd = !v->is_prefd;
+        } else {
+            v->all_paths_valid &= rm_cfg_prepend_path(
+                v->cfg, path, v->index++, replay, v->is_prefd
+            );
+        }
+        g_free(path);
+    }
+    g_free(v->paths);
+}
 
 static INLINE
 bool rm_cmd_set_paths_from_stdin(
@@ -1215,11 +1244,11 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     const bool replay = cfg->replay;
     const bool read_stdin0 = cfg->read_stdin0;
-    bool read_stdin = read_stdin0;
-    bool is_prefd = false;
     RmCmdSetPathVars v = {
         .cfg = cfg,
+        .paths = paths,
         .index = cfg->path_count,
+        .read_stdin = read_stdin0,
         .null_separated = read_stdin0,
         .all_paths_valid = true
     };
@@ -1227,25 +1256,10 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     cfg->path_count = 0;
 
     if(paths) {
-        for(char *path, **list = paths; (path = *list); ++list) {
-            if(strcmp(path, "-") == 0) {
-                read_stdin = true;
-                /* remember whether to treat stdin paths as preferred paths */
-                v.stdin_paths_preferred = is_prefd;
-            } else if(strcmp(path, "//") == 0) {
-                /* the '//' separator separates non-preferred paths from preferred */
-                is_prefd = !is_prefd;
-            } else {
-                v.all_paths_valid &= rm_cfg_prepend_path(
-                    cfg, path, v.index++, replay, is_prefd
-                );
-            }
-            g_free(path);
-        }
-        g_free(paths);
+        rm_cmd_set_paths_from_cmdline(&v, replay);
     }
 
-    if(read_stdin) {
+    if(v.read_stdin) {
         /* option '-' means read paths from stdin */
         if(!rm_cmd_set_paths_from_stdin(&v, replay)) {
             rm_log_error_line(_("Could not process path arguments"));
@@ -1256,7 +1270,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     if(cfg->path_count == 0 && v.all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_prepend_path(
-            cfg, cfg->iwd, v.index, /* replay */ false, is_prefd
+            cfg, cfg->iwd, v.index, /* replay */ false, v.is_prefd
         );
     }
 
