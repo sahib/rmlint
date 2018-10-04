@@ -62,7 +62,7 @@ static FTSENT *fts_build(FTS *, int);
 static void fts_free(FTSENT *);
 static void fts_lfree(FTSENT *);
 static void fts_load(FTS *, FTSENT *);
-static size_t fts_maxarglen(char *const *);
+static size_t fts_maxarglen(const char *const *);
 static size_t fts_pow2(size_t);
 static int fts_palloc(FTS *, size_t);
 static void fts_padjust(FTS *, FTSENT *);
@@ -107,7 +107,7 @@ static int fts_safe_changedir(const FTS *, const FTSENT *, int, const char *);
 #undef FTS_WHITEOUT
 #endif
 
-FTS *fts_open(char *const *argv, int options,
+FTS *fts_open(const char *const *argv, int options,
               int (*compar)(const FTSENT **, const FTSENT **)) {
     FTS *sp;
     FTSENT *p, *root;
@@ -1152,7 +1152,7 @@ static void fts_padjust(FTS *sp, FTSENT *head) {
     }
 }
 
-static size_t fts_maxarglen(char *const *argv) {
+static size_t fts_maxarglen(const char *const *argv) {
     size_t len, max;
 
     _DIAGASSERT(argv != NULL);
