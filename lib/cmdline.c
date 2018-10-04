@@ -1627,7 +1627,11 @@ int rm_cmd_main(RmSession *session) {
             return EXIT_FAILURE;
         }
 
-        session->dir_merger = rm_tm_new(session);
+        RmTreeMerger *t = session->dir_merger = rm_tm_new(session);
+        if(!t) {
+            rm_log_error_line(_("Failed to complete setup for merging directories"));
+            return EXIT_FAILURE;
+        }
     }
 
     if(session->total_files < 2 && session->cfg->run_equal_mode) {
