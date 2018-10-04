@@ -1237,6 +1237,17 @@ bool rm_cmd_set_paths_from_stdin(
     return true;
 }
 
+#define PROCESS_PATHS(replay)                                           \
+    if(paths) {                                                         \
+        rm_cmd_set_paths_from_cmdline(&v, (replay));                    \
+    }                                                                   \
+    if(v.read_stdin) {                                                  \
+        if(!rm_cmd_set_paths_from_stdin(&v, (replay))) {                \
+            rm_log_error_line(_("Could not process path arguments"));   \
+            return false;                                               \
+        }                                                               \
+    }
+
 static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     g_assert(cfg);
 
@@ -1253,16 +1264,10 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     cfg->path_count = 0;
 
-    if(paths) {
-        rm_cmd_set_paths_from_cmdline(&v, replay);
-    }
-
-    if(v.read_stdin) {
-        /* option '-' means read paths from stdin */
-        if(!rm_cmd_set_paths_from_stdin(&v, replay)) {
-            rm_log_error_line(_("Could not process path arguments"));
-            return false;
-        }
+    if(replay) {
+        PROCESS_PATHS(true);
+    } else {
+        PROCESS_PATHS(false);
     }
 
     if(cfg->path_count == 0 && v.all_paths_valid) {
