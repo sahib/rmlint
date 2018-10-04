@@ -39,6 +39,7 @@
 #include <search.h>
 #include <sys/time.h>
 
+#include "cfg-funcs.h"
 #include "cmdline.h"
 #include "formats.h"
 #include "hash-utility.h"

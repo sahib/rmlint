@@ -22,6 +22,9 @@
 * Hosted on http://github.com/sahib/rmlint
 **/
 
+#ifndef RM_CFG_FUNCS_H
+#define RM_CFG_FUNCS_H
+
 #include <string.h>     // memset
 #include <stdbool.h>    // bool, true, false
 #include <limits.h>     // PATH_MAX (maybe)
@@ -34,6 +37,7 @@
 
 /* Options not specified by commandline get a default option -
  * this is usually called before rm_cmd_parse_args */
+static INLINE
 void rm_cfg_set_default(RmCfg *cfg) {
     /* Set everything to 0 at first,
      * only non-null options are listed below.
@@ -102,6 +106,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     rm_trie_init(&cfg->file_trie);
 }
 
+static INLINE
 bool rm_cfg_prepend_json(
     RmCfg *const cfg,
     const char *const path
@@ -120,6 +125,7 @@ bool rm_cfg_prepend_json(
     return false;
 }
 
+static INLINE
 bool rm_cfg_prepend_path(
     RmCfg *const cfg,
     const char *const path,
@@ -140,6 +146,7 @@ bool rm_cfg_prepend_path(
     return false;
 }
 
+static INLINE
 void rm_cfg_free_paths(RmCfg *const cfg) {
     g_assert(cfg);
     g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
@@ -147,3 +154,5 @@ void rm_cfg_free_paths(RmCfg *const cfg) {
     g_slist_free_full(cfg->json_paths, (GDestroyNotify)rm_path_free);
     cfg->json_paths = NULL;
 }
+
+#endif /* end of include guard */
