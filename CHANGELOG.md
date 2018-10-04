@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.8.0 Maidenly Moose] -- Unreleased
+
+Mostly a bugfix release with smaller functional changes.
+
+### Added
+
+- Support for reflinks on XFS (48c2e5b1)
+- Option "--no-backup" to overwrite output files as before (see "Changed")
+- New build system option called "gettext" that eases the maintenance of translations.
+  (thanks Michael Witten)
+
+### Changed
+
+- -pp is now silently permitted, but is the same as -p
+- Old output files get backed up now to a new timestamped name.
+  This was done to not to overwrite the results of long runs.
+  You can use --no-backup to disable this behaviour.
+- Several internal cleanups and potential bug fixes (thanks to Michael Witten)
+
+### Deprecated
+
+Nothing was deprecated.
+
+### Removed
+
+Nothing was removed.
+
+### Fixed
+
+- Several small fixes in the documentation.
+- Compiler warnings that may happen with clang and on 32 bit.
+- "-g" now does not overwrite other formatters anymore.
+- Make the progressbar less flickering.
+- Startup error when the permissions to a location where bad.
+- Endless loop that happens on btrfs due to the fiemap optimization.
+- Fix a bug when doing "rmlint --replay x.json" without an explicit path.
+- Fix -f that did not really follow symbolic links.
+- gui: locations are now stored persistently and survive restarts.
+
 ## [2.7.0 Toothless Taipan] -- 2017-04-25
 
 ### Added
