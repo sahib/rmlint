@@ -171,6 +171,7 @@ void rm_session_acknowledge_abort(const gint abort_count) {
  **/
 int rm_session_dedupe_main(RmCfg *cfg) {
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
+    g_assert(cfg->path_count == g_slist_length(cfg->paths));
     if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --dedupe [-r] [-v|V] source dest\n"));
         return EXIT_FAILURE;
@@ -363,6 +364,7 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
      * Other return values defined in utilities.h 'RmOffsetsMatchCode' enum
      */
 
+    g_assert(cfg->path_count == g_slist_length(cfg->paths));
     if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
         return EXIT_FAILURE;
