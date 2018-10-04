@@ -360,31 +360,6 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [3] = G_LOG_LEVEL_MESSAGE |
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
-static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
-                                         bool null_separated) {
-    char delim = null_separated ? 0 : '\n';
-
-    size_t buf_len = PATH_MAX;
-    char *path_buf = malloc(buf_len * sizeof(char));
-
-    bool all_paths_read = true;
-
-    int path_len;
-
-    /* Still read all paths on errors, so the user knows all paths that failed */
-    while((path_len = getdelim(&path_buf, &buf_len, delim, stdin)) >= 0) {
-        if(path_len > 0) {
-            /* replace returned delimiter with null */
-            if (path_buf[path_len - 1] == delim) {
-                path_buf[path_len - 1] = 0;
-            }
-            all_paths_read &= rm_cfg_prepend_path(session->cfg, path_buf, is_prefd);
-        }
-    }
-
-    free(path_buf);
-    return all_paths_read;
-}
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
                                      GError **error) {
@@ -1181,6 +1156,32 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 
     /* This cannot fail currently */
     return true;
+}
+
+static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
+                                         bool null_separated) {
+    char delim = null_separated ? 0 : '\n';
+
+    size_t buf_len = PATH_MAX;
+    char *path_buf = malloc(buf_len * sizeof(char));
+
+    bool all_paths_read = true;
+
+    int path_len;
+
+    /* Still read all paths on errors, so the user knows all paths that failed */
+    while((path_len = getdelim(&path_buf, &buf_len, delim, stdin)) >= 0) {
+        if(path_len > 0) {
+            /* replace returned delimiter with null */
+            if(path_buf[path_len - 1] == delim) {
+                path_buf[path_len - 1] = 0;
+            }
+            all_paths_read &= rm_cfg_prepend_path(session->cfg, path_buf, is_prefd);
+        }
+    }
+
+    free(path_buf);
+    return all_paths_read;
 }
 
 static bool rm_cmd_set_paths(RmSession *session, char **paths) {
