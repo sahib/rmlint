@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "cfg-funcs.h"
 #include "formats.h"
 #include "preprocess.h"
 #include "session.h"

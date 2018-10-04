@@ -172,19 +172,4 @@ typedef struct RmCfg {
 
 } RmCfg;
 
-void rm_cfg_set_default(RmCfg *cfg);
-
-bool rm_cfg_prepend_json(
-    RmCfg *const cfg,
-    const char *const path
-);
-
-bool rm_cfg_prepend_path(
-    RmCfg *const cfg,
-    const char *const path,
-    const bool preferred
-);
-
-void rm_cfg_free_paths(RmCfg *const cfg);
-
 #endif /* end of include guard */
