@@ -14,6 +14,7 @@ Mostly a bugfix release with smaller functional changes.
 - Option "--no-backup" to overwrite output files as before (see "Changed")
 - New build system option called "gettext" that eases the maintenance of translations.
   (thanks Michael Witten)
+- gui: Add config option to choose how to handle the found duplicates
 
 ### Changed
 

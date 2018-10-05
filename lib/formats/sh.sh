@@ -183,6 +183,7 @@ cp_symlink() {
             if [ -d "$1" ]; then
                 rm -rf "$1"
             fi
+
             cp --remove-destination --archive --symbolic-link "$2" "$1"
             touch -mr "$0" "$1"
         fi
