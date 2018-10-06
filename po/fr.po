@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-10-04 18:46+0000\n"
+"POT-Creation-Date: 2019-01-21 21:40+0000\n"
 "PO-Revision-Date: 2014-12-02 13:37+0100\n"
 "Last-Translator: F. <contact@f.0x2501.org>\n"
 "Language-Team: none\n"
@@ -337,12 +337,12 @@ msgstr "Drapeau fts_info %d inconnu pour le fichier %s"
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': échec de fts_read pour %s"
 
-#: lib/cfg.c lib/hash-utility.c
+#: lib/hash-utility.c lib/path-funcs.h
 #, fuzzy, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
 
-#: lib/cfg.c
+#: lib/path-funcs.h
 #, fuzzy, c-format
 msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr "Impossible d'ouvrir le répertoire ou le fichier \"%s\": %s\n"
@@ -999,6 +999,21 @@ msgstr ""
 #: lib/cmdline.c
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
+msgstr ""
+
+#: lib/cmdline.c
+#, c-format
+msgid "Failed to include this replay file: %s"
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Invalid path \"%s\""
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Could not get metadata for path \"%s\": %s"
 msgstr ""
 
 #~ msgid "caching is not supported due to missing json-glib library."

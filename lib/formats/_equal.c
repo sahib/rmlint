@@ -26,6 +26,7 @@
 #include "../formats.h"
 #include "../utilities.h"
 #include "../preprocess.h"
+#include "../path.h"
 
 #include <glib.h>
 #include <stdio.h>

@@ -82,6 +82,7 @@
 #include "preprocess.h"
 #include "shredder.h"
 #include "treemerge.h"
+#include "path.h"
 
 #include "fts/fts.h"
 

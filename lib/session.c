@@ -28,10 +28,12 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "cfg-funcs.h"
 #include "formats.h"
 #include "preprocess.h"
 #include "session.h"
 #include "traverse.h"
+#include "path.h"
 
 #if HAVE_BTRFS_H
 #include <linux/btrfs.h>

@@ -22,20 +22,25 @@
 * Hosted on http://github.com/sahib/rmlint
 **/
 
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
+#ifndef RM_CFG_FUNCS_H
+#define RM_CFG_FUNCS_H
 
-#include "cfg.h"
+#include <string.h>     // memset
+#include <stdbool.h>    // bool, true, false
+#include <limits.h>     // PATH_MAX (maybe)
+#include <glib.h>       // G_MAXUINT64, g_strdup, G_LOG_LEVEL_INFO, g_slist_free_full
 
-static void rm_path_free(RmPath *rmpath) {
-    free(rmpath->path);
-    g_slice_free(RmPath, rmpath);
-}
+#include "config.h"     // RM_DEFAULT_DIGEST, PATH_MAX (maybe), RmOff
+#include "cfg.h"        // RmCfg
+#include "pathtricia.h" // rm_trie_init
+#include "path-funcs.h" // rm_path_free, rm_path_is_valid, rm_path_is_json, rm_path_prepend
 
 /* Options not specified by commandline get a default option -
  * this is usually called before rm_cmd_parse_args */
+static INLINE
 void rm_cfg_set_default(RmCfg *cfg) {
+    g_assert(cfg);
+
     /* Set everything to 0 at first,
      * only non-null options are listed below.
      */
@@ -103,46 +108,53 @@ void rm_cfg_set_default(RmCfg *cfg) {
     rm_trie_init(&cfg->file_trie);
 }
 
-guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
-    int rc = 0;
-
-#if HAVE_FACCESSAT
-    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
-#else
-    rc = access(path, R_OK);
-#endif
-
-    if(rc != 0) {
-        rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
-                            strerror(errno));
-        return 0;
+static INLINE
+bool rm_cfg_prepend_json(
+    RmCfg *const cfg,
+    const char *const path
+) {
+    g_assert(cfg);
+    char *real_path;
+    if(rm_path_is_valid(path, &real_path) && rm_path_is_json(real_path)) {
+        rm_path_prepend(
+            &cfg->json_paths,
+            real_path,
+            cfg->path_count++,
+            false /* not preferred */
+        );
+        return true;
     }
-
-    char *real_path = realpath(path, NULL);
-    if(real_path == NULL) {
-        rm_log_warning_line(_("Can't get real path for directory or file \"%s\": %s"),
-                            path, strerror(errno));
-        return 0;
-    }
-
-    RmPath *rmpath = g_slice_new(RmPath);
-    rmpath->path = real_path;
-    rmpath->is_prefd = is_prefd;
-    rmpath->idx = cfg->path_count++;
-    rmpath->treat_as_single_vol = strncmp(path, "//", 2) == 0;
-
-    if(cfg->replay && g_str_has_suffix(rmpath->path, ".json")) {
-        cfg->json_paths = g_slist_prepend(cfg->json_paths, rmpath);
-        return 1;
-    }
-
-    cfg->paths = g_slist_prepend(cfg->paths, rmpath);
-    return 1;
+    return false;
 }
 
-void rm_cfg_free_paths(RmCfg *cfg) {
+static INLINE
+bool rm_cfg_prepend_path(
+    RmCfg *const cfg,
+    const char *const path,
+    const bool preferred
+) {
+    g_assert(cfg);
+    char *real_path;
+    if(rm_path_is_valid(path, &real_path)) {
+        rm_path_prepend(
+            (cfg->replay && rm_path_is_json(path)) ?
+                &cfg->json_paths : &cfg->paths,
+            real_path,
+            cfg->path_count++,
+            preferred
+        );
+        return true;
+    }
+    return false;
+}
+
+static INLINE
+void rm_cfg_free_paths(RmCfg *const cfg) {
+    g_assert(cfg);
     g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
     cfg->paths = NULL;
     g_slist_free_full(cfg->json_paths, (GDestroyNotify)rm_path_free);
     cfg->json_paths = NULL;
 }
+
+#endif /* end of include guard */

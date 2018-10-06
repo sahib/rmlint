@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: rmlint 2.6.2\n"
+"Project-Id-Version: rmlint 2.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-10-04 18:46+0000\n"
+"POT-Creation-Date: 2019-01-21 21:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -334,12 +334,12 @@ msgstr ""
 msgid "'%s': fts_read failed on %s"
 msgstr ""
 
-#: lib/cfg.c lib/hash-utility.c
+#: lib/hash-utility.c lib/path-funcs.h
 #, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr ""
 
-#: lib/cfg.c
+#: lib/path-funcs.h
 #, c-format
 msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr ""
@@ -948,4 +948,19 @@ msgstr ""
 #: lib/cmdline.c
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
+msgstr ""
+
+#: lib/cmdline.c
+#, c-format
+msgid "Failed to include this replay file: %s"
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Invalid path \"%s\""
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Could not get metadata for path \"%s\": %s"
 msgstr ""

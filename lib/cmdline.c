@@ -39,6 +39,7 @@
 #include <search.h>
 #include <sys/time.h>
 
+#include "cfg-funcs.h"
 #include "cmdline.h"
 #include "formats.h"
 #include "hash-utility.h"
@@ -49,6 +50,7 @@
 #include "traverse.h"
 #include "treemerge.h"
 #include "utilities.h"
+#include "path.h"
 
 /* define paranoia levels */
 static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
@@ -376,7 +378,7 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
             if (path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
-            all_paths_read &= rm_cfg_add_path(session->cfg, is_prefd, path_buf);
+            all_paths_read &= rm_cfg_prepend_path(session->cfg, path_buf, is_prefd);
         }
     }
 
@@ -1096,12 +1098,26 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
-                                    const gchar *json_path, RmSession *session,
-                                    _UNUSED GError **error) {
+                                    const gchar *path, RmSession *session,
+                                    GError **error) {
+    g_assert(session);
+    g_assert(session->cfg);
     session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
-    rm_cfg_add_path(session->cfg, false, json_path);
-    return true;
+
+    if(rm_cfg_prepend_json(session->cfg, path)) {
+        return true;
+    }
+
+    g_assert(error);
+    g_assert(*error == NULL);
+
+    g_set_error(
+        error, RM_ERROR_QUARK, 0,
+        _("Failed to include this replay file: %s"), path
+    );
+
+    return false;
 }
 
 static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
@@ -1184,7 +1200,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
         } else {
-            all_paths_valid &= rm_cfg_add_path(cfg, is_prefd, paths[i]);
+            all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
         }
     }
 
@@ -1198,7 +1214,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
-        rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
+        rm_cfg_prepend_path(session->cfg, cfg->iwd, is_prefd);
     }
 
     /* Only return success if everything is fine. */
