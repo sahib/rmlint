@@ -82,15 +82,18 @@ You can contact the author at :
  *  Includes & Memory related functions
  ***************************************/
 #include "xxhash.h"
+
 /* Modify the local functions below should you wish to use some other memory routines */
 /* for malloc(), free() */
-#include <stdlib.h>
-static void* XXH_malloc(size_t s) {
-    return malloc(s);
+
+#include <glib.h>   // g_slice_alloc, g_slice_free1
+
+static INLINE void *XXH_malloc(size_t s) {
+    return g_slice_alloc(s);
 }
-static void XXH_free(void* p) {
-    free(p);
-}
+
+#define XXH_free(pointer) g_slice_free1(sizeof(*pointer), pointer)
+
 /* for memcpy() */
 #include <string.h>
 static void* XXH_memcpy(void* dest, const void* src, size_t size) {
