@@ -127,26 +127,37 @@ bool rm_cfg_prepend_json(
     return false;
 }
 
+#define PREPEND_TO(list)    \
+    rm_path_prepend(        \
+        &(list),            \
+        real_path,          \
+        index,              \
+        preferred           \
+    )
+
 static INLINE
 bool rm_cfg_prepend_path(
     RmCfg *const cfg,
     const char *const path,
+    const unsigned int index,
+    const bool replay,
     const bool preferred
 ) {
     g_assert(cfg);
     char *real_path;
     if(rm_path_is_valid(path, &real_path)) {
-        rm_path_prepend(
-            (cfg->replay && rm_path_is_json(path)) ?
-                &cfg->json_paths : &cfg->paths,
-            real_path,
-            cfg->path_count++,
-            preferred
-        );
+        if(replay && rm_path_is_json(path)) {
+            PREPEND_TO(cfg->json_paths);
+        } else {
+            PREPEND_TO(cfg->paths);
+            ++(cfg->path_count);
+        }
         return true;
     }
     return false;
 }
+
+#undef PREPEND_TO
 
 static INLINE
 void rm_cfg_free_paths(RmCfg *const cfg) {
