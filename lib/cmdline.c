@@ -1468,6 +1468,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto cleanup;
     }
 
+    if(cfg->replay && (cfg->dedupe || cfg->is_reflink)) {
+        error = g_error_new(
+            RM_ERROR_QUARK, 0,
+            _("--replay (-Y) is incompatible with --dedupe or --is-reflink")
+        ); goto cleanup;
+    }
+
     if(cfg->dedupe) {
         /* dedupe session; regular rmlint configs are ignored */
         goto cleanup;
