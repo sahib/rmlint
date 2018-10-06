@@ -74,18 +74,10 @@ You can contact the author at :
  ***************************************/
 #ifdef _MSC_VER                 /* Visual Studio */
 #pragma warning(disable : 4127) /* disable: C4127: conditional expression is constant */
-#define FORCE_INLINE static __forceinline
-#else
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L /* C99 */
-#ifdef __GNUC__
-#define FORCE_INLINE static inline __attribute__((always_inline))
-#else
-#define FORCE_INLINE static inline
 #endif
-#else
-#define FORCE_INLINE static
-#endif /* __STDC_VERSION__ */
-#endif
+
+#include "../../config.h" // INLINE
+#define FORCE_INLINE static INLINE
 
 /**************************************
  *  Includes & Memory related functions
