@@ -720,7 +720,7 @@ if ARGUMENTS.get('DEBUG') == "1":
     conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-ggdb3', '-fno-inline'])
     cc_O_option += (ARGUMENTS.get('O') or '0')
 else:
-    conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT'])
+    conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
     conf.env.Append(LINKFLAGS=['-s'])
     cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
 
