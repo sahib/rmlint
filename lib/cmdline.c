@@ -1178,12 +1178,10 @@ void rm_cmd_set_paths_from_cmdline(
     g_assert(v->paths);
 
     for(char *path, **list = v->paths; (path = *list); ++list) {
-        if(strcmp(path, "-") == 0) {
+        if(/* path is "-" */ path[0] == '-' && path[1] == 0) {
             v->read_stdin = true;
-            /* remember whether to treat stdin paths as preferred paths */
             v->stdin_paths_preferred = v->is_prefd;
-        } else if(strcmp(path, "//") == 0) {
-            /* the '//' separator separates non-preferred paths from preferred */
+        } else if(/* path is "//" */ path[0] == '/' && path[1] == '/' && path[2] == 0) {
             v->is_prefd = !v->is_prefd;
         } else {
             v->all_paths_valid &= rm_cfg_prepend_path(
