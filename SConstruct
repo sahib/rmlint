@@ -742,6 +742,12 @@ if ARGUMENTS.get('SYMBOLS') == '1':
     print("Compiling with debugging symbols")
     conf.env.Append(CCFLAGS='-g3')
 
+value = ARGUMENTS.get('CCFLAGS')
+if value:
+    import shlex
+    print("Appending custom build flags provided on command line: " + value)
+    conf.env.Append(CCFLAGS=shlex.split(value))
+
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
     lambda dest, mode: 'Chmod("%s", 0%o)' % (dest, mode)

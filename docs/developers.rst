@@ -147,6 +147,23 @@ Variables
     Print the exact compiler and linker commands. Useful for troubleshooting
     build errors.
 
+:CCFLAGS=<command line options>:
+
+    Set the last compiler options.
+
+    Internally, the build system maintains in ``CCFLAGS`` the list of
+    options that are supplied to the compiler; this list is composed by
+    combining the relevant environment variables (such as ``CFLAGS``)
+    along with the choices made by other build-time configurations.
+
+    This command-line variable makes it possible to override an option in
+    this list by supplying customized command-line options to be appended.
+    For example: ``GDB=1 CCFLAGS=-g1``.
+
+    The string that is supplied as the value for this variable is parsed as
+    per a POSIX shell command line, and so it may include shell quoting if
+    necessary.
+
 Arguments
 ~~~~~~~~~
 
