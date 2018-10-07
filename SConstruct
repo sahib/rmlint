@@ -676,7 +676,7 @@ else:
         conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
-conf.env.Append(CFLAGS=[
+conf.env.Append(CCFLAGS=[
     '-Wall', '-W', '-Wextra',
     '-Winit-self',
     '-Wstrict-aliasing',
