@@ -711,13 +711,17 @@ conf.check_sysmacro_h()
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
+if ARGUMENTS.get('GDB') == '1':
+    ARGUMENTS['DEBUG'] = '1'
+    ARGUMENTS['SYMBOLS'] = '1'
+
 O_DEBUG   = 'g' # The optimisation level for a debug   build
 O_RELEASE = '2' # The optimisation level for a release build
 
-# compiler optimisation and debug symbols:
+# build modes
 if ARGUMENTS.get('DEBUG') == "1":
-    print("Compiling with gdb extra debug symbols")
-    conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-ggdb3', '-fno-inline'])
+    print("Compiling in debug mode")
+    conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-fno-inline'])
     O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
@@ -734,6 +738,9 @@ cc_O_option = '-O' + O_value
 print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
 conf.env.Append(CCFLAGS=[cc_O_option])
 
+if ARGUMENTS.get('SYMBOLS') == '1':
+    print("Compiling with debugging symbols")
+    conf.env.Append(CCFLAGS='-g3')
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
@@ -893,7 +900,8 @@ if 'config' in COMMAND_LINE_TARGETS:
     Install prefix       : {prefix}
     Actual prefix        : {actual_prefix}
     Verbose building     : {verbose}
-    Adding debug symbols : {debug}
+    Adding debug checks  : {debug}
+    Adding debug symbols : {symbols}
 
 Type 'scons' to actually compile rmlint now. Good luck.
     '''.format(
@@ -918,6 +926,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
             verbose=yesno(ARGUMENTS.get('VERBOSE')),
             debug=yesno(ARGUMENTS.get('DEBUG')),
+            symbols=yesno(ARGUMENTS.get('SYMBOLS')),
             version='{a}.{b}.{c} "{n}" (rev {r})'.format(
                 a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH,
                 n=VERSION_NAME, r=env.get('gitrev', 'unknown')

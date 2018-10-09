@@ -112,12 +112,37 @@ Variables
     that the optimization level should be whatever the build system currently
     defines to be the default for the associated build mode.
 
-:DEBUG:
+:DEBUG=1:
 
-    Enable debugging symbols for ``rmlint``. This should always be enabled during
-    development. Backtraces wouldn't be useful elsewhise.
+    Enable a debugging build.
 
-:VERBOSE:
+    This turns on extra tests; in particular, it turns on run-time
+    assertions. By default, a debug build excludes optimizations that may
+    hinder debugging, but this may be overridden with the ``O`` variable,
+    as usual.
+
+    Note that setting ``DEBUG=1`` does not enable the production of
+    debugger symbols; to enable those, use ``SYMBOLS=1`` or ``GDB=1``.
+
+    This should always be enabled during development.
+
+:SYMBOLS=1:
+
+    Enable debugger symbols.
+
+    This option instructs the compiler to collect information that will
+    help tools such as ``gdb`` present human-readable identifiers for
+    a program's functions and variables, etc. Note, though, that this
+    information becomes obscured by optimizations, so make sure to set
+    the optimization level appropriately.
+
+:GDB=1:
+
+    Enable options that help a debugger (such as ``gdb``).
+
+    This option is equivalent to ``DEBUG=1 SYMBOLS=1``.
+
+:VERBOSE=1:
 
     Print the exact compiler and linker commands. Useful for troubleshooting
     build errors.
