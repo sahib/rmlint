@@ -11,7 +11,7 @@ import SCons
 import SCons.Conftest as tests
 from SCons.Script.SConscript import SConsEnvironment
 
-pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
+pkg_config = os.getenv('PKG_CONFIG', 'pkg-config')
 
 def read_version():
     with open('.version', 'r') as handle:
