@@ -82,15 +82,15 @@ You can contact the author at :
  *  Includes & Memory related functions
  ***************************************/
 #include "xxhash.h"
+
 /* Modify the local functions below should you wish to use some other memory routines */
 /* for malloc(), free() */
-#include <stdlib.h>
-static void* XXH_malloc(size_t s) {
-    return malloc(s);
-}
-static void XXH_free(void* p) {
-    free(p);
-}
+
+#include <glib.h>   // g_slice_alloc, g_slice_free1
+#define XXH_new(type) g_slice_alloc(sizeof(type));
+/* Note that "*pointer" must provide the type of the full object */
+#define XXH_delete(pointer) g_slice_free1(sizeof(*pointer), pointer)
+
 /* for memcpy() */
 #include <string.h>
 static void* XXH_memcpy(void* dest, const void* src, size_t size) {
@@ -486,10 +486,10 @@ XXH32_state_t* XXH32_createState(void) {
     XXH_STATIC_ASSERT(sizeof(XXH32_state_t) >=
                       sizeof(XXH_istate32_t)); /* A compilation error here means
                                                   XXH32_state_t is not large enough */
-    return (XXH32_state_t*)XXH_malloc(sizeof(XXH32_state_t));
+    return (XXH32_state_t*)XXH_new(XXH32_state_t);
 }
 XXH_errorcode XXH32_freeState(XXH32_state_t* statePtr) {
-    XXH_free(statePtr);
+    XXH_delete(statePtr);
     return XXH_OK;
 }
 
@@ -497,10 +497,10 @@ XXH64_state_t* XXH64_createState(void) {
     XXH_STATIC_ASSERT(sizeof(XXH64_state_t) >=
                       sizeof(XXH_istate64_t)); /* A compilation error here means
                                                   XXH64_state_t is not large enough */
-    return (XXH64_state_t*)XXH_malloc(sizeof(XXH64_state_t));
+    return (XXH64_state_t*)XXH_new(XXH64_state_t);
 }
 XXH_errorcode XXH64_freeState(XXH64_state_t* statePtr) {
-    XXH_free(statePtr);
+    XXH_delete(statePtr);
     return XXH_OK;
 }
 
