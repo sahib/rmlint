@@ -87,12 +87,9 @@ You can contact the author at :
 /* for malloc(), free() */
 
 #include <glib.h>   // g_slice_alloc, g_slice_free1
-
-static INLINE void *XXH_malloc(size_t s) {
-    return g_slice_alloc(s);
-}
-
-#define XXH_free(pointer) g_slice_free1(sizeof(*pointer), pointer)
+#define XXH_new(type) g_slice_alloc(sizeof(type));
+/* Note that "*pointer" must provide the type of the full object */
+#define XXH_delete(pointer) g_slice_free1(sizeof(*pointer), pointer)
 
 /* for memcpy() */
 #include <string.h>
@@ -489,10 +486,10 @@ XXH32_state_t* XXH32_createState(void) {
     XXH_STATIC_ASSERT(sizeof(XXH32_state_t) >=
                       sizeof(XXH_istate32_t)); /* A compilation error here means
                                                   XXH32_state_t is not large enough */
-    return (XXH32_state_t*)XXH_malloc(sizeof(XXH32_state_t));
+    return (XXH32_state_t*)XXH_new(XXH32_state_t);
 }
 XXH_errorcode XXH32_freeState(XXH32_state_t* statePtr) {
-    XXH_free(statePtr);
+    XXH_delete(statePtr);
     return XXH_OK;
 }
 
@@ -500,10 +497,10 @@ XXH64_state_t* XXH64_createState(void) {
     XXH_STATIC_ASSERT(sizeof(XXH64_state_t) >=
                       sizeof(XXH_istate64_t)); /* A compilation error here means
                                                   XXH64_state_t is not large enough */
-    return (XXH64_state_t*)XXH_malloc(sizeof(XXH64_state_t));
+    return (XXH64_state_t*)XXH_new(XXH64_state_t);
 }
 XXH_errorcode XXH64_freeState(XXH64_state_t* statePtr) {
-    XXH_free(statePtr);
+    XXH_delete(statePtr);
     return XXH_OK;
 }
 
