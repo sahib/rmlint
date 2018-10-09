@@ -11,8 +11,6 @@ import SCons
 import SCons.Conftest as tests
 from SCons.Script.SConscript import SConsEnvironment
 
-DEFAULT_OPTIMISATION='s'  # compile with -Os
-
 pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
 
 def read_version():
@@ -714,15 +712,16 @@ if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
 # compiler optimisation and debug symbols:
-cc_O_option = '-O'
 if ARGUMENTS.get('DEBUG') == "1":
     print("Compiling with gdb extra debug symbols")
     conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-ggdb3', '-fno-inline'])
-    cc_O_option += (ARGUMENTS.get('O') or '0')
+    O_value = ARGUMENTS.get('O', '0')
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
     conf.env.Append(LINKFLAGS=['-s'])
-    cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
+    O_value = ARGUMENTS.get('O', 's')
+
+cc_O_option = '-O' + O_value
 
 print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
 conf.env.Append(CCFLAGS=[cc_O_option])
