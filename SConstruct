@@ -676,7 +676,7 @@ else:
         conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
-conf.env.Append(CFLAGS=[
+conf.env.Append(CCFLAGS=[
     '-Wall', '-W', '-Wextra',
     '-Winit-self',
     '-Wstrict-aliasing',
@@ -741,6 +741,12 @@ conf.env.Append(CCFLAGS=[cc_O_option])
 if ARGUMENTS.get('SYMBOLS') == '1':
     print("Compiling with debugging symbols")
     conf.env.Append(CCFLAGS='-g3')
+
+value = ARGUMENTS.get('CCFLAGS')
+if value:
+    import shlex
+    print("Appending custom build flags provided on command line: " + value)
+    conf.env.Append(CCFLAGS=shlex.split(value))
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
