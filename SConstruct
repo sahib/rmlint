@@ -711,15 +711,23 @@ conf.check_sysmacro_h()
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
+O_DEBUG   = '0' # The optimisation level for a debug   build
+O_RELEASE = 's' # The optimisation level for a release build
+
 # compiler optimisation and debug symbols:
 if ARGUMENTS.get('DEBUG') == "1":
     print("Compiling with gdb extra debug symbols")
     conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-ggdb3', '-fno-inline'])
-    O_value = ARGUMENTS.get('O', '0')
+    O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
     conf.env.Append(LINKFLAGS=['-s'])
-    O_value = ARGUMENTS.get('O', 's')
+    O_value = ARGUMENTS.get('O', O_RELEASE)
+
+if O_value == 'debug':
+    O_value = O_DEBUG
+elif O_value == 'release':
+    O_value = O_RELEASE
 
 cc_O_option = '-O' + O_value
 

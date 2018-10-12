@@ -100,6 +100,18 @@ Environment Variables
 Variables
 ~~~~~~~~~
 
+:O=<level>:
+
+    Set the optimization level.
+
+    Valid levels are currently those that may be passed with the GCC/Clang
+    option ``-O``; these include ``0``, ``1``, ``2``, ``3``, ``s``,
+    ``fast``, ``g``, etc., depending on the compiler version.
+
+    In addition, the level may be ``debug`` or ``release``, which indicates
+    that the optimization level should be whatever the build system currently
+    defines to be the default for the associated build mode.
+
 :DEBUG:
 
     Enable debugging symbols for ``rmlint``. This should always be enabled during
