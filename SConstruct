@@ -711,7 +711,7 @@ conf.check_sysmacro_h()
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
-O_DEBUG   = '0' # The optimisation level for a debug   build
+O_DEBUG   = 'g' # The optimisation level for a debug   build
 O_RELEASE = '2' # The optimisation level for a release build
 
 # compiler optimisation and debug symbols:
