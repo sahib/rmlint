@@ -17,7 +17,7 @@ notifications:
     - thomas_d_j@yahoo.com.au
 
 script:
-    - scons VERBOSE=1
+    - scons VERBOSE=1 DEBUG=1 O=release
     - scons config
     - export RM_TS_PRINT_CMD=1
     - export RM_TS_PEDANTIC=0

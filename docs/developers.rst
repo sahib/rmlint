@@ -100,15 +100,69 @@ Environment Variables
 Variables
 ~~~~~~~~~
 
-:DEBUG:
+:O=<level>:
 
-    Enable debugging symbols for ``rmlint``. This should always be enabled during
-    development. Backtraces wouldn't be useful elsewhise.
+    Set the optimization level.
 
-:VERBOSE:
+    Valid levels are currently those that may be passed with the GCC/Clang
+    option ``-O``; these include ``0``, ``1``, ``2``, ``3``, ``s``,
+    ``fast``, ``g``, etc., depending on the compiler version.
+
+    In addition, the level may be ``debug`` or ``release``, which indicates
+    that the optimization level should be whatever the build system currently
+    defines to be the default for the associated build mode.
+
+:DEBUG=1:
+
+    Enable a debugging build.
+
+    This turns on extra tests; in particular, it turns on run-time
+    assertions. By default, a debug build excludes optimizations that may
+    hinder debugging, but this may be overridden with the ``O`` variable,
+    as usual.
+
+    Note that setting ``DEBUG=1`` does not enable the production of
+    debugger symbols; to enable those, use ``SYMBOLS=1`` or ``GDB=1``.
+
+    This should always be enabled during development.
+
+:SYMBOLS=1:
+
+    Enable debugger symbols.
+
+    This option instructs the compiler to collect information that will
+    help tools such as ``gdb`` present human-readable identifiers for
+    a program's functions and variables, etc. Note, though, that this
+    information becomes obscured by optimizations, so make sure to set
+    the optimization level appropriately.
+
+:GDB=1:
+
+    Enable options that help a debugger (such as ``gdb``).
+
+    This option is equivalent to ``DEBUG=1 SYMBOLS=1``.
+
+:VERBOSE=1:
 
     Print the exact compiler and linker commands. Useful for troubleshooting
     build errors.
+
+:CCFLAGS=<command line options>:
+
+    Set the last compiler options.
+
+    Internally, the build system maintains in ``CCFLAGS`` the list of
+    options that are supplied to the compiler; this list is composed by
+    combining the relevant environment variables (such as ``CFLAGS``)
+    along with the choices made by other build-time configurations.
+
+    This command-line variable makes it possible to override an option in
+    this list by supplying customized command-line options to be appended.
+    For example: ``GDB=1 CCFLAGS=-g1``.
+
+    The string that is supplied as the value for this variable is parsed as
+    per a POSIX shell command line, and so it may include shell quoting if
+    necessary.
 
 Arguments
 ~~~~~~~~~
