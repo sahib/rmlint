@@ -315,7 +315,7 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
                 highest_match = path_len;
 
                 file->is_prefd = rmpath->is_prefd || polly->is_prefd;
-                file->path_index = rmpath->idx;
+                file->path_index = rmpath->index;
             }
         }
     }

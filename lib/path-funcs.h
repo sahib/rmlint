@@ -136,7 +136,7 @@ void rm_path_prepend(
 
     RmPath *p = g_slice_new(RmPath);
     p->path = path;
-    p->idx = index;
+    p->index = index;
     p->is_prefd = preferred;
     p->treat_as_single_vol = (path[0] == '/') && (path[1] == '/');
 

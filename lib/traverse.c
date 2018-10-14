@@ -256,7 +256,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     RmPath *rmpath = buffer->rmpath;
 
     char is_prefd = rmpath->is_prefd;
-    RmOff path_index = rmpath->idx;
+    RmOff path_index = rmpath->index;
 
     /* Initialize ftsp */
     int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
@@ -492,7 +492,7 @@ void rm_traverse_tree(RmSession *session) {
             }
 
             rm_traverse_file(trav_session, &buffer->stat_buf, rmpath->path,
-                             rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_UNKNOWN, false,
+                             rmpath->is_prefd, rmpath->index, RM_LINT_TYPE_UNKNOWN, false,
                              is_hidden, FALSE, 0);
 
             rm_trav_buffer_free(buffer);
@@ -500,7 +500,7 @@ void rm_traverse_tree(RmSession *session) {
             /* It's a directory, traverse it. */
             buffer->disk =
                 rm_mds_device_get(mds, rmpath->path, (cfg->fake_pathindex_as_disk)
-                                                         ? rmpath->idx + 1
+                                                         ? rmpath->index + 1
                                                          : buffer->stat_buf.st_dev);
             rm_mds_device_ref(buffer->disk, 1);
             rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, rmpath->path,
