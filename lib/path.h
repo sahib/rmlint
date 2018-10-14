@@ -32,7 +32,7 @@ typedef struct RmPath {
     char *path;                 // result of `realpath()' of <stdlib.h>
     unsigned int index;         // command line order, followed by stdin order
     bool is_prefd;              // whether path was tagged as preferred path
-    bool treat_as_single_vol;   // treat this directory as one file system
+    bool single_volume;         // treat this directory as one file system
 } RmPath;
 
 #endif /* end of include guard */

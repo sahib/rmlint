@@ -138,7 +138,7 @@ void rm_path_prepend(
     p->path = path;
     p->index = index;
     p->is_prefd = preferred;
-    p->treat_as_single_vol = (path[0] == '/') && (path[1] == '/');
+    p->single_volume = (path[0] == '/') && (path[1] == '/');
 
     *list = g_slist_prepend(*list, p);
 }

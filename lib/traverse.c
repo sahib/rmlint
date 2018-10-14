@@ -209,7 +209,7 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
         trav_session, (RmStat *)stat_buf, p->fts_path, is_prefd, path_index, lint_type, \
         is_symlink,                                                                     \
         rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),           \
-        rmpath->treat_as_single_vol, p->fts_level);
+        rmpath->single_volume, p->fts_level);
 
 #if RM_PLATFORM_32 && HAVE_STAT64
 
@@ -261,7 +261,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     /* Initialize ftsp */
     int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
 
-    if(rmpath->treat_as_single_vol) {
+    if(rmpath->single_volume) {
         rm_log_debug_line("Treating files under %s as a single volume", rmpath->path);
     }
 
@@ -375,7 +375,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      path_index, RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
-                                     rmpath->treat_as_single_vol, p->fts_level);
+                                     rmpath->single_volume, p->fts_level);
                     rm_log_warning_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
