@@ -1161,6 +1161,7 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
 typedef struct RmCmdSetPathVars {
     RmCfg *const cfg;
     bool stdin_paths_preferred;
+    bool all_paths_valid;
 } RmCmdSetPathVars;
 
 static INLINE
@@ -1176,8 +1177,10 @@ bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
 
     size_t buf_len = PATH_MAX;
     char *path_buf = malloc(buf_len);
-
-    bool all_paths_read = true;
+    if(!path_buf) {
+        rm_log_perror(_("Failed to allocate memory"));
+        return false;
+    }
 
     int path_len;
 
@@ -1188,21 +1191,26 @@ bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
             if(path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
-            all_paths_read &= rm_cfg_prepend_path(cfg, path_buf, is_prefd);
+            v->all_paths_valid &= rm_cfg_prepend_path(cfg, path_buf, is_prefd);
         }
     }
 
+    if(ferror(stdin)) {
+        rm_log_perror(_("Failed to read stdin"))
+        return false;
+    }
+
     free(path_buf);
-    return all_paths_read;
+    return true;
 }
 
 static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     g_assert(cfg);
 
     bool is_prefd = false;
-    bool all_paths_valid = true;
     RmCmdSetPathVars v = {
         .cfg = cfg,
+        .all_paths_valid = true
     };
 
     /* Check the directory to be valid */
@@ -1215,7 +1223,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
         } else {
-            all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
+            v.all_paths_valid &= rm_cfg_prepend_path(cfg, paths[i], is_prefd);
         }
     }
 
@@ -1223,16 +1231,19 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     if(cfg->read_stdin || cfg->read_stdin0) {
         /* option '-' means read paths from stdin */
-        all_paths_valid &= rm_cmd_set_paths_from_stdin(&v);
+        if(!rm_cmd_set_paths_from_stdin(&v)) {
+            rm_log_error_line(_("Could not process path arguments"));
+            return false;
+        }
     }
 
-    if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
+    if(g_slist_length(cfg->paths) == 0 && v.all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_prepend_path(cfg, cfg->iwd, is_prefd);
     }
 
     /* Only return success if everything is fine. */
-    return all_paths_valid;
+    return v.all_paths_valid;
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {

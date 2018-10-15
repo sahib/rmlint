@@ -992,8 +992,8 @@ msgstr ""
 msgid "Failed to complete setup for merging directories"
 msgstr ""
 
-#: lib/treemerge.c
-msgid "Failed to allocate memory. Out of memory?"
+#: lib/treemerge.c lib/cmdline.c
+msgid "Failed to allocate memory"
 msgstr ""
 
 #: lib/cmdline.c
@@ -1018,6 +1018,14 @@ msgstr ""
 #: lib/path-funcs.h
 #, c-format
 msgid "Could not get metadata for path \"%s\": %s"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Failed to read stdin"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Could not process path arguments"
 msgstr ""
 
 #~ msgid "caching is not supported due to missing json-glib library."
