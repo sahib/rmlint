@@ -503,7 +503,7 @@ msgid "This does not look like a number"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Negativ sizes are no good idea"
+msgid "A size must be non-negative"
 msgstr ""
 
 #: lib/cmdline.c

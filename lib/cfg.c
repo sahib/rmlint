@@ -87,8 +87,8 @@ void rm_cfg_set_default(RmCfg *cfg) {
      * 32k => 15.8 seconds */
     cfg->read_buf_len = 16 * 1024;
 
-    cfg->total_mem = (RmOff)1024 * 1024 * 1024;
-    cfg->sweep_size = 1024 * 1024 * 1024;
+    cfg->total_mem = 1024L * 1024 * 1024;
+    cfg->sweep_size = 1024L * 1024 * 1024;
     cfg->sweep_count = 1024 * 16;
 
     cfg->skip_start_factor = 0.0;

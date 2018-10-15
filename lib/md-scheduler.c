@@ -30,9 +30,9 @@
  * debug messages by continually recycling back to the joiner.
  */
 #if _RM_MDS_DEBUG
-#define MDS_EMPTYQUEUE_SLEEP_US (60 * 1000 * 1000) /* 60 seconds */
+#define MDS_EMPTYQUEUE_SLEEP_US (60L * 1000 * 1000) /* 60 seconds */
 #else
-#define MDS_EMPTYQUEUE_SLEEP_US (50 * 1000) /* 0.05 second */
+#define MDS_EMPTYQUEUE_SLEEP_US (50L * 1000) /* 0.05 second */
 #endif
 
 ///////////////////////////////////////

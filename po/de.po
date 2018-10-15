@@ -535,7 +535,7 @@ msgid "This does not look like a number"
 msgstr "Das schaut nicht wie eine Zahl aus"
 
 #: lib/cmdline.c
-msgid "Negativ sizes are no good idea"
+msgid "A size must be non-negative"
 msgstr "Negative Größen sind keine gute Idee"
 
 #: lib/cmdline.c

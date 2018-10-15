@@ -230,7 +230,7 @@ int rm_session_dedupe_main(RmCfg *cfg) {
 /* clang-format on */
 
     /* a poorly-documented limit for dedupe ioctl's */
-    static const gint64 max_dedupe_chunk = 16 * 1024 * 1024;
+    static const gint64 max_dedupe_chunk = 16L * 1024 * 1024;
 
     /* how fine a resolution to use once difference detected;
      * use btrfs default node size (16k): */

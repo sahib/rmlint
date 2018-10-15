@@ -275,14 +275,14 @@
 #define SHRED_PAGE_SIZE (sysconf(_SC_PAGESIZE))
 
 #define SHRED_MAX_READ_FACTOR \
-    ((256 * 1024 * 1024) / SHRED_BALANCED_PAGES / SHRED_PAGE_SIZE)
+    ((256L * 1024 * 1024) / SHRED_BALANCED_PAGES / SHRED_PAGE_SIZE)
 
 /* Maximum increment size for paranoid digests.  This is smaller than for other
  * digest types due to memory management issues.
  * 16MB should be big enough buffer size to make seek time fairly insignificant
  * relative to sequential read time, eg 16MB read at typical 100 MB/s read
  * rate = 160ms read vs typical seek time 10ms*/
-#define SHRED_PARANOID_BYTES (16 * 1024 * 1024)
+#define SHRED_PARANOID_BYTES (16L * 1024 * 1024)
 
 /* When paranoid hashing, if a file increments is larger
  * than SHRED_PREMATCH_THRESHOLD, we take a guess at the likely
@@ -296,7 +296,7 @@
 #define SHRED_AVERAGE_MEM_PER_FILE (100)
 
 /* Maximum number of bytes before worth_waiting becomes false */
-#define SHRED_TOO_MANY_BYTES_TO_WAIT (64 * 1024 * 1024)
+#define SHRED_TOO_MANY_BYTES_TO_WAIT (64L * 1024 * 1024)
 
 ///////////////////////////////////////////////////////////////////////
 //    INTERNAL STRUCTURES, WITH THEIR INITIALISERS AND DESTROYERS    //
@@ -1742,7 +1742,7 @@ void rm_shred_run(RmSession *session) {
     /* estimate mem used for RmFiles and allocate any leftovers to read buffer and/or
      * paranoid mem */
     RmOff mem_used = SHRED_AVERAGE_MEM_PER_FILE * session->shred_files_remaining;
-    RmOff read_buffer_mem = MAX(1024 * 1024, (gint64)cfg->total_mem - (gint64)mem_used);
+    RmOff read_buffer_mem = MAX(1024L * 1024, cfg->total_mem - mem_used);
 
     if(cfg->checksum_type == RM_DIGEST_PARANOID) {
         /* allocate any spare mem for paranoid hashing */
