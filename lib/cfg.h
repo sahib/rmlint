@@ -100,16 +100,13 @@ typedef struct RmCfg {
      *
      *   + To record  a  unique  index for each path supplied by the
      *     user; a path's index represents  the number of paths that
-     *     were already processed. This is always the case.
+     *     were  already  processed. This  is  the  case DURING  the
+     *     processing of user-input options (such as '--replay').
      *
-     *   + To provide  quick  access to the length of its associated
-     *     RmCfg::paths list. This is only the case when NOT running
-     *     in "--replay"  mode; when running in  "--replay" mode, it
-     *     just represents the total number  of paths that have been
-     *     supplied by  the user, i.e.,  the sums of the  lengths of
-     *     the associated lists  RmCfg::{paths,json_paths}, which is
-     *     not meant to be a useful  number to know, and is simply a
-     *     byproduct of calculating path indicies.
+     *   + To provide  quick access  to the length of its associated
+     *     RmCfg::paths list.  This is the case AFTER the processing
+     *     of user-input options (including during the processing of
+     *     non-option paths from the command line or stdin).
      */
     guint path_count;
 

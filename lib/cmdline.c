@@ -1224,6 +1224,8 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
         .all_paths_valid = true
     };
 
+    cfg->path_count = 0;
+
     if(paths) {
         for(char *path, **list = paths; (path = *list); ++list) {
             if(strcmp(path, "-") == 0) {
@@ -1251,14 +1253,12 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
         }
     }
 
-    if(g_slist_length(cfg->paths) == 0 && v.all_paths_valid) {
+    if(cfg->path_count == 0 && v.all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_prepend_path(
-            cfg, cfg->iwd, v.index++, /* replay */ false, is_prefd
+            cfg, cfg->iwd, v.index, /* replay */ false, is_prefd
         );
     }
-
-    cfg->path_count = v.index;
 
     /* Only return success if everything is fine. */
     return v.all_paths_valid;
