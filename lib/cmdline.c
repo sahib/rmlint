@@ -284,7 +284,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
         g_set_error(error, RM_ERROR_QUARK, 0, _("This does not look like a number"));
         return 0;
     } else if(decimal < 0) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Negativ sizes are no good idea"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("A size must be non-negative"));
         return 0;
     } else if(*format) {
         format = g_strstrip(format);

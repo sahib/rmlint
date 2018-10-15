@@ -513,7 +513,7 @@ msgid "This does not look like a number"
 msgstr "Cela ne semble pas correspondre à un chiffre"
 
 #: lib/cmdline.c
-msgid "Negativ sizes are no good idea"
+msgid "A size must be non-negative"
 msgstr "Une taille négative n'est pas une bonne idée"
 
 #: lib/cmdline.c
