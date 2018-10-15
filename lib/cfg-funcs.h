@@ -39,6 +39,8 @@
  * this is usually called before rm_cmd_parse_args */
 static INLINE
 void rm_cfg_set_default(RmCfg *cfg) {
+    g_assert(cfg);
+
     /* Set everything to 0 at first,
      * only non-null options are listed below.
      */
