@@ -1158,12 +1158,20 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
     return true;
 }
 
+typedef struct RmCmdSetPathVars {
+    RmCfg *const cfg;
+    bool stdin_paths_preferred;
+} RmCmdSetPathVars;
+
 static INLINE
-bool rm_cmd_set_paths_from_stdin(
-    RmCfg *const cfg,
-    const bool is_prefd,
-    const bool null_separated
-) {
+bool rm_cmd_set_paths_from_stdin(RmCmdSetPathVars *const v) {
+    g_assert(v);
+    g_assert(v->cfg);
+
+    RmCfg *const cfg = v->cfg;
+    const bool is_prefd = v->stdin_paths_preferred;
+    const bool null_separated = cfg->read_stdin0;
+
     char delim = null_separated ? 0 : '\n';
 
     size_t buf_len = PATH_MAX;
@@ -1193,14 +1201,16 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     bool is_prefd = false;
     bool all_paths_valid = true;
-    bool stdin_paths_preferred = false;
+    RmCmdSetPathVars v = {
+        .cfg = cfg,
+    };
 
     /* Check the directory to be valid */
     for(int i = 0; paths && paths[i]; ++i) {
         if(strcmp(paths[i], "-") == 0) {
             cfg->read_stdin = true;
             /* remember whether to treat stdin paths as preferred paths */
-            stdin_paths_preferred = is_prefd;
+            v.stdin_paths_preferred = is_prefd;
         } else if(strcmp(paths[i], "//") == 0) {
             /* the '//' separator separates non-preferred paths from preferred */
             is_prefd = !is_prefd;
@@ -1213,9 +1223,7 @@ static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
 
     if(cfg->read_stdin || cfg->read_stdin0) {
         /* option '-' means read paths from stdin */
-        all_paths_valid &= rm_cmd_set_paths_from_stdin(
-            cfg, stdin_paths_preferred, cfg->read_stdin0
-        );
+        all_paths_valid &= rm_cmd_set_paths_from_stdin(&v);
     }
 
     if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
