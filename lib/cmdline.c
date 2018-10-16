@@ -1163,7 +1163,7 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
     char delim = null_separated ? 0 : '\n';
 
     size_t buf_len = PATH_MAX;
-    char *path_buf = malloc(buf_len * sizeof(char));
+    char *path_buf = malloc(buf_len);
 
     bool all_paths_read = true;
 
