@@ -1248,7 +1248,8 @@ bool rm_cmd_set_paths_from_stdin(
         }                                                               \
     }
 
-static bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
+static INLINE
+bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
     g_assert(cfg);
 
     const bool replay = cfg->replay;
