@@ -470,7 +470,7 @@ else:
 
 # If the output is not a terminal, remove the COLORS
 if not sys.stdout.isatty():
-    for key, value in COLORS.iteritems():
+    for key, value in COLORS.items():
         COLORS[key] = ''
 
 # Configure the actual colors to our liking:
