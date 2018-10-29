@@ -57,14 +57,71 @@ static int RM_DIGEST_USE_SSE = 0;
 //    BUFFER IMPLEMENTATION     //
 //////////////////////////////////
 
-RmBuffer *rm_buffer_new(gsize buf_size) {
+RmSemaphore *rm_semaphore_new(int n) {
+    RmSemaphore *self = g_malloc0(sizeof(RmSemaphore));
+    g_mutex_init(&self->sem_lock);
+    g_cond_init(&self->sem_cond);
+    self->n = n;
+    return self;
+}
+
+void rm_semaphore_destroy(RmSemaphore *sem) {
+    g_cond_clear(&sem->sem_cond);
+    g_mutex_clear(&sem->sem_lock);
+    g_free(sem);
+}
+
+void rm_semaphore_acquire(RmSemaphore *sem) {
+   g_mutex_lock(&sem->sem_lock);
+   while(sem->n == 0) {
+        g_cond_wait(&sem->sem_cond, &sem->sem_lock);
+   }
+   --sem->n;
+   g_mutex_unlock(&sem->sem_lock);
+}
+
+void rm_semaphore_release(RmSemaphore *sem) {
+   g_mutex_lock(&sem->sem_lock);
+   ++sem->n;
+   g_mutex_unlock(&sem->sem_lock);
+   g_cond_signal(&sem->sem_cond);
+}
+
+////////////////////
+
+RmBuffer *rm_buffer_new(RmSemaphore *sem, gsize buf_size) {
+    /* NOTE: Here is a catch:
+     *
+     * We should only allocate a buffer if we do not surpass
+     * a certain number of buffers in memory. If the filesystem
+     * is faster than the CPU is able to hash the input, we might
+     * slowly allocate too many buffers, causing memory issues.
+     *
+     * Therefore we'll block here until another thread releases
+     * its buffers using rm_buffer_free. This of course means that
+     * the logic regarding buffer freeing must be very tough, since
+     * we might risk deadlocks otherwise.
+     *
+     * This was discovered as part of this issue:
+     *
+     *  https://github.com/sahib/rmlint/issues/309
+     */
+    if(sem != NULL) {
+        rm_semaphore_acquire(sem);
+    }
+
     RmBuffer *self = g_slice_new0(RmBuffer);
     self->data = g_slice_alloc(buf_size);
     self->buf_size = buf_size;
     return self;
 }
 
-void rm_buffer_free(RmBuffer *buf) {
+void rm_buffer_free(RmSemaphore *sem, RmBuffer *buf) {
+    /*  See the explanation in rm_buffer_new */
+    if(sem != NULL) {
+        rm_semaphore_release(sem);
+    }
+
     g_slice_free1(buf->buf_size, buf->data);
     g_slice_free(RmBuffer, buf);
 }
@@ -868,12 +925,12 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size) {
     }
 }
 
-void rm_digest_buffered_update(RmBuffer *buffer) {
+void rm_digest_buffered_update(RmSemaphore *sem, RmBuffer *buffer) {
     g_assert(buffer);
     RmDigest *digest = buffer->digest;
     if(digest->type != RM_DIGEST_PARANOID) {
         rm_digest_update(digest, buffer->data, buffer->len);
-        rm_buffer_free(buffer);
+        rm_buffer_free(sem, buffer);
     } else {
         RmParanoid *paranoid = digest->state;
         rm_digest_paranoid_buffered_update(paranoid, buffer);
