@@ -103,7 +103,7 @@ void rm_file_set_path(RmFile *file, char *path) {
 }
 
 void rm_file_build_path(RmFile *file, char *buf) {
-    rm_assert_gentle(file);
+    g_assert(file);
 
     rm_trie_build_path(&file->session->cfg->file_trie, file->folder, buf, PATH_MAX);
 }
@@ -180,7 +180,9 @@ static gint rm_file_foreach_hardlink(RmFile *f, RmRFunc func, gpointer user_data
 }
 
 void rm_file_cluster_add(RmFile *host, RmFile *guest) {
-    rm_assert_gentle(!guest->cluster || host == guest);
+    g_assert(host);
+    g_assert(guest);
+    g_assert(!guest->cluster || host == guest);
     if(!host->cluster) {
         host->cluster = g_queue_new();
         if(guest != host) {
@@ -192,7 +194,8 @@ void rm_file_cluster_add(RmFile *host, RmFile *guest) {
 }
 
 void rm_file_cluster_remove(RmFile *file) {
-    rm_assert_gentle(file->cluster);
+    g_assert(file);
+    g_assert(file->cluster);
 
     g_queue_remove(file->cluster, file);
     if(file->cluster->length == 0) {
@@ -231,7 +234,7 @@ static gint rm_file_count(RmFile *file, gint type) {
     case RM_FILE_COUNT_NEW:
         return file->is_new;
     default:
-        rm_assert_gentle(FALSE);
+        g_assert_not_reached();
         return 0;
     }
 }

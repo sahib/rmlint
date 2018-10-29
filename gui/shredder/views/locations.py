@@ -13,6 +13,7 @@ Also show the directory size alongside.
 
 # Stdlib:
 import os
+import json
 import logging
 
 # External:
@@ -72,10 +73,19 @@ class LocationEntry(Gtk.ListBoxRow):
         'shortcut': (GObject.SIGNAL_RUN_FIRST, None, ())
     }
 
+    def to_dict(self):
+        names = self.themed_icon.get_names()
+        return {
+            "name": self.name,
+            "path": self.path,
+            "icon": names[-1] if names else "folder",
+        }
+
     def __init__(self, name, path, themed_icon, fill_level=None):
         Gtk.ListBoxRow.__init__(self)
         self.set_size_request(-1, 80)
         self.set_can_focus(False)
+        self.themed_icon = themed_icon
 
         # CSS Name
         self.set_name('ShredderLocationEntry')
@@ -203,6 +213,34 @@ class LocationEntry(Gtk.ListBoxRow):
         self.props.preferred = btn.get_active()
 
 
+def cache_file_path():
+    return os.path.join(
+        GLib.get_user_cache_dir(),
+        "shredder",
+        "entries.json"
+    )
+
+
+def load_saved_entries():
+    try:
+        with open(cache_file_path(), "r") as fd:
+            return json.loads(fd.read())
+    except OSError as exc:
+        LOGGER.warning("Failed to get location entries: {}".format(exc))
+    except Exception:
+        LOGGER.exception("Failed to get location entries unexpected")
+
+
+def store_saved_entries(entries):
+    try:
+        cache_path = cache_file_path()
+        os.makedirs(os.path.dirname(cache_path), mode=0o700, exist_ok=True)
+        with open(cache_path, "w") as fd:
+            fd.write(json.dumps(entries, sort_keys=True, indent=4))
+    except Exception:
+        LOGGER.exception("Failed to write location cache")
+
+
 class LocationView(View):
     """The actual view instance."""
     def __init__(self, app):
@@ -247,13 +285,11 @@ class LocationView(View):
             'search-changed', self.on_search_changed
         )
 
-        self.volume_monitor = Gio.VolumeMonitor.get()
-        self.recent_mgr = Gtk.RecentManager.get_default()
-        self.recent_mgr.connect('changed', self.refill_entries)
-        self.volume_monitor.connect('volume-changed', self.refill_entries)
-        self.volume_monitor.connect('drive-changed', self.refill_entries)
-        self.volume_monitor.connect('mount-changed', self.refill_entries)
-        self.refill_entries()
+        entries = load_saved_entries()
+        if entries:
+            self.load_entries_from_disk(entries)
+        else:
+            self.load_entries_initially()
 
         run_button = IconButton('edit-find-symbolic', 'Scan folders')
         run_button.connect('clicked', self._run_clicked)
@@ -299,12 +335,27 @@ class LocationView(View):
         data.display_name = path
         data.mime_type = 'inode/directory'
 
-        if not self.recent_mgr.add_full(path, data):
+        recent_mgr = Gtk.RecentManager.get_default()
+        if not recent_mgr.add_full(path, data):
             LOGGER.warning('Could not add to recently used: ' + path)
 
-    def refill_entries(self, *_):
+    def load_entries_from_disk(self, entries):
+        LOGGER.info('Loading entries initially')
+
+        for entry in entries:
+            self.add_entry(
+                entry["name"],
+                entry["path"],
+                Gio.ThemedIcon(name=entry["icon"])
+            )
+
+        self.show_all()
+
+
+    def load_entries_initially(self, *_):
         """Re-read all LocationEntries from every possible source."""
         LOGGER.info('Refilling location entries')
+        recent_mgr = Gtk.RecentManager.get_default()
         for child in list(self.box):
             self.box.remove(child)
 
@@ -323,16 +374,24 @@ class LocationView(View):
         )
 
         # Mounted volumes:
-        for mount in self.volume_monitor.get_mounts():
+        volume_monitor = Gio.VolumeMonitor.get()
+        for mount in volume_monitor.get_mounts():
             if mount.get_root().get_path() is None:
                 continue
 
-            info = mount.get_root().query_filesystem_info(
-                ','.join([
-                    Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE,
-                    Gio.FILE_ATTRIBUTE_FILESYSTEM_USED
-                ])
-            )
+            try:
+                info = mount.get_root().query_filesystem_info(
+                    ','.join([
+                        Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE,
+                        Gio.FILE_ATTRIBUTE_FILESYSTEM_USED
+                    ])
+                )
+            except Exception as exc:
+                LOGGER.warning("Failed to get fs info for {}: {}".format(
+                    mount.get_name(),
+                    exc,
+                ))
+                continue
 
             self.add_entry(
                 mount.get_name(),
@@ -345,7 +404,7 @@ class LocationView(View):
                         Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE)))
 
         # Recently used items:
-        for item in self.recent_mgr.get_items():
+        for item in recent_mgr.get_items():
             # Note: item.get_exists() tells us bullshit sometimes.
             if item.get_mime_type() != 'inode/directory':
                 continue
@@ -384,7 +443,16 @@ class LocationView(View):
         entry.connect(
             'shortcut', self._shortcut_clicked
         )
+
+        self.cache_saved_entries()
         return entry
+
+    def cache_saved_entries(self):
+        entries = []
+        for child in self.box.get_children():
+            entries.append(child.to_dict())
+
+        store_saved_entries(entries)
 
     def on_row_clicked(self, _, row):
         """Highlight an entry when a row was clicked."""
@@ -418,7 +486,7 @@ class LocationView(View):
             self.box.invalidate_filter()
 
     def _filter_func(self, row):
-        """Decide if a row shoul be visible depending on the search term."""
+        """Decide if a row should be visible depending on the search term."""
         query = self.search_entry.get_text().lower()
         if query in row.path.lower():
             return True
@@ -474,8 +542,6 @@ class LocationView(View):
             """The open file button was clicked. Add paths."""
             for path in self.file_chooser.get_filenames():
                 name = os.path.basename(path)
-                # self.recent_mgr.add_item(path)
-                self.add_recent_item(path)
                 entry = self.add_entry(
                     name, path, Gio.ThemedIcon(
                         name='folder-new'
@@ -541,6 +607,7 @@ class LocationView(View):
 
         self.selected_locations = []
         self._update_selected_label()
+        self.cache_saved_entries()
 
     def on_default_action(self):
         """Executed on Ctrl-Enter"""

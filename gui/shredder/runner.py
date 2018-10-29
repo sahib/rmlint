@@ -55,10 +55,10 @@ class MatchType(Enum):
     """Key: traverse-match"""
     NONE, BASENAME, EXTENSION, WITHOUT_EXTENSION = range(1, 5)
     MAPPING = {
-        NONE: '',
-        BASENAME: '--match-basename',
-        EXTENSION: '--match-with-extension',
-        WITHOUT_EXTENSION: '--match-without-extension'
+        NONE: [],
+        BASENAME: ['--match-basename'],
+        EXTENSION: ['--match-with-extension'],
+        WITHOUT_EXTENSION: ['--match-without-extension']
     }
 
 
@@ -66,9 +66,9 @@ class SymlinkType(Enum):
     """Key: general-find-symlinks"""
     IGNORE, SEE, FOLLOW = range(1, 4)
     MAPPING = {
-        IGNORE: '--no-followlinks',
-        SEE: '--see-symlinks',
-        FOLLOW: '--followlinks'
+        IGNORE: ['--no-followlinks'],
+        SEE: ['--see-symlinks'],
+        FOLLOW: ['--followlinks']
     }
 
 
@@ -76,9 +76,9 @@ class HiddenType(Enum):
     """Key: traverse-hidden"""
     IGNORE, PARTIAL, FOLLOW = range(1, 4)
     MAPPING = {
-        IGNORE: '--no-hidden',
-        PARTIAL: '--partial-hidden',
-        FOLLOW: '--hidden'
+        IGNORE: ['--no-hidden'],
+        PARTIAL: ['--partial-hidden'],
+        FOLLOW: ['--hidden']
     }
 
 
@@ -86,9 +86,9 @@ class KeepAllType(Enum):
     """Key: computation-keep-all-tagged"""
     NONE, TAGGED, UNTAGGED = range(1, 4)
     MAPPING = {
-        NONE: '',
-        TAGGED: '--keep-all-tagged',
-        UNTAGGED: '--keep-all-untagged'
+        NONE: [],
+        TAGGED: ['--keep-all-tagged'],
+        UNTAGGED: ['--keep-all-untagged']
     }
 
 
@@ -96,9 +96,9 @@ class MustMatchType(Enum):
     """Key: computation-must-match-tagged"""
     NONE, TAGGED, UNTAGGED = range(1, 4)
     MAPPING = {
-        NONE: '',
-        TAGGED: '--must-match-tagged',
-        UNTAGGED: '--must-match-untagged'
+        NONE: [],
+        TAGGED: ['--must-match-tagged'],
+        UNTAGGED: ['--must-match-untagged']
     }
 
 
@@ -106,8 +106,19 @@ class HardlinkType(Enum):
     """Key: "general-find-hardlinks"""
     OFF, ACTIVE = False, True
     MAPPING = {
-        ACTIVE: '--hardlinked',
-        OFF: '--no-hardlinked'
+        ACTIVE: ['--hardlinked'],
+        OFF: ['--no-hardlinked']
+    }
+
+
+class HandlerType(Enum):
+    """Key: "general-handler-type"""
+    REMOVE_DUPES, LINK_DUPES, SYMLINK_DUPES, HARDLINK_DUPES = range(1, 5)
+    MAPPING = {
+        REMOVE_DUPES: ['-c', 'sh:handler=remove'],
+        LINK_DUPES: ['-c', 'sh:handler=link'],
+        SYMLINK_DUPES: ['-c', 'sh:handler=symlink'],
+        HARDLINK_DUPES: ['-c', 'sh:handler=hardlink'],
     }
 
 
@@ -115,14 +126,14 @@ class CrossMountType(Enum):
     """Key: traverse-cross-mounts"""
     OFF, ACTIVE = False, True
     MAPPING = {
-        ACTIVE: '--crossdev',
-        OFF: '--no-crossdev'
+        ACTIVE: ['--crossdev'],
+        OFF: ['--no-crossdev']
     }
 
 
 def map_cfg(option, val):
     """Helper function to save some characters"""
-    return option.MAPPING.value.get(val)
+    return option.MAPPING.value.get(val, [])
 
 
 def _create_rmlint_process(
@@ -149,11 +160,18 @@ def _create_rmlint_process(
                     cfg.get_enum('computation-keep-all-tagged')),
             map_cfg(MustMatchType,
                     cfg.get_enum('computation-must-match-tagged')),
+            map_cfg(HandlerType,
+                    cfg.get_enum('general-handler-type')),
             map_cfg(HardlinkType,
                     cfg.get_boolean('general-find-hardlinks')),
             map_cfg(CrossMountType,
-                    cfg.get_boolean('traverse-cross-mounts'))
+                    cfg.get_boolean('traverse-cross-mounts')),
+            map_cfg(AlgorithmType,
+                    cfg.get_boolean('computation-algorithm'))
         ]
+
+        # Flatten list:
+        extra_options = [item for sublist in extra_options for item in sublist]
 
         min_size, max_size = cfg.get_value('traverse-size-limits')
         extra_options += [
@@ -162,11 +180,6 @@ def _create_rmlint_process(
                 b=max_size // (1024 ** 2)
             )
         ]
-
-        extra_options += map_cfg(
-            AlgorithmType,
-            cfg.get_enum('computation-algorithm')
-        )
 
         extra_options += [
             '--max-depth', str(cfg.get_int('traverse-max-depth'))

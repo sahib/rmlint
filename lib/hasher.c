@@ -49,6 +49,9 @@ const int HASHER_FADVISE_FLAGS = 0
 
 #define DIVIDE_CEIL(n, m) ((n) / (m) + !!((n) % (m)))
 
+/* how many buffers to read? */
+const guint16 N_PREADV_BUFFERS = 4;
+
 struct _RmHasher {
     RmDigestType digest_type;
     gboolean use_buffered_read;
@@ -64,6 +67,8 @@ struct _RmHasher {
 
     gsize buf_size;
     guint active_tasks;
+
+    RmSemaphore *buf_sem;
 };
 
 struct _RmHasherTask {
@@ -90,19 +95,21 @@ static void rm_hasher_task_free(RmHasherTask *self) {
 
 /* GThreadPool Worker for hashing */
 static void rm_hasher_hashpipe_worker(RmBuffer *buffer, RmHasher *hasher) {
+    g_assert(buffer);
     if(buffer->len > 0) {
         /* Update digest with buffer->data */
-        rm_assert_gentle(buffer->user_data == NULL);
-        rm_digest_buffered_update(buffer);
+        g_assert(buffer->user_data == NULL);
+        rm_digest_buffered_update(hasher->buf_sem, buffer);
     } else if(buffer->user_data) {
         /* finalise via callback */
         RmHasherTask *task = buffer->user_data;
-        rm_assert_gentle(task->digest == buffer->digest);
+        g_assert(task->digest == buffer->digest);
 
+        g_assert(hasher);
         hasher->callback(hasher, task->digest, hasher->session_user_data,
                          task->task_user_data);
         rm_hasher_task_free(task);
-        rm_buffer_free(buffer);
+        rm_buffer_free(hasher->buf_sem, buffer);
 
         g_mutex_lock(&hasher->lock);
         {
@@ -135,12 +142,12 @@ static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
                                        gsize *bytes_actually_read) {
     /* Read contents of symlink (i.e. path of symlink's target).  */
 
-    RmBuffer *buffer = rm_buffer_new(hasher->buf_size);
+    RmBuffer *buffer = rm_buffer_new(hasher->buf_sem, hasher->buf_size);
     gint len = readlink(path, (char *)buffer->data, hasher->buf_size);
 
     if (len < 0) {
         rm_log_perror("Cannot read symbolic link");
-        rm_buffer_free(buffer);
+        rm_buffer_free(hasher->buf_sem, buffer);
         return FALSE;
     }
 
@@ -181,15 +188,13 @@ static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
     gsize bytes_remaining = bytes_to_read;
 
     while(TRUE) {
-        RmBuffer *buffer = rm_buffer_new(hasher->buf_size);
-
+        RmBuffer *buffer = rm_buffer_new(hasher->buf_sem, hasher->buf_size);
         gsize want_bytes = MIN(bytes_remaining, hasher->buf_size);
-
         gsize bytes_read = fread(buffer->data, 1, want_bytes, fd);
 
         if(ferror(fd) != 0) {
             rm_log_perror("fread(3) failed");
-            rm_buffer_free(buffer);
+            rm_buffer_free(hasher->buf_sem, buffer);
             break;
         }
 
@@ -242,7 +247,7 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
     }
 
     /* preadv() is beneficial for large files since it can cut the
-     * number of syscall heavily.  I suggest N_BUFFERS=4 as good
+     * number of syscall heavily.  I suggest N_PREADV_BUFFERS=4 as good
      * compromise between memory and cpu.
      *
      * With 16 buffers: 43% cpu 33,871 total
@@ -255,17 +260,16 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
     /* Give the kernel scheduler some hints */
     rm_hasher_request_readahead(fd, start_offset, bytes_to_read);
 
-    /* how many buffers to read? */
-    guint16 N_BUFFERS = 4;
+    guint16 n_preadv_buffers = N_PREADV_BUFFERS;
     if(bytes_to_read > 0) {
-        N_BUFFERS = MIN(N_BUFFERS, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
+        n_preadv_buffers = MIN(n_preadv_buffers, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
     }
 
     /* Allocate buffer vector */
     RmBuffer **buffers;
-    buffers = g_slice_alloc(sizeof(*buffers) * N_BUFFERS);
+    buffers = g_slice_alloc(sizeof(*buffers) * n_preadv_buffers);
 
-    struct iovec readvec[N_BUFFERS + 1];
+    struct iovec readvec[n_preadv_buffers + 1];
     memset(readvec, 0, sizeof(readvec));
 
     gboolean success = FALSE;
@@ -273,20 +277,20 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
 
     while(TRUE) {
         /* allocate buffers for preadv */
-        for(int i = 0; i < N_BUFFERS; ++i) {
-            buffers[i] = rm_buffer_new(hasher->buf_size);
+        for(int i = 0; i < n_preadv_buffers; ++i) {
+            buffers[i] = rm_buffer_new(hasher->buf_sem, hasher->buf_size);
             readvec[i].iov_base = buffers[i]->data;
             readvec[i].iov_len = hasher->buf_size;
         }
 
-        bytes_read = rm_sys_preadv(fd, readvec, N_BUFFERS, file_offset);
+        bytes_read = rm_sys_preadv(fd, readvec, n_preadv_buffers, file_offset);
 
         if(bytes_read == -1) {
             /* error occurred */
             rm_log_perror("preadv failed");
             /* Release the buffers and give up*/
-            for(int i = 0; i < N_BUFFERS; ++i) {
-                rm_buffer_free(buffers[i]);
+            for(int i = 0; i < n_preadv_buffers; ++i) {
+                rm_buffer_free(hasher->buf_sem, buffers[i]);
             }
             break;
         }
@@ -300,7 +304,7 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
         bytes_remaining -= bytes_read;
 
         /* send buffers */
-        for(int i = 0; i < N_BUFFERS; ++i) {
+        for(int i = 0; i < n_preadv_buffers; ++i) {
             RmBuffer *buffer = buffers[i];
 
             buffer->len = CLAMP(bytes_read - i * (gint32)hasher->buf_size, 0,
@@ -311,7 +315,7 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
                 buffer->user_data = NULL;
                 rm_util_thread_pool_push(hashpipe, buffer);
             } else {
-                rm_buffer_free(buffer);
+                rm_buffer_free(hasher->buf_sem,  buffer);
             }
         }
 
@@ -330,7 +334,7 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
         }
     }
 
-    g_slice_free1(sizeof(*buffers) * N_BUFFERS, buffers);
+    g_slice_free1(sizeof(*buffers) * n_preadv_buffers, buffers);
     rm_sys_close(fd);
 
     return success;
@@ -367,6 +371,20 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     RmHasher *self = g_slice_new0(RmHasher);
     self->digest_type = digest_type;
 
+    if(digest_type != RM_DIGEST_PARANOID) {
+        int max_buffers = num_threads * 64;
+        if(!use_buffered_read) {
+            /*  preadv() uses N_PREADV_BUFFERS in parallel.
+             *  Need at least this many for one operation.
+             *  */
+            max_buffers *= N_PREADV_BUFFERS;
+        }
+
+        self->buf_sem = rm_semaphore_new(max_buffers);
+    } else {
+        self->buf_sem = NULL;
+    }
+
     self->use_buffered_read = use_buffered_read;
     self->buf_size = buf_size;
     self->cache_quota_bytes = cache_quota_bytes;
@@ -383,11 +401,11 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     /* initialise mutex & cond */
     g_mutex_init(&self->lock);
     g_cond_init(&self->cond);
-    
+
     /* Create a pool of hashing thread "pools" - each "pool" can only have
      * one thread because hashing must be done in order */
     self->hashpipe_pool = g_async_queue_new_full((GDestroyNotify)rm_hasher_hashpipe_free);
-    rm_assert_gentle(num_threads > 0);
+    g_assert(num_threads > 0);
     self->unalloc_hashpipes = num_threads;
     return self;
 }
@@ -411,6 +429,11 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
 
     g_cond_clear(&hasher->cond);
     g_mutex_clear(&hasher->lock);
+
+    if(hasher->buf_sem) {
+        rm_semaphore_destroy(hasher->buf_sem);
+    }
+
     g_slice_free(RmHasher, hasher);
 }
 
@@ -442,7 +465,7 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
             self->hashpipe = g_async_queue_pop(hasher->hashpipe_pool);
         }
     }
-    rm_assert_gentle(self->hashpipe);
+    g_assert(self->hashpipe);
 
     self->task_user_data = task_user_data;
     return self;
@@ -477,7 +500,7 @@ RmDigest *rm_hasher_task_finish(RmHasherTask *task) {
     /* get a dummy buffer to use to signal the hasher thread that this increment is
      * finished */
     RmHasher *hasher = task->hasher;
-    RmBuffer *finisher = rm_buffer_new(task->hasher->buf_size);
+    RmBuffer *finisher = rm_buffer_new(hasher->buf_sem, hasher->buf_size);
     finisher->digest = task->digest;
     finisher->len = 0;
     finisher->user_data = task;

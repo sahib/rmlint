@@ -145,40 +145,33 @@ void rm_session_clear(RmSession *session) {
     rm_trie_destroy(&cfg->file_trie);
 }
 
-volatile int SESSION_ABORTED;
+volatile int rm_session_abort_count = 0;
 
-void rm_session_abort(void) {
-    g_atomic_int_add(&SESSION_ABORTED, 1);
+void rm_session_acknowledge_abort(const gint abort_count) {
+    g_assert(abort_count);
+    static bool message_not_yet_shown = true;
+    static GMutex m;
+
+    g_mutex_lock(&m);
+        if(message_not_yet_shown) {
+            rm_log_warning("\n");
+            rm_log_warning_line(_("Received interrupt; stopping..."));
+            message_not_yet_shown = false;
+        }
+        if(abort_count > 1) {
+            rm_log_warning("\n");
+            rm_log_warning_line(_("Received second interrupt; stopping hard."));
+            exit(EXIT_FAILURE);
+        }
+    g_mutex_unlock(&m);
 }
 
-static gpointer rm_session_print_first_abort_warn(_UNUSED gpointer data) {
-    rm_log_warning("\r");
-    rm_log_warning_line(_("Received Interrupt, stopping..."));
-    return NULL;
-}
-
-bool rm_session_was_aborted() {
-    gint rc = g_atomic_int_get(&SESSION_ABORTED);
-
-    static GOnce print_once = G_ONCE_INIT;
-
-    switch(rc) {
-    case 1:
-        g_once(&print_once, rm_session_print_first_abort_warn, NULL);
-        break;
-    case 2:
-        rm_log_warning_line(_("Received second Interrupt, stopping hard."));
-        exit(EXIT_FAILURE);
-        break;
-    }
-
-    return rc;
-}
 /**
  * *********** dedupe session main ************
  **/
 int rm_session_dedupe_main(RmCfg *cfg) {
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
+    g_assert(cfg->path_count == g_slist_length(cfg->paths));
     if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --dedupe [-r] [-v|V] source dest\n"));
         return EXIT_FAILURE;
@@ -298,7 +291,8 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         } else if(dedupe.info.status == _DATA_DIFFERS) {
             if(dedupe_chunk != min_dedupe_chunk) {
                 dedupe_chunk = min_dedupe_chunk;
-                rm_log_debug_line("Dropping to %lu byte chunks after %lu bytes",
+                rm_log_debug_line("Dropping to %"G_GINT64_FORMAT"-byte chunks "
+                                  "after %"G_GINT64_FORMAT" bytes",
                                   dedupe_chunk, bytes_deduped);
                 continue;
             } else {
@@ -314,14 +308,15 @@ int rm_session_dedupe_main(RmCfg *cfg) {
 
         bytes_deduped += dedupe.info.bytes_deduped;
     }
-    rm_log_debug_line("Bytes deduped: %lu", bytes_deduped);
+    rm_log_debug_line("Bytes deduped: %"G_GINT64_FORMAT, bytes_deduped);
 
     if (ret!=0) {
         rm_log_perrorf(_("%s returned error: (%d)"), _DEDUPE_IOCTL_NAME, ret);
     } else if(bytes_deduped == 0) {
         rm_log_info_line(_("Files don't match - not deduped"));
     } else if(bytes_deduped < source_stat.st_size) {
-        rm_log_info_line(_("Only first %lu bytes deduped - files not fully identical"),
+        rm_log_info_line(_("Only first %"G_GINT64_FORMAT" bytes deduped "
+                           "- files not fully identical"),
                          bytes_deduped);
     }
 
@@ -369,6 +364,7 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
      * Other return values defined in utilities.h 'RmOffsetsMatchCode' enum
      */
 
+    g_assert(cfg->path_count == g_slist_length(cfg->paths));
     if(cfg->path_count != 2) {
         rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
         return EXIT_FAILURE;

@@ -169,15 +169,25 @@ typedef guint64 RmOff;
 /* Domain for reporting errors. Needed by GOptions */
 #define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
 
-#define rm_assert_gentle(cond)                                                                \
-    if(!(cond)) {{                                                                            \
-        rm_log_error_line("BUG: Assertion failed at `%s@%d`: %s", __FILE__, __LINE__, #cond); \
-        rm_log_error_line("     Will try to continue in 2 seconds. Expect crashes.");         \
-        g_usleep(2 * 1000 * 1000);                                                            \
-    }}
+#ifdef RM_DEBUG
+    #undef NDEBUG
+#else
+    #ifndef NDEBUG
+        #define NDEBUG
+    #endif
+    #ifdef __GNUC__
+        #define INLINE inline __attribute__((__always_inline__))
+    #elif defined(__CLANG__)
+        #if __has_attribute(__always_inline__)
+            #define INLINE inline __attribute__((__always_inline__))
+        #endif
+    #elif defined(_MSC_VER)
+        #define INLINE __forceinline
+    #endif
+#endif
 
-
-#define RM_NOT_REACHED (0)
-#define rm_assert_gentle_not_reached() rm_assert_gentle(RM_NOT_REACHED)
+#ifndef INLINE
+    #define INLINE inline
+#endif
 
 #endif

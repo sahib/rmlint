@@ -4,13 +4,53 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.7.0 Toothless Taipan] -- unreleased
+## [2.8.0 Maidenly Moose] -- Unreleased
+
+Mostly a bugfix release with smaller functional changes.
+
+### Added
+
+- Support for reflinks on XFS (48c2e5b1)
+- Option "--no-backup" to overwrite output files as before (see "Changed")
+- New build system option called "gettext" that eases the maintenance of translations.
+  (thanks Michael Witten)
+- gui: Add config option to choose how to handle the found duplicates
+
+### Changed
+
+- -pp is now silently permitted, but is the same as -p
+- Old output files get backed up now to a new timestamped name.
+  This was done to not to overwrite the results of long runs.
+  You can use --no-backup to disable this behaviour.
+- Several internal cleanups and potential bug fixes (thanks to Michael Witten)
+
+### Deprecated
+
+Nothing was deprecated.
+
+### Removed
+
+Nothing was removed.
+
+### Fixed
+
+- Several small fixes in the documentation.
+- Compiler warnings that may happen with clang and on 32 bit.
+- "-g" now does not overwrite other formatters anymore.
+- Make the progressbar less flickering.
+- Startup error when the permissions to a location where bad.
+- Endless loop that happens on btrfs due to the fiemap optimization.
+- Fix a bug when doing "rmlint --replay x.json" without an explicit path.
+- Fix -f that did not really follow symbolic links.
+- gui: locations are now stored persistently and survive restarts.
+
+## [2.7.0 Toothless Taipan] -- 2017-04-25
 
 ### Added
 
 * New checksum types metro and highway
 * New option --keep-hardlinked
-* --dedupe option can deduplicate twins on any reflick-capable filesystem
+* --dedupe option can deduplicate twins on any reflick-capable filesystems
 * --dedupe-readonly option can dedupe files on read-only btrfs snapshots
 
 ### Changed
@@ -33,7 +73,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Fix compile error on systems with no FIEMAP (https://github.com/sahib/rmlint/issues/252)
 * Fix handling of bad uids/gids in python output formatter (https://github.com/sahib/rmlint/issues/239)
 * Fix escaping of dirnames in rmlint.sh test for new emptydirs (https://github.com/sahib/rmlint/issues/241)
-
+* Fix another quoting issue (https://github.com/sahib/rmlint/issues/272)
 
 ## [2.6.1 Penetrating Pineapple] -- 2017-06-13
 

@@ -61,6 +61,10 @@ typedef struct RmFmtHandlerProgress {
     RmRunningMean read_diff_mean;
     RmRunningMean eta_mean;
     RmOff last_shred_bytes_remaining;
+
+    /* Last calculation of ETA for caching purpose */
+    char last_eta[1024];
+    gint64 last_eta_update;
 } RmFmtHandlerProgress;
 
 static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
@@ -110,6 +114,41 @@ static gdouble rm_fmt_progress_calculated_eta(
     return rm_running_mean_get(&self->eta_mean);
 }
 
+static char *rm_fmt_progress_get_cached_eta(
+        RmSession *session,
+        RmFmtHandlerProgress *self,
+        gfloat elapsed_sec
+    ) {
+    /* If there was already an ETA calculation in the last 500ms,
+     * use that one to avoid flickering (see issue #292)
+     */
+
+    gdouble eta_sec = rm_fmt_progress_calculated_eta(
+            session,
+            self,
+            elapsed_sec,
+            self->last_state
+    );
+
+    gint64 now = g_get_real_time();
+    if(self->last_eta[0] != 0) {
+        if(ABS(now - self->last_eta_update) <= 500 * 1000) {
+            return self->last_eta;
+        }
+    }
+
+    /*  New display string needed */
+    if(eta_sec < 0) {
+        return "...";
+    }
+
+    char *eta_info = rm_format_elapsed_time(eta_sec, 0);
+    strncpy(self->last_eta, eta_info, sizeof(self->last_eta) - 1);
+    self->last_eta_update = now;
+    g_free(eta_info);
+    return self->last_eta;
+}
+
 static void rm_fmt_progress_format_text(
         RmSession *session,
         RmFmtHandlerProgress *self,
@@ -149,12 +188,7 @@ static void rm_fmt_progress_format_text(
         self->percent = 1.0 - ((gdouble)session->shred_bytes_remaining /
                                (gdouble)session->shred_bytes_after_preprocess);
 
-        gdouble eta_sec = rm_fmt_progress_calculated_eta(session, self, elapsed_sec, self->last_state);
-        char *eta_info = NULL;
-        if(eta_sec >= 0) {
-            eta_info = rm_format_elapsed_time(eta_sec, 0);
-        }
-
+        char *eta_info = rm_fmt_progress_get_cached_eta(session, self, elapsed_sec);
         rm_util_size_to_human_readable(
                 session->shred_bytes_remaining, num_buf,
                 sizeof(num_buf)
@@ -172,7 +206,6 @@ static void rm_fmt_progress_format_text(
                     MAYBE_GREEN(out, session), (eta_info) ? eta_info : "0s", MAYBE_RESET(out, session)
             );
 
-        g_free(eta_info);
         break;
     case RM_PROGRESS_STATE_MERGE:
         self->percent = 1.0;
@@ -398,10 +431,32 @@ static void rm_fmt_prog(RmSession *session,
         }
     }
 
+    /* Try to get terminal width, might fail on some terminals. */
+    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
+
+    // Adjust the text width if we have not a lot of space.
+    // Favour text over progress bar in this case until we run out of space.
+    float text_width_percentage = 0.7;
+    if(self->terminal.ws_col <= 120) {
+        // This function will give 100% to text with <= 60 chars width.
+        text_width_percentage = 1.0 - CLAMP(0.005 * self->terminal.ws_col - 0.3, 0.0, 0.3);
+    }
+
+    float progress_bar_percentage = 1.0 - text_width_percentage;
+    int progress_bar_width = MAX(0, floor(self->terminal.ws_col * progress_bar_percentage) - 1.0);
+    int text_width = MAX(0, ceil(self->terminal.ws_col * text_width_percentage) - 1.0);
+
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         self->percent = 1.05;
         if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-            rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+            if(progress_bar_width > 0) {
+                rm_fmt_progress_print_bar(
+                    session,
+                    self,
+                    progress_bar_width,
+                    out
+                );
+            }
             fprintf(out, "\n");
         }
         g_timer_start(self->timer);
@@ -415,17 +470,10 @@ static void rm_fmt_prog(RmSession *session,
         force_draw = true;
     }
 
-    /* Try to get terminal width, might fail on some terminals. */
-    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
     self->last_state = state;
-
-    // g_printerr(".\n");
 
     gdouble elapsed_sec = g_timer_elapsed(self->timer, NULL);
     if(force_draw || elapsed_sec * 1000.0 >= self->update_interval) {
-        /* Max. 70% (-1 char) are allowed for the text */
-        int text_width = MAX(self->terminal.ws_col * 0.7 - 1, 0);
-
         rm_fmt_progress_format_text(session, self, text_width, elapsed_sec, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
@@ -433,7 +481,15 @@ static void rm_fmt_prog(RmSession *session,
             text_width = 0;
         }
 
-        rm_fmt_progress_print_bar(session, self, self->terminal.ws_col * 0.3, out);
+        if(progress_bar_width > 0) {
+            rm_fmt_progress_print_bar(
+                    session,
+                    self,
+                    progress_bar_width,
+                    out
+            );
+        }
+
         rm_fmt_progress_print_text(self, text_width, out);
 
         fprintf(out, "%s\r", MAYBE_RESET(out, session));
@@ -470,6 +526,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .use_unicode_glyphs = true,
     .plain = true,
     .stripe_offset = 0,
+    .last_eta = {0},
+    .last_eta_update = 0,
     .last_state = RM_PROGRESS_STATE_INIT};
 
 RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *)&PROGRESS_HANDLER_IMPL;

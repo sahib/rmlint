@@ -71,19 +71,11 @@ translated during compile time. You have to mark them first and translate them a
        printf("World is %s\n", _(stuff));
    }
 
-After you're done with marking the new strings, you have to update the template:
+After you're done with marking the new strings, you have to update the
+gettext files:
 
 .. code-block:: bash
 
-   # scons can do this for you already:
-   $ scons xgettext
+   $ scons gettext
 
-You need to add the new strings to the existing translations now:
-
-.. code-block:: bash
-
-   $ msgmerge po/de.po po/rmlint.pot > po/de_new.po
-   $ EDITOR po/de_new.po   # check if everything was merged alright.
-   $ mv po/de_new.po po/de.po
-
-After that you can translate the new strings and proceed like in the upper steps.
+Then, proceed to work with the relevant `*.po` file as described above.

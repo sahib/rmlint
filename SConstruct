@@ -11,9 +11,7 @@ import SCons
 import SCons.Conftest as tests
 from SCons.Script.SConscript import SConsEnvironment
 
-DEFAULT_OPTIMISATION='s'  # compile with -Os
-
-pkg_config = os.getenv('PKG_CONFIG') or 'pkg-config'
+pkg_config = os.getenv('PKG_CONFIG', 'pkg-config')
 
 def read_version():
     with open('.version', 'r') as handle:
@@ -35,6 +33,28 @@ Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 ###########################################################################
 #                                Utilities                                #
 ###########################################################################
+
+def check_gcc_version(context):
+    context.Message('Checking for GCC version... ')
+
+    try:
+        v = subprocess.check_output("printf '%s\n' __GNUC__ | gcc -E -P -", shell=True)
+        try:
+            v = int(v)
+            context.Result(str(v))
+        except ValueError:
+            print('Expected a number, but got: ' + v)
+            v = 0
+    except subprocess.CalledProcessError:
+        print('Unable to find GCC version.')
+        v = 0
+    except AttributeError:
+        print('Not allowed.')
+        v = 0
+
+    conf.env['__GNUC__'] = v
+    return v
+
 
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
@@ -450,7 +470,7 @@ else:
 
 # If the output is not a terminal, remove the COLORS
 if not sys.stdout.isatty():
-    for key, value in COLORS.iteritems():
+    for key, value in COLORS.items():
         COLORS[key] = ''
 
 # Configure the actual colors to our liking:
@@ -535,6 +555,7 @@ Export('env')
 
 # Configuration:
 conf = Configure(env, custom_tests={
+    'check_gcc_version': check_gcc_version,
     'check_pkgconfig': check_pkgconfig,
     'check_pkg': check_pkg,
     'check_git_rev': check_git_rev,
@@ -608,6 +629,17 @@ if 'LDFLAGS' in os.environ:
     conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
     print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
 
+if 'AR' in os.environ:
+    conf.env.Replace(AR=os.environ['AR'])
+    print(">> Using ar: " + os.environ['AR'])
+
+if 'NM' in os.environ:
+    conf.env.Replace(NM=os.environ['NM'])
+    print(">> Using nm: " + os.environ['NM'])
+
+if 'RANLIB' in os.environ:
+    conf.env.Replace(RANLIB=os.environ['RANLIB'])
+    print(">> Using ranlib: " + os.environ['RANLIB'])
 
 # Support museums or other debian flavours:
 conf.check_c11()
@@ -639,10 +671,12 @@ if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
 else:
-    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
+    gcc_version = conf.check_gcc_version()
+    if gcc_version >= 8:
+        conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
-conf.env.Append(CFLAGS=[
+conf.env.Append(CCFLAGS=[
     '-Wall', '-W', '-Wextra',
     '-Winit-self',
     '-Wstrict-aliasing',
@@ -677,19 +711,42 @@ conf.check_sysmacro_h()
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
-# compiler optimisation and debug symbols:
-cc_O_option = '-O'
+if ARGUMENTS.get('GDB') == '1':
+    ARGUMENTS['DEBUG'] = '1'
+    ARGUMENTS['SYMBOLS'] = '1'
+
+O_DEBUG   = 'g' # The optimisation level for a debug   build
+O_RELEASE = '2' # The optimisation level for a release build
+
+# build modes
 if ARGUMENTS.get('DEBUG') == "1":
-    print("Compiling with gdb extra debug symbols")
-    conf.env.Append(CCFLAGS=['-ggdb3', '-fno-inline'])
-    cc_O_option += (ARGUMENTS.get('O') or '0')
+    print("Compiling in debug mode")
+    conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-fno-inline'])
+    O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
+    conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
     conf.env.Append(LINKFLAGS=['-s'])
-    cc_O_option += (ARGUMENTS.get('O') or DEFAULT_OPTIMISATION)
+    O_value = ARGUMENTS.get('O', O_RELEASE)
+
+if O_value == 'debug':
+    O_value = O_DEBUG
+elif O_value == 'release':
+    O_value = O_RELEASE
+
+cc_O_option = '-O' + O_value
 
 print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
 conf.env.Append(CCFLAGS=[cc_O_option])
 
+if ARGUMENTS.get('SYMBOLS') == '1':
+    print("Compiling with debugging symbols")
+    conf.env.Append(CCFLAGS='-g3')
+
+value = ARGUMENTS.get('CCFLAGS')
+if value:
+    import shlex
+    print("Appending custom build flags provided on command line: " + value)
+    conf.env.Append(CCFLAGS=shlex.split(value))
 
 SConsEnvironment.Chmod = SCons.Action.ActionFactory(
     os.chmod,
@@ -849,7 +906,8 @@ if 'config' in COMMAND_LINE_TARGETS:
     Install prefix       : {prefix}
     Actual prefix        : {actual_prefix}
     Verbose building     : {verbose}
-    Adding debug symbols : {debug}
+    Adding debug checks  : {debug}
+    Adding debug symbols : {symbols}
 
 Type 'scons' to actually compile rmlint now. Good luck.
     '''.format(
@@ -874,6 +932,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
             verbose=yesno(ARGUMENTS.get('VERBOSE')),
             debug=yesno(ARGUMENTS.get('DEBUG')),
+            symbols=yesno(ARGUMENTS.get('SYMBOLS')),
             version='{a}.{b}.{c} "{n}" (rev {r})'.format(
                 a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH,
                 n=VERSION_NAME, r=env.get('gitrev', 'unknown')

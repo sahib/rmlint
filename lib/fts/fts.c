@@ -40,14 +40,13 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 #include <sys/param.h>
 #include <sys/stat.h>
 
-#include <assert.h>
-#define _DIAGASSERT(e)
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <glib.h>       // g_assert
 
 #include "fts.h"
 
@@ -62,7 +61,7 @@ static FTSENT *fts_build(FTS *, int);
 static void fts_free(FTSENT *);
 static void fts_lfree(FTSENT *);
 static void fts_load(FTS *, FTSENT *);
-static size_t fts_maxarglen(char *const *);
+static size_t fts_maxarglen(const char *const *);
 static size_t fts_pow2(size_t);
 static int fts_palloc(FTS *, size_t);
 static void fts_padjust(FTS *, FTSENT *);
@@ -107,7 +106,7 @@ static int fts_safe_changedir(const FTS *, const FTSENT *, int, const char *);
 #undef FTS_WHITEOUT
 #endif
 
-FTS *fts_open(char *const *argv, int options,
+FTS *fts_open(const char *const *argv, int options,
               int (*compar)(const FTSENT **, const FTSENT **)) {
     FTS *sp;
     FTSENT *p, *root;
@@ -115,7 +114,7 @@ FTS *fts_open(char *const *argv, int options,
     FTSENT *parent, *tmp = NULL; /* pacify gcc */
     size_t len;
 
-    _DIAGASSERT(argv != NULL);
+    g_assert(argv != NULL);
 
     /* Options check. */
     if(options & ~FTS_OPTIONMASK) {
@@ -229,8 +228,8 @@ static void fts_load(FTS *sp, FTSENT *p) {
     size_t len;
     char *cp;
 
-    _DIAGASSERT(sp != NULL);
-    _DIAGASSERT(p != NULL);
+    g_assert(sp != NULL);
+    g_assert(p != NULL);
 
     /*
      * Load the stream structure for the next traversal.  Since we don't
@@ -254,7 +253,7 @@ int fts_close(FTS *sp) {
     FTSENT *freep, *p;
     int saved_errno = 0;
 
-    _DIAGASSERT(sp != NULL);
+    g_assert(sp != NULL);
 
     /*
      * This still works if we haven't read anything -- the dummy structure
@@ -327,7 +326,7 @@ FTSENT *fts_read(FTS *sp) {
     char *t;
     int saved_errno;
 
-    _DIAGASSERT(sp != NULL);
+    g_assert(sp != NULL);
 
     /* If finished or unrecoverable error, return NULL. */
     if(sp->fts_cur == NULL || ISSET(FTS_STOP))
@@ -424,7 +423,7 @@ next:
      * if we exit without setting it to a new value because
      * FCHDIR() failed below.
      */
-    assert(tmp == sp->fts_cur);
+    g_assert(tmp == sp->fts_cur);
     sp->fts_cur = NULL;
 
     if((p = p->fts_link) != NULL) {
@@ -523,8 +522,8 @@ next:
 /* ARGSUSED */
 int fts_set(FTS *sp, FTSENT *p, int instr) {
     (void)sp;
-    _DIAGASSERT(sp != NULL);
-    _DIAGASSERT(p != NULL);
+    g_assert(sp != NULL);
+    g_assert(p != NULL);
 
     if(instr && instr != FTS_AGAIN && instr != FTS_FOLLOW && instr != FTS_NOINSTR &&
        instr != FTS_SKIP) {
@@ -539,7 +538,7 @@ FTSENT *fts_children(FTS *sp, int instr) {
     FTSENT *p;
     int fd;
 
-    _DIAGASSERT(sp != NULL);
+    g_assert(sp != NULL);
 
     if(instr && instr != FTS_NAMEONLY) {
         errno = EINVAL;
@@ -631,7 +630,7 @@ static FTSENT *fts_build(FTS *sp, int type) {
 #endif
     char *cp = NULL; /* pacify gcc */
 
-    _DIAGASSERT(sp != NULL);
+    g_assert(sp != NULL);
 
     /* Set current node pointer. */
     cur = sp->fts_cur;
@@ -899,8 +898,8 @@ static unsigned short fts_stat(FTS *sp, FTSENT *p, int follow) {
     __fts_stat_t *sbp, sb;
     int saved_errno;
 
-    _DIAGASSERT(sp != NULL);
-    _DIAGASSERT(p != NULL);
+    g_assert(sp != NULL);
+    g_assert(p != NULL);
 
     /* If user needs stat info, stat buffer already allocated. */
     sbp = ISSET(FTS_NOSTAT) ? &sb : p->fts_statp;
@@ -976,8 +975,8 @@ static unsigned short fts_stat(FTS *sp, FTSENT *p, int follow) {
 static FTSENT *fts_sort(FTS *sp, FTSENT *head, size_t nitems) {
     FTSENT **ap, *p;
 
-    _DIAGASSERT(sp != NULL);
-    _DIAGASSERT(head != NULL);
+    g_assert(sp != NULL);
+    g_assert(head != NULL);
 
     /*
      * Construct an array of pointers to the structures and call qsort(3).
@@ -1011,8 +1010,8 @@ static FTSENT *fts_alloc(FTS *sp, const char *name, size_t namelen) {
     size_t len;
 #endif
 
-    _DIAGASSERT(sp != NULL);
-    _DIAGASSERT(name != NULL);
+    g_assert(sp != NULL);
+    g_assert(name != NULL);
 
 #if defined(FTS_ALLOC_ALIGNED)
     /*
@@ -1104,7 +1103,7 @@ static size_t fts_pow2(size_t x) {
 static int fts_palloc(FTS *sp, size_t size) {
     char *new;
 
-    _DIAGASSERT(sp != NULL);
+    g_assert(sp != NULL);
 
 #ifdef __FTS_COMPAT_LENGTH
     /* Protect against fts_pathlen overflow. */
@@ -1130,7 +1129,7 @@ static void fts_padjust(FTS *sp, FTSENT *head) {
     FTSENT *p;
     char *addr;
 
-    _DIAGASSERT(sp != NULL);
+    g_assert(sp != NULL);
 
 #define ADJUST(p)                                                         \
     do {                                                                  \
@@ -1152,10 +1151,10 @@ static void fts_padjust(FTS *sp, FTSENT *head) {
     }
 }
 
-static size_t fts_maxarglen(char *const *argv) {
+static size_t fts_maxarglen(const char *const *argv) {
     size_t len, max;
 
-    _DIAGASSERT(argv != NULL);
+    g_assert(argv != NULL);
 
     for(max = 0; *argv; ++argv)
         if((len = strlen(*argv)) > max)

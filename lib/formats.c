@@ -81,7 +81,7 @@ static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
 }
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
-    rm_assert_gentle(handler);
+    g_assert(handler);
 
     g_free(handler->path);
     g_free(handler);
@@ -174,6 +174,27 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
     return false;
 }
 
+void rm_fmt_remove_by_name(RmFmtTable *self, char *name) {
+    GQueue deleted_iters = G_QUEUE_INIT;
+    for(GList *iter = self->handler_order->head; iter; iter = iter->next) {
+        RmFmtHandler *handler = iter->data;
+        if(!g_str_equal(handler->name, name)) {
+            continue;
+        }
+
+        g_hash_table_remove(self->handler_to_file, handler);
+        g_hash_table_remove(self->path_to_handler, handler->path);
+        g_queue_push_tail(&deleted_iters, iter);
+    }
+
+    for(GList *iter = deleted_iters.head; iter; iter = iter->next) {
+        g_queue_delete_link(self->handler_order, iter);
+    }
+
+    // Since we removed all handlers
+    g_hash_table_remove(self->handler_set, name);
+}
+
 void rm_fmt_clear(RmFmtTable *self) {
     if(rm_fmt_len(self) <= 0) {
         return;
@@ -184,6 +205,36 @@ void rm_fmt_clear(RmFmtTable *self) {
     g_hash_table_remove_all(self->path_to_handler);
     g_hash_table_remove_all(self->config);
     g_queue_clear(self->handler_order);
+}
+
+void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
+    if(self->first_backup_timestamp.tv_sec == 0L) {
+        g_get_current_time(&self->first_backup_timestamp);
+    }
+
+    char *new_path = NULL;
+    char *timestamp = g_time_val_to_iso8601(&self->first_backup_timestamp);
+
+    // Split the extension, if possible and place it before the timestamp suffix.
+    char *extension = g_utf8_strrchr(old_path, -1, '.');
+    if(extension != NULL) {
+        char *old_path_prefix = g_strndup(old_path, extension - old_path);
+        new_path = g_strdup_printf("%s.%s.%s", old_path_prefix, timestamp, extension + 1);
+        g_free(old_path_prefix);
+    } else {
+        new_path = g_strdup_printf("%s.%s", old_path, timestamp);
+    }
+
+
+    rm_log_debug_line(_("Old result `%s` already exists."), old_path);
+    rm_log_debug_line(_("Moving old file to `%s`. Use --no-backup to disable this."), new_path);
+
+    if(rename(old_path, new_path) < 0) {
+        rm_log_perror(_("failed to rename old result file"));
+    }
+
+    g_free(new_path);
+    g_free(timestamp);
 }
 
 void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler) {
@@ -240,6 +291,9 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         needs_full_path = true;
         if(access(path, F_OK) == 0) {
             file_existed_already = true;
+            if(!self->session->cfg->no_backup) {
+                rm_fmt_backup_old_result_file(self, path);
+            }
         }
 
         file_handle = fopen(path, "w");

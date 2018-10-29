@@ -57,6 +57,7 @@ def test_paranoia(interpreter):
     text = text.decode('utf-8')
 
     # subprocess.call('ls  -l ' + TESTDIR_NAME, shell=True)
+    os.remove(os.path.join(TESTDIR_NAME, "rmlint.py"))
     head, *data, footer = run_rmlint(
         '-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME)
     )
@@ -76,6 +77,7 @@ def test_paranoia(interpreter):
         '-d',
         '-p'
     ])
+    os.remove(os.path.join(TESTDIR_NAME, "rmlint.py"))
     head, *data, footer = run_rmlint(
         '-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME)
     )

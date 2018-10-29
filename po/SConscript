@@ -7,7 +7,6 @@ Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
 Import('VERSION_PATCH')
 
-
 import os
 import subprocess
 
@@ -31,10 +30,12 @@ if env['HAVE_MSGFMT']:
             create_uninstall_target(env, path)
 
 
-def xgettext(target=None, source=None, env=None):
-    Exit(subprocess.call(
+def xgettext():
+    return subprocess.call(
         'xgettext --package-name rmlint -k_ -kN_ ' \
         '--package-version {}.{}.{} --default-domain rmlint ' \
+        '--add-location=file ' \
+        '--join-existing ' \
         '--output po/rmlint.pot ' \
         '--from-code UTF-8 ' \
         '$(find src lib -iname "*.[ch]") &&' \
@@ -44,11 +45,58 @@ def xgettext(target=None, source=None, env=None):
             VERSION_PATCH
         ),
         shell=True
-    ))
+    )
+
+
+def xgettext_action(target=None, source=None, env=None):
+    status = xgettext()
+    if status:
+        print('Error: xgettext failed')
+        Exit(status)
+
+
+def msgmerge(target=None, source=None, env=None):
+    return subprocess.call(
+        'set -e;' \
+        'for p in po/*.po; do' \
+        '  msgmerge --update --backup=none "$p" po/rmlint.pot;' \
+        'done',
+        shell=True
+    )
+
+
+def msgmerge_action(target=None, source=None, env=None):
+    status = msgmerge()
+    if status:
+        print('Error: msgmerge failed')
+        Exit(status)
+
+
+def gettext_action(target=None, source=None, env=None):
+    status = xgettext()
+    if status:
+        ('Error: gettext failed while running xgettext')
+        Exit(status)
+    status = msgmerge()
+    if status:
+        print('Error: gettext failed while running msgmerge')
+        Exit(status)
 
 
 if 'xgettext' in COMMAND_LINE_TARGETS:
     env.Alias(
         'xgettext',
-        env.Command('xgettext', None, Action(xgettext, "Running xgettext"))
+        env.Command('xgettext', None, Action(xgettext_action, "Running xgettext"))
+    )
+
+if 'msgmerge' in COMMAND_LINE_TARGETS:
+    env.Alias(
+        'msgmerge',
+        env.Command('msgmerge', None, Action(msgmerge_action, "Running msgmerge"))
+    )
+
+if 'gettext' in COMMAND_LINE_TARGETS:
+    env.Alias(
+        'gettext',
+        env.Command('gettext', None, Action(gettext_action, "Running gettext"))
     )

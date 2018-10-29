@@ -31,8 +31,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Needed for RmTreeMerger */
-#include "treemerge.h"
+#include "config.h"     // INLINE
+#include "treemerge.h"  // RmTreeMerger
 
 typedef struct RmFileTables {
     /* List of all files found during traversal */
@@ -157,14 +157,27 @@ void rm_session_clear(RmSession *session);
  *
  * Threadsafe.
  */
-void rm_session_abort(void);
+static INLINE void rm_session_abort(void) {
+    extern volatile int rm_session_abort_count;
+    g_atomic_int_add(&rm_session_abort_count, 1);
+}
 
 /**
  * @brief Check if rmlint was aborted early.
  *
  * Threadsafe.
  */
-bool rm_session_was_aborted(void);
+static INLINE bool rm_session_was_aborted(void) {
+    extern volatile int rm_session_abort_count;
+    const gint n = g_atomic_int_get(&rm_session_abort_count);
+
+    if (n) {
+        void rm_session_acknowledge_abort(gint);
+        rm_session_acknowledge_abort(n);
+    }
+
+    return n;
+}
 
 /**
  * @brief Check the kernel version of the Linux kernel.

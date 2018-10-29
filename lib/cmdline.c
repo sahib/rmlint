@@ -58,7 +58,7 @@ static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
                                                   RM_DIGEST_PARANOID,
                                                   RM_DIGEST_PARANOID};
 static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
-static const int RM_PARANOIA_MAX = 4;
+static const int RM_PARANOIA_MAX = 5;
 
 static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
@@ -386,8 +386,8 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
                                      GError **error) {
-    rm_assert_gentle(session);
-    rm_assert_gentle(pair);
+    g_assert(session);
+    g_assert(pair);
 
     char *separator = strchr(pair, ':');
     char *full_path = NULL;
@@ -737,19 +737,26 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         memset(stamp_buf, 0, sizeof(stamp_buf));
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            success = rm_cmd_parse_timestamp(option_name, g_strstrip(stamp_buf), session,
-                                             error);
+            success = rm_cmd_parse_timestamp(
+                option_name,
+                g_strstrip(stamp_buf),
+                session,
+                error
+            );
+
+            if(!success) {
+                return false;
+            }
+
             plain = rm_cmd_timestamp_is_plain(stamp_buf);
         }
 
         fclose(stamp_file);
     } else {
-        /* Cannot read... */
+        /* Cannot read a stamp file, assume we gonna creae it. */
         plain = false;
-    }
-
-    if(!success) {
-        return false;
+        success = true;
+        rm_log_info_line(_("No stamp file at `%s`, will create one after this run."), timestamp_path);
     }
 
     rm_fmt_add(session->formats, "stamp", timestamp_path);
@@ -876,7 +883,8 @@ static gboolean rm_cmd_parse_clamp_top(_UNUSED const char *option_name, const gc
 static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
                                       _UNUSED const gchar *value, RmSession *session,
                                       _UNUSED GError **error) {
-    rm_fmt_clear(session->formats);
+    rm_fmt_remove_by_name(session->formats, "pretty");
+
     rm_fmt_add(session->formats, "progressbar", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
 
@@ -1088,10 +1096,11 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
-                                    _UNUSED const gchar *x, RmSession *session,
+                                    const gchar *json_path, RmSession *session,
                                     _UNUSED GError **error) {
     session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
+    rm_cfg_add_path(session->cfg, false, json_path);
     return true;
 }
 
@@ -1187,7 +1196,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
             rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
     }
 
-    if(cfg->path_count == 0 && all_paths_valid) {
+    if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
     }
@@ -1279,7 +1288,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
         {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
         {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
-        {"replay"   , 'Y' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(replay)   , _("Re-output a json file")                , "path/to/rmlint.json"} ,
+        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)   , _("Re-output a json file")                , "path/to/rmlint.json"} ,
         {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)    , _("Test for equality of PATHS")           , "PATHS"}           ,
 
         /* Trivial boolean options */
@@ -1303,7 +1312,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"keep-hardlinked"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->keep_hardlinked_dupes    , _("Keep hardlink that are linked to any original")                        , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
-        {"stdin0"                   , '0'  , 0         , G_OPTION_ARG_NONE      , &cfg->read_stdin0              , _("Read null-separated file list from stdin")                             , NULL}      ,
+        {"stdin0"                   , '0'  , 0         , G_OPTION_ARG_NONE      , &cfg->read_stdin0              , _("Read null-separated file list from stdin")                             , NULL}     ,
+        {"no-backup"                , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->no_backup                , _("Do not create backups of previous result files")                       , NULL}     ,
 
         /* COW filesystem deduplication support */
         {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
@@ -1458,6 +1468,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto cleanup;
     }
 
+    if(cfg->replay && (cfg->dedupe || cfg->is_reflink)) {
+        error = g_error_new(
+            RM_ERROR_QUARK, 0,
+            _("--replay (-Y) is incompatible with --dedupe or --is-reflink")
+        ); goto cleanup;
+    }
+
     if(cfg->dedupe) {
         /* dedupe session; regular rmlint configs are ignored */
         goto cleanup;
@@ -1497,6 +1514,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
 
+    g_assert(!(cfg->follow_symlinks && cfg->see_symlinks));
+
     if(cfg->keep_all_tagged && cfg->keep_all_untagged) {
         error = g_error_new(
             RM_ERROR_QUARK, 0,
@@ -1506,9 +1525,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
                             _("-q (--clamp-low) should be lower than -Q (--clamp-top)"));
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
-    } else if(cfg->follow_symlinks && cfg->see_symlinks) {
-        rm_log_error("Program error: Cannot do both follow_symlinks and see_symlinks");
-        rm_assert_gentle_not_reached();
     } else if(cfg->keep_all_tagged && cfg->must_match_untagged) {
         error = \
             g_error_new(
@@ -1584,7 +1600,7 @@ int rm_cmd_main(RmSession *session) {
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
 
-    if(session->cfg->replay) {
+    if(cfg->replay) {
         return rm_cmd_replay_main(session);
     }
 
@@ -1606,7 +1622,7 @@ int rm_cmd_main(RmSession *session) {
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
-        rm_assert_gentle(cfg->cache_file_structs);
+        g_assert(cfg->cache_file_structs);
 
         /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
          * on two dupicate directories which is likely not a valid assumption.
@@ -1625,7 +1641,11 @@ int rm_cmd_main(RmSession *session) {
             return EXIT_FAILURE;
         }
 
-        session->dir_merger = rm_tm_new(session);
+        RmTreeMerger *t = session->dir_merger = rm_tm_new(session);
+        if(!t) {
+            rm_log_error_line(_("Failed to complete setup for merging directories"));
+            return EXIT_FAILURE;
+        }
     }
 
     if(session->total_files < 2 && session->cfg->run_equal_mode) {

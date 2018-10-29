@@ -51,7 +51,7 @@ print_progress_prefix() {
         if [ $((PROGRESS_TOTAL)) -gt 0 ]; then
             PROGRESS_PERC=$((PROGRESS_CURR * 100 / PROGRESS_TOTAL))
         fi
-        printf "${COL_BLUE}[% 3d%%]${COL_RESET} $PROGRESS_PERC"
+        printf %s "${COL_BLUE}" "$PROGRESS_PERC" "${COL_RESET}"
         if [ $# -eq "1" ]; then
             PROGRESS_CURR=$((PROGRESS_CURR+$1))
         else
@@ -127,7 +127,7 @@ check_for_equality() {
         echo $?
     else
         # Fallback to `rmlint --equal` for directories:
-        "$RMLINT_BINARY" -pp --equal %s "$1" "$2"
+        "$RMLINT_BINARY" -p --equal %s "$1" "$2"
         echo $?
     fi
 }
@@ -183,13 +183,8 @@ cp_hardlink() {
     echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
-            # If it's a directory cp will create a new copy into
-            # the destination path. This would lead to more wasted space...
-            if [ -d "$1" ]; then
-                rm -rf "$1"
-            fi
             # replace duplicate with hardlink
-            rm "$1"
+            rm -rf "$1"
             ln "$2" "$1"
         fi
     fi

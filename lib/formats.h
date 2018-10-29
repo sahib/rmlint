@@ -59,6 +59,7 @@ typedef struct RmFmtTable {
     GQueue *handler_order;
     GRecMutex state_mtx;
     RmSession *session;
+    GTimeVal first_backup_timestamp;
 
     /* Group of RmFiles that will be cached until exit */
     GQueue groups;
@@ -261,6 +262,11 @@ bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
  * @brief Check if there is at least one formatter with `name`.
  */
 bool rm_fmt_has_formatter(RmFmtTable *self, const char *name);
+
+/**
+ * @brief Remove all registered formatters with `name`.
+ */
+void rm_fmt_remove_by_name(RmFmtTable *self, char *name);
 
 /**
  * You can use this template for implementing new RmFmtHandlers.

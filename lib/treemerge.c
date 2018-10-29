@@ -178,26 +178,25 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
     return 0;
 }
 
-static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *session) {
+static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     /* put paths into format expected by fts */
-    guint path_count = g_slist_length(paths);
-    char **path_vec = g_malloc0(sizeof(char *) * (path_count + 1));
-    for(guint idx = 0; paths && idx < path_count; idx++, paths = paths->next) {
-        path_vec[idx] = ((RmPath *)paths->data)->path;
-    }
 
-    if(*path_vec == NULL) {
-        rm_log_error("No paths passed to rm_tm_count_files\n");
-        g_free(path_vec);
+    g_assert(cfg);
+    guint path_count = cfg->path_count;
+    g_assert(path_count);
+    g_assert(path_count == g_slist_length(cfg->paths));
+
+    const char **const path_vec = malloc(sizeof(*path_vec) * (path_count + 1));
+    if(!path_vec) {
+        rm_log_error(_("Failed to allocate memory. Out of memory?"));
         return false;
     }
 
-    int fts_flags = FTS_COMFOLLOW;
-    if(session->cfg->follow_symlinks) {
-        fts_flags |= FTS_LOGICAL;
-    } else {
-        fts_flags |= FTS_PHYSICAL;
-    }
+    const char **path = path_vec + path_count; *path = 0;
+    for(const GSList *paths = cfg->paths; paths; paths = paths->next) {
+        g_assert(paths->data);
+        *(--path) = ((RmPath *)paths->data)->path;
+    } g_assert(path == path_vec);
 
     /* This tree stores the full file paths.
        It is joined into a full directory tree later.
@@ -205,11 +204,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
     RmTrie file_tree;
     rm_trie_init(&file_tree);
 
-    FTS *fts = fts_open(path_vec, fts_flags, NULL);
+    FTS *fts = fts_open(path_vec, FTS_COMFOLLOW | FTS_PHYSICAL, NULL);
     if(fts == NULL) {
         rm_log_perror("fts_open failed");
-        g_free(path_vec);
-        return false;
+        goto fail;
     }
 
     FTSENT *ent = NULL;
@@ -238,8 +236,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
         case FTS_SLNONE:
         case FTS_DEFAULT:
             /* Save this path as countable file, but only if we consider empty files */
-            if(!(session->cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
-                rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
+            if(!(cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
+                if(!(cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
+                    rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
+                }
             }
         case FTS_D:
         case FTS_DNR:
@@ -254,19 +254,18 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
 
     if(fts_close(fts) != 0) {
         rm_log_perror("fts_close failed");
-        g_free(path_vec);
-        return false;
+        goto fail;
     }
 
     rm_trie_iter(&file_tree, NULL, true, false, rm_tm_count_art_callback, count_tree);
 
     /* Now flag everything as a no-go over the given paths,
      * otherwise we would continue merging till / with fatal consequences,
-     * since / does not have more files as paths[0]
+     * since / does not have more files than path_vec[0]
      */
-    for(int i = 0; path_vec[i]; ++i) {
+    for(/*path = path_vec*/; *path; ++path) {
         /* Just call the callback directly */
-        RmNode *node = rm_trie_search_node(&file_tree, path_vec[i]);
+        RmNode *node = rm_trie_search_node(&file_tree, *path);
         if(node != NULL) {
             node->data = GINT_TO_POINTER(true);
             rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
@@ -276,6 +275,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, GSList *paths, RmSession *sess
     rm_trie_destroy(&file_tree);
     g_free(path_vec);
     return true;
+
+    fail:
+        g_free(path_vec);
+        return false;
 }
 
 ///////////////////////////////
@@ -416,9 +419,9 @@ static guint rm_directory_hash(const RmDirectory *d) {
 }
 
 static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile *file) {
-    rm_assert_gentle(file);
-    rm_assert_gentle(file->digest);
-    rm_assert_gentle(directory);
+    g_assert(file);
+    g_assert(file->digest);
+    g_assert(directory);
 
     guint8 *file_digest = NULL;
     RmOff digest_bytes = 0;
@@ -523,7 +526,9 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     rm_trie_init(&self->dir_tree);
     rm_trie_init(&self->count_tree);
 
-    rm_tm_count_files(&self->count_tree, session->cfg->paths, session);
+    if(!rm_tm_count_files(&self->count_tree, session->cfg)) {
+        return 0;
+    }
 
     return self;
 }

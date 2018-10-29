@@ -21,14 +21,12 @@ def test_order():
     head, *data, footer = run_rmlint('-f -S a')
     assert sum(p['is_original'] for p in data) == 1
 
-    assert len(data) == 5
+    assert len(data) == 2
     assert data[0]['path'].endswith('z')
     assert data[0]['is_original']
 
     assert data[1]['path'].endswith('z')
-    assert data[2]['path'].endswith('x')
-    assert data[3]['path'].endswith('x')
-    assert data[4]['path'].endswith('y')
+    assert not data[1]['is_original']
 
     head, *data, footer = run_rmlint('-@ -S a')
     assert sum(p['is_original'] for p in data) == 2

@@ -28,14 +28,20 @@
         <value nick="Find all hidden files" value="3"/>
     </enum>
     <enum id="org.gnome.Shredder.KeepAllType">
-        <value nick="No restriction" value="0"/>
-        <value nick="Keep all tagged" value="1"/>
-        <value nick="Keep all untagged" value="2"/>
+        <value nick="No restriction" value="1"/>
+        <value nick="Keep all tagged" value="2"/>
+        <value nick="Keep all untagged" value="3"/>
     </enum>
     <enum id="org.gnome.Shredder.MustMatchType">
-        <value nick="No restriction" value="0"/>
-        <value nick="Must match tagged" value="1"/>
-        <value nick="Must match untagged" value="2"/>
+        <value nick="No restriction" value="1"/>
+        <value nick="Must match tagged" value="2"/>
+        <value nick="Must match untagged" value="3"/>
+    </enum>
+    <enum id="org.gnome.Shredder.HandlerType">
+        <value nick="Remove duplicates" value="1"/>
+        <value nick="Link duplicates" value="2"/>
+        <value nick="Symboliclink duplicates" value="3"/>
+        <value nick="Hardlink duplicates" value="4"/>
     </enum>
     <schema id="org.gnome.Shredder" path="/org/gnome/Shredder/" gettext-domain="shredder">
         <key name="general-find-hardlinks" type="b">
@@ -47,6 +53,11 @@
             <default>'See symbolic links'</default>
             <summary>Symbolic link handling</summary>
             <description>What to do with symbolic links?</description>
+        </key>
+        <key name="general-handler-type" enum="org.gnome.Shredder.HandlerType">
+            <default>'Remove duplicates'</default>
+            <summary>How to tackle found duplicates</summary>
+            <description>Define the handler that will tackle the wasted space</description>
         </key>
         <key name="traverse-hidden" enum="org.gnome.Shredder.HiddenType">
             <default>'Use for duplicate directories only'</default>

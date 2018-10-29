@@ -111,6 +111,38 @@ typedef struct RmDigest {
 
 } RmDigest;
 
+typedef struct RmSemaphore {
+    volatile int n;
+    GMutex sem_lock;
+    GCond sem_cond;
+} RmSemaphore;
+
+/**
+ * @brief Allocate a new RmSemaphore.
+ *
+ * @param n: The number of acquire operations before the semaphore blocks.
+ */
+RmSemaphore *rm_semaphore_new(int n);
+
+/**
+ * @brief Allocate a new RmSemaphore.
+ *
+ * @param n: The number of acquire operations before the semaphore blocks.
+ */
+void rm_semaphore_destroy(RmSemaphore *sem);
+
+/**
+ * @brief Acquire a share of the semaphore.
+ *
+ * This call will block if already too may acquires happened.
+ */
+void rm_semaphore_acquire(RmSemaphore *sem);
+
+/**
+ * @brief Release one share of the semaphore.
+ */
+void rm_semaphore_release(RmSemaphore *sem);
+
 /////////// RmBuffer ////////////////
 
 /* Represents one block of read data */
@@ -135,9 +167,9 @@ typedef struct RmBuffer {
     unsigned char *data;
 } RmBuffer;
 
-RmBuffer *rm_buffer_new(gsize buf_size);
+RmBuffer *rm_buffer_new(RmSemaphore *sem, gsize buf_size);
 
-void rm_buffer_free(RmBuffer *buf);
+void rm_buffer_free(RmSemaphore *sem, RmBuffer *buf);
 
 /**
  * @brief Convert a string like "md5" to a RmDigestType member.
@@ -185,7 +217,7 @@ void rm_digest_update(RmDigest *digest, const unsigned char *data, RmOff size);
  * @param digest a pointer to a RmDigest
  * @param buffer a RmBuffer of data.
  */
-void rm_digest_buffered_update(RmBuffer *buffer);
+void rm_digest_buffered_update(RmSemaphore *sem, RmBuffer *buffer);
 
 /**
  * @brief Convert the checksum to a hexstring (like `md5sum`)

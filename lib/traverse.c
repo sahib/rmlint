@@ -149,8 +149,25 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
         }
     }
 
+    bool path_needs_free = false;
+    if(is_symlink && cfg->follow_symlinks) {
+        char *new_path_buf = g_malloc0(PATH_MAX + 1);
+        if(readlink(path, new_path_buf, PATH_MAX) == -1) {
+            rm_log_perror("failed to follow symbolic link");
+            return;
+        }
+
+        path = new_path_buf;
+        is_symlink = false;
+        path_needs_free = true;
+    }
+
     RmFile *file =
         rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth);
+
+    if(path_needs_free) {
+        g_free(path);
+    }
 
     if(file != NULL) {
         file->is_symlink = is_symlink;
@@ -247,7 +264,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
         rm_log_debug_line("Treating files under %s as a single volume", rmpath->path);
     }
 
-    FTS *ftsp = fts_open((char *[2]){rmpath->path, NULL}, fts_flags, NULL);
+    FTS *ftsp = fts_open((const char *const[2]){rmpath->path, NULL}, fts_flags, NULL);
 
     if(ftsp == NULL) {
         rm_log_error_line("fts_open() == NULL");
@@ -393,7 +410,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                         symlink_message_delivered = TRUE;
                     }
                     next_is_symlink = true;
-                    fts_set(ftsp, p, FTS_FOLLOW); /* do not recurse */
+                    fts_set(ftsp, p, FTS_FOLLOW); /* do recurse */
                 }
                 break;
             case FTS_NSOK:    /* no rm_sys_stat(2) requested */
@@ -456,7 +473,7 @@ void rm_traverse_tree(RmSession *session) {
                      (RmMDSFunc)rm_traverse_directory,
                      trav_session,
                      0,
-                     session->cfg->threads_per_disk,
+                     cfg->threads_per_disk,
                      NULL);
 
     /* iterate through paths */
