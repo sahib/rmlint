@@ -371,15 +371,20 @@ RmHasher *rm_hasher_new(RmDigestType digest_type,
     RmHasher *self = g_slice_new0(RmHasher);
     self->digest_type = digest_type;
 
-    int max_buffers = num_threads * 32;
-    if(!use_buffered_read) {
-        /*  preadv() uses N_PREADV_BUFFERS in parallel.
-         *  Need at least this many for one operation.
-         *  */
-        max_buffers *= N_PREADV_BUFFERS;
+    if(digest_type != RM_DIGEST_PARANOID) {
+        int max_buffers = num_threads * 64;
+        if(!use_buffered_read) {
+            /*  preadv() uses N_PREADV_BUFFERS in parallel.
+             *  Need at least this many for one operation.
+             *  */
+            max_buffers *= N_PREADV_BUFFERS;
+        }
+
+        self->buf_sem = rm_semaphore_new(max_buffers);
+    } else {
+        self->buf_sem = NULL;
     }
 
-    self->buf_sem = rm_semaphore_new(max_buffers);
     self->use_buffered_read = use_buffered_read;
     self->buf_size = buf_size;
     self->cache_quota_bytes = cache_quota_bytes;
@@ -425,7 +430,10 @@ void rm_hasher_free(RmHasher *hasher, gboolean wait) {
     g_cond_clear(&hasher->cond);
     g_mutex_clear(&hasher->lock);
 
-    rm_semaphore_destroy(hasher->buf_sem);
+    if(hasher->buf_sem) {
+        rm_semaphore_destroy(hasher->buf_sem);
+    }
+
     g_slice_free(RmHasher, hasher);
 }
 

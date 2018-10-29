@@ -105,6 +105,8 @@ RmBuffer *rm_buffer_new(RmSemaphore *sem, gsize buf_size) {
      * This was discovered as part of this issue:
      *
      *  https://github.com/sahib/rmlint/issues/309
+     *
+     * The semaphore is not used in paranoia mode.
      */
     if(sem != NULL) {
         rm_semaphore_acquire(sem);
@@ -699,8 +701,12 @@ static RmParanoid *rm_digest_paranoid_new(void) {
     return paranoid;
 }
 
+static void rm_buffer_destroy_notify_func(gpointer data) {
+    rm_buffer_free(NULL, data);
+}
+
 static void rm_digest_paranoid_release_buffers(RmParanoid *paranoid) {
-    g_slist_free_full(paranoid->buffers, (GDestroyNotify)rm_buffer_free);
+    g_slist_free_full(paranoid->buffers, (GDestroyNotify)rm_buffer_destroy_notify_func);
     paranoid->buffers = NULL;
 }
 
