@@ -226,8 +226,8 @@ void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
     }
 
 
-    rm_log_warning_line(_("Old result `%s` already exists."), old_path);
-    rm_log_warning_line(_("Moving old file to `%s`. Use --no-backup to disable this."), new_path);
+    rm_log_debug_line(_("Old result `%s` already exists."), old_path);
+    rm_log_debug_line(_("Moving old file to `%s`. Use --no-backup to disable this."), new_path);
 
     if(rename(old_path, new_path) < 0) {
         rm_log_perror(_("failed to rename old result file"));
