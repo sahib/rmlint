@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.8.0 Maidenly Moose] -- Unreleased
+## [2.8.0 Maidenly Moose] -- 2018-10-30
 
 Mostly a bugfix release with smaller functional changes.
 
