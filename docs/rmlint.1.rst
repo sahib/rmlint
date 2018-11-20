@@ -648,7 +648,7 @@ FORMATTERS
     * ``remove``: Remove the file using ``rm -rf``. (``-r`` for duplicate dirs).
       This handler never fails.
     * ``usercmd``: Use the provided user defined command (``-c
-      sh:cmd=something``). Never fails.
+      sh:cmd=something``). This handler never fails.
 
     Default is ``remove``.
 
@@ -853,6 +853,10 @@ This is a collection of common usecases and other tricks:
 * Inject user-defined command into shell script output:
 
   ``$ rmlint -o sh -c sh:cmd='echo "original:" "$2" "is the same as" "$1"'``
+
+* Use ``shred`` to overwrite the contents of a file fully:
+
+  ``$ rmlint -c 'sh:cmd=shred -un 10 "$1"'``
 
 * Use *data* as master directory. Find **only** duplicates in *backup* that are
   also in *data*. Do not delete any files in *data*:

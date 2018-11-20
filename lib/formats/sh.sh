@@ -237,8 +237,12 @@ skip_reflink() {
 
 user_command() {
     print_progress_prefix
-    # You can define this function to do what you want:
-    %s
+
+    echo "${COL_YELLOW}Executing user command: ${COL_RESET}$1"
+    if [ -z "$DO_DRY_RUN" ]; then
+        # You can define this function to do what you want:
+        %s
+    fi
 }
 
 remove_cmd() {
