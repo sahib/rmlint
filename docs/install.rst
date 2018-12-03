@@ -47,12 +47,10 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ dnf copr enable sahib/rmlint
+    $ dnf copr enable eclipseo/rmlint
     $ dnf install rmlint
 
-  Those packages are built from master snapshots and might be outdated.
-
-.. _`Fedora Copr`: https://copr.fedoraproject.org/coprs/sahib/rmlint/
+.. _`Fedora Copr`: https://copr.fedorainfracloud.org/coprs/eclipseo/rmlint/
 
 * **ArchLinux:**
 
