@@ -23,7 +23,7 @@ It's main focus lies on finding duplicate files and directories.
 It is able to find the following types of lint:
 
 * Duplicate files and directories (and as a result unique files).
-* Nonstripped Binaries (Binaries with debug symbols; needs to be explicityl enabled).
+* Nonstripped Binaries (Binaries with debug symbols; needs to be explicitly enabled).
 * Broken symbolic links.
 * Empty files and directories (also nested empty directories).
 * Files with broken user or group id.
@@ -33,7 +33,7 @@ output (for example a shell script) to help you delete the files if you want
 to. Another design principle is that it should work well together with other
 tools like ``find``. Therefore we do not replicate features of other well know
 programs, as for example pattern matching and finding duplicate filenames.
-However we provide many convinience options for common use cases that are hard
+However we provide many convenience options for common use cases that are hard
 to build from scratch with standard tools.
 
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
@@ -53,7 +53,7 @@ This behaviour can be also overwritten if you know that a certain directory
 contains duplicates and another one originals. In this case you write the
 original directory after specifying a single ``//``  on the commandline.
 Everything that comes after is a preferred (or a "tagged") directory. If there
-are duplicates from a unpreferred and from a preffered directory, the preferred
+are duplicates from an unpreferred and from a preferred directory, the preferred
 one will always count as original. Special options can also be used to always
 keep files in preferred directories (``-k``) and to only find duplicates that
 are present in both given directories (``-m``).
@@ -301,7 +301,7 @@ Traversal Options
     2 Megabyte.
 
     It's also possible to specify only one size. In this case the size is
-    interpreted as *"bigger or equal"*. If you want to to filter for files
+    interpreted as *"bigger or equal"*. If you want to filter for files
     *up to this size* you can add a ``-`` in front (``-s -1M`` == ``-s 0-1M``).
 
     **Edge case:** The default excludes empty files from the duplicate search.
@@ -314,7 +314,7 @@ Traversal Options
 :``-d --max-depth=depth`` (**default\:** *INF*):
 
     Only recurse up to this depth. A depth of 1 would disable recursion and is
-    equivalent to a directory listing. A depth of 2 would also consider also all
+    equivalent to a directory listing. A depth of 2 would also consider all
     children directories and so on.
 
 :``-l --hardlinked`` (**default**) / ``--keep-hardlinked`` / ``-L --no-hardlinked``:
@@ -498,7 +498,7 @@ Caching
     duplicates from previous runs are printed. Therefore specifying new paths
     will simply have no effect. As a security measure, ``--replay`` will ignore
     files whose mtime changed in the meantime (i.e. mtime in the ``.json`` file
-    differes from the current one). These files might have been modified and
+    differs from the current one). These files might have been modified and
     are silently ignored.
 
     By design, some options will not have any effect. Those are:
@@ -557,7 +557,7 @@ Rarely used, miscellaneous options
     Apply a maximum number of memory to use for hashing and **--paranoid**.
     The total number of memory might still exceed this limit though, especially
     when setting it very low. In general ``rmlint`` will however consume about this
-    amont of memory plus a more or less constant extra amount that depends on the
+    amount of memory plus a more or less constant extra amount that depends on the
     data you are scanning.
 
     The ``size``-description has the same format as for **--size**, therefore you
@@ -633,7 +633,7 @@ FORMATTERS
     * ``clone``: For reflink-capable filesystems only. Try to clone both files with the
       FIDEDUPERANGE ``ioctl(3p)`` (or BTRFS_IOC_FILE_EXTENT_SAME on older kernels).
       This will free up duplicate extents. Needs at least kernel 4.2.
-      Use this option when you only have read-only acess to a btrfs filesystem but still
+      Use this option when you only have read-only access to a btrfs filesystem but still
       want to deduplicate it. This is usually the case for snapshots.
     * ``reflink``: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
@@ -675,7 +675,7 @@ FORMATTERS
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
-  make it read from there. This formatter is mostly intented for complex use-cases
+  make it read from there. This formatter is mostly intended for complex use-cases
   where the lint needs special handling that you define in the python script.
   Therefore the python script can be modified to do things standard ``rmlint``
   is not able to do easily.
@@ -794,7 +794,7 @@ OTHER STAND-ALONE COMMANDS
 EXAMPLES
 ========
 
-This is a collection of common usecases and other tricks:
+This is a collection of common use cases and other tricks:
 
 * Check the current working directory for duplicates.
 

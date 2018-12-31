@@ -73,7 +73,7 @@ to delete this file, a green checkmark will make it keep it.
 The user can edit those to his liking. 
 
 Additionally, the view can be filtered after a search query. In the simplest
-case this filters by a path element, in more complex usecases you can also
+case this filters by a path element, in more complex use cases you can also
 filter by size, mtime and twincount. The latter can be done by adding
 ``size:10K`` or ``size:1M-2M,3M-4M`` to the query (similar with ``mtime:`` and
 ``count:``)
