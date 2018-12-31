@@ -354,7 +354,7 @@ Here's the list of currently available formatters and their config options:
     python script will find it there. The default python script produced by rmlint does
     pretty much the same thing as the shell script described above (although not reflinking
     or hardlinking or symlinking at the moment).  You can customise the python script for
-    just about any usecase (Python is a simple and extremely powerful programming language).
+    just about any use case (Python is a simple and extremely powerful programming language).
 
     **Example:**
 
@@ -465,7 +465,7 @@ a stronger hash function or to do a byte-by-byte comparison. While this might so
 slow it's often only a few seconds slower than the default behaviour.
 
 There is a bunch of other hash functions you can lookup in the manpage.
-We recommend never to use anythinh worse than the default.
+We recommend never to use anything worse than the default.
 
 .. note::
 
