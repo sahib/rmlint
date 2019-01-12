@@ -94,6 +94,7 @@ Metro128State *metrohash128_copy(Metro128State *state) {
 
 #include <nmmintrin.h>
 
+__attribute__((target("sse4.2")))
 void metrohash128crc_1_update(Metro128State *state, const uint8_t *key, size_t len) {
     if(!state->use_sse) {
         metrohash128_1_update(state, key, len);
@@ -148,6 +149,7 @@ void metrohash128crc_2_update(Metro128State *state, const uint8_t *key, size_t l
     }
 }
 
+__attribute__((target("sse4.2")))
 void metrohash128crc_1_steal(Metro128State *state, uint8_t *out) {
     if(!state->use_sse) {
         metrohash128_1_steal(state, out);
@@ -209,6 +211,7 @@ void metrohash128crc_1_steal(Metro128State *state, uint8_t *out) {
     memcpy(out, v, 16);
 }
 
+__attribute__((target("sse4.2")))
 void metrohash128crc_2_steal(Metro128State *state, uint8_t *out) {
     if(!state->use_sse) {
         metrohash128_2_steal(state, out);
