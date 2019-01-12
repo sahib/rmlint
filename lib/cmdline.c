@@ -1493,6 +1493,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(cfg->honour_dir_layout && !cfg->merge_directories) {
         rm_log_warning_line(_("--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
+        rm_log_warning_line(_("Note that not having duplicate directories enabled as lint type (e.g via -T df)"));
+        rm_log_warning_line(_("will also disable --merge-directories and trigger this warning."));
     }
 
     if(cfg->progress_enabled) {
