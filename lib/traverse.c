@@ -117,12 +117,12 @@ static char *rm_traverse_rel_realpath(char *link_path, char *pointing_to) {
 
     // Most links will already be absolute.
     if(g_path_is_absolute(pointing_to))  {
-        return g_canonicalize_filename(pointing_to, NULL);
+        return realpath(pointing_to, NULL);
     }
 
     char *link_dir_path = g_path_get_dirname(link_path);
     char *full_path = g_build_path(G_DIR_SEPARATOR_S, link_dir_path, pointing_to, NULL);
-    char *clean_path = g_canonicalize_filename(full_path, NULL);
+    char *clean_path = realpath(full_path, NULL);
 
     g_free(link_dir_path);
     g_free(full_path);
