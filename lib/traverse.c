@@ -103,6 +103,32 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 // ACTUAL WORK HERE //
 //////////////////////
 
+// Symbolic links may contain relative paths, that are relative to the symbolic
+// link location.  When using readlink(), those relative paths are returned but
+// may not make sense depending from where rmlint was run. This function takes
+// the original link_path and the (potentially relatiev) path it is pointing to
+// and constructs an absolute path out of it.
+//
+// See also: https://github.com/sahib/rmlint/issues/333
+static char *rm_traverse_rel_realpath(char *link_path, char *pointing_to) {
+    if(pointing_to == NULL) {
+        return NULL;
+    }
+
+    // Most links will already be absolute.
+    if(g_path_is_absolute(pointing_to))  {
+        return g_canonicalize_filename(pointing_to, NULL);
+    }
+
+    char *link_dir_path = g_path_get_dirname(link_path);
+    char *full_path = g_build_path(G_DIR_SEPARATOR_S, link_dir_path, pointing_to, NULL);
+    char *clean_path = g_canonicalize_filename(full_path, NULL);
+
+    g_free(link_dir_path);
+    g_free(full_path);
+    return clean_path;
+}
+
 static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *path,
                              bool is_prefd, unsigned long path_index,
                              RmLintType file_type, bool is_symlink, bool is_hidden,
@@ -153,11 +179,15 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
     if(is_symlink && cfg->follow_symlinks) {
         char *new_path_buf = g_malloc0(PATH_MAX + 1);
         if(readlink(path, new_path_buf, PATH_MAX) == -1) {
-            rm_log_perror("failed to follow symbolic link");
+            rm_log_warning_line("failed to follow symbolic link of %s: %s", path, g_strerror(errno));
+            g_free(new_path_buf);
             return;
         }
 
-        path = new_path_buf;
+        char *resolved_path = rm_traverse_rel_realpath(path, new_path_buf);
+        g_free(new_path_buf);
+
+        path = resolved_path;
         is_symlink = false;
         path_needs_free = true;
     }

@@ -148,13 +148,22 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
 
 static ino_t rm_path_parent_inode(RmFile *file) {
     char parent_path[PATH_MAX];
-    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie, file->folder->parent,
-                       parent_path, PATH_MAX);
+    rm_trie_build_path(
+        (RmTrie *)&file->session->cfg->file_trie,
+        file->folder->parent,
+        parent_path,
+        PATH_MAX
+    );
+
     RmStat stat_buf;
     int retval = rm_sys_stat(parent_path, &stat_buf);
     if(retval == -1) {
-        rm_log_error_line("Failed to get parent path: stat failed: %s",
-                          g_strerror(errno));
+        RM_DEFINE_PATH(file);
+        rm_log_error_line(
+            "Failed to get parent path of %s: stat failed: %s",
+            file_path,
+            g_strerror(errno)
+        );
         return 0;
     }
 
