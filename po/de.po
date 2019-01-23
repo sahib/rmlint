@@ -897,7 +897,7 @@ msgstr "DEBUG"
 
 #: lib/hash-utility.c
 msgid "bytes to hash at a time [4096]"
-msgstr ""
+msgstr "Bytes die parallel gehashed werden [4096]"
 
 #: lib/hash-utility.c
 #, fuzzy, c-format
@@ -928,12 +928,12 @@ msgstr ""
 #: lib/formats.c
 #, c-format
 msgid "Old result `%s` already exists."
-msgstr ""
+msgstr "Alte Resultatdatei `%s` existiert bereits."
 
 #: lib/formats.c
 #, c-format
 msgid "Moving old file to `%s`. Use --no-backup to disable this."
-msgstr ""
+msgstr "Verschiebe die alte Datei zu `%s`. Nutze --no-backup um das zu verhindern."
 
 #: lib/formats.c
 #, fuzzy
@@ -948,7 +948,7 @@ msgstr "Benutzung: rmlint --dedupe QUELLE ZIEL\n"
 #: lib/session.c
 #, c-format
 msgid "%s returned error: (%d)"
-msgstr ""
+msgstr "%s gab einen Fehler zurück (%d)"
 
 #: lib/session.c
 #, fuzzy
@@ -957,7 +957,7 @@ msgstr "Dateien sind nicht gleich - nichts geklont"
 
 #: lib/session.c
 msgid "Only first %"
-msgstr ""
+msgstr "Nur die ersten %"
 
 #: lib/session.c
 #, fuzzy
@@ -976,15 +976,15 @@ msgstr "Maximal zwei -p flags oder zwei -P Flag erlaubt"
 
 #: lib/cmdline.c
 msgid "Keep hardlink that are linked to any original"
-msgstr ""
+msgstr "Behalte Hardlinks die zu einem Original gelinkt sind"
 
 #: lib/cmdline.c
 msgid "Read null-separated file list from stdin"
-msgstr ""
+msgstr "Lese null-separierte Dateiliste vom Standardinput"
 
 #: lib/cmdline.c
 msgid "Do not create backups of previous result files"
-msgstr ""
+msgstr "Erstelle keine Backups alter Resultdateien"
 
 #: lib/cmdline.c
 #, fuzzy
@@ -993,40 +993,42 @@ msgstr "Klone Extents von Quell zu Zieldatei falls sie übereinstimmen"
 
 #: lib/cmdline.c
 msgid "(--dedupe option) even dedupe read-only snapshots (needs root)"
-msgstr ""
+msgstr "(--dedupe Option) Dedupliziere selbst read-only snapshots (braucht Rootzugriff)"
 
 #: lib/cmdline.c
 msgid "Test if two files are reflinks (share same data extents)"
-msgstr ""
+msgstr "Prüfe ob zwei Dateien reflinks sind (selbe Datei-Extents)"
 
 #: lib/cmdline.c
 msgid ""
 "-k and -M should not be specified at the same time (see also: https://github."
 "com/sahib/rmlint/issues/244)"
-msgstr ""
+msgstr "-k und -M sollten nicht gleichzeitig benutzt werden (Siehe auch: https://github."
+"com/sahib/rmlint/issues/244)"
 
 #: lib/cmdline.c
 msgid ""
 "-K and -m should not be specified at the same time (see also: https://github."
 "com/sahib/rmlint/issues/244)"
-msgstr ""
+msgstr "-K und -m sollten nicht gleichzeitig genutzt werden (siehe auch: https://github."
+"com/sahib/rmlint/issues/244)"
 
 #: lib/cmdline.c
 msgid "Failed to complete setup for merging directories"
-msgstr ""
+msgstr "Schlug beim Setup des Verzeichnismergers fehl"
 
 #: lib/treemerge.c lib/cmdline.c
 msgid "Failed to allocate memory"
-msgstr ""
+msgstr "Konnte kein Speicher allokieren"
 
 #: lib/cmdline.c
 msgid "--replay (-Y) is incompatible with --dedupe or --is-reflink"
-msgstr ""
+msgstr "--replay (-Y) ist nicht kompatibel mit --dedupe oder --is-reflink"
 
 #: lib/cmdline.c
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
-msgstr ""
+msgstr "Keine stamp Datei hier: `%s`. Es wird eine nach diesem Lauf erstellt."
 
 #: lib/cmdline.c
 #, c-format

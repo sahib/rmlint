@@ -159,38 +159,43 @@ original_check() {
     fi
 }
 
-cp_hardlink() {
-    print_progress_prefix
-    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
-    if original_check "$1" "$2"; then
-        if [ -z "$DO_DRY_RUN" ]; then
-            # If it's a directory cp will create a new copy into
-            # the destination path. This would lead to more wasted space...
-            if [ -d "$1" ]; then
-                rm -rf "$1"
-            fi
-            cp --remove-destination --archive --link "$2" "$1"
-        fi
-    fi
-}
-
 cp_symlink() {
     print_progress_prefix
     echo "${COL_YELLOW}Symlinking to original: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
-            touch -mr "$1" "$0"
-            if [ -d "$1" ]; then
-                rm -rf "$1"
-            fi
+            # replace duplicate with symlink
+            rm -rf "$1"
+            ln -s "$2" "$1"
+            # make the symlink's mtime the same as the original
+            touch -mr "$2" -h "$1"
+        fi
+    fi
+}
 
-            cp --remove-destination --archive --symbolic-link "$2" "$1"
-            touch -mr "$0" "$1"
+cp_hardlink() {
+    if [ -d "$1" ]; then
+        # for duplicate dir's, can't hardlink so use symlink
+        cp_symlink "$@"
+        return $?
+    fi
+    print_progress_prefix
+    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
+    if original_check "$1" "$2"; then
+        if [ -z "$DO_DRY_RUN" ]; then
+            # replace duplicate with hardlink
+            rm -rf "$1"
+            ln "$2" "$1"
         fi
     fi
 }
 
 cp_reflink() {
+    if [ -d "$1" ]; then
+        # for duplicate dir's, can't clone so use symlink
+        cp_symlink "$@"
+        return $?
+    fi
     print_progress_prefix
     # reflink $1 to $2's data, preserving $1's  mtime
     echo "${COL_YELLOW}Reflinking to original: ${COL_RESET}$1"
@@ -232,8 +237,12 @@ skip_reflink() {
 
 user_command() {
     print_progress_prefix
-    # You can define this function to do what you want:
-    %s
+
+    echo "${COL_YELLOW}Executing user command: ${COL_RESET}$1"
+    if [ -z "$DO_DRY_RUN" ]; then
+        # You can define this function to do what you want:
+        %s
+    fi
 }
 
 remove_cmd() {

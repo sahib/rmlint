@@ -470,7 +470,7 @@ else:
 
 # If the output is not a terminal, remove the COLORS
 if not sys.stdout.isatty():
-    for key, value in COLORS.iteritems():
+    for key, value in COLORS.items():
         COLORS[key] = ''
 
 # Configure the actual colors to our liking:
@@ -663,8 +663,6 @@ else:
 
 # check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
-if conf.env['HAVE_MM_CRC32_U64']:
-    conf.env.Append(CCFLAGS=['-msse4.2'])
 
 if 'clang' in os.path.basename(conf.env['CC']):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings

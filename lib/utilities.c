@@ -145,7 +145,7 @@ bool rm_util_path_is_hidden(const char *path) {
 int rm_util_path_depth(const char *path) {
     int depth = 0;
 
-    while(path) {
+    while(path && *path) {
         /* Skip trailing slashes */
         if(*path == G_DIR_SEPARATOR && path[1] != 0) {
             depth++;

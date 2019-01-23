@@ -175,9 +175,9 @@ def _create_rmlint_process(
 
         min_size, max_size = cfg.get_value('traverse-size-limits')
         extra_options += [
-            '--size', '{a}M-{b}M'.format(
-                a=min_size // (1024 ** 2),
-                b=max_size // (1024 ** 2)
+            '--size', '{a}-{b}'.format(
+                a=min_size,
+                b=max_size
             )
         ]
 
