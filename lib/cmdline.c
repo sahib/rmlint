@@ -1731,5 +1731,10 @@ int rm_cmd_main(RmSession *session) {
         return session->equal_exit_code;
     }
 
+	if(exit_state == EXIT_SUCCESS && rm_session_was_aborted()) {
+		exit_state = EXIT_FAILURE;
+	}
+
+
     return exit_state;
 }
