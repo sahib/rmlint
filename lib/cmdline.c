@@ -358,6 +358,7 @@ static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
                                    _UNUSED GError **error) {
     session->cfg->write_cksum_to_xattr = true;
     session->cfg->read_cksum_from_xattr= true;
+    session->cfg->clear_xattr_fields = false;
     session->cfg->write_unfinished = true;
     return true;
 }
@@ -1274,9 +1275,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     const int DISABLE = G_OPTION_FLAG_REVERSE, EMPTY = G_OPTION_FLAG_NO_ARG,
               HIDDEN = G_OPTION_FLAG_HIDDEN, OPTIONAL = G_OPTION_FLAG_OPTIONAL_ARG;
 
-    /* Free/Used Options:
-       Used: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ|
-       Free:                  jJ                                |
+    /* Free short options: AJ
+     * (beside special characters and numbers)
     */
 
     /* clang-format off */
@@ -1293,7 +1293,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"newer-than-stamp" , 'n' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp_file) , _("Newer than stamp file")                , "PATH"}                ,
         {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
         {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
-        {"xattr"            , 'C' , 0        , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                    ,
+        {"xattr"            , 'C' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                    ,
 
         /* Non-trivial switches */
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,

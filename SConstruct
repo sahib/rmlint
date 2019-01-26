@@ -304,6 +304,28 @@ def check_xattr(context):
     return rc
 
 
+
+def check_lxattr(context):
+    rc = 1
+
+    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr']:
+        if tests.CheckFunc(
+            context, func,
+            header=
+                '#include <sys/types.h>'
+                '#include <sys/xattr.h>'
+        ):
+            rc = 0
+            print("DO NOT HAVE", func)
+            break
+
+    conf.env['HAVE_LXATTR'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
 def check_sha512(context):
     rc = 1
     if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>\n'):
@@ -562,6 +584,7 @@ conf = Configure(env, custom_tests={
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
     'check_xattr': check_xattr,
+    'check_lxattr': check_lxattr,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_posix_fadvise': check_posix_fadvise,
@@ -695,6 +718,7 @@ conf.check_sys_block()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
+conf.check_lxattr()
 conf.check_bigfiles()
 conf.check_sha512()
 conf.check_gettext()

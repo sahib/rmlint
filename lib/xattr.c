@@ -49,31 +49,63 @@
 
 #if RM_IS_APPLE
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size) {
-    return getxattr(path, name, value, size, 0, 0);
+ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size, bool follow_link) {
+    int flags = 0;
+    if(follow_link) {
+        flags |= XATTR_NOFOLLOW;
+    }
+
+    return getxattr(path, name, value, size, 0, flags);
 }
 
 ssize_t rm_sys_setxattr(
-    const char *path, const char *name, const void *value, size_t size, int flags) {
+    const char *path, const char *name, const void *value, size_t size, int flags, bool follow_link) {
+    if(follow_link) {
+        flags |= XATTR_NOFOLLOW;
+    }
+
     return setxattr(path, name, value, size, 0, flags);
 }
 
-int rm_sys_removexattr(const char *path, const char *name) {
-    return removexattr(path, name, 0);
+int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+    int flags = 0;
+    if(follow_link) {
+        flags |= XATTR_NOFOLLOW;
+    }
+
+    return removexattr(path, name, flags);
 }
 
 #else
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size) {
+ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size, bool follow_link) {
+    if(follow_link) {
+    #if HAVE_LXATTR
+        return lgetxattr(path, name, value, size);
+    #endif
+    }
+
     return getxattr(path, name, value, size);
 }
 
 ssize_t rm_sys_setxattr(
-    const char *path, const char *name, const void *value, size_t size, int flags) {
+    const char *path, const char *name, const void *value, size_t size, int flags, bool follow_link) {
+    if(follow_link) {
+    #if HAVE_LXATTR
+        return lsetxattr(path, name, value, size, flags);
+    #endif
+    }
+
     return setxattr(path, name, value, size, flags);
 }
 
-int rm_sys_removexattr(const char *path, const char *name) {
+int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+    if(follow_link) {
+    #if HAVE_LXATTR
+        return lremovexattr(path, name);
+    #endif
+    }
+
     return removexattr(path, name);
 }
 
@@ -125,27 +157,29 @@ static int rm_xattr_is_fail(const char *name, char *path, int rc) {
 static int rm_xattr_set(RmFile *file,
                         const char *key,
                         const char *value,
-                        size_t value_size) {
+                        size_t value_size,
+                        bool follow_link) {
     RM_DEFINE_PATH(file);
     return rm_xattr_is_fail("setxattr", file_path,
-                            rm_sys_setxattr(file_path, key, value, value_size, 0));
+                            rm_sys_setxattr(file_path, key, value, value_size, 0, follow_link));
 }
 
 static int rm_xattr_get(RmFile *file,
                         const char *key,
                         char *out_value,
-                        size_t value_size) {
+                        size_t value_size,
+                        bool follow_link) {
     RM_DEFINE_PATH(file);
 
     return rm_xattr_is_fail("getxattr", file_path,
-                            rm_sys_getxattr(file_path, key, out_value, value_size));
+                            rm_sys_getxattr(file_path, key, out_value, value_size, follow_link));
 }
 
-static int rm_xattr_del(RmFile *file, const char *key) {
+static int rm_xattr_del(RmFile *file, const char *key, bool follow_link) {
     RM_DEFINE_PATH(file);
     return rm_xattr_is_fail(
             "removexattr", file_path,
-            rm_sys_removexattr(file_path, key));
+            rm_sys_removexattr(file_path, key, follow_link));
 }
 
 #endif
@@ -169,13 +203,14 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
 
     int timestamp_bytes = 0;
 
+    bool follow = session->cfg->follow_symlinks;
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
-       rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str)) ||
+       rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str), follow) ||
        (timestamp_bytes = snprintf(
             timestamp, sizeof(timestamp), "%.9f", file->mtime)) == -1 ||
-       rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes)) {
+       rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes, follow)) {
         return errno;
     }
 #endif
@@ -194,24 +229,26 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
          cksum_hex_str[512] = {0};
 
-    memset(cksum_hex_str, '0', sizeof(cksum_hex_str));
+    memset(cksum_hex_str, 0, sizeof(cksum_hex_str));
     cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;
 
+    bool follow = session->cfg->follow_symlinks;
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
-       rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1) ||
+       rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1, follow) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
-       rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
+       rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1, follow)) {
         return FALSE;
     }
 
-    if(cksum_hex_str[0] == 0 || strcmp(cksum_hex_str, "")==0) {
+    if(cksum_hex_str[0] == 0 || strcmp(cksum_hex_str, "") == 0) {
         return FALSE;
     }
 
-    if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) < 0) {
+    if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) == 0) {
         /* Data is too old and not useful, autoclean it */
+        RM_DEFINE_PATH(file);
         rm_log_debug_line("Checksum too old for %s, %" G_GINT64_FORMAT " < %" G_GINT64_FORMAT,
-                          file->folder->basename,
+                          file_path,
                           g_ascii_strtoll(mtime_buf, NULL, 10),
                           (gint64)file->mtime);
         rm_xattr_clear_hash(file, session);
@@ -241,7 +278,7 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
             continue;
         }
 
-        if(rm_xattr_del(file, key)) {
+        if(rm_xattr_del(file, key, session->cfg->follow_symlinks)) {
             error = errno;
         }
     }
