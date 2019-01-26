@@ -491,6 +491,7 @@ gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offse
 
     if(bytes_read_out != NULL) {
         *bytes_read_out = bytes_read;
+
     }
 
     return success;
