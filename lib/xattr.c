@@ -109,13 +109,13 @@ static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
     return rm_digest_hexstring(file->digest, buf);
 }
 
-static int rm_xattr_is_fail(const char *name, int rc) {
+static int rm_xattr_is_fail(const char *name, char *path, int rc) {
     if(rc != -1) {
         return 0;
     }
 
     if(errno != ENOTSUP && errno != ENODATA) {
-        rm_log_perror(name);
+        rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
         return errno;
     }
 
@@ -127,7 +127,7 @@ static int rm_xattr_set(RmFile *file,
                         const char *value,
                         size_t value_size) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("setxattr",
+    return rm_xattr_is_fail("setxattr", file_path,
                             rm_sys_setxattr(file_path, key, value, value_size, 0));
 }
 
@@ -137,13 +137,15 @@ static int rm_xattr_get(RmFile *file,
                         size_t value_size) {
     RM_DEFINE_PATH(file);
 
-    return rm_xattr_is_fail("getxattr",
+    return rm_xattr_is_fail("getxattr", file_path,
                             rm_sys_getxattr(file_path, key, out_value, value_size));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("removexattr", rm_sys_removexattr(file_path, key));
+    return rm_xattr_is_fail(
+            "removexattr", file_path,
+            rm_sys_removexattr(file_path, key));
 }
 
 #endif
@@ -195,7 +197,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     memset(cksum_hex_str, '0', sizeof(cksum_hex_str));
     cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;
 
-    if(0 || rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
+    if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_get(file, mtime_key, mtime_buf, sizeof(mtime_buf) - 1)) {
