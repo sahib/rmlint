@@ -109,9 +109,8 @@ static void rm_fmt_prog(RmSession *session,
     char eff_total[64] = "NaN";
     char eff_dupes[64] = "NaN";
     if(session->shred_bytes_read != 0) {
-        gfloat efficiency = 100 * (0 + session->duplicate_bytes +
-                                   session->original_bytes + session->unique_bytes) /
-                            session->shred_bytes_read;
+        gfloat efficiency = 100 * (session->duplicate_bytes +
+
 
         snprintf(eff_total, sizeof(eff_total), "%.0f%%", efficiency);
         efficiency = 100 * (0 + session->duplicate_bytes + session->original_bytes) /

@@ -22,7 +22,7 @@ It's main focus lies on finding duplicate files and directories.
 
 It is able to find the following types of lint:
 
-* Duplicate files and directories (and as a result unique files).
+* Duplicate files and directories (and as a by-product unique files).
 * Nonstripped Binaries (Binaries with debug symbols; needs to be explicitly enabled).
 * Broken symbolic links.
 * Empty files and directories (also nested empty directories).
@@ -558,6 +558,8 @@ Caching
     re-running rmlint on a large dataset this can greatly speed up a re-run in
     some cases. Please refer to ``--xattr-read`` for an example.
 
+    If you want to output unique files, please look into the ``uniques`` output formatter.
+
 Rarely used, miscellaneous options
 ----------------------------------
 
@@ -689,12 +691,21 @@ FORMATTERS
     This is useful if you plan to parse the output line-by-line, e.g. while
     ``rmlint`` is sill running.
 
+  This formatter is extremely useful if you're in need of scripting more complex behaviour,
+  that is not directly possible with rmlint's built-in options. A very handy tool here is ``jq``.
+  Here is an example to output all original files directly from a ``rmlint`` run:
+
+  ``$ rmlint -o | json jq -r '.[1:-1][] | select(.is_original) | .path'``
+
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
   make it read from there. This formatter is mostly intended for complex use-cases
   where the lint needs special handling that you define in the python script.
   Therefore the python script can be modified to do things standard ``rmlint``
   is not able to do easily.
+
+* ``uniques``: Outputs all unique paths found during the run, one path per line.
+  This is often useful for scripting purposes.
 
 * ``stamp``:
 
@@ -884,8 +895,21 @@ This is a collection of common use cases and other tricks:
   ``$ rmlint --equal a b c && echo "Files are equal" || echo "Files are not equal"``
 
 * Test if two files are reflinks
-  ``rmlint --is-reflink a b && echo "Files are reflinks" || echo "Files are not reflinks"``.
 
+  ``$ rmlint --is-reflink a b && echo "Files are reflinks" || echo "Files are not reflinks"``.
+
+* Cache calculated checksums for next run. The checksums will be written to the extended file attributes:
+
+  ``$ rmlint --xattr``
+
+* Produce a list of unique files in a folder:
+
+  ``$ rmlint -o uniques``
+
+* Produce a list of files that are unique, including original files ("one of each"):
+
+  ``$ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files``
+  ``$ cat unique_files original_files``
 
 PROBLEMS
 ========

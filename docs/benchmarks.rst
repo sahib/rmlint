@@ -13,6 +13,12 @@ on ``rmlint``. You're of course free to interpret something different or re-run_
 the benchmarks on your own machine. The exact version of each program is given
 in the plots.
 
+.. warning::
+
+    This page is a little out of date. Help in updating it would be appreciated.
+    The performance characteristics of rmlint have improved overall, but
+    so might have other tools.
+
 It should be noted that it is very hard to compare these tools, since *each*
 tool investigated a slightly different amount of data and produces different
 results on the dataset below. This is partly due to the fact that some tools
@@ -95,7 +101,6 @@ case.
 .. raw:: html
    :file: _static/benchmarks/found_items.html
 
-|
 
 Surprisingly each tool found a different set of files. As stated above, direct
 comparison may not be possible here. For most tools except ``rdfind`` and
