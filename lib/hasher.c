@@ -216,7 +216,7 @@ static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             rm_log_error_line("Unexpected EOF in rm_hasher_buffered_read");
             break;
         } else if(bytes_read == 0) {
-            rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
+            rm_log_warning_line(_("Something went wrong reading %s; expected %li bytes, "
                                 "got %li; ignoring"),
                               path, (long int)bytes_to_read,
                               (long int)*bytes_actually_read);

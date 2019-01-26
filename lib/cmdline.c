@@ -352,6 +352,16 @@ static gboolean rm_cmd_parse_limit_sizes(_UNUSED const char *option_name,
     }
 }
 
+static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *_,
+                                   RmSession *session,
+                                   _UNUSED GError **error) {
+    session->cfg->write_cksum_to_xattr = true;
+    session->cfg->read_cksum_from_xattr= true;
+    session->cfg->write_unfinished = true;
+    return true;
+}
+
 static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [1] = G_LOG_LEVEL_ERROR,
                                                   [2] = G_LOG_LEVEL_WARNING,
@@ -1283,6 +1293,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"newer-than-stamp" , 'n' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp_file) , _("Newer than stamp file")                , "PATH"}                ,
         {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
         {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
+        {"xattr"            , 'C' , 0        , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                    ,
 
         /* Non-trivial switches */
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,

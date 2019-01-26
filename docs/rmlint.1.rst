@@ -514,23 +514,39 @@ Caching
     *NOTE:* In ``--replay`` mode, a new ``.json`` file will be written to
     ``rmlint.replay.json`` in order to avoid overwriting ``rmlint.json``.
 
+:``-C --xattr``:
+
+    Shortcut for ``--xattr-write``, ``--xattr-write``, ``--write-unfinished``.
+    This will write a checksum and a timestamp to the extended attributes of each
+    file that rmlint hashed. This speeds up subsequent runs on the same data set.
+    Please note that not all filesystems may support extended attributes and you
+    need write support to use this feature.
+
+    See the individual options below for more details and some examples.
+
 :``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
 
     Read or write cached checksums from the extended file attributes.
     This feature can be used to speed up consecutive runs.
 
     **CAUTION:** This could potentially lead to false positives if file contents are
-    somehow modified without changing the file mtime.
+    somehow modified without changing the file modification time. rmlint uses the mtime
+    to determine the modification timestamp if a checksum is outdated.
 
     **NOTE:** Many tools do not support extended file attributes properly,
     resulting in a loss of the information when copying the file or editing it.
-    Also, this is a linux specific feature that works not on all filesystems and
-    only if you have write permissions to the file.
+
+    **NOTE:** You can specify ``--xattr-write`` and ``--xattr-read`` at the same time.
+    This will read from existing checksums at the start of the run and update all hashed
+    files at the end.
 
     Usage example::
 
-        $ rmlint large_file_cluster/ -U --xattr-write   # first run.
-        $ rmlint large_file_cluster/ --xattr-read       # second run.
+        $ rmlint large_file_cluster/ -U --xattr-write   # first run should be slow.
+        $ rmlint large_file_cluster/ --xattr-read       # second run should be faster.
+
+        # Or do the same in just one run:
+        $ rmlint large_file_cluster/ --xattr
 
 :``-U --write-unfinished``:
 
