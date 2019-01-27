@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-10-04 18:46+0000\n"
+"POT-Creation-Date: 2019-01-21 21:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -343,12 +343,12 @@ msgstr "Unbekanntes fts_info flag %d für Datei %s"
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': fts_read schlug fehl bei Pfad %s"
 
-#: lib/cfg.c lib/hash-utility.c
+#: lib/hash-utility.c lib/path-funcs.h
 #, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
 
-#: lib/cfg.c
+#: lib/path-funcs.h
 #, fuzzy, c-format
 msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr "Kann Verzeichnis oder Datei \"%s\" nicht öffnen: %s"
@@ -535,7 +535,7 @@ msgid "This does not look like a number"
 msgstr "Das schaut nicht wie eine Zahl aus"
 
 #: lib/cmdline.c
-msgid "Negativ sizes are no good idea"
+msgid "A size must be non-negative"
 msgstr "Negative Größen sind keine gute Idee"
 
 #: lib/cmdline.c
@@ -1017,9 +1017,9 @@ msgstr "-K und -m sollten nicht gleichzeitig genutzt werden (siehe auch: https:/
 msgid "Failed to complete setup for merging directories"
 msgstr "Schlug beim Setup des Verzeichnismergers fehl"
 
-#: lib/treemerge.c
-msgid "Failed to allocate memory. Out of memory?"
-msgstr "Konnte kein Speicher allokieren. Kein Speicher mehr?"
+#: lib/treemerge.c lib/cmdline.c
+msgid "Failed to allocate memory"
+msgstr "Konnte kein Speicher allokieren"
 
 #: lib/cmdline.c
 msgid "--replay (-Y) is incompatible with --dedupe or --is-reflink"
@@ -1029,6 +1029,29 @@ msgstr "--replay (-Y) ist nicht kompatibel mit --dedupe oder --is-reflink"
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
 msgstr "Keine stamp Datei hier: `%s`. Es wird eine nach diesem Lauf erstellt."
+
+#: lib/cmdline.c
+#, c-format
+msgid "Failed to include this replay file: %s"
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Invalid path \"%s\""
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Could not get metadata for path \"%s\": %s"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Failed to read stdin"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Could not process path arguments"
+msgstr ""
 
 #~ msgid "%s%15"
 #~ msgstr "%s%15"

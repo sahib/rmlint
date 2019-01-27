@@ -22,29 +22,15 @@
 * Hosted on http://github.com/sahib/rmlint
 **/
 
-#ifndef RM_SETTINGS_H
-#define RM_SETTINGS_H
+#ifndef RM_CFG_H
+#define RM_CFG_H
 
-#include <stdio.h>
+#include <stdbool.h>    // bool
+#include <glib.h>       // gboolean, gdouble, gint, GSList, guint
 
-#include "checksum.h"
-#include "pathtricia.h"
-#include "utilities.h"
-
-/* Struct for paths passed to rmlint from command line (or stdin) */
-typedef struct RmPath {
-    /* the RealPath of the passed string */
-    char *path;
-
-    /* index number (command line order) */
-    guint idx;
-
-    /* whether path was tagged as preferred path */
-    bool is_prefd;
-
-    /* whether to treat all files under path as one filesystem */
-    bool treat_as_single_vol;
-} RmPath;
+#include "config.h"     // RmOff
+#include "pathtricia.h" // RmTrie
+#include "checksum.h"   // RmDigestType
 
 /* Storage struct for all options settable in cmdline. */
 typedef struct RmCfg {
@@ -87,7 +73,6 @@ typedef struct RmCfg {
     gboolean progress_enabled;
     gboolean list_mounts;
     gboolean replay;
-    gboolean read_stdin;
     gboolean read_stdin0;
     gboolean no_backup;
 
@@ -115,16 +100,13 @@ typedef struct RmCfg {
      *
      *   + To record  a  unique  index for each path supplied by the
      *     user; a path's index represents  the number of paths that
-     *     were already processed. This is always the case.
+     *     were  already  processed. This  is  the  case DURING  the
+     *     processing of user-input options (such as '--replay').
      *
-     *   + To provide  quick  access to the length of its associated
-     *     RmCfg::paths list. This is only the case when NOT running
-     *     in "--replay"  mode; when running in  "--replay" mode, it
-     *     just represents the total number  of paths that have been
-     *     supplied by  the user, i.e.,  the sums of the  lengths of
-     *     the associated lists  RmCfg::{paths,json_paths}, which is
-     *     not meant to be a useful  number to know, and is simply a
-     *     byproduct of calculating path indicies.
+     *   + To provide  quick access  to the length of its associated
+     *     RmCfg::paths list.  This is the case AFTER the processing
+     *     of user-input options (including during the processing of
+     *     non-option paths from the command line or stdin).
      */
     guint path_count;
 
@@ -185,20 +167,5 @@ typedef struct RmCfg {
     bool no_sse;
 
 } RmCfg;
-
-/**
- * @brief Reset RmCfg to default cfg and all other vars to 0.
- */
-void rm_cfg_set_default(RmCfg *cfg);
-
-/**
- * @brief check and add a path to cfg->paths.
- */
-guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
-
-/**
- * @brief free all data associated with cfg->paths.
- */
-void rm_cfg_free_paths(RmCfg *cfg);
 
 #endif /* end of include guard */

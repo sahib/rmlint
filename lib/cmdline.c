@@ -39,6 +39,7 @@
 #include <search.h>
 #include <sys/time.h>
 
+#include "cfg-funcs.h"
 #include "cmdline.h"
 #include "formats.h"
 #include "hash-utility.h"
@@ -49,6 +50,7 @@
 #include "traverse.h"
 #include "treemerge.h"
 #include "utilities.h"
+#include "path.h"
 
 /* define paranoia levels */
 static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
@@ -284,7 +286,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
         g_set_error(error, RM_ERROR_QUARK, 0, _("This does not look like a number"));
         return 0;
     } else if(decimal < 0) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Negativ sizes are no good idea"));
+        g_set_error(error, RM_ERROR_QUARK, 0, _("A size must be non-negative"));
         return 0;
     } else if(*format) {
         format = g_strstrip(format);
@@ -369,31 +371,6 @@ static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [3] = G_LOG_LEVEL_MESSAGE |
                                                         G_LOG_LEVEL_INFO,
                                                   [4] = G_LOG_LEVEL_DEBUG};
-static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
-                                         bool null_separated) {
-    char delim = null_separated ? 0 : '\n';
-
-    size_t buf_len = PATH_MAX;
-    char *path_buf = malloc(buf_len * sizeof(char));
-
-    bool all_paths_read = true;
-
-    int path_len;
-
-    /* Still read all paths on errors, so the user knows all paths that failed */
-    while((path_len = getdelim(&path_buf, &buf_len, delim, stdin)) >= 0) {
-        if(path_len > 0) {
-            /* replace returned delimiter with null */
-            if (path_buf[path_len - 1] == delim) {
-                path_buf[path_len - 1] = 0;
-            }
-            all_paths_read &= rm_cfg_add_path(session->cfg, is_prefd, path_buf);
-        }
-    }
-
-    free(path_buf);
-    return all_paths_read;
-}
 
 static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
                                      GError **error) {
@@ -1107,12 +1084,26 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
-                                    const gchar *json_path, RmSession *session,
-                                    _UNUSED GError **error) {
+                                    const gchar *path, RmSession *session,
+                                    GError **error) {
+    g_assert(session);
+    g_assert(session->cfg);
     session->cfg->replay = true;
     session->cfg->cache_file_structs = true;
-    rm_cfg_add_path(session->cfg, false, json_path);
-    return true;
+
+    if(rm_cfg_prepend_json(session->cfg, path)) {
+        return true;
+    }
+
+    g_assert(error);
+    g_assert(*error == NULL);
+
+    g_set_error(
+        error, RM_ERROR_QUARK, 0,
+        _("Failed to include this replay file: %s"), path
+    );
+
+    return false;
 }
 
 static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
@@ -1178,42 +1169,128 @@ static bool rm_cmd_set_cmdline(RmCfg *cfg, int argc, char **argv) {
     return true;
 }
 
-static bool rm_cmd_set_paths(RmSession *session, char **paths) {
-    bool is_prefd = false;
-    bool all_paths_valid = true;
-    bool stdin_paths_preferred = false;
+typedef struct RmCmdSetPathVars {
+    RmCfg *const cfg;
+    char **const paths;
+    unsigned int index;
+    bool is_prefd;
+    bool read_stdin;
+    bool stdin_paths_preferred;
+    const bool null_separated;
+    bool all_paths_valid;
+} RmCmdSetPathVars;
 
-    RmCfg *cfg = session->cfg;
+static INLINE
+void rm_cmd_set_paths_from_cmdline(
+    RmCmdSetPathVars *const v,
+    const bool replay
+) {
+    g_assert(v);
+    g_assert(v->paths);
 
-    /* Check the directory to be valid */
-    for(int i = 0; paths && paths[i]; ++i) {
-        if(strcmp(paths[i], "-") == 0) {
-            cfg->read_stdin = true;
-            /* remember whether to treat stdin paths as preferred paths */
-            stdin_paths_preferred = is_prefd;
-        } else if(strcmp(paths[i], "//") == 0) {
-            /* the '//' separator separates non-preferred paths from preferred */
-            is_prefd = !is_prefd;
+    for(char *path, **list = v->paths; (path = *list); ++list) {
+        if(/* path is "-" */ path[0] == '-' && path[1] == 0) {
+            v->read_stdin = true;
+            v->stdin_paths_preferred = v->is_prefd;
+        } else if(/* path is "//" */ path[0] == '/' && path[1] == '/' && path[2] == 0) {
+            v->is_prefd = !v->is_prefd;
         } else {
-            all_paths_valid &= rm_cfg_add_path(cfg, is_prefd, paths[i]);
+            v->all_paths_valid &= rm_cfg_prepend_path(
+                v->cfg, path, v->index++, replay, v->is_prefd
+            );
+        }
+        g_free(path);
+    }
+    g_free(v->paths);
+}
+
+static INLINE
+bool rm_cmd_set_paths_from_stdin(
+    RmCmdSetPathVars *const v,
+    const bool replay
+) {
+    g_assert(v);
+    g_assert(v->cfg);
+
+    RmCfg *const cfg = v->cfg;
+    const bool is_prefd = v->stdin_paths_preferred;
+
+    char delim = v->null_separated ? 0 : '\n';
+
+    size_t buf_len = PATH_MAX;
+    char *path_buf = malloc(buf_len);
+    if(!path_buf) {
+        rm_log_perror(_("Failed to allocate memory"));
+        return false;
+    }
+
+    int path_len;
+
+    /* Still read all paths on errors, so the user knows all paths that failed */
+    while((path_len = getdelim(&path_buf, &buf_len, delim, stdin)) >= 0) {
+        if(path_len > 0) {
+            /* replace returned delimiter with null */
+            if(path_buf[path_len - 1] == delim) {
+                path_buf[path_len - 1] = 0;
+            }
+            v->all_paths_valid &= rm_cfg_prepend_path(
+                cfg, path_buf, v->index++, replay, is_prefd
+            );
         }
     }
 
-    g_strfreev(paths);
-
-    if(cfg->read_stdin || cfg->read_stdin0) {
-        /* option '-' means read paths from stdin */
-        all_paths_valid &=
-            rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
+    if(ferror(stdin)) {
+        rm_log_perror(_("Failed to read stdin"))
+        return false;
     }
 
-    if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
+    free(path_buf);
+    return true;
+}
+
+#define PROCESS_PATHS(replay)                                           \
+    if(paths) {                                                         \
+        rm_cmd_set_paths_from_cmdline(&v, (replay));                    \
+    }                                                                   \
+    if(v.read_stdin) {                                                  \
+        if(!rm_cmd_set_paths_from_stdin(&v, (replay))) {                \
+            rm_log_error_line(_("Could not process path arguments"));   \
+            return false;                                               \
+        }                                                               \
+    }
+
+static INLINE
+bool rm_cmd_set_paths(RmCfg *const cfg, char **const paths) {
+    g_assert(cfg);
+
+    const bool replay = cfg->replay;
+    const bool read_stdin0 = cfg->read_stdin0;
+    RmCmdSetPathVars v = {
+        .cfg = cfg,
+        .paths = paths,
+        .index = cfg->path_count,
+        .read_stdin = read_stdin0,
+        .null_separated = read_stdin0,
+        .all_paths_valid = true
+    };
+
+    cfg->path_count = 0;
+
+    if(replay) {
+        PROCESS_PATHS(true);
+    } else {
+        PROCESS_PATHS(false);
+    }
+
+    if(cfg->path_count == 0 && v.all_paths_valid) {
         /* Still no path set? - use `pwd` */
-        rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
+        rm_cfg_prepend_path(
+            cfg, cfg->iwd, v.index, /* replay */ false, v.is_prefd
+        );
     }
 
     /* Only return success if everything is fine. */
-    return all_paths_valid;
+    return v.all_paths_valid;
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
@@ -1474,7 +1551,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto cleanup;
     }
 
-    if(!rm_cmd_set_paths(session, paths)) {
+    if(!rm_cmd_set_paths(cfg, paths)) {
         error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
         goto cleanup;
     }

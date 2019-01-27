@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.4.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-10-04 18:46+0000\n"
+"POT-Creation-Date: 2019-01-21 21:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -339,12 +339,12 @@ msgstr "Bandera fts_info %d desconocida para archivo %s"
 msgid "'%s': fts_read failed on %s"
 msgstr "'%s': fts_read falló en %s"
 
-#: lib/cfg.c lib/hash-utility.c
+#: lib/hash-utility.c lib/path-funcs.h
 #, c-format
 msgid "Can't open directory or file \"%s\": %s"
 msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
 
-#: lib/cfg.c
+#: lib/path-funcs.h
 #, fuzzy, c-format
 msgid "Can't get real path for directory or file \"%s\": %s"
 msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
@@ -525,7 +525,7 @@ msgid "This does not look like a number"
 msgstr "Estto no parece un número"
 
 #: lib/cmdline.c
-msgid "Negativ sizes are no good idea"
+msgid "A size must be non-negative"
 msgstr "Tamaños negativos no son una buena idea"
 
 #: lib/cmdline.c
@@ -992,8 +992,8 @@ msgstr ""
 msgid "Failed to complete setup for merging directories"
 msgstr ""
 
-#: lib/treemerge.c
-msgid "Failed to allocate memory. Out of memory?"
+#: lib/treemerge.c lib/cmdline.c
+msgid "Failed to allocate memory"
 msgstr ""
 
 #: lib/cmdline.c
@@ -1003,6 +1003,29 @@ msgstr ""
 #: lib/cmdline.c
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
+msgstr ""
+
+#: lib/cmdline.c
+#, c-format
+msgid "Failed to include this replay file: %s"
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Invalid path \"%s\""
+msgstr ""
+
+#: lib/path-funcs.h
+#, c-format
+msgid "Could not get metadata for path \"%s\": %s"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Failed to read stdin"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Could not process path arguments"
 msgstr ""
 
 #~ msgid "caching is not supported due to missing json-glib library."

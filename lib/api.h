@@ -27,6 +27,7 @@
 #include <glib.h>
 
 #include "cfg.h"
+#include "cfg-funcs.h"
 #include "cmdline.h"
 #include "config.h"
 #include "session.h"

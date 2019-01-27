@@ -119,7 +119,7 @@ int rm_hasher_main(int argc, const char **argv) {
     /* Digest type */
     tag.digest_type = RM_DEFAULT_DIGEST;
     gint threads = 8;
-    gint64 buffer_mbytes = 256;
+    guint64 buffer_mbytes = 256;
     guint64 increment = 4096;
 
     ////////////// Option Parsing ///////////////
@@ -213,7 +213,7 @@ int rm_hasher_main(int argc, const char **argv) {
                                      threads,
                                      FALSE,
                                      increment,
-                                     1024 * 1024 * buffer_mbytes,
+                                     1024L * 1024 * buffer_mbytes,
                                      (RmHasherCallback)rm_hasher_callback,
                                      &tag);
 

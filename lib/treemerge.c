@@ -82,6 +82,7 @@
 #include "preprocess.h"
 #include "shredder.h"
 #include "treemerge.h"
+#include "path.h"
 
 #include "fts/fts.h"
 
@@ -188,7 +189,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
 
     const char **const path_vec = malloc(sizeof(*path_vec) * (path_count + 1));
     if(!path_vec) {
-        rm_log_error(_("Failed to allocate memory. Out of memory?"));
+        rm_log_perror(_("Failed to allocate memory"));
         return false;
     }
 
