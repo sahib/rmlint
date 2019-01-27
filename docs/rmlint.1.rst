@@ -529,9 +529,13 @@ Caching
     Read or write cached checksums from the extended file attributes.
     This feature can be used to speed up consecutive runs.
 
-    **CAUTION:** This could potentially lead to false positives if file contents are
-    somehow modified without changing the file modification time. rmlint uses the mtime
-    to determine the modification timestamp if a checksum is outdated.
+    **CAUTION:** This could potentially lead to false positives if file
+    contents are somehow modified without changing the file modification time.
+    rmlint uses the mtime to determine the modification timestamp if a checksum
+    is outdated. This is not a problem if you use the clone or reflink
+    operation on a filesystem like btrfs. There an outdated checksum entry
+    would simply lead to some duplicate work done in the kernel but would do no
+    harm otherwise.
 
     **NOTE:** Many tools do not support extended file attributes properly,
     resulting in a loss of the information when copying the file or editing it.
