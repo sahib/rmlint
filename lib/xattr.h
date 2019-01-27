@@ -63,17 +63,6 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session);
 int rm_xattr_clear_hash(RmFile *file, RmSession *session);
 
 /**
- * @brief Result of rm_xattr_is_deduplicated
- */
-typedef struct RmDedupResult {
-	const char *path;
-	char *key;
-	char *val;
-	bool is_deduplicated;
-	bool follow_symlinks;
-} RmDedupResult;
-
-/**
  * @brief Check if `path` was already deduplicated.
  *
  * @param path Path to check.

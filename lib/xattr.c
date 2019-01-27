@@ -392,7 +392,7 @@ static void rm_xattr_change_subkey(char *key, char *sub_key) {
 }
 
 bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
-	g_assert(path);
+    g_assert(path);
 
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
@@ -441,7 +441,7 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
 }
 
 int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
-	g_assert(path);
+    g_assert(path);
 
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
@@ -472,7 +472,7 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
         }
 
         rm_xattr_change_subkey(key, "dedup");
-		result = rm_sys_setxattr(path, key, cksum, strlen(cksum), 0, follow_symlinks);
+        result = rm_sys_setxattr(path, key, cksum, strlen(cksum), 0, follow_symlinks);
     }
 
     g_hash_table_destroy(map);

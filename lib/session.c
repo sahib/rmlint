@@ -218,23 +218,23 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     RmPath *source = cfg->paths->next->data;
     rm_log_debug_line("Cloning %s -> %s", source->path, dest->path);
 
-	if(cfg->dedupe_check_xattr) {
-		// Check if we actually need to deduplicate.
-		// This utility will write a value to the extended attributes
-		// of the file so we know that we do not need to do it again
-		// next time. This is supposed to avoid disk thrashing.
-		// (See also: https://github.com/sahib/rmlint/issues/349)
-		if(rm_xattr_is_deduplicated(dest->path, cfg->follow_symlinks)) {
-			rm_log_debug_line("Already deduplicated according to xattr!");
-			return EXIT_SUCCESS;
-		}
-	}
+    if(cfg->dedupe_check_xattr) {
+        // Check if we actually need to deduplicate.
+        // This utility will write a value to the extended attributes
+        // of the file so we know that we do not need to do it again
+        // next time. This is supposed to avoid disk thrashing.
+        // (See also: https://github.com/sahib/rmlint/issues/349)
+        if(rm_xattr_is_deduplicated(dest->path, cfg->follow_symlinks)) {
+            rm_log_debug_line("Already deduplicated according to xattr!");
+            return EXIT_SUCCESS;
+        }
+    }
 
-	// Also use --is-reflink on both files before doing extra work:
+    // Also use --is-reflink on both files before doing extra work:
     if(rm_util_link_type(source->path, dest->path) == RM_LINK_REFLINK) {
-		rm_log_debug_line("Already an exact reflink!");
-		return EXIT_SUCCESS;
-	}
+        rm_log_debug_line("Already an exact reflink!");
+        return EXIT_SUCCESS;
+    }
 
     int source_fd = rm_sys_open(source->path, O_RDONLY);
     if(source_fd < 0) {
@@ -341,9 +341,9 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     rm_sys_close(dedupe.info._DEST_FD);
 
     if(bytes_deduped == source_stat.st_size) {
-		if(cfg->dedupe_check_xattr && !cfg->dedupe_readonly) {
-			rm_xattr_mark_deduplicated(dest->path, cfg->follow_symlinks);
-		}
+        if(cfg->dedupe_check_xattr && !cfg->dedupe_readonly) {
+            rm_xattr_mark_deduplicated(dest->path, cfg->follow_symlinks);
+        }
 
         return EXIT_SUCCESS;
     }
