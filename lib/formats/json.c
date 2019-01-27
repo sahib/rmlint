@@ -259,7 +259,9 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
-            return;
+            if(!file->digest || !session->cfg->write_unfinished) {
+                return;
+            }
         }
     }
 

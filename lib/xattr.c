@@ -313,7 +313,7 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
     const size_t buf_size = 4096;
     const size_t val_size = 1024;
-    const char prefix[] = "user.rmlint.";
+    const char prefix[13] = "user.rmlint.";
 
     char buf[buf_size];
     memset(buf, 0, buf_size);
@@ -347,7 +347,7 @@ GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
             break;
         }
 
-        if(strncmp(curr, prefix, MIN(key_len, sizeof(prefix - 1))) != 0) {
+        if(strncmp(curr, prefix, MIN(key_len, sizeof(prefix) -1)) != 0) {
             // Skip this key and save some memory. Not one of ours.
             curr = next + 1;
             continue;

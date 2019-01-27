@@ -316,7 +316,6 @@ def check_lxattr(context):
                 '#include <sys/xattr.h>'
         ):
             rc = 0
-            print("DO NOT HAVE", func)
             break
 
     conf.env['HAVE_LXATTR'] = rc
