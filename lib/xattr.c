@@ -51,7 +51,7 @@
 
 ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size, bool follow_link) {
     int flags = 0;
-    if(follow_link) {
+    if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
     }
 
@@ -60,7 +60,7 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
 
 ssize_t rm_sys_setxattr(
     const char *path, const char *name, const void *value, size_t size, int flags, bool follow_link) {
-    if(follow_link) {
+    if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
     }
 
@@ -69,17 +69,26 @@ ssize_t rm_sys_setxattr(
 
 int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     int flags = 0;
-    if(follow_link) {
+    if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
     }
 
     return removexattr(path, name, flags);
 }
 
+int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
+    int flags = 0;
+    if(!follow_link) {
+        flags |= XATTR_NOFOLLOW;
+    }
+
+    return listxattr(path, out, out_size, flags);
+}
+
 #else
 
 ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size, bool follow_link) {
-    if(follow_link) {
+    if(!follow_link) {
     #if HAVE_LXATTR
         return lgetxattr(path, name, value, size);
     #endif
@@ -90,7 +99,7 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
 
 ssize_t rm_sys_setxattr(
     const char *path, const char *name, const void *value, size_t size, int flags, bool follow_link) {
-    if(follow_link) {
+    if(!follow_link) {
     #if HAVE_LXATTR
         return lsetxattr(path, name, value, size, flags);
     #endif
@@ -100,13 +109,23 @@ ssize_t rm_sys_setxattr(
 }
 
 int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
-    if(follow_link) {
+    if(!follow_link) {
     #if HAVE_LXATTR
         return lremovexattr(path, name);
     #endif
     }
 
     return removexattr(path, name);
+}
+
+int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
+    if(!follow_link) {
+    #if HAVE_LXATTR
+        return llistxattr(path, out, out_size);
+    #endif
+    }
+
+    return listxattr(path, out, out_size);
 }
 
 #endif
@@ -226,7 +245,9 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
+    char cksum_key[64] = {0},
+         mtime_key[64] = {0},
+         mtime_buf[64] = {0},
          cksum_hex_str[512] = {0};
 
     memset(cksum_hex_str, 0, sizeof(cksum_hex_str));
@@ -240,7 +261,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    if(cksum_hex_str[0] == 0 || strcmp(cksum_hex_str, "") == 0) {
+    if(cksum_hex_str[0] == 0 || mtime_buf[0] == 0) {
         return FALSE;
     }
 
@@ -287,4 +308,173 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 #else
     return EXIT_FAILURE;
 #endif
+}
+
+GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
+    const size_t buf_size = 4096;
+    const size_t val_size = 1024;
+    const char prefix[] = "user.rmlint.";
+
+    char buf[buf_size];
+    memset(buf, 0, buf_size);
+
+    int rc = rm_sys_listxattr(path, buf, buf_size-1, follow_symlinks);
+    if(rc < 0) {
+        rm_xattr_is_fail("listxattr", (char *)path, rc);
+        return NULL;
+    }
+
+    GHashTable *map = g_hash_table_new_full(
+            g_str_hash, g_str_equal,
+            g_free, g_free
+    );
+
+    bool failed = false;
+    char *curr = buf;
+    while(true) {
+        size_t n = buf_size - (curr - buf);
+        if(n <= 0) {
+            break;
+        }
+
+        char *next = memchr(curr, 0, n);
+        if(next == NULL) {
+            break;
+        }
+
+        size_t key_len = next-curr;
+        if(key_len <= 0) {
+            break;
+        }
+
+        if(strncmp(curr, prefix, MIN(key_len, sizeof(prefix - 1))) != 0) {
+            // Skip this key and save some memory. Not one of ours.
+            curr = next + 1;
+            continue;
+        }
+
+        char *key = g_strndup(curr, key_len);
+        char *val = g_malloc0(val_size);
+
+        rc = rm_sys_getxattr(path, key, val, val_size, follow_symlinks);
+        if(rc < 0) {
+            rm_xattr_is_fail("getxattr", (char *)path, rc);
+            g_free(key);
+            g_free(val);
+            failed = true;
+            break;
+        }
+
+        g_hash_table_insert(map, key, val);
+        curr = next + 1;
+    }
+
+    if(failed) {
+        g_hash_table_destroy(map);
+        map = NULL;
+    }
+
+    return map;
+}
+
+static void rm_xattr_change_subkey(char *key, char *sub_key) {
+    size_t key_len = strlen(key);
+    size_t sub_key_len = strlen(sub_key);
+
+    // This method is only thought to be used for our xattr keys.
+    // They happen to have all 5 byte long sub keys by chance.
+    // So take the chance to save some allocations.
+    if(sub_key_len != 5) {
+        return;
+    }
+
+    strcpy(&key[key_len - sub_key_len], sub_key);
+}
+
+bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
+	g_assert(path);
+
+    RmStat stat_buf;
+    if(rm_sys_stat(path, &stat_buf) < 0) {
+        rm_log_warning_line("failed to check dedupe state of %s: %s", path, g_strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    bool result = false;
+    char *key = NULL, *value = NULL;
+    GHashTable *map = rm_xattr_list(path, follow_symlinks);
+    GHashTableIter iter;
+
+    g_hash_table_iter_init(&iter, map);
+    while(g_hash_table_iter_next(&iter, (gpointer)&key, (gpointer)&value)) {
+        if(!g_str_has_suffix(key, ".mtime")) {
+            continue;
+        }
+
+        gdouble mtime = g_ascii_strtod(value, NULL);
+        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, MTIME_TOL) != 0) {
+            continue;
+        }
+
+        rm_xattr_change_subkey(key, "cksum");
+        char *cksum = g_hash_table_lookup(map, key);
+        if(cksum == NULL) {
+            continue;
+        }
+
+        rm_xattr_change_subkey(key, "dedup");
+        char *dedup = g_hash_table_lookup(map, key);
+        if(dedup == NULL) {
+            continue;
+        }
+
+        if(g_strcmp0(cksum, dedup) != 0) {
+            continue;
+        }
+
+        result = true;
+        break;
+    }
+
+    g_hash_table_destroy(map);
+    return result;
+}
+
+int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
+	g_assert(path);
+
+    RmStat stat_buf;
+    if(rm_sys_stat(path, &stat_buf) < 0) {
+        rm_log_warning_line("failed to mark dedupe state of %s: %s", path, g_strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    int result = EXIT_FAILURE;
+    char *key = NULL, *value = NULL;
+    GHashTable *map = rm_xattr_list(path, follow_symlinks);
+    GHashTableIter iter;
+
+    g_hash_table_iter_init(&iter, map);
+    while(g_hash_table_iter_next(&iter, (gpointer)&key, (gpointer)&value)) {
+        if(!g_str_has_suffix(key, ".mtime")) {
+            continue;
+        }
+
+        gdouble mtime = g_ascii_strtod(value, NULL);
+        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, MTIME_TOL) != 0) {
+            continue;
+        }
+
+        rm_xattr_change_subkey(key, "cksum");
+        char *cksum = g_hash_table_lookup(map, key);
+        if(cksum == NULL) {
+            continue;
+        }
+
+        rm_xattr_change_subkey(key, "dedup");
+		result = rm_sys_setxattr(path, key, cksum, strlen(cksum), 0, follow_symlinks);
+    }
+
+    g_hash_table_destroy(map);
+    return result;
 }

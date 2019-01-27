@@ -32,6 +32,7 @@
 #include "preprocess.h"
 #include "session.h"
 #include "traverse.h"
+#include "xattr.h"
 
 #if HAVE_BTRFS_H
 #include <linux/btrfs.h>
@@ -166,33 +167,6 @@ void rm_session_acknowledge_abort(const gint abort_count) {
     g_mutex_unlock(&m);
 }
 
-/**
- * *********** dedupe session main ************
- **/
-int rm_session_dedupe_main(RmCfg *cfg) {
-#if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
-    g_assert(cfg->path_count == g_slist_length(cfg->paths));
-    if(cfg->path_count != 2) {
-        rm_log_error(_("Usage: rmlint --dedupe [-r] [-v|V] source dest\n"));
-        return EXIT_FAILURE;
-    }
-
-    g_assert(cfg->paths);
-    RmPath *dest = cfg->paths->data;
-    g_assert(cfg->paths->next);
-    RmPath *source = cfg->paths->next->data;
-    rm_log_debug_line("Cloning %s -> %s", source->path, dest->path);
-
-    int source_fd = rm_sys_open(source->path, O_RDONLY);
-    if(source_fd < 0) {
-        rm_log_error_line(_("dedupe: failed to open source file"));
-        return EXIT_FAILURE;
-    }
-
-    struct stat source_stat;
-    fstat(source_fd, &source_stat);
-    gint64 bytes_deduped = 0;
-
 /* FIDEDUPERANGE supercedes the btrfs-only BTRFS_IOC_FILE_EXTENT_SAME as of Linux 4.5 and
  * should work for ocfs2 and xfs as well as btrfs.  We should still support the older
  * btrfs ioctl so that this still works on Linux 4.2 to 4.4.  The two ioctl's are
@@ -203,7 +177,6 @@ int rm_session_dedupe_main(RmCfg *cfg) {
  * because the BTRFS_IOC_FILE_EXTENT_SAME is decided at compile time...
  */
 
-/* clang-format off */
 #if HAVE_FIDEDUPERANGE
 # define _DEDUPE_IOCTL_NAME        "FIDEDUPERANGE"
 # define _DEDUPE_IOCTL             FIDEDUPERANGE
@@ -227,7 +200,51 @@ int rm_session_dedupe_main(RmCfg *cfg) {
 # define _FILE_DEDUPE_RANGE_INFO   btrfs_ioctl_same_extent_info
 # define _MIN_LINUX_SUBVERSION     2
 #endif
-/* clang-format on */
+
+/**
+ * *********** dedupe session main ************
+ **/
+int rm_session_dedupe_main(RmCfg *cfg) {
+#if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
+    g_assert(cfg->path_count == g_slist_length(cfg->paths));
+    if(cfg->path_count != 2) {
+        rm_log_error(_("Usage: rmlint --dedupe [-r] [-v|V] source dest\n"));
+        return EXIT_FAILURE;
+    }
+
+    g_assert(cfg->paths);
+    RmPath *dest = cfg->paths->data;
+    g_assert(cfg->paths->next);
+    RmPath *source = cfg->paths->next->data;
+    rm_log_debug_line("Cloning %s -> %s", source->path, dest->path);
+
+	if(cfg->dedupe_check_xattr) {
+		// Check if we actually need to deduplicate.
+		// This utility will write a value to the extended attributes
+		// of the file so we know that we do not need to do it again
+		// next time. This is supposed to avoid disk thrashing.
+		// (See also: https://github.com/sahib/rmlint/issues/349)
+		if(rm_xattr_is_deduplicated(dest->path, cfg->follow_symlinks)) {
+			rm_log_debug_line("Already deduplicated according to xattr!");
+			return EXIT_SUCCESS;
+		}
+	}
+
+	// Also use --is-reflink on both files before doing extra work:
+    if(rm_util_link_type(source->path, dest->path) == RM_LINK_REFLINK) {
+		rm_log_debug_line("Already an exact reflink!");
+		return EXIT_SUCCESS;
+	}
+
+    int source_fd = rm_sys_open(source->path, O_RDONLY);
+    if(source_fd < 0) {
+        rm_log_error_line(_("dedupe: failed to open source file"));
+        return EXIT_FAILURE;
+    }
+
+    struct stat source_stat;
+    fstat(source_fd, &source_stat);
+    gint64 bytes_deduped = 0;
 
     /* a poorly-documented limit for dedupe ioctl's */
     static const gint64 max_dedupe_chunk = 16 * 1024 * 1024;
@@ -299,8 +316,8 @@ int rm_session_dedupe_main(RmCfg *cfg) {
                 break;
             }
         } else if(dedupe.info.status != 0) {
-            ret=-dedupe.info.status;
-            errno=ret;
+            ret = -dedupe.info.status;
+            errno = ret;
             break;
         } else if(dedupe.info.bytes_deduped == 0) {
             break;
@@ -324,22 +341,12 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     rm_sys_close(dedupe.info._DEST_FD);
 
     if(bytes_deduped == source_stat.st_size) {
+		if(cfg->dedupe_check_xattr && !cfg->dedupe_readonly) {
+			rm_xattr_mark_deduplicated(dest->path, cfg->follow_symlinks);
+		}
+
         return EXIT_SUCCESS;
     }
-
-#undef _DEDUPE_IOCTL_NAME
-#undef _DEDUPE_IOCTL
-#undef _DEST_FD
-#undef _SRC_OFFSET
-#undef _DEST_OFFSET
-#undef _SRC_LENGTH
-#undef _DATA_DIFFERS
-#undef _DEST_FD
-#undef _FILE_DEDUPE_RANGE
-#undef _FILE_DEDUPE_RANGE_INFO
-#undef _MIN_LINUX_SUBVERSION
-#undef MAX_DEDUPE_CHUNK
-#undef MIN_DEDUPE_CHUNK
 
 #else
     (void)cfg;

@@ -287,7 +287,7 @@ def check_faccessat(context):
 def check_xattr(context):
     rc = 1
 
-    for func in ['getxattr', 'setxattr', 'removexattr']:
+    for func in ['getxattr', 'setxattr', 'removexattr', 'listxattr']:
         if tests.CheckFunc(
             context, func,
             header=
@@ -308,7 +308,7 @@ def check_xattr(context):
 def check_lxattr(context):
     rc = 1
 
-    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr']:
+    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr']:
         if tests.CheckFunc(
             context, func,
             header=

@@ -1146,7 +1146,6 @@ static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
 static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
                                    _UNUSED const gchar *x, RmSession *session,
                                    _UNUSED GError **error) {
-    rm_log_warning_line("option --btrfs-readonly is deprecated, use --dedupe-readonly");
     session->cfg->dedupe_readonly = true;
     return true;
 }
@@ -1328,7 +1327,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
         /* COW filesystem deduplication support */
         {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
-        {"dedupe-readonly"          , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
+        {"dedupe-xattr"             , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_check_xattr       , _("Check extended attributes to see if the file is already deduplicated") , NULL}     ,
+        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
         {"is-reflink"               , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_reflink               , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
 
         /* Callback */

@@ -289,6 +289,16 @@ static char *rm_fmt_sh_get_extra_equal_args(RmSession *session) {
     return g_string_free(buf, false);
 }
 
+static char *rm_fmt_sh_get_extra_dedupe_args(RmSession *session) {
+    RmCfg *cfg = session->cfg;
+
+    if(cfg->write_cksum_to_xattr) {
+        return " --dedupe-xattr";
+    }
+
+    return "";
+}
+
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
 
@@ -322,6 +332,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     }
 
     char *equal_extra_args = rm_fmt_sh_get_extra_equal_args(session);
+    char *dedupe_extra_args = rm_fmt_sh_get_extra_dedupe_args(session);
 
     /* Fill in all placeholders in the script template */
     /* This is a brittle hack of which the author should be ashamed. */
@@ -334,6 +345,8 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         rm_util_get_groupname(),
         "'%s[%3d%%]%s '", /* The progress format */
         equal_extra_args,
+        dedupe_extra_args,
+        dedupe_extra_args,
         (self->user_cmd) ? self->user_cmd : "echo 'no user command defined.'",
         (session->cfg->joined_argv) ? (session->cfg->joined_argv) : "unknown_commandline"
     );

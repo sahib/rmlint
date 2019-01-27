@@ -62,4 +62,35 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session);
  */
 int rm_xattr_clear_hash(RmFile *file, RmSession *session);
 
+/**
+ * @brief Result of rm_xattr_is_deduplicated
+ */
+typedef struct RmDedupResult {
+	const char *path;
+	char *key;
+	char *val;
+	bool is_deduplicated;
+	bool follow_symlinks;
+} RmDedupResult;
+
+/**
+ * @brief Check if `path` was already deduplicated.
+ *
+ * @param path Path to check.
+ * @param follow_symlinks Wether to check if it is a symbolic link;
+ * @param res Where to store the result.
+ *
+ * @return true if deduplicated
+ */
+bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks);
+
+/**
+ * @brief Mark the file as deduplicated.
+ *
+ * @param res The result from rm_xattr_is_deduplicated;
+ *
+ * @return 0 on success, some errno on failure.
+ */
+int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks);
+
 #endif
