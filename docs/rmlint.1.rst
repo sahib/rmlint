@@ -636,6 +636,7 @@ FORMATTERS
   Available options:
 
   * *no_header*: Do not write a first line describing the column headers.
+  * *unique*: Include unique files in the output.
 
 * ``sh``: Output all found lint as shell script This formatter is activated
     as default.
@@ -689,6 +690,7 @@ FORMATTERS
 
   Available options:
 
+  - *unique*: Include unique files in the output.
   - *no_header=[true|false]:* Print the header with metadata (default: true)
   - *no_footer=[true|false]:* Print the footer with statistics (default: true)
   - *oneline=[true|false]:* Print one json document per line (default: false)

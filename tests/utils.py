@@ -186,7 +186,7 @@ def compare_json_doc(doc_a, doc_b, compare_checksum=False):
 
     for key in keys:
         # It's okay for unfinished checksums to have some missing fields.
-        if doc_a['type'] == doc_b['type'] == 'unfinished_cksum':
+        if doc_a['type'] == doc_b['type'] == 'unique_file':
             continue
 
         if doc_a[key] != doc_b[key]:

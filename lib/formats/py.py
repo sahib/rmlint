@@ -91,7 +91,7 @@ def handle_duplicate_file(path, original, args, **kwargs):
             os.remove(path)
 
 
-def handle_unfinished_cksum(path, **kwargs):
+def handle_unique_file(path, **kwargs):
     pass  # doesn't need any handling.
 
 
@@ -133,7 +133,7 @@ def handle_badugid(path, **kwargs):
 OPERATIONS = {
     "duplicate_dir": handle_duplicate_dir,
     "duplicate_file": handle_duplicate_file,
-    "unfinished_cksum": handle_unfinished_cksum,
+    "unique_file": handle_unique_file,
     "emptydir": handle_empty_dir,
     "emptyfile": handle_empty_file,
     "nonstripped": handle_nonstripped,
@@ -157,7 +157,7 @@ def exec_operation(item, original=None, args=None):
 MESSAGES = {
     'duplicate_dir':    '{c[yellow]}Deleting duplicate directory:',
     'duplicate_file':   '{c[yellow]}Deleting duplicate:',
-    'unfinished_cksum': 'checking',
+    'unique_file':      'checking',
     'emptydir':         '{c[green]}Deleting empty directory:',
     'emptyfile':        '{c[green]}Deleting empty file:',
     'nonstripped':      '{c[green]}Stripping debug symbols:',

@@ -29,7 +29,7 @@ def create_files():
 
 
 def check(data, write_cache):
-    unfinished = [p['path'] for p in data if p['type'] == 'unfinished_cksum']
+    unfinished = [p['path'] for p in data if p['type'] == 'unique_file']
     dupe_files = [p['path'] for p in data if p['type'] == 'duplicate_file']
     dupe_trees = [p['path'] for p in data if p['type'] == 'duplicate_dir']
 
