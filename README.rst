@@ -38,11 +38,14 @@ Finds…
 
 **Differences to other duplicate finders:**
 
-- Extremely fast (no exaggeration, we promise!).
+- Extremely fast (no exaggeration, we promise!)
 - Paranoia mode for those who do not trust hashsums.
 - Many output formats.
 - No interactivity.
-- Search for files only newer than a certain ``mtime``. 
+- Search for files only newer than a certain ``mtime``.
+- Many ways to handle duplicates.
+- Caching and replaying.
+- ``btrfs`` support.
 - ...
 
 It runs and compiles under most Unices, including Linux, FreeBSD and Darwin.
