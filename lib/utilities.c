@@ -732,7 +732,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
              * */
             if(rm_mounts_is_ramdisk(entry->fsname)) {
-                strncpy(diskname, entry->fsname, sizeof(diskname));
+                strncpy(diskname, entry->fsname, sizeof(diskname)-1);
                 is_rotational = false;
                 whole_disk = stat_buf_folder.st_dev;
             } else if((nfs_marker = strstr(entry->fsname, ":/")) != NULL) {
@@ -761,7 +761,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                 rm_log_debug_line(RED "devno_to_wholedisk failed for %s" RESET,
                                   entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
-                strncpy(diskname, entry->fsname, sizeof(diskname));
+                strncpy(diskname, entry->fsname, sizeof(diskname)-1);
                 is_rotational = false;
             } else {
                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);

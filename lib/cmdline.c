@@ -410,11 +410,11 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
         char *extension = strchr(pair, '.');
         if(extension == NULL) {
             full_path = "stdout";
-            strncpy(format_name, pair, strlen(pair));
+            strncpy(format_name, pair, sizeof(format_name)-1);
         } else {
             extension += 1;
             full_path = (char *)pair;
-            strncpy(format_name, extension, strlen(extension));
+            strncpy(format_name, extension, sizeof(format_name)-1);
         }
     } else {
         full_path = separator + 1;
@@ -1077,7 +1077,7 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
     }
 
     /* Remember the criteria string */
-    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria));
+    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria)-1);
 
     /* ranking the files depends on caching them to the end of the program */
     cfg->cache_file_structs = true;
