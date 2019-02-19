@@ -2,9 +2,9 @@ Installation
 ============
 
 Many major Linux distribution might already package ``rmlint`` -- but watch out for
-the version. This manual describes the rewrite of ``rmlint`` (i.e. version :math:`\geq 2`).
-Old versions before this might contain bugs, have design flaws or might eat your
-hamster. We recommend using the newest version.
+the version. If possible, we recommend using the `newest version`_ available.
+
+.. _`newest version`: https://github.com/sahib/rmlint/releases
 
 If there is no package yet or you want to try a development version, you gonna
 need to compile ``rmlint`` from source.
@@ -38,7 +38,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ yum -y install git scons python3-sphinx gettext json-glib-devel
+    $ yum -y install pkgconf git scons python3-sphinx gettext json-glib-devel
     $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
     # Optional dependencies for the GUI:
     $ yum -y install pygobject3 gtk3 librsvg2
@@ -49,6 +49,10 @@ Here's a list of readily prepared commands for known operating systems:
 
     $ dnf copr enable eclipseo/rmlint
     $ dnf install rmlint
+
+  Since **Fedora 29** we also have an `official package`_.
+
+.. _`official package`: https://bugzilla.redhat.com/show_bug.cgi?id=1655338
 
 .. _`Fedora Copr`: https://copr.fedorainfracloud.org/coprs/eclipseo/rmlint/
 
@@ -64,7 +68,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ pacman -S git scons python-sphinx
+    $ pacman -S pkgconf git scons python-sphinx
     $ pacman -S glib2 libutil-linux elfutils json-glib
     # Optional dependencies for the GUI:
     $ pacman -S gtk3 python-gobject librsvg
@@ -82,7 +86,10 @@ Here's a list of readily prepared commands for known operating systems:
 .. _`PKGBUILD`: https://aur.archlinux.org/packages/rm/rmlint-git/PKGBUILD
 .. _`ArchLinux AUR`: https://aur.archlinux.org/packages/rmlint-git
 
-* **Ubuntu** :math:`\geq 12.04`:
+* **Debian** / **Ubuntu** :math:`\geq 12.04`:
+
+  Note: Debian also `ships an official package`_.
+  Use the below instructions if you need a more recent version.
 
   This most likely applies to most distributions that are derived from Ubuntu.
   Note that the ``GUI`` depends on ``GTK+ >= 3.12``! 
@@ -90,12 +97,14 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ apt-get install git scons python3-sphinx python3-nose gettext build-essential
+    $ apt-get install pkg-config git scons python3-sphinx python3-nose gettext build-essential
     # Optional dependencies for more features:
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
     # Optional dependencies for the GUI:
     $ apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 python-cairo gir1.2-polkit-1.0 gir1.2-gtksource-3.0 
 
+ 
+.. _`ships an official package`: https://packages.debian.org/de/sid/rmlint
 .. _`still ships`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
 
 * **macOS**
@@ -130,8 +139,7 @@ Here's a list of readily prepared commands for known operating systems:
 -----
 
 Send us a note if you want to see your distribution here or the instructions
-need an update.
-The commands above install the full dependencies, therefore
+need an update. The commands above install the full dependencies, therefore
 some packages might be stripped if you do not need the feature
 they enable. Only hard requirement for the commandline is ``glib``.
 
