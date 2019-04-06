@@ -316,6 +316,9 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
     } else if(rm_fmt_get_config_value(session->formats, "sh", "link") != NULL) {
         /* Preset: try reflinks, then then hardlinks then symlinks */
         rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
+    } else if(rm_fmt_get_config_value(session->formats, "sh", "reflink") != NULL) {
+        /* Preset: same as above, just an alias */
+        rm_sh_parse_handlers(self, "reflink,hardlink,symlink");
     } else if(rm_fmt_get_config_value(session->formats, "sh", "hardlink") != NULL) {
         /* Preset: try hardlinks before using symlinks */
         rm_sh_parse_handlers(self, "hardlink,symlink");
@@ -497,7 +500,7 @@ static RmFmtHandlerShScript SH_SCRIPT_HANDLER_IMPL = {
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = rm_fmt_foot,
-        .valid_keys = {"handler", "cmd", "clone", "link", "hardlink", "symlink", NULL},
+        .valid_keys = {"handler", "cmd", "clone", "link", "hardlink", "symlink", "reflink", NULL},
     },
     .last_original = NULL,
     .line_count = 0
