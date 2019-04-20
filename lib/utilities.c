@@ -983,7 +983,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
  * Needs to be freed with g_free if not NULL.
  * */
 static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
-                                           const int file_offset) {
+                                           const uint64_t file_offset) {
 #if _RM_OFFSET_DEBUG
     rm_log_debug_line(_("rm_offset_get_fiemap: fd=%d, n_extents=%d, file_offset=%d"),
                       fd, n_extents, file_offset);
