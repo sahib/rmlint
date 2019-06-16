@@ -237,7 +237,7 @@ skip_hardlink() {
 
 skip_reflink() {
     print_progress_prefix
-    echo "{$COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}$1"
+    echo "${COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}$1"
 }
 
 user_command() {

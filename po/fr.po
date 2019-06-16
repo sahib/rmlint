@@ -692,7 +692,7 @@ msgid "Use more paranoid hashing"
 msgstr "Utiliser une fonction de hachage paranoïaque"
 
 #: lib/cmdline.c
-msgid "Do not cross mounpoints"
+msgid "Do not cross mountpoints"
 msgstr "Ne pas traverser les points de montages"
 
 #: lib/cmdline.c
