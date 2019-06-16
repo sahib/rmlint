@@ -976,12 +976,18 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 
 #if HAVE_FIEMAP
 
+#define _RM_OFFSET_DEBUG 0
+
 /* Return fiemap structure containing n_extents for file descriptor fd.
  * Return NULL if errors encountered.
  * Needs to be freed with g_free if not NULL.
  * */
 static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
-                                           const int file_offset) {
+                                           const uint64_t file_offset) {
+#if _RM_OFFSET_DEBUG
+    rm_log_debug_line(_("rm_offset_get_fiemap: fd=%d, n_extents=%d, file_offset=%d"),
+                      fd, n_extents, file_offset);
+#endif
     /* struct fiemap does not allocate any extents by default,
      * so we allocate the nominated number
      * */
@@ -999,8 +1005,6 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
     }
     return fm;
 }
-
-#define _RM_OFFSET_DEBUG 0
 
 /* Return physical (disk) offset of the beginning of the file extent containing the
  * specified logical file_offset.
@@ -1025,14 +1029,14 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
         if(fm==NULL) {
             /* got no extent data */
 #if _RM_OFFSET_DEBUG
-            rm_log_info_line("rm_offset_get_fiemap: got no fiemap for %s", path);
+            rm_log_info_line(_("rm_offset_get_fiemap: got no fiemap for %d"), fd);
 #endif
             break;
         }
 
         if (fm->fm_mapped_extents == 0) {
 #if _RM_OFFSET_DEBUG
-            rm_log_info_line("rm_offset_get_fiemap: got no extents for %s", path);
+            rm_log_info_line(_("rm_offset_get_fiemap: got no extents for %d"), fd);
 #endif
             done = TRUE;
         } else {
@@ -1259,9 +1263,8 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         }
 
 #if _RM_OFFSET_DEBUG
-        rm_log_debug_line("Offsets match at logical=%" G_GUINT64_FORMAT
-                          ", physical=%" G_GUINT64_FORMAT,
-                          logical_current, physical_1);
+        rm_log_debug_line("Offsets match at fd1=%d, fd2=%d, logical=%" G_GUINT64_FORMAT ", physical=%" G_GUINT64_FORMAT,
+                          fd1, fd2, logical_current, physical_1);
 #endif
         if(logical_next_1 <= logical_current) {
             /* oops we seem to be getting nowhere (this shouldn't really happen) */
