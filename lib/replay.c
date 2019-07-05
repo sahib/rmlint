@@ -246,6 +246,13 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
         return true;
     }
 
+    if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
+       file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        // Non-lint files always count as good size.
+        // See: https://github.com/sahib/rmlint/issues/368
+        return true;
+    }
+
     return ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->actual_file_size) &&
             (cfg->maxsize == (RmOff)-1 || file->actual_file_size <= cfg->maxsize));
 }

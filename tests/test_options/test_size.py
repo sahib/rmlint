@@ -60,3 +60,30 @@ def test_invalid():
 
     # double min
     trigger('--size 10--10')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_size():
+    create_file('', 'empty1')
+    create_file('', 'empty2')
+    create_file('xxx', 'a/xxx')
+    create_file('xxx', 'b/xxx')
+    create_file('yyy', 'a/yyy')
+    create_file('yyy', 'b/yyy')
+    create_testdir('empty_dir')
+
+    replay_path = '/tmp/replay.json'
+    head, *data, footer = run_rmlint('-o json:{p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 7
+    assert [e["type"] for e in data] == \
+           ["emptydir"] + (["emptyfile"] * 2) + (["duplicate_file"] * 4)
+
+    head, *data, footer = run_rmlint('--replay {p} --size 1-10B'.format(
+        p=replay_path
+    ))
+
+    assert [e["type"] for e in data] == \
+           ["emptydir"] + (["emptyfile"] * 2) + (["duplicate_file"] * 4)

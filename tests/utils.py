@@ -58,9 +58,12 @@ def keep_testdir():
     return get_env_flag('RM_TS_KEEP_TESTDIR')
 
 
-def create_testdir():
+def create_testdir(*extra_path):
     try:
-        os.makedirs(TESTDIR_NAME)
+        path = TESTDIR_NAME
+        if extra_path:
+            path = os.path.join(TESTDIR_NAME, *extra_path)
+        os.makedirs(path)
     except OSError:
         pass
 
