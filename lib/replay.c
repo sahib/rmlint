@@ -192,7 +192,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     // stat() reports directories as size zero.
     // Fix this by actually using the size field in this example.
-    if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE && stat_info->st_mode == S_IFDIR) {
+    if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE && stat_info->st_mode & S_IFDIR) {
         file->actual_file_size = json_object_get_int_member(object, "size");
     }
 
@@ -527,6 +527,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
              rm_parrot_check_types(cfg, file) && rm_parrot_check_crossdev(polly, file) &&
              rm_parrot_check_path(polly, file, file_path))) {
             rm_file_destroy(file);
+            rm_log_debug("[nope]\n");
             continue;
         }
 
