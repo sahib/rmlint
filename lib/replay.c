@@ -190,6 +190,12 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
     file->free_digest = true;
 
+    // stat() reports directories as size zero.
+    // Fix this by actually using the size field in this example.
+    if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE && stat_info->st_mode == S_IFDIR) {
+        file->actual_file_size = json_object_get_int_member(object, "size");
+    }
+
     if(file->is_original) {
         polly->last_original = file;
     }
@@ -410,7 +416,8 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
     RmSession *session = cage->session;
 
     session->total_files += 1;
-    if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+    if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE ||
+       file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         session->dup_group_counter += file->is_original;
         if(!file->is_original) {
             session->dup_counter += 1;
