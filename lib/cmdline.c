@@ -1002,7 +1002,7 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     RmCfg *cfg = session->cfg;
     cfg->merge_directories = true;
 
-    /* Pull in some options for convinience,
+    /* Pull in some options for convenience,
      * duplicate dir detection works better with them.
      *
      * They may be disabled explicitly though.
@@ -1014,6 +1014,24 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     /* Keep RmFiles after shredder. */
     cfg->cache_file_structs = true;
 
+    return true;
+}
+
+static gboolean rm_cmd_parse_hidden(_UNUSED const char *option_name,
+                                               _UNUSED const gchar *_,
+                                               RmSession *session,
+                                               _UNUSED GError **error) {
+    session->cfg->ignore_hidden = false;
+    session->cfg->partial_hidden = false;
+    return true;
+}
+
+static gboolean rm_cmd_parse_no_hidden(_UNUSED const char *option_name,
+                                               _UNUSED const gchar *_,
+                                               RmSession *session,
+                                               _UNUSED GError **error) {
+    session->cfg->ignore_hidden = true;
+    session->cfg->partial_hidden = false;
     return true;
 }
 
@@ -1303,11 +1321,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
-        {"hidden"                   , 'r'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->ignore_hidden            , _("Find hidden files")                                                    , NULL}     ,
+        {"hidden"                   , 'r'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(hidden)                   , _("Find hidden files")                                                    , NULL}     ,
         {"followlinks"              , 'f'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(follow_symlinks)          , _("Follow symlinks")                                                      , NULL}     ,
         {"no-followlinks"           , 'F'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->follow_symlinks          , _("Ignore symlinks")                                                      , NULL}     ,
         {"paranoid"                 , 'p'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(paranoid)                 , _("Use more paranoid hashing")                                            , NULL}     ,
-        {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mountpoints")                                              , NULL}     ,
+        {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mountpoints")                                             , NULL}     ,
         {"keep-all-tagged"          , 'k'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_tagged          , _("Keep all tagged files")                                                , NULL}     ,
         {"keep-all-untagged"        , 'K'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_untagged        , _("Keep all untagged files")                                              , NULL}     ,
         {"must-match-tagged"        , 'm'  , 0         , G_OPTION_ARG_NONE      , &cfg->must_match_tagged        , _("Must have twin in tagged dir")                                         , NULL}     ,
@@ -1344,7 +1362,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     };
 
     const GOptionEntry inversed_option_entries[] = {
-        {"no-hidden"                  , 'R' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , "Ignore hidden files"                 , NULL} ,
+        {"no-hidden"                  , 'R' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_hidden)               , "Ignore hidden files"                 , NULL} ,
         {"with-color"                 , 'w' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->with_color              , "Be colorful like a unicorn"          , NULL} ,
         {"hardlinked"                 , 'l' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Report hardlinks as duplicates")   , NULL} ,
         {"crossdev"                   , 'X' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL} ,
@@ -1497,7 +1515,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(cfg->partial_hidden && !cfg->merge_directories) {
         /* --partial-hidden only makes sense with --merge-directories.
-         * If the latter is not specfified, ignore it all together */
+         * If the latter is not specfified, ignore it all together
+         * and act as if --no-hidden was specified. */
         cfg->ignore_hidden = true;
         cfg->partial_hidden = false;
     }

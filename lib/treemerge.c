@@ -736,7 +736,30 @@ static int rm_tm_cmp_directory_groups(GQueue *a, GQueue *b) {
 }
 
 static int rm_tm_hidden_file(RmFile *file, _UNUSED gpointer user_data) {
+    RM_DEFINE_PATH(file);
     return file->is_hidden;
+}
+
+static void rm_tm_filter_hidden_directories(GQueue *directories) {
+    GQueue *kill_list = g_queue_new();
+
+    for(GList *iter = directories->head; iter; iter = iter->next) {
+        RmDirectory *directory = iter->data;
+        if(!g_str_has_prefix(rm_util_basename(directory->dirname), ".")) {
+            continue;
+        }
+
+        g_queue_push_tail(kill_list, directory);
+    }
+
+    // Actually remove the directories:
+    // (If the directory list is only one directory long now,
+    //  it is being filtered later in the process)
+    for(GList *iter = kill_list->head; iter; iter = iter->next) {
+        g_queue_remove(directories, iter->data);
+    }
+
+    g_queue_free(kill_list);
 }
 
 static void rm_tm_extract(RmTreeMerger *self) {
@@ -773,6 +796,12 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         /* Sort the RmDirectory list by their path depth, lowest depth first */
         g_queue_sort(dir_list, (GCompareDataFunc)rm_tm_sort_paths, self);
+
+        /* If no --hidden is given, do not display top-level directories
+         * that are hidden. If needed, filter them beforehand. */
+        if(cfg->partial_hidden) {
+            rm_tm_filter_hidden_directories(dir_list);
+        }
 
         /* Output the directories and mark their children to prevent
          * duplicate directory reports in lower levels.
@@ -857,7 +886,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
         if(self->session->cfg->partial_hidden) {
-            /* with --partial-hidden we do not want to output */
+            /* with --partial-hidden we do not want to output left overs that are hidden */
             rm_util_queue_foreach_remove(file_list, (RmRFunc)rm_tm_hidden_file, NULL);
         }
 
