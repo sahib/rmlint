@@ -94,7 +94,7 @@ General Options
     * ``emptyfiles``, ``ef``: Find empty files.
     * ``nonstripped``, ``ns``: Find nonstripped binaries.
     * ``duplicates``, ``df``: Find duplicate files.
-    * ``duplicatedirs``, ``dd``: Find duplicate directories.
+    * ``duplicatedirs``, ``dd``: Find duplicate directories (This is the same ``-D``!)
 
     **WARNING:** It is good practice to enclose the description in single or
     double quotes. In obscure cases argument parsing might fail in weird ways,

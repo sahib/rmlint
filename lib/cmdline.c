@@ -1735,6 +1735,5 @@ int rm_cmd_main(RmSession *session) {
         exit_state = EXIT_FAILURE;
     }
 
-
     return exit_state;
 }
