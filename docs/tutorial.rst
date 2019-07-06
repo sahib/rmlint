@@ -666,8 +666,9 @@ here, that the original is taken from a directory that was preserved. So exactly
 one copy of the ``xxx``-content file stays on the filesystem in the end.
 
 ``rmlint`` finds duplicate directories by counting all files in the directory
-tree and looking up if there's an equal amount of duplicate and empty files.
-If so, it tries the same with the parent directory.
+tree and looking up if there's an equal amount of duplicate and empty files. If
+yes, it checks if the hashes are equal using a Merkle Tree. If it matches, it
+continues on the parent directory.
 
 Some file like hidden files will not be recognized as duplicates, but still
 added to the count. This will of course lead to unmerged directories. That's why
