@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.9.0 Odd Olm] -- 2019-??-??
+
+### Added
+
+* An up-to-date COPR package for Fedora (thanks eclipseo).
+* Add --xattr as --xattr-write, --xattr-read & --write-unfinished to enable easy
+  checksum caching for the next run.
+* Unique option for json and csv formatters (-c json:unique)
+* New -k option for rmlint.sh to keep directory timestamps like before deletion.
+
+### Changed
+
+* Warn when using -j without -D.
+* The exist status is now EXIT_FAILURE when rmlint was interrupted.
+* Slightly changed progressbar ETA algorithm to deliver more stable results.
+* docs: added a few scripting examples to underline the possibility to use 3rd-party tools.
+* --dedupe options now checks if the files are already reflinks to reduce disk thrashing.
+* Made sure that -T dd is the same as specifying -D.
+
+### Deprecated
+
+Nothing was deprecated.
+
+### Removed
+
+Nothing was removed.
+
+### Fixed
+
+* Dry-run was not honoured when a user-defined command was used.
+* Fix crash when compiled with -msse4.2
+* Relative symbolic links were compared wrong when using -f (See issue #333)
+* gui: The size options wer enot correctly passed to rmlint (only Megabytes)
+* xattr: timestamps where often compared wrongly.
+* Fiemap (and thus reflink detection) code was improved.
+* --replay did not replay duplicate directories correctly.
+* --replay did not honour --hidden and --size correctly.
+* Various build issues.
+
 ## [2.8.0 Maidenly Moose] -- 2018-10-30
 
 Mostly a bugfix release with smaller functional changes.
