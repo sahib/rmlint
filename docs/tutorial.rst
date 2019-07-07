@@ -455,10 +455,11 @@ paranoia level can be adjusted using the ``-p`` (``--paranoid``) switch.
 
 Here's what they do in detail:
 
-* ``-p`` is equivalent to ``--algorithm=paranoid``
-* ``-P`` is equivalent to ``--algorithm=highway256``
-* ``-PP`` is equivalent to ``--algorithm=metro256``
-* ``-PP`` is equivalent to ``--algorithm=metro``
+- ``-p`` is equivalent to ``--algorithm=paranoid``
+- ``-P`` is equivalent to ``--algorithm=highway256``
+- ``-PP`` is equivalent to ``--algorithm=metro256``
+- ``-PPP`` is equivalent to ``--algorithm=metro``
+
 
 As you see, it just enables a certain duplicate detection algorithm to either use
 a stronger hash function or to do a byte-by-byte comparison. While this might sound
