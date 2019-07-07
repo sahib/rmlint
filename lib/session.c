@@ -373,13 +373,15 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
 
     g_assert(cfg->path_count == g_slist_length(cfg->paths));
     if(cfg->path_count != 2) {
-        rm_log_error(_("Usage: rmlint --is-clone [-v|V] file1 file2\n"));
+        rm_log_error(_("Usage: rmlint --is-reflink [-v|V] file1 file2\n"));
         return EXIT_FAILURE;
     }
 
     g_assert(cfg->paths);
+
     RmPath *a = cfg->paths->data;
     g_assert(cfg->paths->next);
+
     RmPath *b = cfg->paths->next->data;
     rm_log_debug_line("Testing if %s is clone of %s", a->path, b->path);
 
@@ -397,5 +399,6 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
     default:
         break;
     }
+
     return result;
 }

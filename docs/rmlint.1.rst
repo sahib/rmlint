@@ -810,18 +810,19 @@ OTHER STAND-ALONE COMMANDS
 
 :``rmlint --is-reflink [-v|-V] <file1> <file2>``:
     Tests whether ``file1`` and ``file2`` are reflinks (reference same data).
-    Return codes:
-        0: files are reflinks
-        1: files are not reflinks
-        3: not a regular file
-        4: file sizes differ
-        5: fiemaps can't be read
-        6: file1 and file2 are the same path
-        7: file1 and file2 are the same file under different mountpoints
-        8: files are hardlinks
-        9: files are symlinks (TODO)
-        10: files are not on same device
-        11: other error encountered
+    This command makes ``rmlint`` exit with one of the following exit codes:
+
+    * 0: files are reflinks
+    * 1: files are not reflinks
+    * 3: not a regular file
+    * 4: file sizes differ
+    * 5: fiemaps can't be read
+    * 6: file1 and file2 are the same path
+    * 7: file1 and file2 are the same file under different mountpoints
+    * 8: files are hardlinks
+    * 9: files are symlinks
+    * 10: files are not on same device
+    * 11: other error encountered
 
 
 EXAMPLES

@@ -1227,6 +1227,11 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         }
     }
 
+    /* If both are symbolic links we do not follow them */
+    if((stat1.st_mode | stat2.st_mode) & S_IFLNK) {
+        RM_RETURN(RM_LINK_SYMLINK);
+    }
+
 #if HAVE_FIEMAP
 
     RmOff logical_current = 0;
