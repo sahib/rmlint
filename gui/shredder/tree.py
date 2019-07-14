@@ -125,7 +125,7 @@ class PathNode:
         if idx is Column.PATH:
             return self.name
         elif idx is Column.TOOLTIP:
-            return self.build_path()
+            return GLib.markup_escape_text(self.build_path(), -1)
         else:
             return self.row[idx]
 
