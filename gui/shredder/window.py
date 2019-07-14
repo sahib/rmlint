@@ -252,11 +252,24 @@ class MainWindow(Gtk.ApplicationWindow):
             'clicked', lambda btn: self.views.set_search_mode(btn.get_active())
         )
 
+        close_button = Gtk.Button()
+        close_button.add(
+            Gtk.Image.new_from_gicon(
+                Gio.ThemedIcon(name="window-close-symbolic"),
+                Gtk.IconSize.BUTTON
+            )
+        )
+        close_button.get_style_context().add_class("titlebutton")
+        close_button.connect(
+                'clicked', lambda _: self.close(),
+        )
+
         if shredder.APP_USE_TRADITIONAL_MENU:
             menu_button.set_use_popover(False)
 
         self.main_grid = Gtk.Grid()
         self.main_grid.attach(self.view_stack, 0, 3, 1, 1)
+        self.headerbar.pack_end(close_button)
         self.headerbar.pack_end(menu_button)
         self.headerbar.pack_end(search_button)
         self.add(self.main_grid)
