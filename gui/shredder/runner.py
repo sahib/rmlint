@@ -427,9 +427,24 @@ class Runner(GObject.Object):
             return
 
         try:
-            shutil.copy(source_path_func(), dest_path)
+            source_path = source_path_func()
+            shutil.copy(source_path, dest_path)
+            if file_type == "sh":
+                _fix_shell_auto_remove_path(dest_path, source_path)
         except OSError:
             LOGGER.exception('Could not save')
+
+
+def _fix_shell_auto_remove_path(sh_path, temp_path):
+    """
+    Shell scripts contain the path that they were created under.
+    This is used to remove the script after a successful run.
+    """
+    with open(sh_path, "r") as fd:
+        text = fd.read()
+
+    with open(sh_path, "w") as fd:
+        fd.write(text.replace(temp_path, sh_path))
 
 
 def _strip_ascii_colors(text):
