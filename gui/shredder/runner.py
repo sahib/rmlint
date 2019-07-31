@@ -390,6 +390,7 @@ class Runner(GObject.Object):
         with open(replay_path, 'w') as handle:
             handle.write(json.dumps(results))
 
+        # Regenerate output formatters by calling rmlint:
         process = _create_rmlint_process(
             self.settings,
             self._tmpdir.name,

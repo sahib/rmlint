@@ -871,7 +871,7 @@ class PathTreeView(Gtk.TreeView):
             yield node
 
     def get_selected_node(self):
-        """Return thefirst selected node or None."""
+        """Return the first selected node or None."""
         try:
             return next(self.get_selected_nodes())
         except StopIteration:
