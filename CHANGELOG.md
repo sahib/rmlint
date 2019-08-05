@@ -42,6 +42,9 @@ Nothing was removed.
 * --replay did not replay duplicate directories correctly.
 * --replay did not honour --hidden and --size correctly.
 * Various build issues.
+* gui: fix "render from selected" feature.
+* gui: generated script now correctly removes itself.
+* gui: fix display of paths with ampersands in them.
 
 ## [2.8.0 Maidenly Moose] -- 2018-10-30
 
