@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.9.0 Odd Olm] -- 2019-??-??
+## [2.9.0 Odd Olm] -- 2019-08-20
 
 ### Added
 
