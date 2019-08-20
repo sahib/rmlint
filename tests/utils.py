@@ -58,9 +58,12 @@ def keep_testdir():
     return get_env_flag('RM_TS_KEEP_TESTDIR')
 
 
-def create_testdir():
+def create_testdir(*extra_path):
     try:
-        os.makedirs(TESTDIR_NAME)
+        path = TESTDIR_NAME
+        if extra_path:
+            path = os.path.join(TESTDIR_NAME, *extra_path)
+        os.makedirs(path)
     except OSError:
         pass
 
@@ -186,7 +189,7 @@ def compare_json_doc(doc_a, doc_b, compare_checksum=False):
 
     for key in keys:
         # It's okay for unfinished checksums to have some missing fields.
-        if doc_a['type'] == doc_b['type'] == 'unfinished_cksum':
+        if doc_a['type'] == doc_b['type'] == 'unique_file':
             continue
 
         if doc_a[key] != doc_b[key]:

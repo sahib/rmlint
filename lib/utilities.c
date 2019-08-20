@@ -271,7 +271,8 @@ gpointer rm_util_slist_pop(GSList **list, GMutex *lock) {
 }
 
 /* checks uid and gid; returns 0 if both ok, else RM_LINT_TYPE_ corresponding *
- * to RmFile->filter types                                            */
+ * to RmFile->filter types
+ * */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist) {
     bool has_gid = 1, has_uid = 1;
     if(!rm_userlist_contains(userlist, statp->st_uid, statp->st_gid, &has_uid,
@@ -732,7 +733,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
              * */
             if(rm_mounts_is_ramdisk(entry->fsname)) {
-                strncpy(diskname, entry->fsname, sizeof(diskname));
+                strncpy(diskname, entry->fsname, sizeof(diskname)-1);
                 is_rotational = false;
                 whole_disk = stat_buf_folder.st_dev;
             } else if((nfs_marker = strstr(entry->fsname, ":/")) != NULL) {
@@ -761,7 +762,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                 rm_log_debug_line(RED "devno_to_wholedisk failed for %s" RESET,
                                   entry->fsname);
                 whole_disk = stat_buf_dev.st_dev;
-                strncpy(diskname, entry->fsname, sizeof(diskname));
+                strncpy(diskname, entry->fsname, sizeof(diskname)-1);
                 is_rotational = false;
             } else {
                 is_rotational = rm_mounts_is_rotational_blockdev(diskname);
@@ -1012,7 +1013,7 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
  * the next non-contiguous extent (fragment) is encountered and writes the corresponding
  * file offset to &file_offset_next.
  * */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) {
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last) {
     RmOff result = 0;
     bool done = FALSE;
     bool first = TRUE;
@@ -1063,6 +1064,10 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next) 
 
             if(fm_ext.fe_flags & FIEMAP_EXTENT_LAST) {
                 done = TRUE;
+
+                if(is_last != NULL) {
+                    *is_last = TRUE;
+                }
             }
 
             if(fm_ext.fe_length <= 0) {
@@ -1093,7 +1098,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL);
     rm_sys_close(fd);
     return result;
 }
@@ -1101,7 +1106,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 #else /* Probably FreeBSD */
 
 RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
-                            _UNUSED RmOff *file_offset_next) {
+                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last) {
     return 0;
 }
 
@@ -1164,7 +1169,7 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
     }
 
     RmStat stat1;
-    int stat_state = rm_sys_stat(path1, &stat1);
+    int stat_state = rm_sys_lstat(path1, &stat1);
     if(stat_state == -1) {
         rm_log_perrorf("rm_util_link_type: Unable to stat file %s", path1);
         RM_RETURN(RM_LINK_ERROR);
@@ -1189,7 +1194,7 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
     }
 
     RmStat stat2;
-    stat_state = rm_sys_stat(path2, &stat2);
+    stat_state = rm_sys_lstat(path2, &stat2);
     if(stat_state == -1) {
         rm_log_perrorf("rm_util_link_type: Unable to stat file %s", path2);
         RM_RETURN(RM_LINK_ERROR);
@@ -1227,15 +1232,33 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         }
     }
 
+    /* If both are symbolic links we do not follow them */
+    if(S_ISLNK(stat1.st_mode) || S_ISLNK(stat2.st_mode)) {
+        RM_RETURN(RM_LINK_SYMLINK);
+    }
+
 #if HAVE_FIEMAP
 
     RmOff logical_current = 0;
 
+    bool is_last_1 = false;
+    bool is_last_2 = false;
+    bool at_least_one_checked = false;
+
     while(!rm_session_was_aborted()) {
         RmOff logical_next_1 = 0;
         RmOff logical_next_2 = 0;
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2);
+
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2);
+
+        if(is_last_1 != is_last_2) {
+            RM_RETURN(RM_LINK_NONE);
+        }
+
+        if(is_last_1 && is_last_2 && at_least_one_checked) {
+            RM_RETURN(RM_LINK_REFLINK);
+        }
 
         if(physical_1 != physical_2) {
 #if _RM_OFFSET_DEBUG
@@ -1282,6 +1305,7 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         }
 
         logical_current = logical_next_1;
+        at_least_one_checked = true;
     }
 
     RM_RETURN(RM_LINK_ERROR);

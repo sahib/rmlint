@@ -455,10 +455,11 @@ paranoia level can be adjusted using the ``-p`` (``--paranoid``) switch.
 
 Here's what they do in detail:
 
-* ``-p`` is equivalent to ``--algorithm=paranoid``
-* ``-P`` is equivalent to ``--algorithm=highway256``
-* ``-PP`` is equivalent to ``--algorithm=metro256``
-* ``-PP`` is equivalent to ``--algorithm=metro``
+- ``-p`` is equivalent to ``--algorithm=paranoid``
+- ``-P`` is equivalent to ``--algorithm=highway256``
+- ``-PP`` is equivalent to ``--algorithm=metro256``
+- ``-PPP`` is equivalent to ``--algorithm=metro``
+
 
 As you see, it just enables a certain duplicate detection algorithm to either use
 a stronger hash function or to do a byte-by-byte comparison. While this might sound
@@ -666,8 +667,9 @@ here, that the original is taken from a directory that was preserved. So exactly
 one copy of the ``xxx``-content file stays on the filesystem in the end.
 
 ``rmlint`` finds duplicate directories by counting all files in the directory
-tree and looking up if there's an equal amount of duplicate and empty files.
-If so, it tries the same with the parent directory.
+tree and looking up if there's an equal amount of duplicate and empty files. If
+yes, it checks if the hashes are equal using a Merkle Tree. If it matches, it
+continues on the parent directory.
 
 Some file like hidden files will not be recognized as duplicates, but still
 added to the count. This will of course lead to unmerged directories. That's why
@@ -755,17 +757,19 @@ Miscellaneous options
 ---------------------
 
 If you read so far, you know ``rmlint`` pretty well by now.
-Here's just a list of options that are nice to know, but not essential:
+Here's just a list of options that are nice to know, but are not essential:
 
-- Consecutive runs of ``rmlint`` can be speed up by using ``--xattr-read``.
+- Consecutive runs of ``rmlint`` can be speed up by using ``--xattr``.
 
   .. code-block:: python
 
-    $ rmlint large_dataset/ --xattr-write --write-unfinished
-    $ rmlint large_dataset/ --xattr-read
+    $ rmlint large_dataset/ --xattr
+    $ rmlint large_dataset/ --xattr
 
-  Here, the second run should (or *might*) run a lot faster.
-  But be sure to read the caveats stated in the `manpage`_!
+  Here, the second run should (or *might*) run a lot faster, since the first
+  run saved all calculated checksums to the extended attributes of each
+  processed file. But be sure to read the caveats stated in the `manpage`_!
+  Especially keep in mind that you need to have write access to the files for this to work.
 
 - ``-r`` (``--hidden``): Include hidden files and directories.  The default
   is to ignore these, to save you from destroying git repositories (or similar
@@ -817,3 +821,47 @@ Here's just a list of options that are nice to know, but not essential:
     $ rmlint -q 100 -Q .9
 
 .. _manpage: http://rmlint.readthedocs.org/en/latest/rmlint.1.html
+
+Scripting
+---------
+
+Sometimes ``rmlint`` can't help you with everything. While we get a lot of
+feature request to have some more comfort-options built-in, we have to decline
+most of them to make sure that ``rmlint`` does not become too bloated. But fret not,
+we have lots of possibilities to do some scripting. Let's look at some common problem
+that can be easily solved with some other tools.
+
+Copying unique files
+~~~~~~~~~~~~~~~~~~~~
+
+Imagine you have a folder from which you want to extract one copy of each file
+by content. This does not only mean unique files, but also original files - but
+not their duplicates. This sounds like a job for the ``uniques`` formatter
+(which outputs all unique paths, one by line) and ``jq``. ``jq`` is a great
+little `tool`_ which makes it really easy to extract data from a ``json`` file:
+
+.. _tool: https://stedolan.github.io/jq
+
+.. code-block:: bash
+
+    # This command produces two files:
+    # - unique_files: Files that have a unique checksum in the directory.
+    # - original_files: Files that have the "is_original" field set to true in the json output.
+    # The '.[1:-1]' part is for filtering the header and footer part of the json response.
+    $ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
+    # Now we only need to combine both files:
+    $ cat unique_files original_files
+
+Filter by regular expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A very often requested feature is to provide something like ``--include`` or
+``--exclude`` where you could pass a regular expression to include or exclude
+some files from traversing. But ``rmlint`` is not a clone of ``find``. Instead
+you can use ``find`` just fine to pipe output into ``rmlint``:
+
+
+.. code-block:: bash
+
+    # Deduplicate all png pictures that were not modified in the last 24 hours:
+    $ find ~ -iname '*.png' ! -mtime 0 | rmlint -

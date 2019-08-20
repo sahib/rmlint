@@ -397,37 +397,42 @@ class RunnerView(View):
             self.group_revealer.set_reveal_child(False)
             self.chart_stack.render(node)
 
-    def _generate_script(self, trie, node):
+    def _generate_script(self, trie, nodes):
         """Do the actual generation work, starting at `node` in `trie`."""
         self._script_generated = True
 
-        gen = trie.iterate(node=node)
-        self.runner.replay({
-            ch.build_path(): NodeState.should_keep(ch[Column.TAG]) for ch in gen if ch.is_leaf
-        })
+        path_to_is_original = {}
+        for node in nodes:
+            for ch in trie.iterate(node=node):
+                if not ch.is_leaf:
+                    continue
 
+                path_to_is_original[ch.build_path()] = \
+                    NodeState.should_keep(ch[Column.TAG])
+
+        self.runner.replay(path_to_is_original)
         self.app_window.views.go_right.set_sensitive(True)
         self.app_window.views.switch('editor')
 
     def on_generate_script(self, _):
         """Generate the full script."""
-        self._generate_script(self.model.trie, self.model.trie.root)
+        self._generate_script(self.model.trie, [self.model.trie.root])
 
     def on_generate_filtered_script(self, _):
         """Generate the script with only the visible content."""
         model = self.treeview.get_model()
-        self._generate_script(model.trie, model.trie.root)
+        self._generate_script(model.trie, [model.trie.root])
 
     def on_generate_selection_script(self, _):
         """Generate the script only from the current selected dir or files."""
         model = self.treeview.get_model()
-        selected_node = self.treeview.get_selected_node()
+        selected_nodes = self.treeview.get_selected_nodes()
 
-        if selected_node is None:
+        if not selected_nodes:
             LOGGER.info('Nothing selected to make script from.')
             return
 
-        self._generate_script(model.trie, selected_node)
+        self._generate_script(model.trie, selected_nodes)
 
     def on_default_action(self):
         """Called on Ctrl-Enter"""

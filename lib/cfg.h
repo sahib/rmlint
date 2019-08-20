@@ -176,6 +176,7 @@ typedef struct RmCfg {
     gboolean run_equal_mode;
     /* --dedupe options */
     bool dedupe;
+    bool dedupe_check_xattr;
     bool dedupe_readonly;
 
     /* for --is-reflink option */

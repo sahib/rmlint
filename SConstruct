@@ -287,7 +287,7 @@ def check_faccessat(context):
 def check_xattr(context):
     rc = 1
 
-    for func in ['getxattr', 'setxattr', 'removexattr']:
+    for func in ['getxattr', 'setxattr', 'removexattr', 'listxattr']:
         if tests.CheckFunc(
             context, func,
             header=
@@ -298,6 +298,27 @@ def check_xattr(context):
             break
 
     conf.env['HAVE_XATTR'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+
+def check_lxattr(context):
+    rc = 1
+
+    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr']:
+        if tests.CheckFunc(
+            context, func,
+            header=
+                '#include <sys/types.h>'
+                '#include <sys/xattr.h>'
+        ):
+            rc = 0
+            break
+
+    conf.env['HAVE_LXATTR'] = rc
 
     context.did_show_result = True
     context.Result(rc)
@@ -562,6 +583,7 @@ conf = Configure(env, custom_tests={
     'check_libelf': check_libelf,
     'check_fiemap': check_fiemap,
     'check_xattr': check_xattr,
+    'check_lxattr': check_lxattr,
     'check_sha512': check_sha512,
     'check_blkid': check_blkid,
     'check_posix_fadvise': check_posix_fadvise,
@@ -695,6 +717,7 @@ conf.check_sys_block()
 conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
+conf.check_lxattr()
 conf.check_bigfiles()
 conf.check_sha512()
 conf.check_gettext()

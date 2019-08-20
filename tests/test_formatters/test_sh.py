@@ -259,3 +259,26 @@ def test_cleanup_emptydirs(shell):
 
     for dirname in names:
         assert (not os.path.exists(os.path.join(TESTDIR_NAME, dirname)))
+
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+@parameterized([("sh", ), ("bash", ), ("dash", )])
+def test_keep_parent_timestamps(shell):
+    create_file('xxx', 'dir/a')
+    create_file('xxx', 'dir/b')
+
+    dir_path = os.path.join(TESTDIR_NAME, 'dir')
+    stat_before = os.stat(dir_path)
+
+    head, *data, footer = run_rmlint('-S a -T df -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    assert footer['duplicate_sets'] == 1
+    assert footer['total_lint_size'] == 3
+    assert footer['total_files'] == 2
+    assert footer['duplicates'] == 1
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    run_shell_script(shell, sh_path, "-dck")
+    stat_after = os.stat(dir_path)
+
+    assert stat_before.st_mtime == stat_after.st_mtime

@@ -266,10 +266,12 @@ class Segment:
         self.is_selected = False
 
         # Cut off too long tooltips:
-        if len(tooltip) > 60:
-            self.tooltip = tooltip[:60] + '...'
-        else:
-            self.tooltip = tooltip
+        if tooltip is not None:
+            tooltip = GLib.markup_escape_text(tooltip, -1)
+            if len(tooltip) > 60:
+                self.tooltip = tooltip[:60] + '...'
+            else:
+                self.tooltip = tooltip
 
     def draw(self, ctx, alloc, max_layers, bg_col):
         """Trigger the actual drawing of the segment."""

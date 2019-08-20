@@ -352,6 +352,17 @@ static gboolean rm_cmd_parse_limit_sizes(_UNUSED const char *option_name,
     }
 }
 
+static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *_,
+                                   RmSession *session,
+                                   _UNUSED GError **error) {
+    session->cfg->write_cksum_to_xattr = true;
+    session->cfg->read_cksum_from_xattr= true;
+    session->cfg->clear_xattr_fields = false;
+    session->cfg->write_unfinished = true;
+    return true;
+}
+
 static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
                                                   [1] = G_LOG_LEVEL_ERROR,
                                                   [2] = G_LOG_LEVEL_WARNING,
@@ -399,11 +410,11 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
         char *extension = strchr(pair, '.');
         if(extension == NULL) {
             full_path = "stdout";
-            strncpy(format_name, pair, strlen(pair));
+            strncpy(format_name, pair, sizeof(format_name)-1);
         } else {
             extension += 1;
             full_path = (char *)pair;
-            strncpy(format_name, extension, strlen(extension));
+            strncpy(format_name, extension, sizeof(format_name)-1);
         }
     } else {
         full_path = separator + 1;
@@ -991,7 +1002,7 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     RmCfg *cfg = session->cfg;
     cfg->merge_directories = true;
 
-    /* Pull in some options for convinience,
+    /* Pull in some options for convenience,
      * duplicate dir detection works better with them.
      *
      * They may be disabled explicitly though.
@@ -1003,6 +1014,24 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     /* Keep RmFiles after shredder. */
     cfg->cache_file_structs = true;
 
+    return true;
+}
+
+static gboolean rm_cmd_parse_hidden(_UNUSED const char *option_name,
+                                               _UNUSED const gchar *_,
+                                               RmSession *session,
+                                               _UNUSED GError **error) {
+    session->cfg->ignore_hidden = false;
+    session->cfg->partial_hidden = false;
+    return true;
+}
+
+static gboolean rm_cmd_parse_no_hidden(_UNUSED const char *option_name,
+                                               _UNUSED const gchar *_,
+                                               RmSession *session,
+                                               _UNUSED GError **error) {
+    session->cfg->ignore_hidden = true;
+    session->cfg->partial_hidden = false;
     return true;
 }
 
@@ -1066,7 +1095,7 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
     }
 
     /* Remember the criteria string */
-    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria));
+    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria)-1);
 
     /* ranking the files depends on caching them to the end of the program */
     cfg->cache_file_structs = true;
@@ -1135,7 +1164,6 @@ static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
 static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
                                    _UNUSED const gchar *x, RmSession *session,
                                    _UNUSED GError **error) {
-    rm_log_warning_line("option --btrfs-readonly is deprecated, use --dedupe-readonly");
     session->cfg->dedupe_readonly = true;
     return true;
 }
@@ -1264,9 +1292,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     const int DISABLE = G_OPTION_FLAG_REVERSE, EMPTY = G_OPTION_FLAG_NO_ARG,
               HIDDEN = G_OPTION_FLAG_HIDDEN, OPTIONAL = G_OPTION_FLAG_OPTIONAL_ARG;
 
-    /* Free/Used Options:
-       Used: abBcCdDeEfFgGHhiI  kKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ|
-       Free:                  jJ                                |
+    /* Free short options: AJ
+     * (beside special characters and numbers)
     */
 
     /* clang-format off */
@@ -1283,6 +1310,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"newer-than-stamp" , 'n' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp_file) , _("Newer than stamp file")                , "PATH"}                ,
         {"newer-than"       , 'N' , 0        , G_OPTION_ARG_CALLBACK , FUNC(timestamp)      , _("Newer than timestamp")                 , "STAMP"}               ,
         {"config"           , 'c' , 0        , G_OPTION_ARG_CALLBACK , FUNC(config)         , _("Configure a formatter")                , "FMT:K[=V]"}           ,
+        {"xattr"            , 'C' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                    ,
 
         /* Non-trivial switches */
         {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
@@ -1293,11 +1321,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
-        {"hidden"                   , 'r'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->ignore_hidden            , _("Find hidden files")                                                    , NULL}     ,
+        {"hidden"                   , 'r'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(hidden)                   , _("Find hidden files")                                                    , NULL}     ,
         {"followlinks"              , 'f'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(follow_symlinks)          , _("Follow symlinks")                                                      , NULL}     ,
         {"no-followlinks"           , 'F'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->follow_symlinks          , _("Ignore symlinks")                                                      , NULL}     ,
         {"paranoid"                 , 'p'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(paranoid)                 , _("Use more paranoid hashing")                                            , NULL}     ,
-        {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mounpoints")                                              , NULL}     ,
+        {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mountpoints")                                             , NULL}     ,
         {"keep-all-tagged"          , 'k'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_tagged          , _("Keep all tagged files")                                                , NULL}     ,
         {"keep-all-untagged"        , 'K'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_untagged        , _("Keep all untagged files")                                              , NULL}     ,
         {"must-match-tagged"        , 'm'  , 0         , G_OPTION_ARG_NONE      , &cfg->must_match_tagged        , _("Must have twin in tagged dir")                                         , NULL}     ,
@@ -1317,7 +1345,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
         /* COW filesystem deduplication support */
         {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
-        {"dedupe-readonly"          , 'r'  , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
+        {"dedupe-xattr"             , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_check_xattr       , _("Check extended attributes to see if the file is already deduplicated") , NULL}     ,
+        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
         {"is-reflink"               , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_reflink               , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
 
         /* Callback */
@@ -1333,7 +1362,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     };
 
     const GOptionEntry inversed_option_entries[] = {
-        {"no-hidden"                  , 'R' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->ignore_hidden           , "Ignore hidden files"                 , NULL} ,
+        {"no-hidden"                  , 'R' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_hidden)               , "Ignore hidden files"                 , NULL} ,
         {"with-color"                 , 'w' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->with_color              , "Be colorful like a unicorn"          , NULL} ,
         {"hardlinked"                 , 'l' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Report hardlinks as duplicates")   , NULL} ,
         {"crossdev"                   , 'X' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL} ,
@@ -1486,13 +1515,16 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(cfg->partial_hidden && !cfg->merge_directories) {
         /* --partial-hidden only makes sense with --merge-directories.
-         * If the latter is not specfified, ignore it all together */
+         * If the latter is not specfified, ignore it all together
+         * and act as if --no-hidden was specified. */
         cfg->ignore_hidden = true;
         cfg->partial_hidden = false;
     }
 
     if(cfg->honour_dir_layout && !cfg->merge_directories) {
         rm_log_warning_line(_("--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
+        rm_log_warning_line(_("Note that not having duplicate directories enabled as lint type (e.g via -T df)"));
+        rm_log_warning_line(_("will also disable --merge-directories and trigger this warning."));
     }
 
     if(cfg->progress_enabled) {
@@ -1716,6 +1748,10 @@ int rm_cmd_main(RmSession *session) {
 
     if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode) {
         return session->equal_exit_code;
+    }
+
+    if(exit_state == EXIT_SUCCESS && rm_session_was_aborted()) {
+        exit_state = EXIT_FAILURE;
     }
 
     return exit_state;

@@ -713,7 +713,7 @@ msgid "Use more paranoid hashing"
 msgstr "Benutze immer paranoideren Hashalgorithmus"
 
 #: lib/cmdline.c
-msgid "Do not cross mounpoints"
+msgid "Do not cross mountpoints"
 msgstr "Überquere keine Mountpoints"
 
 #: lib/cmdline.c

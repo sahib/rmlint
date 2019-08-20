@@ -108,7 +108,7 @@ msgstr "Fichier %s%s%s écrit: %s%s%s\n"
 #: lib/formats/stats.c
 #, c-format
 msgid "No shred stats.\n"
-msgstr "Pas de statistiques pour shred"
+msgstr "Pas de statistiques pour shred\n"
 
 #: lib/formats/stats.c
 #, c-format
@@ -135,7 +135,7 @@ msgstr "%s%15s%s bytes de non-doublon\n"
 #: lib/formats/stats.c
 #, c-format
 msgid "%s%15s%s bytes of files data actually read\n"
-msgstr "%s%15s%s bytes de données de fichier réellement lus"
+msgstr "%s%15s%s bytes de données de fichier réellement lus\n"
 
 #: lib/formats/stats.c
 #, c-format
@@ -150,7 +150,7 @@ msgstr "%s%15ld%s fichiers en doublons\n"
 #: lib/formats/stats.c
 #, c-format
 msgid "%s%15ld%s Groups in total\n"
-msgstr "%s%15ld%s groupes au total"
+msgstr "%s%15ld%s groupes au total\n"
 
 #: lib/formats/stats.c
 #, c-format
@@ -692,7 +692,7 @@ msgid "Use more paranoid hashing"
 msgstr "Utiliser une fonction de hachage paranoïaque"
 
 #: lib/cmdline.c
-msgid "Do not cross mounpoints"
+msgid "Do not cross mountpoints"
 msgstr "Ne pas traverser les points de montages"
 
 #: lib/cmdline.c

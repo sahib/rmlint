@@ -317,3 +317,17 @@ def test_replay_tagged_order():
     assert data[1]['path'].endswith('b/2')
     assert data[2]['path'].endswith('a/1')
     assert data[3]['path'].endswith('a/2')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_duplicate_directory_size():
+    create_file('xxx', 'a/xxx')
+    create_file('xxx', 'b/xxx')
+
+    replay_path = '/tmp/replay.json'
+    head, *data, footer = run_rmlint('-o json:{p} -S a'.format(p=replay_path))
+    assert len(data) == 2
+
+    head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
+    assert len(data) == 2
+    assert footer['total_lint_size'] == 3

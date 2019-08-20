@@ -58,9 +58,10 @@ typedef struct RmFmtHandlerProgress {
     GTimer *timer;
 
     /* Estimated Time of Arrival calculation */
-    RmRunningMean read_diff_mean;
+    RmRunningMean speed_mean;
     RmRunningMean eta_mean;
-    RmOff last_shred_bytes_remaining;
+    RmOff last_shred_bytes_read;
+    gint64 last_check_time;
 
     /* Last calculation of ETA for caching purpose */
     char last_eta[1024];
@@ -83,50 +84,56 @@ static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
     }
 }
 
-static gdouble rm_fmt_progress_calculated_eta(
+static gdouble rm_fmt_progress_calculate_eta(
         RmSession *session,
         RmFmtHandlerProgress *self,
-        gdouble elapsed_sec,
         RmFmtProgressState state) {
-    if(self->last_shred_bytes_remaining == 0) {
-        self->last_shred_bytes_remaining = session->shred_bytes_remaining;
-        return -1.0;
-    }
-
     if(state != RM_PROGRESS_STATE_SHREDDER) {
         return -1.0;
     }
 
-    RmOff last_diff = self->last_shred_bytes_remaining - session->shred_bytes_remaining;
-    self->last_shred_bytes_remaining = session->shred_bytes_remaining;
+    // Diff is the number of bytes that we read in the last time interval.
+    // This does not involve bytes that were just skipped due to bad checksums.
+    RmOff diff = session->shred_bytes_read - self->last_shred_bytes_read;
 
-    rm_running_mean_add(&self->read_diff_mean, last_diff);
+    // took is the length of the time interval it took in seconds.
+    gint64 now = g_get_monotonic_time();
+    gdouble took = (now - self->last_check_time) / (1000.0 * 1000.0);
 
-    gdouble avg_bytes_read = rm_running_mean_get(&self->read_diff_mean);
-    gdouble throughput = avg_bytes_read / elapsed_sec;
+    self->last_check_time = now;
+    self->last_shred_bytes_read = session->shred_bytes_read;
 
-    gdouble eta_sec = 0;
-    if(throughput != 0.0) {
-        eta_sec = session->shred_bytes_remaining / throughput;
+    if(diff > 0) {
+        // speed is the average time a single file took to process or filter in files/sec.
+        gdouble speed = diff / took;
+
+        // Average the mean, to make sure that we do not directly give in to "speed bumps"
+        rm_running_mean_add(&self->speed_mean, speed);
     }
 
+    gdouble mean_speed = rm_running_mean_get(&self->speed_mean);
+    if(FLOAT_SIGN_DIFF(mean_speed, 0.0, MTIME_TOL) <= 0) {
+        return -1;
+    }
+
+    gdouble eta_sec = session->shred_bytes_remaining / mean_speed;
     rm_running_mean_add(&self->eta_mean, eta_sec);
-    return rm_running_mean_get(&self->eta_mean);
+
+    gdouble mean_eta = rm_running_mean_get(&self->eta_mean);
+    return mean_eta;
 }
 
 static char *rm_fmt_progress_get_cached_eta(
         RmSession *session,
-        RmFmtHandlerProgress *self,
-        gfloat elapsed_sec
+        RmFmtHandlerProgress *self
     ) {
     /* If there was already an ETA calculation in the last 500ms,
      * use that one to avoid flickering (see issue #292)
      */
 
-    gdouble eta_sec = rm_fmt_progress_calculated_eta(
+    gdouble eta_sec = rm_fmt_progress_calculate_eta(
             session,
             self,
-            elapsed_sec,
             self->last_state
     );
 
@@ -153,7 +160,6 @@ static void rm_fmt_progress_format_text(
         RmSession *session,
         RmFmtHandlerProgress *self,
         int max_len,
-        gdouble elapsed_sec,
         FILE *out
     ) {
     /* This is very ugly, but more or less required since we need to translate
@@ -188,7 +194,7 @@ static void rm_fmt_progress_format_text(
         self->percent = 1.0 - ((gdouble)session->shred_bytes_remaining /
                                (gdouble)session->shred_bytes_after_preprocess);
 
-        char *eta_info = rm_fmt_progress_get_cached_eta(session, self, elapsed_sec);
+        char *eta_info = rm_fmt_progress_get_cached_eta(session, self);
         rm_util_size_to_human_readable(
                 session->shred_bytes_remaining, num_buf,
                 sizeof(num_buf)
@@ -395,9 +401,10 @@ static void rm_fmt_prog(RmSession *session,
         const char *update_interval_str =
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
-        rm_running_mean_init(&self->read_diff_mean, 10);
-        rm_running_mean_init(&self->eta_mean, 50);
-        self->last_shred_bytes_remaining = 0;
+        rm_running_mean_init(&self->speed_mean, 10);
+        rm_running_mean_init(&self->eta_mean, 25);
+        self->last_shred_bytes_read = 0;
+        self->last_check_time = g_get_monotonic_time();
 
         self->plain = true;
         if(rm_fmt_get_config_value(session->formats, "progressbar", "fancy") != NULL) {
@@ -474,7 +481,7 @@ static void rm_fmt_prog(RmSession *session,
 
     gdouble elapsed_sec = g_timer_elapsed(self->timer, NULL);
     if(force_draw || elapsed_sec * 1000.0 >= self->update_interval) {
-        rm_fmt_progress_format_text(session, self, text_width, elapsed_sec, out);
+        rm_fmt_progress_format_text(session, self, text_width, out);
         if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             /* do not overwrite last messages */
             self->percent = 1.05;
@@ -500,7 +507,7 @@ static void rm_fmt_prog(RmSession *session,
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
         g_timer_destroy(self->timer);
-        rm_running_mean_unref(&self->read_diff_mean);
+        rm_running_mean_unref(&self->speed_mean);
         rm_running_mean_unref(&self->eta_mean);
     }
 }

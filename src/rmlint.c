@@ -103,6 +103,7 @@ static void i18n_init(void) {
 
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
+    RM_LOG_INIT;
 
     RmCfg cfg;
     rm_cfg_set_default(&cfg);

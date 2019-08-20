@@ -125,7 +125,7 @@ class PathNode:
         if idx is Column.PATH:
             return self.name
         elif idx is Column.TOOLTIP:
-            return self.build_path()
+            return GLib.markup_escape_text(self.build_path(), -1)
         else:
             return self.row[idx]
 
@@ -871,7 +871,7 @@ class PathTreeView(Gtk.TreeView):
             yield node
 
     def get_selected_node(self):
-        """Return thefirst selected node or None."""
+        """Return the first selected node or None."""
         try:
             return next(self.get_selected_nodes())
         except StopIteration:

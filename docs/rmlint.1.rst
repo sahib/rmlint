@@ -22,7 +22,7 @@ It's main focus lies on finding duplicate files and directories.
 
 It is able to find the following types of lint:
 
-* Duplicate files and directories (and as a result unique files).
+* Duplicate files and directories (and as a by-product unique files).
 * Nonstripped Binaries (Binaries with debug symbols; needs to be explicitly enabled).
 * Broken symbolic links.
 * Empty files and directories (also nested empty directories).
@@ -94,7 +94,7 @@ General Options
     * ``emptyfiles``, ``ef``: Find empty files.
     * ``nonstripped``, ``ns``: Find nonstripped binaries.
     * ``duplicates``, ``df``: Find duplicate files.
-    * ``duplicatedirs``, ``dd``: Find duplicate directories.
+    * ``duplicatedirs``, ``dd``: Find duplicate directories (This is the same ``-D``!)
 
     **WARNING:** It is good practice to enclose the description in single or
     double quotes. In obscure cases argument parsing might fail in weird ways,
@@ -514,23 +514,43 @@ Caching
     *NOTE:* In ``--replay`` mode, a new ``.json`` file will be written to
     ``rmlint.replay.json`` in order to avoid overwriting ``rmlint.json``.
 
+:``-C --xattr``:
+
+    Shortcut for ``--xattr-write``, ``--xattr-write``, ``--write-unfinished``.
+    This will write a checksum and a timestamp to the extended attributes of each
+    file that rmlint hashed. This speeds up subsequent runs on the same data set.
+    Please note that not all filesystems may support extended attributes and you
+    need write support to use this feature.
+
+    See the individual options below for more details and some examples.
+
 :``--xattr-read`` / ``--xattr-write`` / ``--xattr-clear``:
 
     Read or write cached checksums from the extended file attributes.
     This feature can be used to speed up consecutive runs.
 
-    **CAUTION:** This could potentially lead to false positives if file contents are
-    somehow modified without changing the file mtime.
+    **CAUTION:** This could potentially lead to false positives if file
+    contents are somehow modified without changing the file modification time.
+    rmlint uses the mtime to determine the modification timestamp if a checksum
+    is outdated. This is not a problem if you use the clone or reflink
+    operation on a filesystem like btrfs. There an outdated checksum entry
+    would simply lead to some duplicate work done in the kernel but would do no
+    harm otherwise.
 
     **NOTE:** Many tools do not support extended file attributes properly,
     resulting in a loss of the information when copying the file or editing it.
-    Also, this is a linux specific feature that works not on all filesystems and
-    only if you have write permissions to the file.
+
+    **NOTE:** You can specify ``--xattr-write`` and ``--xattr-read`` at the same time.
+    This will read from existing checksums at the start of the run and update all hashed
+    files at the end.
 
     Usage example::
 
-        $ rmlint large_file_cluster/ -U --xattr-write   # first run.
-        $ rmlint large_file_cluster/ --xattr-read       # second run.
+        $ rmlint large_file_cluster/ -U --xattr-write   # first run should be slow.
+        $ rmlint large_file_cluster/ --xattr-read       # second run should be faster.
+
+        # Or do the same in just one run:
+        $ rmlint large_file_cluster/ --xattr
 
 :``-U --write-unfinished``:
 
@@ -541,6 +561,8 @@ Caching
     This is mainly useful in conjunction with ``--xattr-write/read``. When
     re-running rmlint on a large dataset this can greatly speed up a re-run in
     some cases. Please refer to ``--xattr-read`` for an example.
+
+    If you want to output unique files, please look into the ``uniques`` output formatter.
 
 Rarely used, miscellaneous options
 ----------------------------------
@@ -614,6 +636,7 @@ FORMATTERS
   Available options:
 
   * *no_header*: Do not write a first line describing the column headers.
+  * *unique*: Include unique files in the output.
 
 * ``sh``: Output all found lint as shell script This formatter is activated
     as default.
@@ -667,11 +690,18 @@ FORMATTERS
 
   Available options:
 
+  - *unique*: Include unique files in the output.
   - *no_header=[true|false]:* Print the header with metadata (default: true)
   - *no_footer=[true|false]:* Print the footer with statistics (default: true)
   - *oneline=[true|false]:* Print one json document per line (default: false)
     This is useful if you plan to parse the output line-by-line, e.g. while
     ``rmlint`` is sill running.
+
+  This formatter is extremely useful if you're in need of scripting more complex behaviour,
+  that is not directly possible with rmlint's built-in options. A very handy tool here is ``jq``.
+  Here is an example to output all original files directly from a ``rmlint`` run:
+
+  ``$ rmlint -o | json jq -r '.[1:-1][] | select(.is_original) | .path'``
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
@@ -679,6 +709,9 @@ FORMATTERS
   where the lint needs special handling that you define in the python script.
   Therefore the python script can be modified to do things standard ``rmlint``
   is not able to do easily.
+
+* ``uniques``: Outputs all unique paths found during the run, one path per line.
+  This is often useful for scripting purposes.
 
 * ``stamp``:
 
@@ -777,18 +810,19 @@ OTHER STAND-ALONE COMMANDS
 
 :``rmlint --is-reflink [-v|-V] <file1> <file2>``:
     Tests whether ``file1`` and ``file2`` are reflinks (reference same data).
-    Return codes:
-        0: files are reflinks
-        1: files are not reflinks
-        3: not a regular file
-        4: file sizes differ
-        5: fiemaps can't be read
-        6: file1 and file2 are the same path
-        7: file1 and file2 are the same file under different mountpoints
-        8: files are hardlinks
-        9: files are symlinks (TODO)
-        10: files are not on same device
-        11: other error encountered
+    This command makes ``rmlint`` exit with one of the following exit codes:
+
+    * 0: files are reflinks
+    * 1: files are not reflinks
+    * 3: not a regular file
+    * 4: file sizes differ
+    * 5: fiemaps can't be read
+    * 6: file1 and file2 are the same path
+    * 7: file1 and file2 are the same file under different mountpoints
+    * 8: files are hardlinks
+    * 9: files are symlinks
+    * 10: files are not on same device
+    * 11: other error encountered
 
 
 EXAMPLES
@@ -868,8 +902,21 @@ This is a collection of common use cases and other tricks:
   ``$ rmlint --equal a b c && echo "Files are equal" || echo "Files are not equal"``
 
 * Test if two files are reflinks
-  ``rmlint --is-reflink a b && echo "Files are reflinks" || echo "Files are not reflinks"``.
 
+  ``$ rmlint --is-reflink a b && echo "Files are reflinks" || echo "Files are not reflinks"``.
+
+* Cache calculated checksums for next run. The checksums will be written to the extended file attributes:
+
+  ``$ rmlint --xattr``
+
+* Produce a list of unique files in a folder:
+
+  ``$ rmlint -o uniques``
+
+* Produce a list of files that are unique, including original files ("one of each"):
+
+  ``$ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files``
+  ``$ cat unique_files original_files``
 
 PROBLEMS
 ========
@@ -923,7 +970,7 @@ You can build a debug build of ``rmlint`` like this:
 
 * ``git clone git@github.com:sahib/rmlint.git``
 * ``cd rmlint``
-* ``scons DEBUG=1``
+* ``scons GDB=1 DEBUG=1``
 * ``sudo scons install  # Optional``
 
 LICENSE

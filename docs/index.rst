@@ -129,8 +129,8 @@ Authors
 ``rmlint`` was and is written by: 
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2018
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2018
+*Christopher Pahl*                   https://github.com/sahib      2010-2019
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2019
 ===================================  ============================= ===========================================
 
 Additional thanks to:

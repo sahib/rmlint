@@ -55,7 +55,9 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
 
     for(int i = 0; i < 8192; ++i) {
         hash ^= MurmurHash3_x86_32(file_path, strlen(file_path), i);
-        hash ^= MurmurHash3_x86_32(cksum, strlen(cksum), i);
+        if(cksum != NULL) {
+            hash ^= MurmurHash3_x86_32(cksum, strlen(cksum), i);
+        }
 
         if(!g_hash_table_contains(self->id_set, GUINT_TO_POINTER(hash))) {
             break;
@@ -250,19 +252,28 @@ static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
     rm_digest_hexstring(file->digest, checksum_str);
 }
 
-static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out,
-                        RmFile *file) {
+static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out, RmFile *file) {
     if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
         return;
     }
-    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE &&
-       (!file->digest || !session->cfg->write_unfinished)) {
-        /* unique file with no partial checksum */
-        return;
+
+    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
+        if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
+            if(!file->digest || !session->cfg->write_unfinished) {
+                return;
+            }
+        }
     }
 
-    char checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
-    rm_fmt_json_cksum(file, checksum_str, sizeof(checksum_str));
+    char *checksum_str = NULL;
+    size_t checksum_size = 0;
+
+    if(file->digest != NULL) {
+        checksum_size = rm_digest_get_bytes(file->digest) * 2 + 1;
+        checksum_str = g_slice_alloc0(checksum_size);
+        rm_fmt_json_cksum(file, checksum_str, checksum_size);
+        checksum_str[checksum_size - 1] = 0;
+    }
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
@@ -279,10 +290,14 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 
         gdouble progress = 0;
         if(session->shred_bytes_after_preprocess) {
-            progress = CLAMP(100 -
-                      100 * ((gdouble)session->shred_bytes_remaining /
-                             (gdouble)session->shred_bytes_after_preprocess),
-                      0, 100);
+            progress = CLAMP(
+                100 - 100 * (
+                    (gdouble)session->shred_bytes_remaining /
+                    (gdouble)session->shred_bytes_after_preprocess
+                ),
+                0,
+                100
+            );
         }
         rm_fmt_json_key_int(out, "progress", progress);
         rm_fmt_json_sep(self, out);
@@ -313,7 +328,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
             if(session->cfg->find_hardlinked_dupes) {
                 RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
 
-                if(hardlink_head && hardlink_head != file) {
+                if(hardlink_head && hardlink_head != file && file->digest) {
                     char orig_checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
                     rm_fmt_json_cksum(hardlink_head, orig_checksum_str,
                                       sizeof(orig_checksum_str));
@@ -331,6 +346,10 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
         rm_fmt_json_key_float(out, "mtime", file->mtime);
     }
     rm_fmt_json_close(self, out);
+
+    if(checksum_str != NULL) {
+        g_slice_free1(checksum_size, checksum_str);
+    }
 }
 
 static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
@@ -343,7 +362,7 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
             .elem = rm_fmt_elem,
             .prog = NULL,
             .foot = rm_fmt_foot,
-            .valid_keys = {"no_header", "no_footer", "no_body", "oneline", NULL},
+            .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", NULL},
         },
     .pretty = true};
 

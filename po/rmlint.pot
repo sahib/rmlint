@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.8.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-10-29 23:47+0100\n"
+"POT-Creation-Date: 2019-02-14 01:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -674,7 +674,7 @@ msgid "Use more paranoid hashing"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Do not cross mounpoints"
+msgid "Do not cross mountpoints"
 msgstr ""
 
 #: lib/cmdline.c
@@ -948,4 +948,22 @@ msgstr ""
 #: lib/cmdline.c
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Enable xattr based caching"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Check extended attributes to see if the file is already deduplicated"
+msgstr ""
+
+#: lib/cmdline.c
+msgid ""
+"Note that not having duplicate directories enabled as lint type (e.g via -T "
+"df)"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "will also disable --merge-directories and trigger this warning."
 msgstr ""

@@ -20,6 +20,8 @@ fi
 USER='%s'
 GROUP='%s'
 
+STAMPFILE=$(mktemp 'rmlint.XXXXXXXX.stamp')
+
 # Set to true on -n
 DO_DRY_RUN=
 
@@ -34,6 +36,9 @@ DO_SHOW_PROGRESS=true
 
 # Set to true on -c
 DO_DELETE_EMPTY_DIRS=
+
+# Set to true on -k
+DO_KEEP_DIR_TIMESTAMPS=
 
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
@@ -218,9 +223,9 @@ clone() {
     echo "${COL_YELLOW}Cloning to: ${COL_RESET}$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            $SUDO_COMMAND $RMLINT_BINARY --dedupe -r "$2" "$1"
+            $SUDO_COMMAND $RMLINT_BINARY --dedupe %s --dedupe-readonly "$2" "$1"
         else
-            $RMLINT_BINARY --dedupe "$2" "$1"
+            $RMLINT_BINARY --dedupe %s "$2" "$1"
         fi
     fi
 }
@@ -232,7 +237,7 @@ skip_hardlink() {
 
 skip_reflink() {
     print_progress_prefix
-    echo "{$COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}$1"
+    echo "${COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}$1"
 }
 
 user_command() {
@@ -250,7 +255,17 @@ remove_cmd() {
     echo "${COL_YELLOW}Deleting: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
+            if [ ! -z "$DO_KEEP_DIR_TIMESTAMPS" ]; then
+                touch -r "$(dirname $1)" "$STAMPFILE"
+            fi
+
             rm -rf "$1"
+
+            if [ ! -z "$DO_KEEP_DIR_TIMESTAMPS" ]; then
+                # Swap back old directory timestamp:
+                touch -r "$STAMPFILE" "$(dirname $1)"
+                rm "$STAMPFILE"
+            fi
 
             if [ ! -z "$DO_DELETE_EMPTY_DIRS" ]; then
                 DIR=$(dirname "$1")
@@ -310,13 +325,14 @@ OPTIONS:
   -n   Do not perform any modifications, just print what would be done. (implies -d and -x)
   -c   Clean up empty directories while deleting duplicates.
   -q   Do not show progress.
+  -k   Keep the timestamp of directories when removing duplicates.
 EOF
 }
 
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxnrpqc" OPTION
+while getopts "dhxnrpqck" OPTION
 do
   case $OPTION in
      h)
@@ -345,6 +361,9 @@ do
        ;;
      q)
        DO_SHOW_PROGRESS=
+       ;;
+     k)
+       DO_KEEP_DIR_TIMESTAMPS=true
        ;;
      *)
        usage
