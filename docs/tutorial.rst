@@ -140,7 +140,7 @@ Examples:
    rm some_dir/hello_copy.c
    # Find all duplicate files that have the same basename:
    # minus the extension
-   $ rmlint -e some_dir/
+   $ rmlint -i some_dir/
    ls some_dir/hello.c
    rm some_dir/hello.bak
 
