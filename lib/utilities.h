@@ -76,7 +76,7 @@ typedef struct stat RmStat;
 #define FLOAT_SIGN_DIFF(X, Y, tol) ((X) - (Y) > (tol) ? 1 : ((Y) - (X) > (tol) ? -1 : 0))
 
 // Time tolerance (seconds) when comparing two mtimes
-#define MTIME_TOL (0.00000001)
+#define MTIME_TOL (0.000001)
 
 #define RETURN_IF_NONZERO(X) \
     if((X) != 0) {           \

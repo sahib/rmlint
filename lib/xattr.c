@@ -220,16 +220,14 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
     char cksum_key[64], mtime_key[64],
         cksum_hex_str[rm_digest_get_bytes(file->digest) * 2 + 1], timestamp[64] = {0};
 
-    int timestamp_bytes = 0;
-
     bool follow = session->cfg->follow_symlinks;
+    g_ascii_dtostr(timestamp, sizeof(timestamp), file->mtime);
+
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
        rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str), follow) ||
-       (timestamp_bytes = snprintf(
-            timestamp, sizeof(timestamp), "%.9f", file->mtime)) == -1 ||
-       rm_xattr_set(file, mtime_key, timestamp, timestamp_bytes, follow)) {
+       rm_xattr_set(file, mtime_key, timestamp, strlen(timestamp), follow)) {
         return errno;
     }
 #endif
@@ -265,13 +263,17 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    if(FLOAT_SIGN_DIFF(g_ascii_strtod(mtime_buf, NULL), file->mtime, MTIME_TOL) == 0) {
+    gdouble xattr_mtime = g_ascii_strtod(mtime_buf, NULL);
+    if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, MTIME_TOL) != 0) {
         /* Data is too old and not useful, autoclean it */
         RM_DEFINE_PATH(file);
-        rm_log_debug_line("Checksum too old for %s, %" G_GINT64_FORMAT " < %" G_GINT64_FORMAT,
-                          file_path,
-                          g_ascii_strtoll(mtime_buf, NULL, 10),
-                          (gint64)file->mtime);
+        rm_log_debug_line(
+            "mtime differs too much for %s, %f (xattr) != %f (actual) (diff: %f)\n",
+            file_path,
+            xattr_mtime,
+            file->mtime,
+            file->mtime-xattr_mtime
+        );
         rm_xattr_clear_hash(file, session);
         return FALSE;
     }
