@@ -516,7 +516,7 @@ Caching
 
 :``-C --xattr``:
 
-    Shortcut for ``--xattr-write``, ``--xattr-write``, ``--write-unfinished``.
+    Shortcut for ``--xattr-read``, ``--xattr-write``, ``--write-unfinished``.
     This will write a checksum and a timestamp to the extended attributes of each
     file that rmlint hashed. This speeds up subsequent runs on the same data set.
     Please note that not all filesystems may support extended attributes and you
