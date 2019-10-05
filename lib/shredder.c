@@ -684,9 +684,20 @@ static void rm_shred_counter_factory(RmCounterBuffer *buffer, RmShredTag *tag) {
     g_slice_free(RmCounterBuffer, buffer);
 }
 
-static void rm_shred_write_cksum_to_xattr(const RmSession *session, RmFile *file) {
-    if(session->cfg->write_cksum_to_xattr) {
-        if(!file->ext_cksum) {
+static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *group) {
+    if(session->cfg->write_cksum_to_xattr == false) {
+        /* feature is not requested, bail out */
+        return;
+    }
+
+    if(session->cfg->write_unfinished == false && g_queue_get_length(group) <= 1) {
+        /* Do not write solitary files unless requested */
+        return;
+    }
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if(file->ext_cksum == NULL) {
             rm_xattr_write_hash(file, (RmSession *)session);
         }
     }
@@ -1015,20 +1026,18 @@ static RmFile *rm_shred_sift(RmFile *file) {
     return result;
 }
 
-/* Hasher callback when file increment hashing is completed.
- * */
-static void rm_shred_hash_callback(_UNUSED RmHasher *hasher, RmDigest *digest,
-                                   RmShredTag *tag, RmFile *file) {
+/* Hasher callback when file increment hashing is completed. */
+static void rm_shred_hash_callback(
+    _UNUSED RmHasher *hasher,
+    RmDigest *digest,
+    _UNUSED RmShredTag *tag,
+    RmFile *file
+) {
     if(!file->digest) {
         file->digest = digest;
     }
     g_assert(file->digest == digest);
     g_assert(file->hash_offset == file->shred_group->next_offset);
-
-    if(file->status != RM_FILE_STATE_IGNORE) {
-        /* remember that checksum */
-        rm_shred_write_cksum_to_xattr(tag->session, file);
-    }
 
     if(file->shredder_waiting) {
         /* MDS scheduler is waiting for result */
@@ -1484,6 +1493,8 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
         /* Output them directly, do not merge them first. */
         rm_shred_forward_to_output(tag->session, group->held_files);
     }
+
+    rm_shred_write_group_to_xattr(tag->session, group->held_files);
 
     if(group->status == RM_SHRED_GROUP_FINISHING) {
         group->status = RM_SHRED_GROUP_FINISHED;
