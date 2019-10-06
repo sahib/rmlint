@@ -373,7 +373,13 @@ def create_special_fs(name, fs_type='ext4'):
     ]
 
     for command in commands:
-        subprocess.run(command, shell=True, check=True, capture_output=True)
+        subprocess.run(
+                command,
+                shell=True,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+        )
 
     return mount_path
 
