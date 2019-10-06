@@ -13,7 +13,9 @@ import shutil
 import shlex
 import struct
 import subprocess
+import contextlib
 import xattr
+
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
@@ -354,6 +356,7 @@ def usual_teardown_func():
             pass
 
 
+@contextlib.contextmanager
 def create_special_fs(name, fs_type='ext4'):
     """
     Used to create a special filesystem container in TESTDIR_NAME
@@ -381,7 +384,13 @@ def create_special_fs(name, fs_type='ext4'):
                 stderr=subprocess.DEVNULL,
         )
 
-    return mount_path
+    try:
+        yield mount_path
+    finally:
+        # whatever happens: unmount it again.
+        # we'll get test errors in the next tests otherwise.
+        unmount_command = "umount {}".format(mount_path)
+        subprocess.run(unmount_command, shell=True, check=True)
 
 
 def must_read_xattr(path):

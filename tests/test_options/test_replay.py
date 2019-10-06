@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 from nose import with_setup
+from nose.plugins.attrib import attr
 from tests.utils import *
 
 import time
@@ -148,6 +149,7 @@ def test_replay_must_match_tagged():
     assert (os.path.join(TESTDIR_NAME, 'test_a/a'), True) in paths
 
 
+@attr('slow')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
