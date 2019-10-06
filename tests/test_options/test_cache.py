@@ -2,6 +2,7 @@
 # encoding: utf-8
 from nose import with_setup
 from tests.utils import *
+from parameterized import parameterized
 
 
 def create_files():
@@ -56,7 +57,7 @@ def check(data, write_cache):
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr():
+def test_xattr_basic():
     create_files()
 
     for _ in range(2):
@@ -69,3 +70,66 @@ def test_xattr():
             check(data, write_cache)
 
         head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
+
+
+@parameterized([("", ), ("-D", )])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_xattr_detail(extra_opts):
+    if not runs_as_root():
+        # This tests need a ext4 fs which is created during the test.
+        # The mount step sadly needs root priviliges.
+        return
+
+    # TODO: bugfix: unique files?
+
+    ext4_path = create_special_fs("this-is-not-tmpfs")
+
+    # Keep the checksum fixed, if we change the default we don't want to
+    # break this test (although I'm sure some tests will break)
+    base_options = extra_opts + " -T df -S pa -a blake2b "
+
+    path_1 = os.path.join(ext4_path, "1")
+    path_2 = os.path.join(ext4_path, "2")
+    path_3 = os.path.join(ext4_path, "3")
+
+    create_file("abc", path_1)
+    create_file("abc", path_2)
+    create_file("def", path_3)
+
+    head, *data, footer = run_rmlint(base_options + ' --xattr-write')
+    assert len(data) == 2
+
+    xattr_1 = must_read_xattr(path_1)
+    xattr_2 = must_read_xattr(path_2)
+    xattr_3 = must_read_xattr(path_3)
+    assert xattr_1["user.rmlint.blake2b.cksum"] == \
+            b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
+    assert xattr_1 == xattr_2
+
+    # no --write-unfinished given.
+    assert xattr_3 == {}
+
+    # Repeating the caching option should have no effect on the output.
+    for _ in range(10):
+        head, *data, footer = run_rmlint(base_options + ' --xattr')
+        # one more due to the unique_file
+        assert len(data) == 3
+
+        xattr_1 = must_read_xattr(path_1)
+        xattr_2 = must_read_xattr(path_2)
+        xattr_3 = must_read_xattr(path_3)
+        assert xattr_1["user.rmlint.blake2b.cksum"] == \
+                b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
+        assert xattr_1 == xattr_2
+
+        # --write-unfinished will also write the unfinished one.
+        xattr_3 = must_read_xattr(path_3)
+        assert xattr_3["user.rmlint.blake2b.cksum"] == \
+                b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
+
+    # Try clearing the attributes:
+    head, *data, footer = run_rmlint(base_options + '--xattr-clear')
+    assert len(data) == 2
+    assert must_read_xattr(path_1) == {}
+    assert must_read_xattr(path_2) == {}
+    assert must_read_xattr(path_3) == {}

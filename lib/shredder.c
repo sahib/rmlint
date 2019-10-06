@@ -697,7 +697,7 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if(file->ext_cksum == NULL) {
+        if(file->ext_cksum == NULL && file->digest != NULL) {
             rm_xattr_write_hash(file, (RmSession *)session);
         }
     }

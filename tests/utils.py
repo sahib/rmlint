@@ -13,6 +13,7 @@ import shutil
 import shlex
 import struct
 import subprocess
+import xattr
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
@@ -351,3 +352,37 @@ def usual_teardown_func():
             shutil.rmtree(path=TESTDIR_NAME)
         except OSError:
             pass
+
+
+def create_special_fs(name, fs_type='ext4'):
+    """
+    Used to create a special filesystem container in TESTDIR_NAME
+    under »name«. The type of the filesystem will be »fs_type« (as long
+    we have a »mkfs.xyz« binary for that.) This method needs root privileges.
+
+    Returns: The path of the created directory.
+    """
+    mount_path = os.path.join(TESTDIR_NAME, name)
+    device_path = mount_path + ".device"
+
+    commands = [
+        "dd if=/dev/zero of={} bs=1M count=20".format(device_path),
+        "mkdir -p {}".format(mount_path),
+        "mkfs.{} {}".format(fs_type, device_path),
+        "mount -o loop {} {}".format(device_path, mount_path),
+    ]
+
+    for command in commands:
+        subprocess.run(command, shell=True, check=True, capture_output=True)
+
+    return mount_path
+
+
+def must_read_xattr(path):
+    """
+    Read all extended attributes of a »path«.
+
+    NOTE: This will only work on non-tmpfs mounts.
+          See create_special_fs for a workaround.
+    """
+    return dict(xattr.xattr(os.path.join(TESTDIR_NAME, path)).items())
