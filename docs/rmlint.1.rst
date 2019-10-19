@@ -514,6 +514,13 @@ Caching
     *NOTE:* In ``--replay`` mode, a new ``.json`` file will be written to
     ``rmlint.replay.json`` in order to avoid overwriting ``rmlint.json``.
 
+    *NOTE:* Currently mixed runs with and without ``-D``
+    (``--merge-directories``) are not properly supported. If you have
+    a ``.json`` file with duplicate  directories and run ``--replay`` without
+    ``-D``, then you will not see the duplicates in that. Vice versa,
+    a ``.json`` file produced by a normal run without ``-D`` will not output
+    any duplicate directories when replayed. This is being worked on.
+
 :``-C --xattr``:
 
     Shortcut for ``--xattr-read``, ``--xattr-write``, ``--write-unfinished``.
