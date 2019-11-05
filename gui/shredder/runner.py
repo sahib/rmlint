@@ -167,7 +167,7 @@ def _create_rmlint_process(
             map_cfg(CrossMountType,
                     cfg.get_boolean('traverse-cross-mounts')),
             map_cfg(AlgorithmType,
-                    cfg.get_boolean('computation-algorithm'))
+                    cfg.get_enum('computation-algorithm'))
         ]
 
         # Flatten list:
