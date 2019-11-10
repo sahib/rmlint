@@ -29,7 +29,7 @@ def test_backup():
                 continue
 
             assert re.match(
-                r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z',
+                r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(|\.\d+)Z',
                 path[len("xxx."):-len(".json")]
             ) is not None
     finally:

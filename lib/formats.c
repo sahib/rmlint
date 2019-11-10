@@ -239,7 +239,7 @@ void rm_fmt_clear(RmFmtTable *self) {
 
 void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
     if(self->first_backup_timestamp == NULL) {
-        self->first_backup_timestamp = g_date_time_new_now_local();
+        self->first_backup_timestamp = g_date_time_new_now_utc();
     }
 
     char *new_path = NULL;
