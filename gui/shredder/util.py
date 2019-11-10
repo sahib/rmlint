@@ -803,7 +803,7 @@ class FileSizeSpinButton(Gtk.Box):
 
     def get_bytes(self):
         """Get the current number of displayed bytes"""
-        return self._last_val * (1024 ** self._curr_exp)
+        return int(self._last_val * (1024 ** self._curr_exp))
 
     def set_bytes(self, size):
         """Set the current number of displayed bytes"""
@@ -852,7 +852,7 @@ class FileSizeSpinButton(Gtk.Box):
         label = self._units.get_selected_choice()
         exponent = EXPONENTS.get(label, MAX_EXPONENT)
         self._set_exponent(exponent)
-        self.emit('value-changed', self.get_bytes())
+        self.on_value_changed(self._entry)
 
 
 class FileSizeRange(Gtk.Grid):
