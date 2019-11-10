@@ -195,6 +195,36 @@ void rm_fmt_remove_by_name(RmFmtTable *self, char *name) {
     g_hash_table_remove(self->handler_set, name);
 }
 
+
+// NOTE: This is the same as g_date_time_format_iso8601.
+// It is only copied here because it is only available since
+// GLib 2.62. Remove this in a few years (written as of end 2019)
+gchar *rm_date_time_format_iso8601(GDateTime *datetime) {
+    GString *outstr = NULL;
+    gchar *main_date = NULL;
+    gint64 offset;
+
+    /* Main date and time. */
+    main_date = g_date_time_format(datetime, "%Y-%m-%dT%H:%M:%S");
+    outstr = g_string_new(main_date);
+    g_free(main_date);
+
+    /* Timezone. Format it as `%:::z` unless the offset is zero, in which case
+     * we can simply use `Z`. */
+    offset = g_date_time_get_utc_offset(datetime);
+
+    if(offset == 0) {
+        g_string_append_c(outstr, 'Z');
+    } else {
+        gchar *time_zone = g_date_time_format(datetime, "%:::z");
+        g_string_append (outstr, time_zone);
+        g_free (time_zone);
+    }
+
+    return g_string_free(outstr, FALSE);
+}
+
+
 void rm_fmt_clear(RmFmtTable *self) {
     if(rm_fmt_len(self) <= 0) {
         return;
@@ -213,7 +243,7 @@ void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
     }
 
     char *new_path = NULL;
-    char *timestamp = g_date_time_format_iso8601(self->first_backup_timestamp);
+    char *timestamp = rm_date_time_format_iso8601(self->first_backup_timestamp);
 
     // Split the extension, if possible and place it before the timestamp suffix.
     char *extension = g_utf8_strrchr(old_path, -1, '.');
