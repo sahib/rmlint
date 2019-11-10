@@ -159,8 +159,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
         } else {
             RmOff file_size = statp->st_size;
             if(!cfg->limits_specified ||
-               ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file_size) &&
-                (cfg->maxsize == (RmOff)-1 || file_size <= cfg->maxsize))) {
+               ((cfg->minsize <= file_size) && (file_size <= cfg->maxsize))) {
                 if(rm_mounts_is_evil(trav_session->session->mounts, statp->st_dev) ==
                    false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;

@@ -38,6 +38,14 @@ def test_valid():
     *_, footer = run_rmlint('--size 2K-2KB')
     assert footer['duplicates'] == 2
 
+    *_, footer = run_rmlint('--size 2K-2KB')
+    assert footer['duplicates'] == 2
+
+    *_, footer = run_rmlint('--size 18446744073709551615-18446744073709551615')
+    assert footer['duplicates'] == 0
+
+    *_, footer = run_rmlint('--size 1-18446744073709551615')
+    assert footer['duplicates'] == 6
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_invalid():
@@ -60,6 +68,16 @@ def test_invalid():
 
     # double min
     trigger('--size 10--10')
+
+    # overflow by one.
+    trigger('--size 0-18446744073709551616')
+
+    # overflow by factor.
+    trigger('--size 0-18446744073709551615M')
+
+    # overflow by fraction.
+    trigger('--size 0-18446744073709551615.1')
+
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
