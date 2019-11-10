@@ -1351,13 +1351,18 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 gdouble rm_iso8601_parse(const char *string) {
-    GTimeVal time_result;
-    if(!g_time_val_from_iso8601(string, &time_result)) {
+    GDateTime *time_result = g_date_time_new_from_iso8601(string, NULL);
+    if(time_result == NULL) {
         rm_log_perror("Converting time failed");
         return 0;
     }
 
-    return time_result.tv_sec + time_result.tv_usec / (gdouble)(G_USEC_PER_SEC);
+
+    gdouble result = g_date_time_to_unix(time_result);
+    result += g_date_time_get_microsecond(time_result) / (gdouble)(G_USEC_PER_SEC);
+
+    g_date_time_unref(time_result);
+    return result;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
