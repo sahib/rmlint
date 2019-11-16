@@ -206,6 +206,9 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
                 rm_fmt_json_sep(self, out);
                 rm_fmt_json_key_int(out, "hash_seed", session->hash_seed);
             }
+
+            rm_fmt_json_sep(self, out);
+            rm_fmt_json_key_bool(out, "merge_directories", session->cfg->merge_directories);
         }
         rm_fmt_json_close(self, out);
     }

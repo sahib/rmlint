@@ -1040,7 +1040,7 @@ RmDirectoryUnpacker *rm_dir_unpacker_new(RmSession *session, const char *directo
 }
 
 void rm_dir_unpacker_free(RmDirectoryUnpacker *unpacker) {
-    g_queue_clear_full(&unpacker->files, (GDestroyNotify)rm_file_destroy);
+    g_queue_clear(&unpacker->files);
     g_free(unpacker);
 }
 
@@ -1059,6 +1059,5 @@ RmFile *rm_dir_unpacker_next(RmDirectoryUnpacker *unpacker) {
         unpacker->has_collected = true;
     }
 
-    // TODO: logic.
     return g_queue_pop_head(&unpacker->files);
 }

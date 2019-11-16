@@ -113,6 +113,22 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     }
 
     polly->root = json_node_get_array(root);
+
+    JsonObject *object = json_array_get_object_element(polly->root, 0);
+    JsonNode *merge_directories_node = json_object_get_member(object, "path");
+    bool json_had_merge_dirs = json_node_get_boolean(merge_directories_node);
+
+    if(session->cfg->merge_directories != json_had_merge_dirs) {
+        if(json_had_merge_dirs) {
+            /* The .json file was create with the -D option
+             * We need to unpack directories while running.
+             * */
+            polly->unpack_directories = true;
+        } else {
+            rm_log_warning_line("replay.json was created without -D; ignoring for now.")
+        }
+    }
+
     return polly;
 
 failure:
