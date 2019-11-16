@@ -74,6 +74,9 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
         checksum_str = g_slice_alloc0(checksum_size);
         checksum_str[checksum_size - 1] = 0;
         rm_digest_hexstring(file->digest, checksum_str);
+    } else {
+        checksum_str = g_slice_alloc0(1);
+        *checksum_str = 0;
     }
 
     /* Escape quotes in the path (refer http://tools.ietf.org/html/rfc4180, item 6)*/
