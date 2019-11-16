@@ -69,6 +69,10 @@ typedef struct RmParrot {
     /* true if the .json file came after a //
      * on the commandline. */
     bool is_prefd;
+
+    /* If true deliver each RmFile in a duplicate directory. */
+    bool unpack_directories;
+    RmDirectoryUnpacker *unpacker;
 } RmParrot;
 
 static void rm_parrot_close(RmParrot *polly) {
@@ -91,7 +95,6 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
 
     for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
         RmPath *rmpath = iter->data;
-
         RmStat stat_buf;
         if(rm_sys_stat(rmpath->path, &stat_buf) != -1) {
             g_hash_table_add(polly->disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));
@@ -117,6 +120,15 @@ failure:
 }
 
 static bool rm_parrot_has_next(RmParrot *polly) {
+    if(polly->unpacker != NULL) {
+        if(rm_dir_unpacker_has_next(polly->unpacker)) {
+            return true;
+        }
+
+        rm_dir_unpacker_free(polly->unpacker);
+        polly->unpacker = NULL;
+    }
+
     return (polly->index < json_array_get_length(polly->root));
 }
 
@@ -226,12 +238,40 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 }
 
 static RmFile *rm_parrot_next(RmParrot *polly) {
-    /* Skip NULL entries */
-    while(rm_parrot_has_next(polly)) {
-        RmFile *file = NULL;
-        if((file = rm_parrot_try_next(polly))) {
+    RmFile *file = NULL;
+
+    if(polly->unpacker != NULL) {
+        file = rm_dir_unpacker_next(polly->unpacker);
+        if(file != NULL) {
             return file;
         }
+
+        // unpacker is exhausted. Continue in the JSON.
+        rm_dir_unpacker_free(polly->unpacker);
+        polly->unpacker = NULL;
+    }
+
+
+
+    /* Skip NULL entries */
+    while(rm_parrot_has_next(polly)) {
+        file = rm_parrot_try_next(polly);
+        if(file == NULL) {
+            /* try again */
+            continue;
+        }
+
+        if(polly->unpack_directories &&
+           file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            // TODO: is preferred from RmFile or from json file?
+            RM_DEFINE_PATH(file);
+            polly->unpacker = rm_dir_unpacker_new(file_path, polly->is_prefd);
+
+            /* call self which will now read from the unpacker */
+            return rm_parrot_next(polly);
+        }
+
+        return file;
     }
 
     return NULL;

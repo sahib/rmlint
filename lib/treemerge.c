@@ -951,3 +951,33 @@ void rm_tm_finish(RmTreeMerger *self) {
         rm_tm_extract(self);
     }
 }
+
+//////////////////////
+// Unpacker utility //
+//////////////////////
+
+struct RmDirectoryUnpacker {
+    const char *directory;
+    bool is_prefd;
+};
+
+RmDirectoryUnpacker *rm_dir_unpacker_new(const char *directory, bool is_prefd) {
+    RmDirectoryUnpacker *unpacker = g_malloc0(sizeof(RmDirectoryUnpacker));
+    unpacker->directory = directory;
+    unpacker->is_prefd = is_prefd;
+    return unpacker;
+}
+
+void rm_dir_unpacker_free(RmDirectoryUnpacker *unpacker) {
+    g_free(unpacker);
+}
+
+bool rm_dir_unpacker_has_next(RmDirectoryUnpacker *unpacker) {
+    // TODO:
+    return true;
+}
+
+RmFile *rm_dir_unpacker_next(RmDirectoryUnpacker *unpacker) {
+    // TODO: logic.
+    return NULL;
+}

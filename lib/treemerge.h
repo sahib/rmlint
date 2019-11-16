@@ -65,4 +65,28 @@ void rm_tm_finish(RmTreeMerger *self);
  */
 void rm_tm_destroy(RmTreeMerger *self);
 
+
+struct RmDirectoryUnpacker;
+typedef struct RmDirectoryUnpacker RmDirectoryUnpacker;
+
+/**
+ * @brief Create a new unpack helper
+ * */
+RmDirectoryUnpacker *rm_dir_unpacker_new(const char *directory, bool is_prefd);
+
+/**
+ * @brief Free a unpack helper
+ * */
+void rm_dir_unpacker_free(RmDirectoryUnpacker *unpacker);
+
+/**
+ * @brief Retrieve the next file from the directory.
+ * */
+RmFile *rm_dir_unpacker_next(RmDirectoryUnpacker *unpacker);
+
+/**
+ * @brief Check if we have more entries.
+ */
+bool rm_dir_unpacker_has_next(RmDirectoryUnpacker *unpacker);
+
 #endif /* RM_TREEMERGE_INCLUDE*/
