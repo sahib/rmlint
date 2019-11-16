@@ -69,10 +69,13 @@ void rm_tm_destroy(RmTreeMerger *self);
 struct RmDirectoryUnpacker;
 typedef struct RmDirectoryUnpacker RmDirectoryUnpacker;
 
+struct RmSession;
+typedef struct RmSession RmSession;
+
 /**
  * @brief Create a new unpack helper
  * */
-RmDirectoryUnpacker *rm_dir_unpacker_new(const char *directory, bool is_prefd);
+RmDirectoryUnpacker *rm_dir_unpacker_new(RmSession *session, const char *directory, bool is_prefd);
 
 /**
  * @brief Free a unpack helper

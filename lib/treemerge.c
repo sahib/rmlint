@@ -82,6 +82,7 @@
 #include "preprocess.h"
 #include "shredder.h"
 #include "treemerge.h"
+#include "session.h"
 
 #include "fts/fts.h"
 
@@ -203,6 +204,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
      */
     RmTrie file_tree;
     rm_trie_init(&file_tree);
+
 
     FTS *fts = fts_open(path_vec, FTS_COMFOLLOW | FTS_PHYSICAL, NULL);
     if(fts == NULL) {
@@ -957,27 +959,106 @@ void rm_tm_finish(RmTreeMerger *self) {
 //////////////////////
 
 struct RmDirectoryUnpacker {
+    RmSession *session;
     const char *directory;
     bool is_prefd;
+    bool has_collected;
+    GQueue files;
 };
 
-RmDirectoryUnpacker *rm_dir_unpacker_new(const char *directory, bool is_prefd) {
+static bool rm_dir_unpacker_collect(RmDirectoryUnpacker *unpacker) {
+    const char *const path_vec[2] = {
+        (char * const) unpacker->directory,
+        NULL
+    };
+
+    FTS *fts = fts_open(path_vec, FTS_COMFOLLOW | FTS_PHYSICAL, NULL);
+    if(fts == NULL) {
+        rm_log_perror("fts_open failed");
+        goto fail;
+    }
+
+    FTSENT *ent = NULL;
+    while((ent = fts_read(fts))) {
+        /* Handle large files (where fts fails with FTS_NS) */
+        if(ent->fts_info == FTS_NS) {
+            RmStat stat_buf;
+            if(rm_sys_stat(ent->fts_path, &stat_buf) == -1) {
+                rm_log_perror("stat(2) failed");
+                continue;
+            } else {
+                /* Must be a large file (or followed link to it) */
+                ent->fts_info = FTS_F;
+            }
+        }
+
+        switch(ent->fts_info) {
+        case FTS_ERR:
+        case FTS_DC:
+        case FTS_NS:
+            break;
+        case FTS_F:
+        case FTS_SL:
+        case FTS_SLNONE:
+        case FTS_DEFAULT: {
+            RmFile *file = rm_file_new(
+                unpacker->session,
+                ent->fts_path,
+                (RmStat *)ent->fts_statp,
+                RM_LINT_TYPE_DUPE_CANDIDATE,
+                unpacker->is_prefd,
+                0,
+                ent->fts_level + 1
+            );
+
+            g_queue_push_tail(&unpacker->files, file);
+        }
+        default:
+            /* other fts states, that do not count as errors or files */
+            break;
+        }
+    }
+
+    if(fts_close(fts) != 0) {
+        rm_log_perror("fts_close failed");
+        goto fail;
+    }
+
+fail:
+    return false;
+}
+
+//////
+
+RmDirectoryUnpacker *rm_dir_unpacker_new(RmSession *session, const char *directory, bool is_prefd) {
     RmDirectoryUnpacker *unpacker = g_malloc0(sizeof(RmDirectoryUnpacker));
+    unpacker->session = session;
     unpacker->directory = directory;
     unpacker->is_prefd = is_prefd;
+    g_queue_init(&unpacker->files);
     return unpacker;
 }
 
 void rm_dir_unpacker_free(RmDirectoryUnpacker *unpacker) {
+    g_queue_clear_full(&unpacker->files, (GDestroyNotify)rm_file_destroy);
     g_free(unpacker);
 }
 
 bool rm_dir_unpacker_has_next(RmDirectoryUnpacker *unpacker) {
-    // TODO:
-    return true;
+    if(unpacker->has_collected == false) {
+        rm_dir_unpacker_collect(unpacker);
+        unpacker->has_collected = true;
+    }
+
+    return g_queue_get_length(&unpacker->files) > 0;
 }
 
 RmFile *rm_dir_unpacker_next(RmDirectoryUnpacker *unpacker) {
+    if(unpacker->has_collected == false) {
+        rm_dir_unpacker_collect(unpacker);
+        unpacker->has_collected = true;
+    }
+
     // TODO: logic.
-    return NULL;
+    return g_queue_pop_head(&unpacker->files);
 }

@@ -84,6 +84,7 @@ static void rm_parrot_close(RmParrot *polly) {
     g_free(polly);
 }
 
+// TODO: Pass unpack option.
 static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool is_prefd,
                                 GError **error) {
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
@@ -251,8 +252,6 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
         polly->unpacker = NULL;
     }
 
-
-
     /* Skip NULL entries */
     while(rm_parrot_has_next(polly)) {
         file = rm_parrot_try_next(polly);
@@ -265,7 +264,15 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
            file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
             // TODO: is preferred from RmFile or from json file?
             RM_DEFINE_PATH(file);
-            polly->unpacker = rm_dir_unpacker_new(file_path, polly->is_prefd);
+            rm_log_warning_line("unpacking: %s", file_path);
+            polly->unpacker = rm_dir_unpacker_new(
+                polly->session,
+                file_path,
+                polly->is_prefd
+            );
+
+            /* we won't need the original file anymore */
+            rm_file_destroy(file);
 
             /* call self which will now read from the unpacker */
             return rm_parrot_next(polly);
