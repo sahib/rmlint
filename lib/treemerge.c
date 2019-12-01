@@ -112,7 +112,7 @@ typedef struct RmDirectory {
 } RmDirectory;
 
 const char *rm_directory_get_dirname(RmDirectory *self) {
-	return self->dirname;
+    return self->dirname;
 }
 
 struct RmTreeMerger {
@@ -782,12 +782,18 @@ static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *dir
     directory->was_dupe_extracted = true;
 
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        /* Forward the part_of_directory to the output formatter.
+         * We need a copy, because the type and parent_dir changes.
+         */
         RmFile *file = iter->data;
-        RM_DEFINE_PATH(file);
+        RmFile *shallow_copy = rm_file_shallow_copy(file);
 
-        file->parent_dir = directory;
-        file->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
-        rm_fmt_write(file, self->session->formats, -1);
+        shallow_copy->parent_dir = directory;
+        shallow_copy->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
+        rm_fmt_write(shallow_copy, self->session->formats, -1);
+
+        /* Make sure to clean up the memory of the shallow copy */
+        g_queue_push_tail(self->free_list, shallow_copy);
     }
 
     for(GList *iter = directory->children.head; iter; iter = iter->next) {

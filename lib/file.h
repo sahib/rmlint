@@ -188,6 +188,9 @@ typedef struct RmFile {
     /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
     bool is_on_subvol_fs : 1;
 
+    /* Set to true when file was created by rm_file_shallow_copy */
+    bool is_shallow_copy : 1;
+
     /* The pre-matched file cluster that this file belongs to (or NULL) */
     GQueue *cluster;
 
@@ -358,6 +361,14 @@ void rm_file_set_path(RmFile *file, char *path);
  * @brief Internal helper function for RM_DEFINE_PATH using folder tree and basename.
  */
 void rm_file_build_path(RmFile *file, char *buf);
+
+/**
+ * @brief Make a shallow copy of a file.
+ *
+ * Free with rm_file_destroy, but beware that modifying e.g. the digest will
+ * have a effect on the original file.
+ */
+RmFile *rm_file_shallow_copy(RmFile *file);
 
 /**
  * @brief Compare basenames of two files

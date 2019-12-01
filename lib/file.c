@@ -108,21 +108,31 @@ void rm_file_build_path(RmFile *file, char *buf) {
     rm_trie_build_path(&file->session->cfg->file_trie, file->folder, buf, PATH_MAX);
 }
 
+RmFile *rm_file_shallow_copy(RmFile *file) {
+    g_assert(file);
+
+    RmFile *shallow_copy  = g_slice_new0(RmFile);
+	memcpy(shallow_copy, file, sizeof(RmFile));
+	return shallow_copy;
+}
+
 void rm_file_destroy(RmFile *file) {
-    if(file->hardlinks) {
-        g_queue_remove(file->hardlinks, file);
-        if(file->hardlinks->length == 0) {
-            g_queue_free(file->hardlinks);
-        }
-    }
+	if(file->is_shallow_copy == false) {
+		if(file->hardlinks) {
+			g_queue_remove(file->hardlinks, file);
+			if(file->hardlinks->length == 0) {
+				g_queue_free(file->hardlinks);
+			}
+		}
 
-    if(file->ext_cksum) {
-        g_free(file->ext_cksum);
-    }
+		if(file->ext_cksum) {
+			g_free(file->ext_cksum);
+		}
 
-    if(file->free_digest) {
-        rm_digest_free(file->digest);
-    }
+		if(file->free_digest) {
+			rm_digest_free(file->digest);
+		}
+	}
 
     g_slice_free(RmFile, file);
 }
