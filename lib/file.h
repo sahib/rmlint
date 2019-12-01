@@ -76,6 +76,11 @@ typedef enum RmLintType {
      * This is mainly useful for caching.
      */
     RM_LINT_TYPE_UNIQUE_FILE,
+
+    /* Special type for files that are outputted as part of treemerge.
+     * They land still in the json output with this type.
+     */
+    RM_LINT_TYPE_PART_OF_DIRECTORY,
 } RmLintType;
 
 struct RmSession;
@@ -94,6 +99,8 @@ typedef guint16 RmPatternBitmask;
 /* Set a field and remember that it was set. */
 #define RM_PATTERN_SET_CACHED(mask, idx, match) \
     ((*mask) |= ((!!match << idx) | (1 << (idx + RM_PATTERN_N_MAX))))
+
+struct RmDirectory;
 
 /**
  * RmFile structure; used by pretty much all rmlint modules.
@@ -252,6 +259,11 @@ typedef struct RmFile {
      * */
     RmPatternBitmask pattern_bitmask_path;
     RmPatternBitmask pattern_bitmask_basename;
+
+    /* Parent directory.
+     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
+     */
+    struct RmDirectory *parent_dir;
 } RmFile;
 
 /* Defines a path variable containing the file's path */

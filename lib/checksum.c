@@ -979,7 +979,8 @@ guint rm_digest_hash(RmDigest *digest) {
 }
 
 gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
-    g_assert(a && b);
+    g_assert(a);
+    g_assert(b);
 
     if(a->type != b->type) {
         return false;

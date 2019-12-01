@@ -27,6 +27,7 @@
 #include "../formats.h"
 #include "../preprocess.h"
 #include "../utilities.h"
+#include "../treemerge.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -339,6 +340,12 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
                 rm_fmt_json_sep(self, out);
             }
 
+
+			if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY && file->parent_dir) {
+				rm_fmt_json_key(out, "parent_path", rm_directory_get_dirname(file->parent_dir));
+				rm_fmt_json_sep(self, out);
+
+			}
 
             if(session->cfg->find_hardlinked_dupes) {
                 RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);

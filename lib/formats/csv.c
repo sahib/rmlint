@@ -66,6 +66,10 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
         }
     }
 
+    if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+        return;
+    }
+
     char *checksum_str = NULL;
     size_t checksum_size = 0;
 

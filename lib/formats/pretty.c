@@ -101,6 +101,10 @@ static void rm_fmt_elem(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
         return;
     }
 
+    if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+        return;
+    }
+
     self->elems_written++;
 
     if(file->lint_type != self->last_lint_type) {

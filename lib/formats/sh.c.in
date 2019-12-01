@@ -452,8 +452,10 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         rm_fmt_write_duplicate(self, out, file);
         break;
+    case RM_LINT_TYPE_PART_OF_DIRECTORY:
+        break;
     default:
-        rm_log_warning("Warning: unknown type in encountered: %d\n", file->lint_type);
+        rm_log_warning("warning: sh: unknown type in encountered: %d\n", file->lint_type);
         break;
     }
 

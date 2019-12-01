@@ -27,3 +27,7 @@ lib/formats/sh.c
 uninstall-
 gui/app/resources/app.gresource
 *.a
+
+rmlint.*.sh
+rmlint.*.json
+

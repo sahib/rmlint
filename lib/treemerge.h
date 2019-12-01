@@ -66,6 +66,14 @@ void rm_tm_finish(RmTreeMerger *self);
 void rm_tm_destroy(RmTreeMerger *self);
 
 
+/**
+ * A duplicate directory.
+ */
+struct RmDirectory;
+typedef struct RmDirectory RmDirectory;
+
+const char *rm_directory_get_dirname(RmDirectory *self);
+
 struct RmDirectoryUnpacker;
 typedef struct RmDirectoryUnpacker RmDirectoryUnpacker;
 

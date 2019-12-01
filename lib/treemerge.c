@@ -98,6 +98,7 @@ typedef struct RmDirectory {
     bool finished : 1;   /* Was this dir or one of his parents already printed?        */
     bool was_merged : 1; /* true if this directory was merged up already (only once)   */
     bool was_inserted : 1; /* true if this directory was added to results (only once)  */
+    bool was_dupe_extracted : 1;
     unsigned short depth; /* path depth (i.e. count of / in path, no trailing /)       */
     GHashTable *hash_set; /* Set of hashes, used for true equality check               */
     RmDigest *digest;     /* Common XOR digest of all RmFiles in this directory.
@@ -109,6 +110,10 @@ typedef struct RmDirectory {
         dev_t dir_dev;     /* Directory Metadata: Device ID         */
     } metadata;
 } RmDirectory;
+
+const char *rm_directory_get_dirname(RmDirectory *self) {
+	return self->dirname;
+}
 
 struct RmTreeMerger {
     RmSession *session;       /* Session state variables / Settings                  */
@@ -295,6 +300,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
     self->prefd_files = 0;
     self->was_merged = false;
     self->was_inserted = false;
+    self->was_dupe_extracted = false;
     self->mergeups = 0;
 
     self->dirname = dirname;
@@ -709,8 +715,12 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        GQueue *file_list = rm_hash_table_setdefault(self->file_groups, file->digest,
-                                                     (RmNewFunc)g_queue_new);
+        GQueue *file_list = rm_hash_table_setdefault(
+            self->file_groups,
+            file->digest,
+            (RmNewFunc)g_queue_new
+        );
+
         g_queue_push_head(file_list, file);
     }
 
@@ -762,6 +772,28 @@ static void rm_tm_filter_hidden_directories(GQueue *directories) {
     }
 
     g_queue_free(kill_list);
+}
+
+static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *directory) {
+    if(directory->was_dupe_extracted) {
+        return;
+    }
+
+    directory->was_dupe_extracted = true;
+
+    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        RM_DEFINE_PATH(file);
+
+        file->parent_dir = directory;
+        file->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
+        rm_fmt_write(file, self->session->formats, -1);
+    }
+
+    for(GList *iter = directory->children.head; iter; iter = iter->next) {
+        RmDirectory *child_directory = iter->data;
+        rm_tm_extract_part_of_dir_dupes(self, child_directory);
+    }
 }
 
 static void rm_tm_extract(RmTreeMerger *self) {
@@ -817,7 +849,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
         }
 
         /* Make sure the original directory lands as first
-         * in the result_dirs queue.
+         * in the result_dirs queue. Also convert it from RmDirectory
+         * to a fake RmFile, so the output module can handle it.
          */
         g_queue_sort(&result_dirs, (GCompareDataFunc)rm_tm_sort_orig_criteria, self);
 
@@ -825,6 +858,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         for(GList *iter = result_dirs.head; iter; iter = iter->next) {
             RmDirectory *directory = iter->data;
+            rm_tm_extract_part_of_dir_dupes(self, directory);
 
             RmFile *mask = rm_directory_as_new_file(self, directory);
             g_queue_push_tail(self->free_list, mask);
@@ -847,6 +881,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             if(self->session->cfg->write_unfinished) {
                 rm_tm_write_unfinished_cksums(self, directory);
             }
+
         }
 
         if(result_dirs.length >= 2) {

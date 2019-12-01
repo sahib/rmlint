@@ -470,7 +470,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
     fts_close(ftsp);
 
-    // rm_file_list_insert_queue(, session);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
 done:

@@ -73,6 +73,7 @@ typedef struct RmParrot {
     /* If true deliver each RmFile in a duplicate directory. */
     bool unpack_directories;
     RmDirectoryUnpacker *unpacker;
+    RmDigest *unpack_digest;
 } RmParrot;
 
 static void rm_parrot_close(RmParrot *polly) {
@@ -115,17 +116,22 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     polly->root = json_node_get_array(root);
 
     JsonObject *object = json_array_get_object_element(polly->root, 0);
-    JsonNode *merge_directories_node = json_object_get_member(object, "path");
-    bool json_had_merge_dirs = json_node_get_boolean(merge_directories_node);
+    JsonNode *merge_directories_node = json_object_get_member(object, "merge_directories");
 
-    if(session->cfg->merge_directories != json_had_merge_dirs) {
-        if(json_had_merge_dirs) {
-            /* The .json file was create with the -D option
-             * We need to unpack directories while running.
-             * */
-            polly->unpack_directories = true;
-        } else {
-            rm_log_warning_line("replay.json was created without -D; ignoring for now.")
+    if(merge_directories_node != NULL) {
+        bool json_had_merge_dirs = json_node_get_boolean(merge_directories_node);
+
+        if(session->cfg->merge_directories != json_had_merge_dirs) {
+            if(json_had_merge_dirs) {
+                /* The .json file was create with the -D option
+                 * We need to unpack directories while running.
+                 * */
+                rm_log_warning_line("replay.json was created with -D, but you're running without.")
+                rm_log_warning_line("rmlint will unpack duplicate directories into individual files.")
+                polly->unpack_directories = true;
+            } else {
+                rm_log_warning_line("replay.json was created without -D; ignoring for now.")
+            }
         }
     }
 
@@ -144,6 +150,8 @@ static bool rm_parrot_has_next(RmParrot *polly) {
 
         rm_dir_unpacker_free(polly->unpacker);
         polly->unpacker = NULL;
+        rm_digest_free(polly->unpack_digest);
+        polly->unpack_digest = NULL;
     }
 
     return (polly->index < json_array_get_length(polly->root));
@@ -260,12 +268,16 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
     if(polly->unpacker != NULL) {
         file = rm_dir_unpacker_next(polly->unpacker);
         if(file != NULL) {
+            file->digest = polly->unpack_digest;
             return file;
         }
 
         // unpacker is exhausted. Continue in the JSON.
         rm_dir_unpacker_free(polly->unpacker);
         polly->unpacker = NULL;
+
+        rm_digest_free(polly->unpack_digest);
+        polly->unpack_digest = NULL;
     }
 
     /* Skip NULL entries */
@@ -288,6 +300,7 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
             );
 
             /* we won't need the original file anymore */
+            polly->unpack_digest = rm_digest_copy(file->digest);
             rm_file_destroy(file);
 
             /* call self which will now read from the unpacker */
@@ -601,10 +614,12 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
         rm_log_debug("[okay]\n");
 
-        if(!rm_digest_equal(file->digest, last_digest)) {
-            rm_digest_free(last_digest);
-            last_digest = rm_digest_copy(file->digest);
-            rm_parrot_cage_push_group(cage, &group, false);
+        if(file->digest != NULL) {
+            if(!rm_digest_equal(file->digest, last_digest)) {
+                rm_digest_free(last_digest);
+                last_digest = rm_digest_copy(file->digest);
+                rm_parrot_cage_push_group(cage, &group, false);
+            }
         }
 
         g_queue_push_tail(group, file);
