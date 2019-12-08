@@ -41,6 +41,33 @@
 #if HAVE_JSON_GLIB
 #include <json-glib/json-glib.h>
 
+typedef struct RmUnpackedDirectory {
+	GQueue *files;
+} RmUnpackedDirectory;
+
+static RmUnpackedDirectory *rm_unpacked_directory_new(void) {
+	RmUnpackedDirectory *self = g_malloc0(sizeof(RmUnpackedDirectory));
+	self->files = g_queue_new();
+	return self;
+}
+
+static bool rm_unpacked_directory_has_next(RmUnpackedDirectory *self) {
+	return g_queue_get_length(self->files) > 0;
+}
+
+static RmFile *rm_unpacked_directory_next(RmUnpackedDirectory *self) {
+	return g_queue_pop_head(self->files);
+}
+
+static void rm_unpacked_directory_add(RmUnpackedDirectory *self, RmFile *file) {
+	g_queue_push_tail(self->files, file);
+}
+
+static void rm_unpacked_directory_free(RmUnpackedDirectory *self) {
+	g_queue_free(self->files);
+	g_free(self);
+}
+
 /////////////////////////////////////////////////
 //  POLLY THE PARROT REPEATS WHAT RMLINT SAID  //
 /////////////////////////////////////////////////
@@ -72,8 +99,13 @@ typedef struct RmParrot {
 
     /* If true deliver each RmFile in a duplicate directory. */
     bool unpack_directories;
-    RmDirectoryUnpacker *unpacker;
-    RmDigest *unpack_digest;
+    RmUnpackedDirectory *unpacker;
+
+	/* map duplicate directories paths to the group of RmFiles
+	 * they consist of (read from the "part_of_directory" type
+	 * (required for the unpacking feature)
+	 * */
+	RmTrie directory_trie;
 } RmParrot;
 
 static void rm_parrot_close(RmParrot *polly) {
@@ -82,6 +114,7 @@ static void rm_parrot_close(RmParrot *polly) {
     }
 
     g_hash_table_unref(polly->disk_ids);
+	rm_trie_destroy(&polly->directory_trie);
     g_free(polly);
 }
 
@@ -94,6 +127,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
     polly->is_prefd = is_prefd;
+	rm_trie_init(&polly->directory_trie);
 
     for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
         RmPath *rmpath = iter->data;
@@ -123,7 +157,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
 
         if(session->cfg->merge_directories != json_had_merge_dirs) {
             if(json_had_merge_dirs) {
-                /* The .json file was create with the -D option
+                /* The .json file was created with the -D option
                  * We need to unpack directories while running.
                  * */
                 rm_log_warning_line("replay.json was created with -D, but you're running without.")
@@ -144,14 +178,12 @@ failure:
 
 static bool rm_parrot_has_next(RmParrot *polly) {
     if(polly->unpacker != NULL) {
-        if(rm_dir_unpacker_has_next(polly->unpacker)) {
+        if(rm_unpacked_directory_has_next(polly->unpacker)) {
             return true;
         }
 
-        rm_dir_unpacker_free(polly->unpacker);
+        rm_unpacked_directory_free(polly->unpacker);
         polly->unpacker = NULL;
-        rm_digest_free(polly->unpack_digest);
-        polly->unpack_digest = NULL;
     }
 
     return (polly->index < json_array_get_length(polly->root));
@@ -178,10 +210,12 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     path = json_node_get_string(path_node);
 
-    if(rm_trie_search_node(&polly->session->cfg->file_trie, path)) {
-        /* We have this node already */
-        return NULL;
-    }
+	// RmNode *trie_node = rm_trie_search_node(&polly->session->cfg->file_trie, path);
+    // if(trie_node != NULL) {
+	// 	g_printerr("DATA: %p\n", trie_node->data);
+    //     /* We have this node already */
+    //     return NULL;
+    // }
 
     /* Check for the lint type */
     RmLintType type =
@@ -226,9 +260,11 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     file->is_symlink = (lstat_buf.st_mode & S_IFLNK);
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
     file->free_digest = true;
+	// TODO:
+	// g_printerr("IN: %s %s\n", path, rm_file_lint_type_to_string(file->lint_type));
 
     // stat() reports directories as size zero.
-    // Fix this by actually using the size field in this example.
+    // Fix this by actually using the size field from the json node.
     if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE && stat_info->st_mode & S_IFDIR) {
         file->actual_file_size = json_object_get_int_member(object, "size");
     }
@@ -259,25 +295,61 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         g_assert(!file->hardlinks);
     }
 
+	if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+		char *parent_path = json_object_get_string_member(object, "parent_path");
+
+		g_printerr("SETTING GROUP: %s %s\n", path, parent_path);
+
+		GQueue *children = rm_trie_search(&polly->directory_trie, parent_path);
+		if(children == NULL) {
+			children = g_queue_new();
+			rm_trie_insert(&polly->directory_trie, parent_path, children);
+		}
+
+		g_queue_push_tail(children, file);
+	}
+
     return file;
+}
+
+int rm_parrot_iter_dir_children(RmTrie *self, RmNode *node, int level, void *user_data) {
+	RmUnpackedDirectory *unpacker = user_data;
+
+	char buf[PATH_MAX] = {0};
+	rm_trie_build_path_unlocked(node, buf, PATH_MAX);
+	g_printerr("-> %s (level %d) %s %p\n", buf, level, node->has_value ? "true": "false", node->data);
+
+	GQueue *children = node->data;
+	if(children == NULL) {
+		return 0;
+	}
+
+	for(GList *iter = children->head; iter; iter = iter->next) {
+		RmFile *child_file = iter->data;
+		RM_DEFINE_PATH(child_file);
+		child_file->lint_type = RM_LINT_TYPE_DUPE_CANDIDATE;
+		g_printerr("  -> CHILD: %s\n", child_file_path);
+		rm_unpacked_directory_add(unpacker, child_file);
+	}
+
+	return 0;
 }
 
 static RmFile *rm_parrot_next(RmParrot *polly) {
     RmFile *file = NULL;
 
+	// If we have a directory to unpack, let's do that first.
     if(polly->unpacker != NULL) {
-        file = rm_dir_unpacker_next(polly->unpacker);
+        file = rm_unpacked_directory_next(polly->unpacker);
         if(file != NULL) {
-            file->digest = polly->unpack_digest;
+			RM_DEFINE_PATH(file);
+			g_printerr("PRODUCE: %s %s", file_path, rm_file_lint_type_to_string(file->lint_type));
             return file;
         }
 
         // unpacker is exhausted. Continue in the JSON.
-        rm_dir_unpacker_free(polly->unpacker);
+        rm_unpacked_directory_free(polly->unpacker);
         polly->unpacker = NULL;
-
-        rm_digest_free(polly->unpack_digest);
-        polly->unpack_digest = NULL;
     }
 
     /* Skip NULL entries */
@@ -293,15 +365,16 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
             // TODO: is preferred from RmFile or from json file?
             RM_DEFINE_PATH(file);
             rm_log_warning_line("unpacking: %s", file_path);
-            polly->unpacker = rm_dir_unpacker_new(
-                polly->session,
-                file_path,
-                polly->is_prefd
-            );
 
-            /* we won't need the original file anymore */
-            polly->unpack_digest = rm_digest_copy(file->digest);
-            rm_file_destroy(file);
+			polly->unpacker = rm_unpacked_directory_new();
+			rm_trie_iter(
+				&polly->directory_trie,
+				rm_trie_search_node(&polly->directory_trie, file_path),
+				true,
+				true,
+				rm_parrot_iter_dir_children,
+				polly->unpacker
+			);
 
             /* call self which will now read from the unpacker */
             return rm_parrot_next(polly);
@@ -311,6 +384,14 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
     }
 
     return NULL;
+}
+
+void rm_parrot_file_destroy(RmParrot *polly, RmFile *file) {
+	RM_DEFINE_PATH(file);
+	if(rm_trie_search_node(&polly->directory_trie, file_path) == NULL) {
+		g_printerr("FREE %s\n", file_path);
+		rm_file_destroy(file);
+	}
 }
 
 //////////////////////////////////
@@ -436,6 +517,9 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
         return cfg->find_badids;
     case RM_LINT_TYPE_UNIQUE_FILE:
         return cfg->write_unfinished;
+	case RM_LINT_TYPE_PART_OF_DIRECTORY:
+		// TODO: check for options here.
+		return true;
     case RM_LINT_TYPE_UNKNOWN:
     default:
         FAIL_MSG("nope: invalid lint type.");
@@ -459,8 +543,10 @@ static int rm_parrot_fix_match_opts(RmFile *file, GQueue *group) {
     }
 
     if(remove) {
-        rm_file_destroy(file);
+		g_printerr("remove by fix match\n");
+        // rm_parrot_file_destroy(file);
     }
+
     return remove;
 }
 
@@ -484,7 +570,8 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
 
     if((!has_prefd && cfg->must_match_tagged) ||
        (!has_non_prefd && cfg->must_match_untagged)) {
-        g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
+		g_printerr("remove by must match tagged\n");
+        // g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
         g_queue_clear(group);
     }
 }
@@ -519,7 +606,8 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
         }
 
         if(older == group->length) {
-            g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
+			g_printerr("remove by write\n");
+            // g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
             g_queue_clear(group);
             return;
         }
@@ -563,7 +651,8 @@ static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref,
     if(group->length > 1) {
         g_queue_push_tail(cage->groups, group);
     } else {
-        g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
+		g_printerr("remove by cage push group\n");
+        // g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
     }
 
     if(!is_last) {
@@ -603,7 +692,9 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
              rm_parrot_check_permissions(cfg, file, file_path) &&
              rm_parrot_check_types(cfg, file) && rm_parrot_check_crossdev(polly, file) &&
              rm_parrot_check_path(polly, file, file_path))) {
-            rm_file_destroy(file);
+			g_printerr("remove by nope\n");
+			// rm_parrot_file_destroy(polly, file);
+            // rm_file_destroy(file);
             rm_log_debug("[nope]\n");
             continue;
         }
@@ -673,7 +764,8 @@ void rm_parrot_cage_close(RmParrotCage *cage) {
         if(group->length > 1) {
             rm_parrot_write_group(cage, group);
         } else {
-            g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
+			g_printerr("remove by close\n");
+            // g_queue_free_full(group, (GDestroyNotify)rm_file_destroy);
         }
     }
 

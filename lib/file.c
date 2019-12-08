@@ -99,7 +99,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
 }
 
 void rm_file_set_path(RmFile *file, char *path) {
-    file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, NULL);
+    file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, file);
 }
 
 void rm_file_build_path(RmFile *file, char *buf) {
@@ -118,6 +118,9 @@ RmFile *rm_file_shallow_copy(RmFile *file) {
 
 void rm_file_destroy(RmFile *file) {
 	if(file->is_shallow_copy == false) {
+		RM_DEFINE_PATH(file);
+		g_printerr("destroy %s\n", file_path);
+
 		if(file->hardlinks) {
 			g_queue_remove(file->hardlinks, file);
 			if(file->hardlinks->length == 0) {
