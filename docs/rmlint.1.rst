@@ -648,7 +648,7 @@ FORMATTERS
 * ``sh``: Output all found lint as shell script This formatter is activated
     as default.
 
-  Available options:
+  available options:
 
   * *cmd*: Specify a user defined command to run on duplicates.
     The command can be any valid ``/bin/sh``-expression. The duplicate
@@ -719,6 +719,10 @@ FORMATTERS
 
 * ``uniques``: Outputs all unique paths found during the run, one path per line.
   This is often useful for scripting purposes.
+
+  Available options:
+
+  - *print0*: Do not put newlines between paths but zero bytes.
 
 * ``stamp``:
 
