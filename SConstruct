@@ -74,12 +74,12 @@ def check_pkg(context, name, varname, required=True):
     except AttributeError:
         pass
 
-    if rc is not 0:
+    if rc != 0:
         context.Message('Checking for %s... ' % name)
         rc, text = context.TryAction('%s --exists \'%s\'' % (pkg_config, name))
 
     # 0 is defined as error by TryAction
-    if rc is 0 and required:
+    if rc == 0 and required:
         print('Error: ' + name + ' not found.')
         Exit(1)
 
@@ -101,6 +101,9 @@ def check_git_rev(context):
         # Patch for some special sandbox permission problems.
         # See https://github.com/sahib/rmlint/issues/143#issuecomment-139929733
         print('Not allowed.')
+
+    if hasattr(rev, 'decode'):
+       rev = rev.decode('ascii')
 
     rev = rev or 'unknown'
     conf.env['gitrev'] = rev
@@ -218,7 +221,7 @@ def check_blkid(context):
     if GetOption('with_blkid') is False:
         rc = 0
 
-    if rc is 1 and tests.CheckDeclaration(
+    if rc == 1 and tests.CheckDeclaration(
         context,
         symbol='blkid_devno_to_wholedisk',
         includes='#include <blkid.h>\n'
