@@ -309,21 +309,23 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 
         rm_fmt_json_key_unsafe(out, "path", file_path);
         rm_fmt_json_sep(self, out);
+        rm_fmt_json_key_int(out, "size", file->actual_file_size);
+        rm_fmt_json_sep(self, out);
+        rm_fmt_json_key_int(out, "depth", file->depth);
+        rm_fmt_json_sep(self, out);
+        rm_fmt_json_key_int(out, "inode", file->inode);
+        rm_fmt_json_sep(self, out);
+        rm_fmt_json_key_int(out, "disk_id", file->dev);
+        rm_fmt_json_sep(self, out);
+        rm_fmt_json_key_bool(out, "is_original", file->is_original);
+        rm_fmt_json_sep(self, out);
+
         if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
-            rm_fmt_json_key_int(out, "size", file->actual_file_size);
-            rm_fmt_json_sep(self, out);
             if(file->twin_count >= 0) {
                 rm_fmt_json_key_int(out, "twins", file->twin_count);
                 rm_fmt_json_sep(self, out);
             }
-            rm_fmt_json_key_int(out, "depth", file->depth);
-            rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "inode", file->inode);
-            rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_int(out, "disk_id", file->dev);
-            rm_fmt_json_sep(self, out);
-            rm_fmt_json_key_bool(out, "is_original", file->is_original);
-            rm_fmt_json_sep(self, out);
+
 
             if(session->cfg->find_hardlinked_dupes) {
                 RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
@@ -343,6 +345,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
                 }
             }
         }
+
         rm_fmt_json_key_float(out, "mtime", file->mtime);
     }
     rm_fmt_json_close(self, out);
