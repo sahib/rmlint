@@ -263,6 +263,16 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
                 return;
             }
         }
+
+        if(session->cfg->keep_all_tagged && !file->is_prefd) {
+            /* don't list 'untagged' files as unique */
+            file->is_original = false;
+        } else if(session->cfg->keep_all_untagged && file->is_prefd) {
+            /* don't list 'tagged' files as unique */
+            file->is_original = false;
+        } else {
+            file->is_original = true;
+        }
     }
 
     char *checksum_str = NULL;
