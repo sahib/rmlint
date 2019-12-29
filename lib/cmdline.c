@@ -1715,11 +1715,12 @@ static int rm_cmd_replay_main(RmSession *session) {
         return EXIT_FAILURE;
     }
 
-    rm_parrot_cage_close(&cage);
+    rm_parrot_cage_flush(&cage);
     rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
+    rm_parrot_cage_close(&cage);
     return EXIT_SUCCESS;
 }
 

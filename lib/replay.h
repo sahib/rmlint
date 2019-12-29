@@ -47,6 +47,7 @@
 typedef struct RmParrotCage {
     RmSession *session;
     GQueue *groups;
+    GQueue *parrots;
 } RmParrotCage;
 
 /**
@@ -67,5 +68,10 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
  * @brief Close the cage, frees resources, but does not do rm_fmt_flush().
  */
 void rm_parrot_cage_close(RmParrotCage *cage);
+
+/**
+ * @brief Flush the cage's contents to the output module.
+ * */
+void rm_parrot_cage_flush(RmParrotCage *cage);
 
 #endif /* end of include guard */

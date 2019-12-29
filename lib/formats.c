@@ -53,7 +53,7 @@ static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
      *               since it omits some files or may even print them twice.
      */
     bool needs_free = true;
-    if(cfg->merge_directories) {
+    if(cfg->merge_directories || cfg->replay) {
         needs_free = false;
     }
 
