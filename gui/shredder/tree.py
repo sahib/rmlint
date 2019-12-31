@@ -685,7 +685,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         """Return iter that is set to the nth child of iter."""
         if parent is None:
             node = self.trie.root
-        elif parent.user_data is 0:
+        elif parent.user_data == 0:
             # Sometimes an invalid iterator lands here.
             # It has no user_data and an invalid stamp field.
             return (False, None)

@@ -499,7 +499,7 @@ class CellRendererCount(Gtk.CellRendererText):
         positive numbers as objects in a directory.
         """
         count = self.get_property('count')
-        is_plural = abs(count) is not 1
+        is_plural = abs(count) != 1
 
         if count > 0:
             name = 'Objects' if is_plural else 'Object'
@@ -808,7 +808,7 @@ class FileSizeSpinButton(Gtk.Box):
     def set_bytes(self, size):
         """Set the current number of displayed bytes"""
         # Find out what unit to use:
-        if size is 0:
+        if size == 0:
             exponent = 1
         else:
             exponent = math.floor(math.log(size, 1024))

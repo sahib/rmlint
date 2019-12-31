@@ -33,9 +33,9 @@ def check_numeric(matches, value):
         return True
 
     for match in matches:
-        if len(match) is 1 and match[0] == value:
+        if len(match) == 1 and match[0] == value:
             return True
-        elif len(match) is 2:
+        elif len(match) == 2:
             vmin, vmax = match
             if vmin <= value <= vmax:
                 return True
@@ -155,7 +155,7 @@ def parse_mtime_single(value):
     calendar = Calendar()
     guess, rc = calendar.parseDT(value)
 
-    if rc is 0:
+    if rc == 0:
         LOGGER.warning('Could not parse date: %s', value)
         return int(value)
 
