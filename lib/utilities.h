@@ -452,6 +452,15 @@ gdouble rm_iso8601_parse(const char *string);
  */
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size);
 
+/**
+ * @brief convert GDateTime as iso8601 timestamp string with unrounded seconds.
+ *
+ * @param date_time pointer to GLib date time object.
+ *
+ * @return non-null string if conversion succeeded.
+ */
+gchar *rm_iso8601_format_date_time(GDateTime *date_time) G_GNUC_MALLOC;
+
 ///////////////////////////////
 //    THREADPOOL HELPERS     //
 ///////////////////////////////

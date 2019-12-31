@@ -1351,13 +1351,16 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 gdouble rm_iso8601_parse(const char *string) {
-    GTimeVal time_result;
-    if(!g_time_val_from_iso8601(string, &time_result)) {
+    GDateTime *time_result = g_date_time_new_from_iso8601(string, NULL);
+    if(time_result == NULL) {
         rm_log_perror("Converting time failed");
         return 0;
     }
 
-    return time_result.tv_sec + time_result.tv_usec / (gdouble)(G_USEC_PER_SEC);
+    gdouble secs = g_date_time_to_unix(time_result) +
+        g_date_time_get_microsecond(time_result) / (gdouble)(G_USEC_PER_SEC);
+    g_date_time_unref(time_result);
+    return secs;
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
@@ -1367,6 +1370,21 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
     }
 
     return false;
+}
+
+gchar *rm_iso8601_format_date_time(GDateTime *date_time) {
+    g_return_val_if_fail(date_time != NULL, NULL);
+
+    /* Assuming UTC only.
+     */
+    g_assert(g_date_time_get_utc_offset(date_time) == 0);
+
+    gchar *main_date = g_date_time_format(date_time, "%Y-%m-%dT%H:%M:%S");
+    GString *out_str = g_string_new(main_date);
+    g_free(main_date);
+    g_string_append_printf(out_str, ".%06dZ", g_date_time_get_microsecond(date_time));
+
+    return g_string_free(out_str, FALSE);
 }
 
 #define SECONDS_PER_DAY (24 * 60 * 60)

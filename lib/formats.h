@@ -59,7 +59,7 @@ typedef struct RmFmtTable {
     GQueue *handler_order;
     GRecMutex state_mtx;
     RmSession *session;
-    GTimeVal first_backup_timestamp;
+    GDateTime *first_backup_timestamp;
 
     /* Group of RmFiles that will be cached until exit */
     GQueue groups;

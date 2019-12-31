@@ -208,12 +208,12 @@ void rm_fmt_clear(RmFmtTable *self) {
 }
 
 void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
-    if(self->first_backup_timestamp.tv_sec == 0L) {
-        g_get_current_time(&self->first_backup_timestamp);
+    if(self->first_backup_timestamp == NULL) {
+        self->first_backup_timestamp = g_date_time_new_now_utc();
     }
 
     char *new_path = NULL;
-    char *timestamp = g_time_val_to_iso8601(&self->first_backup_timestamp);
+    char *timestamp = rm_iso8601_format_date_time(self->first_backup_timestamp);
 
     // Split the extension, if possible and place it before the timestamp suffix.
     char *extension = g_utf8_strrchr(old_path, -1, '.');
@@ -442,6 +442,9 @@ void rm_fmt_close(RmFmtTable *self) {
     g_hash_table_unref(self->handler_set);
     g_queue_free(self->handler_order);
     g_rec_mutex_clear(&self->state_mtx);
+    if(self->first_backup_timestamp != NULL) {
+        g_date_time_unref(self->first_backup_timestamp);
+    }
     g_slice_free(RmFmtTable, self);
 }
 

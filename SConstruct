@@ -611,7 +611,7 @@ conf.check_pkgconfig('0.15.0')
 
 # Pkg-config to internal name
 conf.env['HAVE_GLIB'] = 0
-conf.check_pkg('glib-2.0 >= 2.32', 'HAVE_GLIB', required=True)
+conf.check_pkg('glib-2.0 >= 2.62', 'HAVE_GLIB', required=True)
 
 conf.env['HAVE_GIO_UNIX'] = 0
 conf.check_pkg('gio-unix-2.0', 'HAVE_GIO_UNIX', required=False)
