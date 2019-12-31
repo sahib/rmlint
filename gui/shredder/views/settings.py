@@ -62,7 +62,7 @@ def numeric_widget(settings, key_name, *_, step=1):
         range_wdgt.set_range(min_val, max_val)
 
     settings.bind(key_name, range_wdgt, 'value', 0)
-    func = settings.get_int if step is 1 else settings.get_double
+    func = settings.get_int if step == 1 else settings.get_double
     range_wdgt.set_value(func(key_name))
     return range_wdgt
 

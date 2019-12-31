@@ -110,7 +110,7 @@ def _draw_segment(
     radius_a_px = (layer / (max_layers + 1)) * mid
     radius_b_px = radius_a_px + (1 / (max_layers + 1)) * mid
 
-    if layer is 1:
+    if layer == 1:
         radius_a_px += (radius_b_px - radius_a_px) / 2
 
     # Draw the actual segment path
@@ -306,7 +306,7 @@ class Segment:
         mid_x, mid_y = alloc.width / 2, alloc.height / 2
 
         # Distance from (mid_x, mid_y) to middle point
-        if self.layer is 1:
+        if self.layer == 1:
             offset = 0.75
         else:
             offset = 0.5
@@ -352,7 +352,7 @@ class RingChart(Chart):
         for child in node.indices:
             node_size = node[Column.SIZE]
 
-            if node_size is not 0:
+            if node_size != 0:
                 child_angle = (child[Column.SIZE] / node_size) * angle
             else:
                 child_angle = angle
@@ -492,7 +492,7 @@ class RingChart(Chart):
         # Check which layer we are operating on.
         selected_layer = (self.max_layers + 1) / min(mid_x, mid_y)
         selected_layer = math.floor(xy_abs * selected_layer)
-        if selected_layer is 0:
+        if selected_layer == 0:
             return (True, None)
 
         hit_segment = None
