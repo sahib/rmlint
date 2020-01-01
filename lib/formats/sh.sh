@@ -1,7 +1,7 @@
 #!/bin/sh
 
 PROGRESS_CURR=0
-PROGRESS_TOTAL=0                           
+PROGRESS_TOTAL=0
 
 # This file was autowritten by rmlint
 # rmlint was executed from: %s
@@ -255,19 +255,19 @@ remove_cmd() {
     echo "${COL_YELLOW}Deleting: ${COL_RESET}$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
-            if [ ! -z "$DO_KEEP_DIR_TIMESTAMPS" ]; then
-                touch -r "$(dirname $1)" "$STAMPFILE"
+            if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
+                touch -r "$(dirname "$1")" "$STAMPFILE"
             fi
 
             rm -rf "$1"
 
-            if [ ! -z "$DO_KEEP_DIR_TIMESTAMPS" ]; then
+            if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
                 # Swap back old directory timestamp:
-                touch -r "$STAMPFILE" "$(dirname $1)"
+                touch -r "$STAMPFILE" "$(dirname "$1")"
                 rm "$STAMPFILE"
             fi
 
-            if [ ! -z "$DO_DELETE_EMPTY_DIRS" ]; then
+            if [ -n "$DO_DELETE_EMPTY_DIRS" ]; then
                 DIR=$(dirname "$1")
                 while [ ! "$(ls -A "$DIR")" ]; do
                     print_progress_prefix 0
@@ -382,7 +382,7 @@ then
   ask
 fi
 
-if [ ! -z $DO_DRY_RUN  ]
+if [ -n "$DO_DRY_RUN" ]
 then
     echo "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
     echo "#${COL_YELLOW} /// ${COL_RESET} This is only a dry run; nothing will be modified! ${COL_YELLOW}///${COL_RESET}"
