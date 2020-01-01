@@ -12,7 +12,12 @@ dos2unix --quiet "${FILES}" || (echo 'dos2unix failed'; exit 2);
 # Some bad editors might save files with a bad encoding.
 # Since a few source code files contain unicode, we fix this with iconv.
 for path in ${FILES}; do
-    # iconv core dumps when using the same file as input and output.
-    # (adding this to my wtf-of-the-day-list)
-    iconv -t "utf-8" -o "${path}" < "${path}" || (echo "iconv failed on ${path}"; exit 3)
+    tmpfile=$(mktemp 'rmlint.XXXXXXXX.utf8')
+    if iconv -t "utf-8" -o "$tmpfile" < "${path}" ; then
+      mv "$tmpfile" "${path}"
+    else
+      echo "iconv failed on ${path}" 1>&2
+      rm -f "$tmpfile"
+      exit 3
+    fi
 done;
