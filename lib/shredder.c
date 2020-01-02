@@ -1304,7 +1304,8 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     if(rm_shred_has_duplicates(group)) {
         for(GList *iter = group->head; iter; iter = iter->next) {
             RmFile *file = iter->data;
-            rm_fmt_write(file, session->formats, group->length);
+            file->twin_count = group->length;
+            rm_fmt_write(file, session->formats);
         }
     }
 }

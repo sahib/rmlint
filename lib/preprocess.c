@@ -622,7 +622,8 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
 
             num_handled++;
 
-            rm_fmt_write(file, session->formats, -1);
+            file->twin_count = -1;
+            rm_fmt_write(file, session->formats);
         }
 
         if(!session->cfg->cache_file_structs) {

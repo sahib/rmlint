@@ -181,7 +181,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path);
  * implementation of the handler - it might also do just nothing.
  * @note argument order is to enable calling via g_queue_foreach()
  */
-void rm_fmt_write(RmFile *result, RmFmtTable *self, gint64 twin_count);
+void rm_fmt_write(RmFile *result, RmFmtTable *self);
 
 /**
  * @brief Change the state of rmlint.

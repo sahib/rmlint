@@ -666,7 +666,8 @@ static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *direc
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
-        rm_fmt_write(file, self->session->formats, -1);
+        file->twin_count = -1;
+        rm_fmt_write(file, self->session->formats);
     }
 
     /* Recursively propagate to children */
@@ -790,7 +791,8 @@ static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *dir
 
         shallow_copy->parent_dir = directory;
         shallow_copy->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
-        rm_fmt_write(shallow_copy, self->session->formats, -1);
+        shallow_copy->twin_count = -1;
+        rm_fmt_write(shallow_copy, self->session->formats);
 
         /* Make sure to clean up the memory of the shallow copy */
         g_queue_push_tail(self->free_list, shallow_copy);
@@ -826,7 +828,8 @@ static void rm_tm_output_group(RmTreeMerger *self, GQueue *group) {
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        rm_fmt_write(file, self->session->formats, group->length);
+        file->twin_count = group->length;
+        rm_fmt_write(file, self->session->formats);
     }
 }
 

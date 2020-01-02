@@ -56,6 +56,11 @@ RmTreeMerger *rm_tm_new(struct RmSession *session);
 void rm_tm_feed(RmTreeMerger *self, RmFile *file);
 
 /**
+ * @brief callback function called to output a single directory.
+ */
+typedef gint (*RmTreeMergeOutputFunc)(RmFile *result, gpointer user_data);
+
+/**
  * @brief Find duplicate directories through all feeded RmFiles.
  */
 void rm_tm_finish(RmTreeMerger *self);
