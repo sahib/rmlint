@@ -116,15 +116,17 @@ const char *rm_directory_get_dirname(RmDirectory *self) {
 }
 
 struct RmTreeMerger {
-    RmSession *session;       /* Session state variables / Settings                  */
-    RmTrie dir_tree;          /* Path-Trie with all RmFiles as value                 */
-    RmTrie count_tree;        /* Path-Trie with all file's count as value            */
-    GHashTable *result_table; /* {hash => [RmDirectory]} mapping                     */
-    GHashTable *file_groups;  /* Group files by hash                                 */
-    GHashTable *file_checks;  /* Set of files that were handled already.             */
-    GHashTable *known_hashs;  /* Set of known hashes, only used for cleanup.         */
-    GQueue *free_list;        /* List of RmFiles that will be free'd at the end.     */
-    GQueue valid_dirs;        /* Directories consisting of RmFiles only              */
+    RmSession *session;              /* Session state variables / Settings                  */
+    RmTrie dir_tree;                 /* Path-Trie with all RmFiles as value                 */
+    RmTrie count_tree;               /* Path-Trie with all file's count as value            */
+    GHashTable *result_table;        /* {hash => [RmDirectory]} mapping                     */
+    GHashTable *file_groups;         /* Group files by hash                                 */
+    GHashTable *file_checks;         /* Set of files that were handled already.             */
+    GHashTable *known_hashs;         /* Set of known hashes, only used for cleanup.         */
+    GQueue *free_list;               /* List of RmFiles that will be free'd at the end.     */
+    GQueue valid_dirs;               /* Directories consisting of RmFiles only              */
+    RmTreeMergeOutputFunc callback;  /* Callback for finished directories or leftover files */
+    gpointer callback_data;
 };
 
 //////////////////////////
@@ -518,6 +520,8 @@ static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent, RmD
 RmTreeMerger *rm_tm_new(RmSession *session) {
     RmTreeMerger *self = g_slice_new(RmTreeMerger);
     self->session = session;
+    self->callback = NULL;
+    self->callback_data = NULL;
     g_queue_init(&self->valid_dirs);
     self->free_list = g_queue_new();
 
@@ -539,6 +543,12 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     }
 
     return self;
+}
+
+void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback, gpointer data) {
+    g_assert(self);
+    self->callback = callback;
+    self->callback_data = data;
 }
 
 int rm_tm_destroy_iter(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level,
@@ -667,7 +677,7 @@ static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *direc
         RmFile *file = iter->data;
         file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
         file->twin_count = -1;
-        rm_fmt_write(file, self->session->formats);
+        self->callback(file, self->callback_data);
     }
 
     /* Recursively propagate to children */
@@ -792,7 +802,8 @@ static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *dir
         shallow_copy->parent_dir = directory;
         shallow_copy->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
         shallow_copy->twin_count = -1;
-        rm_fmt_write(shallow_copy, self->session->formats);
+
+        self->callback(shallow_copy, self->callback_data);
 
         /* Make sure to clean up the memory of the shallow copy */
         g_queue_push_tail(self->free_list, shallow_copy);
@@ -829,7 +840,7 @@ static void rm_tm_output_group(RmTreeMerger *self, GQueue *group) {
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         file->twin_count = group->length;
-        rm_fmt_write(file, self->session->formats);
+        self->callback(file, self->callback_data);
     }
 }
 
@@ -1007,6 +1018,9 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
 }
 
 void rm_tm_finish(RmTreeMerger *self) {
+    g_assert(self);
+    g_assert(self->callback);
+
     /* Iterate over all valid directories and try to level them all layers up.
      */
     g_queue_sort(&self->valid_dirs, (GCompareDataFunc)rm_tm_sort_paths_reverse, self);

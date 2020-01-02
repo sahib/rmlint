@@ -1705,6 +1705,15 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     return result;
 }
 
+/* called when treemerge.c found something interesting */
+void rm_shred_output_tm_results(RmFile *file, gpointer data) {
+    g_assert(data);
+
+    RmSession *session = data;
+    rm_fmt_write(file, session->formats);
+
+}
+
 void rm_shred_run(RmSession *session) {
     g_assert(session);
     g_assert(session->tables);

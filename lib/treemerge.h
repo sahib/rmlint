@@ -44,21 +44,27 @@ typedef struct RmTreeMerger RmTreeMerger;
 
 /* RmTreeMerger is part of RmSession, therefore prototype it here */
 struct RmSession;
-
-/**
- * @brief Allocate a new RmTreeMerger structure.
- */
-RmTreeMerger *rm_tm_new(struct RmSession *session);
-
-/**
- * @brief Add an RmFile to the pool of (to be) investigated files.
- */
-void rm_tm_feed(RmTreeMerger *self, RmFile *file);
+typedef struct RmSession RmSession;
 
 /**
  * @brief callback function called to output a single directory.
  */
 typedef gint (*RmTreeMergeOutputFunc)(RmFile *result, gpointer user_data);
+
+/**
+ * @brief Allocate a new RmTreeMerger structure.
+ */
+RmTreeMerger *rm_tm_new(RmSession *session);
+
+/**
+ * @brief Set the output callback
+ */
+void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback, gpointer callback_data);
+
+/**
+ * @brief Add an RmFile to the pool of (to be) investigated files.
+ */
+void rm_tm_feed(RmTreeMerger *self, RmFile *file);
 
 /**
  * @brief Find duplicate directories through all feeded RmFiles.

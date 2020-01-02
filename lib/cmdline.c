@@ -1771,8 +1771,8 @@ int rm_cmd_main(RmSession *session) {
             return EXIT_FAILURE;
         }
 
-        RmTreeMerger *t = session->dir_merger = rm_tm_new(session);
-        if(!t) {
+        session->dir_merger = rm_tm_new(session);
+        if(!session->dir_merger) {
             rm_log_error_line(_("Failed to complete setup for merging directories"));
             return EXIT_FAILURE;
         }
@@ -1823,6 +1823,7 @@ int rm_cmd_main(RmSession *session) {
 
     if(cfg->merge_directories) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
+        rm_tm_set_callback(session->dir_merger, (RmTreeMergeOutputFunc)rm_shred_output_tm_results, session);
         rm_tm_finish(session->dir_merger);
     }
 
