@@ -802,6 +802,34 @@ static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *dir
     }
 }
 
+static void rm_tm_output_group(RmTreeMerger *self, GQueue *group) {
+    g_assert(self);
+    g_assert(self->session);
+    g_assert(group);
+
+    if(group->length < 2) {
+        return;
+    }
+
+    bool has_duplicates = false;
+
+    for(GList *iter = group->head; iter; iter=iter->next) {
+        RmFile *file = iter->data;
+        if(!file->is_original) {
+            has_duplicates = true;
+        }
+    }
+
+    if(!has_duplicates) {
+        return;
+    }
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        rm_fmt_write(file, self->session->formats, group->length);
+    }
+}
+
 static void rm_tm_extract(RmTreeMerger *self) {
     /* Iterate over all directories per hash (which are same therefore) */
     RmCfg *cfg = self->session->cfg;
@@ -890,9 +918,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
 
         }
 
-        if(result_dirs.length >= 2) {
-            rm_shred_forward_to_output(self->session, &file_adaptor_group);
-        }
+        rm_tm_output_group(self, &file_adaptor_group);
 
         g_queue_clear(&file_adaptor_group);
         g_queue_clear(&result_dirs);
@@ -941,7 +967,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             } else {
                 rm_shred_group_find_original(self->session, file_list,
                                              RM_SHRED_GROUP_FINISHING);
-                rm_shred_forward_to_output(self->session, file_list);
+                rm_tm_output_group(self, file_list);
             }
         }
     }

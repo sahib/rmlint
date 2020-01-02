@@ -1286,13 +1286,13 @@ static gboolean rm_shred_has_duplicates(GQueue *group) {
             return TRUE;
         }
     }
+
     return FALSE;
 }
 
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     g_assert(session);
     g_assert(group);
-    g_assert(group->head);
 
 #if _RM_SHRED_DEBUG
     RmFile *head = group->head->data;

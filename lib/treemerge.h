@@ -74,30 +74,4 @@ typedef struct RmDirectory RmDirectory;
 
 const char *rm_directory_get_dirname(RmDirectory *self);
 
-struct RmDirectoryUnpacker;
-typedef struct RmDirectoryUnpacker RmDirectoryUnpacker;
-
-struct RmSession;
-typedef struct RmSession RmSession;
-
-/**
- * @brief Create a new unpack helper
- * */
-RmDirectoryUnpacker *rm_dir_unpacker_new(RmSession *session, const char *directory, bool is_prefd);
-
-/**
- * @brief Free a unpack helper
- * */
-void rm_dir_unpacker_free(RmDirectoryUnpacker *unpacker);
-
-/**
- * @brief Retrieve the next file from the directory.
- * */
-RmFile *rm_dir_unpacker_next(RmDirectoryUnpacker *unpacker);
-
-/**
- * @brief Check if we have more entries.
- */
-bool rm_dir_unpacker_has_next(RmDirectoryUnpacker *unpacker);
-
 #endif /* RM_TREEMERGE_INCLUDE*/
