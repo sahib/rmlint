@@ -110,7 +110,7 @@ typedef struct RmParrot {
     /* List of RmFiles that were created and that are removed
      * at the end of the parrot run (i.e. on rm_parrot_close())
      * */
-    GQueue free_list;
+    GQueue *free_list;
 } RmParrot;
 
 static void rm_parrot_close(RmParrot *polly) {
@@ -120,12 +120,12 @@ static void rm_parrot_close(RmParrot *polly) {
 
     g_hash_table_unref(polly->disk_ids);
     rm_trie_destroy(&polly->directory_trie);
-    for(GList *iter = polly->free_list.head; iter; iter = iter->next) {
+    for(GList *iter = polly->free_list->head; iter; iter = iter->next) {
         RmFile *file =  iter->data;
         rm_file_destroy(file);
     }
 
-    g_queue_free_full(&polly->free_list, (GDestroyNotify)rm_file_destroy);
+    g_queue_free_full(polly->free_list, (GDestroyNotify)rm_file_destroy);
     g_free(polly);
 }
 
@@ -138,8 +138,8 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
     polly->is_prefd = is_prefd;
+    polly->free_list = g_queue_new();
     rm_trie_init(&polly->directory_trie);
-    g_queue_init(&polly->free_list);
 
     for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
         RmPath *rmpath = iter->data;
@@ -174,6 +174,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
                  * */
                 rm_log_warning_line("replay.json was created with -D, but you're running without.")
                 rm_log_warning_line("rmlint will unpack duplicate directories into individual files.")
+                rm_log_warning_line("If you do not want this, pass -D to the next run.")
                 polly->unpack_directories = true;
             } else {
                 rm_log_warning_line("replay.json was created without -D; ignoring for now.")
@@ -273,7 +274,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     // TODO: Figure out why this segfaults.
     // RM_DEFINE_PATH(file);
     // g_printerr("PUSH %s %d\n", file_path, file->lint_type);
-    // g_queue_push_tail(&polly->free_list, file);
+    // g_queue_push_tail(polly->free_list, file);
 
 
     // stat() reports directories as size zero.
@@ -374,7 +375,7 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
            file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
             // TODO: is preferred from RmFile or from json file?
             RM_DEFINE_PATH(file);
-            rm_log_warning_line("unpacking: %s", file_path);
+            rm_log_debug_line("unpacking: %s", file_path);
 
             polly->unpacker = rm_unpacked_directory_new();
             rm_trie_iter(
