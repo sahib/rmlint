@@ -101,6 +101,9 @@ typedef struct RmParrot {
     bool unpack_directories;
     RmUnpackedDirectory *unpacker;
 
+    /* If true, cluster up found RmFiles */
+    bool pack_directories;
+
     /* map duplicate directories paths to the group of RmFiles
      * they consist of (read from the "part_of_directory" type
      * (required for the unpacking feature)
@@ -177,7 +180,10 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
                 rm_log_warning_line("If you do not want this, pass -D to the next run.")
                 polly->unpack_directories = true;
             } else {
-                rm_log_warning_line("replay.json was created without -D; ignoring for now.")
+                rm_log_warning_line("replay.json was created without -D, but you're running with.")
+                rm_log_warning_line("rmlint will pack duplicate files into directories where applicable.")
+                rm_log_warning_line("If you do not want this, omit -D from the next run.")
+                polly->pack_directories = true;
             }
         }
     }
@@ -593,7 +599,7 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
     }
 }
 
-static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
+static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool pack_directories) {
     RmCfg *cfg = cage->session->cfg;
 
     if(cfg->filter_mtime) {
@@ -634,7 +640,12 @@ static void rm_parrot_write_group(RmParrotCage *cage, GQueue *group) {
 
         rm_parrot_update_stats(cage, file);
         file->twin_count = group->length;
-        rm_fmt_write(file, cage->session->formats);
+
+        if(pack_directories && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+            rm_tm_feed(cage->tree_merger, file);
+        } else {
+            rm_fmt_write(file, cage->session->formats);
+        }
     }
 }
 
@@ -748,14 +759,48 @@ static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
     g_hash_table_unref(digest_to_group);
 }
 
+void rm_parrot_cage_output_treemerge_results(RmFile *file, gpointer data) {
+    RM_DEFINE_PATH(file);
+    g_printerr("OUTPUT: %s %p\n", file_path, data);
+
+    RmParrotCage *cage = data;
+    g_assert(cage);
+
+    rm_fmt_write(file, cage->session->formats);
+}
+
 void rm_parrot_cage_flush(RmParrotCage *cage) {
     rm_parrot_merge_identical_groups(cage);
+
+    bool pack_directories = false;
+
+    /* Check if any of the .json files were created with -D.
+     * If so, we need to merge them up again using treemerge.c
+     */
+    for(GList *iter = cage->parrots->head; iter; iter = iter->next) {
+        RmParrot *parrot = iter->data;
+        if(parrot->pack_directories) {
+            pack_directories = true;
+            cage->tree_merger = rm_tm_new(cage->session);
+            rm_tm_set_callback(
+                cage->tree_merger,
+                (RmTreeMergeOutputFunc)rm_parrot_cage_output_treemerge_results,
+                cage
+            );
+            break;
+        }
+    }
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
         if(group->length > 1) {
-            rm_parrot_write_group(cage, group);
+            rm_parrot_cage_write_group(cage, group, pack_directories);
         }
+    }
+
+    if(pack_directories) {
+        rm_tm_finish(cage->tree_merger);
+        rm_tm_destroy(cage->tree_merger);
     }
 }
 

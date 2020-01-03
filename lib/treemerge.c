@@ -188,9 +188,9 @@ int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int lev
 
 static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     /* put paths into format expected by fts */
-
     g_assert(cfg);
     guint path_count = cfg->path_count;
+
     g_assert(path_count);
     g_assert(path_count == g_slist_length(cfg->paths));
 
@@ -591,6 +591,9 @@ static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
 }
 
 void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
+    g_assert(self);
+    g_assert(file);
+
     RM_DEFINE_PATH(file);
     char *dirname = g_path_get_dirname(file_path);
 

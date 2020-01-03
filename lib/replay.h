@@ -48,6 +48,7 @@ typedef struct RmParrotCage {
     RmSession *session;
     GQueue *groups;
     GQueue *parrots;
+    RmTreeMerger *tree_merger;
 } RmParrotCage;
 
 /**

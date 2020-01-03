@@ -1790,6 +1790,7 @@ int rm_cmd_main(RmSession *session) {
         RmPath *a = cfg->paths->data;
         g_assert(cfg->paths->next);
         RmPath *b = cfg->paths->next->data;
+
         switch(rm_util_link_type(a->path, b->path)) {
         case RM_LINK_HARDLINK:
         case RM_LINK_REFLINK:
