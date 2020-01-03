@@ -760,9 +760,6 @@ static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
 }
 
 void rm_parrot_cage_output_treemerge_results(RmFile *file, gpointer data) {
-    RM_DEFINE_PATH(file);
-    g_printerr("OUTPUT: %s %p\n", file_path, data);
-
     RmParrotCage *cage = data;
     g_assert(cage);
 

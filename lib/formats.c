@@ -195,7 +195,6 @@ void rm_fmt_remove_by_name(RmFmtTable *self, char *name) {
     g_hash_table_remove(self->handler_set, name);
 }
 
-
 // NOTE: This is the same as g_date_time_format_iso8601.
 // It is only copied here because it is only available since
 // GLib 2.62. Remove this in a few years (written as of end 2019)
@@ -393,6 +392,7 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
     RmFile *fa = ga->files.head->data;
     RmFile *fb = gb->files.head->data;
 
+    /* Filter non-dupe files - they come first always */
     if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
        fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return -1;
@@ -402,6 +402,20 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
        fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return +1;
     }
+
+    /* Make sure that duplicate directories are sorted before normal dupes */
+
+    if(fa->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE &&
+       fb->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+        return -1;
+    }
+
+    if(fa->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE &&
+       fb->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        return +1;
+    }
+
+    /*  Sort by ranking */
 
     for(int i = 0; rank_order[i]; ++i) {
         gint r = 0;
@@ -440,7 +454,7 @@ void rm_fmt_flush(RmFmtTable *self) {
         return;
     }
 
-    if(*(cfg->rank_criteria)) {
+    if(*(cfg->rank_criteria) || cfg->replay) {
         g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
     }
 
