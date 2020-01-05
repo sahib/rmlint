@@ -117,10 +117,10 @@ RmFile *rm_file_shallow_copy(RmFile *file) {
 }
 
 void rm_file_destroy(RmFile *file) {
-	if(file->is_shallow_copy == false) {
-		RM_DEFINE_PATH(file);
-		g_printerr("destroy %s\n", file_path);
+	RM_DEFINE_PATH(file);
+	g_printerr("destroy %d: %s (%s)\n", file->is_shallow_copy, file_path, rm_file_lint_type_to_string(file->lint_type));
 
+	if(file->is_shallow_copy == false) {
 		if(file->hardlinks) {
 			g_queue_remove(file->hardlinks, file);
 			if(file->hardlinks->length == 0) {

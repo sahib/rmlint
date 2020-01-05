@@ -123,16 +123,11 @@ static void rm_parrot_close(RmParrot *polly) {
 
     g_hash_table_unref(polly->disk_ids);
     rm_trie_destroy(&polly->directory_trie);
-    for(GList *iter = polly->free_list->head; iter; iter = iter->next) {
-        RmFile *file =  iter->data;
-        rm_file_destroy(file);
-    }
 
-    g_queue_free_full(polly->free_list, (GDestroyNotify)rm_file_destroy);
     g_free(polly);
 }
 
-// TODO: Pass unpack option.
+// TODO: Pass pack/unpack option to force/unforce automatic packing/unpacking
 static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool is_prefd,
                                 GError **error) {
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
@@ -141,7 +136,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
     polly->is_prefd = is_prefd;
-    polly->free_list = g_queue_new();
+    // polly->free_list = g_queue_new();
     rm_trie_init(&polly->directory_trie);
 
     for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
@@ -175,12 +170,12 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
                 /* The .json file was created with the -D option
                  * We need to unpack directories while running.
                  * */
-                rm_log_warning_line("replay.json was created with -D, but you're running without.")
+                rm_log_warning_line("»%s« was created with -D, but you're running without.", json_path)
                 rm_log_warning_line("rmlint will unpack duplicate directories into individual files.")
                 rm_log_warning_line("If you do not want this, pass -D to the next run.")
                 polly->unpack_directories = true;
             } else {
-                rm_log_warning_line("replay.json was created without -D, but you're running with.")
+                rm_log_warning_line("»%s« was created without -D, but you're running with.", json_path)
                 rm_log_warning_line("rmlint will pack duplicate files into directories where applicable.")
                 rm_log_warning_line("If you do not want this, omit -D from the next run.")
                 polly->pack_directories = true;
@@ -277,12 +272,6 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         file->free_digest = false;
     }
 
-    // TODO: Figure out why this segfaults.
-    // RM_DEFINE_PATH(file);
-    // g_printerr("PUSH %s %d\n", file_path, file->lint_type);
-    // g_queue_push_tail(polly->free_list, file);
-
-
     // stat() reports directories as size zero.
     // Fix this by actually using the size field from the json node.
     if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE && stat_info->st_mode & S_IFDIR) {
@@ -342,7 +331,6 @@ int rm_parrot_iter_dir_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int 
 
     for(GList *iter = children->head; iter; iter = iter->next) {
         RmFile *child_file = iter->data;
-        RM_DEFINE_PATH(child_file);
         child_file->lint_type = RM_LINT_TYPE_DUPE_CANDIDATE;
         rm_unpacked_directory_add(unpacker, child_file);
     }
@@ -396,7 +384,7 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
             // TODO: What to do in case of nested duplicate directories?
             //       (write test for that)
 
-            /* call self which will now read from the unpacker;
+            /* call self, which will now read from the unpacker;
              * current duplicate directory is not returned to caller.
              * */
             return rm_parrot_next(polly);
@@ -532,7 +520,6 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
     case RM_LINT_TYPE_UNIQUE_FILE:
         return cfg->write_unfinished;
     case RM_LINT_TYPE_PART_OF_DIRECTORY:
-        // TODO: check for options here.
         return true;
     case RM_LINT_TYPE_UNKNOWN:
     default:
@@ -642,8 +629,10 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
         file->twin_count = group->length;
 
         if(pack_directories && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+            g_printerr("FEED %s (%s)\n", file_path, rm_file_lint_type_to_string(file->lint_type));
             rm_tm_feed(cage->tree_merger, file);
         } else {
+            g_printerr("WRITE %s (%s)\n", file_path, rm_file_lint_type_to_string(file->lint_type));
             rm_fmt_write(file, cage->session->formats);
         }
     }
@@ -731,6 +720,7 @@ void rm_parrot_cage_open(RmParrotCage *cage, RmSession *session) {
     cage->session = session;
     cage->groups = g_queue_new();
     cage->parrots = g_queue_new();
+    cage->tree_merger = NULL;
 }
 
 static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
@@ -763,6 +753,8 @@ void rm_parrot_cage_output_treemerge_results(RmFile *file, gpointer data) {
     RmParrotCage *cage = data;
     g_assert(cage);
 
+    RM_DEFINE_PATH(file);
+    g_printerr("WRITE VIA TM %s (%s)\n", file_path, rm_file_lint_type_to_string(file->lint_type));
     rm_fmt_write(file, cage->session->formats);
 }
 
@@ -778,14 +770,13 @@ void rm_parrot_cage_flush(RmParrotCage *cage) {
         RmParrot *parrot = iter->data;
         if(parrot->pack_directories) {
             pack_directories = true;
-            cage->tree_merger = rm_tm_new(cage->session);
-            rm_tm_set_callback(
-                cage->tree_merger,
-                (RmTreeMergeOutputFunc)rm_parrot_cage_output_treemerge_results,
-                cage
-            );
             break;
         }
+    }
+
+    if(pack_directories) {
+        cage->tree_merger = rm_tm_new(cage->session);
+        rm_tm_set_callback(cage->tree_merger, (RmTreeMergeOutputFunc)rm_parrot_cage_output_treemerge_results, cage); 
     }
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
@@ -795,15 +786,18 @@ void rm_parrot_cage_flush(RmParrotCage *cage) {
         }
     }
 
-    if(pack_directories) {
+    if(pack_directories && cage->tree_merger) {
         rm_tm_finish(cage->tree_merger);
-        rm_tm_destroy(cage->tree_merger);
     }
 }
 
 void rm_parrot_cage_close(RmParrotCage *cage) {
     g_queue_free_full(cage->groups, (GDestroyNotify)g_queue_free);
     g_queue_free_full(cage->parrots, (GDestroyNotify)rm_parrot_close);
+
+    if(cage->tree_merger) {
+        rm_tm_destroy(cage->tree_merger);
+    }
 }
 
 #else

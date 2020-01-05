@@ -47,33 +47,9 @@ static RmFmtGroup *rm_fmt_group_new(void) {
 }
 
 static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
-    RmCfg *cfg = self->session->cfg;
-
-    /* Special case: treemerge.c has to manage memory itself,
-     *               since it omits some files or may even print them twice.
-     */
-    bool needs_free = true;
-    if(cfg->merge_directories || cfg->replay) {
-        needs_free = false;
-    }
-
-    /* Unique files are not fed to treemerge.c,
-     * therefore we need to free them here.
-     * Can't free them earlier, since '-o uniques' still need
-     * to output them if requested.
-     * */
-    if(needs_free == false && group->files.length == 1) {
-        RmFile *file = (RmFile *)group->files.head->data;
-        if(file && file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
-            // needs_free = true; /* TODO: this is a temporary workaround for double-free of digest with treemerge */
-        }
-    }
-
-    if(needs_free) {
-        for(GList *iter = group->files.head; iter; iter = iter->next) {
-            RmFile *file = iter->data;
-            rm_file_destroy(file);
-        }
+    for(GList *iter = group->files.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        rm_file_destroy(file);
     }
 
     g_queue_clear(&group->files);
@@ -82,7 +58,6 @@ static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
 
 static void rm_fmt_handler_free(RmFmtHandler *handler) {
     g_assert(handler);
-
     g_free(handler->path);
     g_free(handler);
 }

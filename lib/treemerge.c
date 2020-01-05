@@ -123,7 +123,7 @@ struct RmTreeMerger {
     GHashTable *file_groups;         /* Group files by hash                                 */
     GHashTable *file_checks;         /* Set of files that were handled already.             */
     GHashTable *known_hashs;         /* Set of known hashes, only used for cleanup.         */
-    GQueue *free_list;               /* List of RmFiles that will be free'd at the end.     */
+    GHashTable *free_map;            /* Map of file pointer to RmFile (used to cleanup) */
     GQueue valid_dirs;               /* Directories consisting of RmFiles only              */
     RmTreeMergeOutputFunc callback;  /* Callback for finished directories or leftover files */
     gpointer callback_data;
@@ -522,8 +522,8 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     self->session = session;
     self->callback = NULL;
     self->callback_data = NULL;
+    self->free_map = g_hash_table_new(NULL, NULL);
     g_queue_init(&self->valid_dirs);
-    self->free_list = g_queue_new();
 
     self->result_table = g_hash_table_new_full((GHashFunc)rm_directory_hash,
                                                (GEqualFunc)rm_directory_equal, NULL,
@@ -556,27 +556,6 @@ int rm_tm_destroy_iter(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level,
     RmDirectory *directory = node->data;
     rm_directory_free(directory);
     return 0;
-}
-
-void rm_tm_destroy(RmTreeMerger *self) {
-    g_hash_table_unref(self->result_table);
-    g_hash_table_unref(self->file_groups);
-
-    GList *digest_keys = g_hash_table_get_keys(self->known_hashs);
-    g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);
-    g_hash_table_unref(self->known_hashs);
-
-    g_queue_clear(&self->valid_dirs);
-
-    /* Kill all RmDirectories stored in the tree */
-    rm_trie_iter(&self->dir_tree, NULL, true, false,
-                 (RmTrieIterCallback)rm_tm_destroy_iter, self);
-
-    rm_trie_destroy(&self->dir_tree);
-    rm_trie_destroy(&self->count_tree);
-    g_queue_free_full(self->free_list, (GDestroyNotify)rm_file_destroy);
-
-    g_slice_free(RmTreeMerger, self);
 }
 
 static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
@@ -620,7 +599,7 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
         g_free(dirname);
     }
 
-    g_queue_push_tail(self->free_list, file);
+    g_hash_table_insert(self->free_map, file, file);
     rm_directory_add(self, directory, file);
 
     /* Add the file to this directory */
@@ -675,12 +654,18 @@ static gint64 rm_tm_mark_duplicate_files(RmTreeMerger *self, RmDirectory *direct
     return acc;
 }
 
+static void rm_tm_output_file(RmTreeMerger *self, RmFile *file) {
+    g_assert(self->callback);
+    self->callback(file, self->callback_data);
+    g_hash_table_remove(self->free_map, file);
+}
+
 static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
         file->twin_count = -1;
-        self->callback(file, self->callback_data);
+        rm_tm_output_file(self, file);
     }
 
     /* Recursively propagate to children */
@@ -806,10 +791,7 @@ static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *dir
         shallow_copy->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
         shallow_copy->twin_count = -1;
 
-        self->callback(shallow_copy, self->callback_data);
-
-        /* Make sure to clean up the memory of the shallow copy */
-        g_queue_push_tail(self->free_list, shallow_copy);
+        rm_tm_output_file(self, shallow_copy);
     }
 
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
@@ -843,7 +825,7 @@ static void rm_tm_output_group(RmTreeMerger *self, GQueue *group) {
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         file->twin_count = group->length;
-        self->callback(file, self->callback_data);
+        rm_tm_output_file(self, file);
     }
 }
 
@@ -912,8 +894,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
             rm_tm_extract_part_of_dir_dupes(self, directory);
 
             RmFile *mask = rm_directory_as_new_file(self, directory);
-            g_queue_push_tail(self->free_list, mask);
             g_queue_push_tail(&file_adaptor_group, mask);
+            g_hash_table_insert(self->free_map, mask, mask);
 
             if(iter == result_dirs.head) {
                 /* First one in the group -> It's the original */
@@ -1040,3 +1022,32 @@ void rm_tm_finish(RmTreeMerger *self) {
         rm_tm_extract(self);
     }
 }
+
+void rm_tm_destroy(RmTreeMerger *self) {
+    g_hash_table_unref(self->result_table);
+    g_hash_table_unref(self->file_groups);
+
+    // TODO: What was that supposed to do?
+    // GList *digest_keys = g_hash_table_get_keys(self->known_hashs);
+    // g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);
+    g_hash_table_unref(self->known_hashs);
+
+    g_queue_clear(&self->valid_dirs);
+
+    /* Kill all RmDirectories stored in the tree */
+    rm_trie_iter(&self->dir_tree, NULL, true, false,
+                 (RmTrieIterCallback)rm_tm_destroy_iter, self);
+
+    rm_trie_destroy(&self->dir_tree);
+    rm_trie_destroy(&self->count_tree);
+
+    /*  Iterate over all files that were not forwarded to the
+     *  output module (where they would be freed)
+     *  */
+    GList *file_list = g_hash_table_get_values(self->free_map);
+    g_list_free_full(file_list, (GDestroyNotify)rm_file_destroy);
+    g_hash_table_unref(self->free_map);
+
+    g_slice_free(RmTreeMerger, self);
+}
+
