@@ -785,13 +785,13 @@ static void rm_tm_extract_part_of_dir_dupes(RmTreeMerger *self, RmDirectory *dir
          * We need a copy, because the type and parent_dir changes.
          */
         RmFile *file = iter->data;
-        RmFile *shallow_copy = rm_file_shallow_copy(file);
+        RmFile *copy = rm_file_copy(file);
 
-        shallow_copy->parent_dir = directory;
-        shallow_copy->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
-        shallow_copy->twin_count = -1;
+        copy->parent_dir = directory;
+        copy->lint_type = RM_LINT_TYPE_PART_OF_DIRECTORY;
+        copy->twin_count = -1;
 
-        rm_tm_output_file(self, shallow_copy);
+        rm_tm_output_file(self, copy);
     }
 
     for(GList *iter = directory->children.head; iter; iter = iter->next) {

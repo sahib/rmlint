@@ -116,12 +116,31 @@ typedef struct RmParrot {
     GQueue *free_list;
 } RmParrot;
 
+static int rm_parrot_dir_trie_clear_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, _UNUSED void *user_data) {
+    GQueue *children = node->data;
+    if(children != NULL) {
+        g_queue_free(children);
+    }
+    return 0;
+}
+
 static void rm_parrot_close(RmParrot *polly) {
     if(polly->parser) {
         g_object_unref(polly->parser);
     }
 
     g_hash_table_unref(polly->disk_ids);
+
+    /* Free the GQeues in the trie */
+    rm_trie_iter(
+        &polly->directory_trie,
+        NULL,
+        true,
+        true,
+        rm_parrot_dir_trie_clear_children,
+        NULL
+    );
+
     rm_trie_destroy(&polly->directory_trie);
 
     g_free(polly);
@@ -318,7 +337,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     return file;
 }
 
-int rm_parrot_iter_dir_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, void *user_data) {
+static int rm_parrot_iter_dir_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, void *user_data) {
     RmUnpackedDirectory *unpacker = user_data;
 
     char buf[PATH_MAX] = {0};
@@ -345,14 +364,13 @@ int rm_parrot_iter_dir_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int 
 static RmFile *rm_parrot_next(RmParrot *polly) {
     RmFile *file = NULL;
 
-    // If we have a directory to unpack, let's do that first.
+    /* If we have a directory to unpack, let's do that first */
     if(polly->unpacker != NULL) {
         file = rm_unpacked_directory_next(polly->unpacker);
         if(file != NULL) {
             return file;
         }
 
-        // unpacker is exhausted. Continue in the JSON.
         rm_unpacked_directory_free(polly->unpacker);
         polly->unpacker = NULL;
     }
@@ -367,10 +385,12 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
 
         if(polly->unpack_directories &&
            file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
-            // TODO: is preferred from RmFile or from json file?
             RM_DEFINE_PATH(file);
             rm_log_debug_line("unpacking: %s", file_path);
 
+            /* Accumulate all files in that directory into a group.
+             * This group will serve as source for the next iterations.
+             */
             polly->unpacker = rm_unpacked_directory_new();
             rm_trie_iter(
                 &polly->directory_trie,
@@ -477,7 +497,6 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
      * into a RmTrie and use it to find the longest prefix easily.
      */
 
-    /* iterate through cmdline paths */
     for(GSList *iter = cfg->paths; iter; iter = iter->next) {
         RmPath *rmpath = iter->data;
         size_t path_len = strlen(rmpath->path);
@@ -543,6 +562,57 @@ static int rm_parrot_fix_match_opts(RmFile *file, GQueue *group) {
     return 1;
 }
 
+static int rm_parrot_sort_by_path(gconstpointer a, gconstpointer b, _UNUSED gpointer data) {
+    const RmFile *file_a = a;
+    const RmFile *file_b = b;
+
+    RM_DEFINE_PATH(file_a);
+    RM_DEFINE_PATH(file_b);
+    return strcmp(file_a_path, file_b_path);
+}
+
+static void rm_parrot_fix_duplicate_entries(RmParrotCage *cage, GQueue *group) {
+    /* This quirk can happen when we have a duplicate directory that
+     * was unpacked. If that dir has other duplicates inside them
+     * it can happen that we have a "part_of_directory" type that
+     * was promoted to a "dupe_canidate" before.
+     *
+     * This also serves as safety-net for cases when the json files
+     * contain a path several times.
+     */
+
+    g_queue_sort(
+        group,
+        (GCompareDataFunc)rm_parrot_sort_by_path,
+        NULL
+    );
+
+    char *last_path = NULL;
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+            /* Those are not visible in the output, allow them. */
+            continue;
+        }
+
+        RM_DEFINE_PATH(file);
+
+        if(last_path && g_strcmp0(file_path, last_path) == 0) {
+            // remove node.
+            GList *old_iter = iter;
+            iter = iter->prev;
+            g_queue_delete_link(cage->groups, old_iter);
+            rm_file_destroy(file);
+        }
+
+        g_free(last_path);
+        last_path = g_strdup(file_path);
+    }
+
+    g_free(last_path);
+}
+
 static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
     RmCfg *cfg = cage->session->cfg;
     if(!(cfg->must_match_tagged || cfg->must_match_untagged)) {
@@ -602,37 +672,46 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
         }
     }
 
-    if(cfg->match_with_extension || cfg->match_without_extension || cfg->match_basename ||
-       cfg->unmatched_basenames) {
+    if(cfg->match_with_extension
+    || cfg->match_without_extension
+    || cfg->match_basename
+    || cfg->unmatched_basenames) {
         /* This is probably a sucky way to do it, due to n^2,
          * but I doubt that will make a large performance difference.
          */
-        rm_util_queue_foreach_remove(group, (RmRFunc)rm_parrot_fix_match_opts, group);
+        rm_util_queue_foreach_remove(
+            group,
+            (RmRFunc)rm_parrot_fix_match_opts,
+            group
+        );
     }
-    rm_parrot_fix_must_match_tagged(cage, group);
 
-    g_queue_sort(group, (GCompareDataFunc)rm_shred_cmp_orig_criteria, cage->session);
+    rm_parrot_fix_must_match_tagged(cage, group);
+    rm_parrot_fix_duplicate_entries(cage, group);
+
+    g_queue_sort(
+        group,
+        (GCompareDataFunc)rm_shred_cmp_orig_criteria,
+        cage->session
+    );
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        if(file == group->head->data || (cfg->keep_all_tagged && file->is_prefd) ||
-           (cfg->keep_all_untagged && !file->is_prefd)) {
+        if(file == group->head->data
+        || (cfg->keep_all_tagged && file->is_prefd)
+        || (cfg->keep_all_untagged && !file->is_prefd)) {
             file->is_original = true;
         } else {
             file->is_original = false;
         }
 
-        RM_DEFINE_PATH(file);
-
         rm_parrot_update_stats(cage, file);
         file->twin_count = group->length;
 
         if(pack_directories && file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-            g_printerr("FEED %s (%s)\n", file_path, rm_file_lint_type_to_string(file->lint_type));
             rm_tm_feed(cage->tree_merger, file);
         } else {
-            g_printerr("WRITE %s (%s)\n", file_path, rm_file_lint_type_to_string(file->lint_type));
             rm_fmt_write(file, cage->session->formats);
         }
     }
@@ -642,11 +721,13 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
 //  ENTRY POINT TO TRIGGER THE PARROT  //
 /////////////////////////////////////////
 
-static void rm_parrot_cage_push_group(RmParrotCage *cage, GQueue **group_ref,
+static void rm_parrot_cage_push_to_group(RmParrotCage *cage, GQueue **group_ref,
                                       bool is_last) {
     GQueue *group = *group_ref;
     if(group->length > 1) {
         g_queue_push_tail(cage->groups, group);
+    } else {
+        g_queue_free(group);
     }
 
     if(!is_last) {
@@ -700,7 +781,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
             if(!rm_digest_equal(file->digest, last_digest)) {
                 rm_digest_free(last_digest);
                 last_digest = rm_digest_copy(file->digest);
-                rm_parrot_cage_push_group(cage, &group, false);
+                rm_parrot_cage_push_to_group(cage, &group, false);
             }
         }
 
@@ -711,7 +792,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
         rm_digest_free(last_digest);
     }
 
-    rm_parrot_cage_push_group(cage, &group, true);
+    rm_parrot_cage_push_to_group(cage, &group, true);
     g_queue_push_tail(cage->parrots, polly);
     return true;
 }
@@ -753,8 +834,6 @@ void rm_parrot_cage_output_treemerge_results(RmFile *file, gpointer data) {
     RmParrotCage *cage = data;
     g_assert(cage);
 
-    RM_DEFINE_PATH(file);
-    g_printerr("WRITE VIA TM %s (%s)\n", file_path, rm_file_lint_type_to_string(file->lint_type));
     rm_fmt_write(file, cage->session->formats);
 }
 

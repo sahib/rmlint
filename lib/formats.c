@@ -46,7 +46,7 @@ static RmFmtGroup *rm_fmt_group_new(void) {
     return self;
 }
 
-static void rm_fmt_group_destroy(RmFmtTable *self, RmFmtGroup *group) {
+static void rm_fmt_group_destroy(_UNUSED RmFmtTable *self, RmFmtGroup *group) {
     for(GList *iter = group->files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         rm_file_destroy(file);
