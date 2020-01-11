@@ -393,8 +393,8 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
                 polly->unpacker
             );
 
-            // TODO: What to do in case of nested duplicate directories?
-            //       (write test for that)
+            /* we cant get rid of the actual directory now */
+            rm_file_destroy(file);
 
             /* call self, which will now read from the unpacker;
              * current duplicate directory is not returned to caller.
@@ -784,6 +784,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
         )) {
             // TODO: Test free logic when this happens.
             rm_log_debug("[nope]\n");
+            rm_file_destroy(file);
             continue;
         }
 
@@ -821,7 +822,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
     if(part_of_directory_entries->length > 1) {
         g_queue_push_head(cage->groups, part_of_directory_entries);
     } else {
-        g_queue_free(part_of_directory_entries);
+        g_queue_free_full(part_of_directory_entries, (GDestroyNotify)rm_file_destroy);
     }
 
     return true;
