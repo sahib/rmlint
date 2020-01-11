@@ -436,7 +436,6 @@ def test_replay_pack_directories():
     # Do the run without any packing first (it should yield the same result)
     head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
     assert len(data) == 13
-    import pprint; pprint.pprint(data_by_type(data))
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
     # Do the run with packing dupes into directories now:
@@ -453,27 +452,21 @@ def test_replay_unpack_directories():
     replay_path = '/tmp/replay.json'
     head, *data, footer = run_rmlint('-o json:{p} -S ahD -D'.format(p=replay_path))
 
-    print(data_by_type(data))
     assert len(data) == 21
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
     # Do a normal --replay run first without any unpacking:
-    # import pprint; pprint.pprint(data_by_type(data))
-    # head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
-    # import pprint; pprint.pprint(data_by_type(data))
-    # print(len(data))
-
-    # assert len(data) == 21
-    # assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
+    head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
+    assert len(data) == 21
+    assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
     # # Do the run with unpacking the directories:
     head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
-    print(len(data))
-    import pprint; pprint.pprint(data_by_type(data))
-    import pprint; pprint.pprint(EXPECTED_WITHOUT_TREEMERGE)
+    assert len(data) == 23
 
-    import time; time.sleep(1000)
+    # NOTE: In this special case we should still carry around the
+    # part_of_directory elements from previous runs.
+    expected = EXPECTED_WITHOUT_TREEMERGE
+    expected["part_of_directory"] = EXPECTED_WITH_TREEMERGE["part_of_directory"]
 
-    # TODO: /b/special is missing!
-    assert len(data) == 13
-    assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
+    assert data_by_type(data) == expected

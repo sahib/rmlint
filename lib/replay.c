@@ -729,7 +729,12 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
 static void rm_parrot_cage_push_to_group(RmParrotCage *cage, GQueue **group_ref,
                                       bool is_last) {
     GQueue *group = *group_ref;
-    if(group->length > 1) {
+
+    // NOTE: We allow groups with only one file in it.
+    // Those can happen when we unpack directories.
+    // If there's really just one file in the group
+    // it is kicked our later in the process.
+    if(group->length > 0) {
         g_queue_push_tail(cage->groups, group);
     } else {
         g_queue_free(group);
@@ -754,7 +759,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
     RmCfg *cfg = cage->session->cfg;
     GQueue *group = g_queue_new();
-    GQueue *part_of_directorie_entries = g_queue_new();
+    GQueue *part_of_directory_entries = g_queue_new();
     RmDigest *last_digest = NULL;
 
     /* group of files; first group is "other lint" */
@@ -786,7 +791,8 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
          * Accumuluate those in a single group that come in front of the other groups.
          * */
         if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
-            g_queue_push_tail(part_of_directorie_entries, file);
+            rm_log_debug("[part of directory]\n");
+            g_queue_push_tail(part_of_directory_entries, file);
             continue;
         }
 
@@ -812,10 +818,10 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
     rm_parrot_cage_push_to_group(cage, &group, true);
     g_queue_push_tail(cage->parrots, polly);
 
-    if(part_of_directorie_entries->length > 1) {
-        g_queue_push_head(cage->groups, part_of_directorie_entries);
+    if(part_of_directory_entries->length > 1) {
+        g_queue_push_head(cage->groups, part_of_directory_entries);
     } else {
-        g_queue_free(part_of_directorie_entries);
+        g_queue_free(part_of_directory_entries);
     }
 
     return true;
