@@ -333,3 +333,147 @@ def test_replay_duplicate_directory_size():
     head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
     assert len(data) == 2
     assert footer['total_lint_size'] == 3
+
+
+def create_pack_and_unpack_scenario():
+    x_files = [
+        "a/sub1/x1",
+        "a/sub1/x2",
+        "a/sub2/x3",
+        "a/sub2_copy/x3",
+        "b/sub1/x1",
+        "b/sub1/x2",
+        "b/sub2/x3",
+        "b/sub2_copy/x3",
+    ]
+
+    for path in x_files:
+        create_file("x", path)
+
+    create_file("special", "special")
+    create_file("special", "a/special")
+    create_file("special", "b/special")
+
+    create_file("", "a/empty")
+    create_file("", "b/empty")
+
+
+def data_by_type(data):
+    result = {}
+    for entry in data:
+        path = entry["path"][len(TESTDIR_NAME):]
+        # TODO: bring back is_original.
+        # result.setdefault(entry["type"], {})[path] = entry["is_original"]
+        result.setdefault(entry["type"], {})[path] = False
+
+    return result
+
+
+EXPECTED_WITH_TREEMERGE = {
+    'emptyfile': {
+        '/a/empty': False,
+        '/b/empty': False,
+    },
+    "part_of_directory": {
+        '/b/sub1/x1'      : False,
+        '/a/sub2/x3'      : False,
+        '/b/sub2/x3'      : False,
+        '/a/sub2_copy/x3' : False,
+        '/b/sub2_copy/x3' : False,
+        '/a/sub1/x2'      : False,
+        '/a/sub1/x1'      : False,
+        '/b/sub1/x2'      : False,
+        '/a/special'      : False,
+        '/b/special'      : False,
+    },
+    'duplicate_dir': {
+        '/a'           : False,
+        '/b'           : False,
+        '/a/sub2'      : False,
+        '/a/sub2_copy' : False,
+    },
+    'duplicate_file': {
+        '/a/sub1/x1' : False,
+        '/a/sub1/x2' : False,
+        '/a/sub2/x3' : False,
+        '/a/special' : False,
+        '/special'   : False,
+    },
+}
+
+EXPECTED_WITHOUT_TREEMERGE = {
+    'emptyfile': {
+        '/a/empty': False,
+        '/b/empty': False,
+    },
+    'duplicate_file': {
+        '/b/sub1/x1'      : False, #True,
+        '/a/sub1/x1'      : False,
+        '/a/sub1/x2'      : False,
+        '/a/sub2/x3'      : False,
+        '/a/sub2_copy/x3' : False,
+        '/b/sub1/x2'      : False,
+        '/b/sub2/x3'      : False,
+        '/b/sub2_copy/x3' : False,
+        '/a/special'      : False, #True
+        '/b/special'      : False,
+        '/special'        : False,
+    }
+}
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_pack_directories():
+    create_pack_and_unpack_scenario()
+
+    # Do a run without -D and pack it later during --replay.
+    replay_path = '/tmp/replay.json'
+
+    head, *data, footer = run_rmlint('-o json:{p} -S ahD'.format(p=replay_path))
+    assert len(data) == 13
+    assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
+
+    # Do the run without any packing first (it should yield the same result)
+    head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
+    assert len(data) == 13
+    import pprint; pprint.pprint(data_by_type(data))
+    assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
+
+    # Do the run with packing dupes into directories now:
+    head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
+    assert len(data) == 21
+    assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_unpack_directories():
+    create_pack_and_unpack_scenario()
+
+    # Do a run with -D and pack it later during --replay.
+    replay_path = '/tmp/replay.json'
+    head, *data, footer = run_rmlint('-o json:{p} -S ahD -D'.format(p=replay_path))
+
+    print(data_by_type(data))
+    assert len(data) == 21
+    assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
+
+    # Do a normal --replay run first without any unpacking:
+    # import pprint; pprint.pprint(data_by_type(data))
+    # head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
+    # import pprint; pprint.pprint(data_by_type(data))
+    # print(len(data))
+
+    # assert len(data) == 21
+    # assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
+
+    # # Do the run with unpacking the directories:
+    head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
+    print(len(data))
+    import pprint; pprint.pprint(data_by_type(data))
+    import pprint; pprint.pprint(EXPECTED_WITHOUT_TREEMERGE)
+
+    import time; time.sleep(1000)
+
+    # TODO: /b/special is missing!
+    assert len(data) == 13
+    assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE

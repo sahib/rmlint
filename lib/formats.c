@@ -361,33 +361,26 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
     return SIGN_DIFF(sa, sb);
 }
 
+static int rm_lint_type_order[] = {
+    /* Other types have a prio of 0 by default */
+    [RM_LINT_TYPE_PART_OF_DIRECTORY]  = 1,
+    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = 2,
+    [RM_LINT_TYPE_DUPE_CANDIDATE]     = 3,
+};
+
 static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
     const char *rank_order = self->session->cfg->rank_criteria;
 
     RmFile *fa = ga->files.head->data;
     RmFile *fb = gb->files.head->data;
 
-    /* Filter non-dupe files - they come first always */
-    if(fa->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
-       fa->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
-        return -1;
-    }
+    RM_DEFINE_PATH(fa);
+    RM_DEFINE_PATH(fb);
 
-    if(fb->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
-       fb->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
-        return +1;
-    }
-
-    /* Make sure that duplicate directories are sorted before normal dupes */
-
-    if(fa->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE &&
-       fb->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        return -1;
-    }
-
-    if(fa->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE &&
-       fb->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
-        return +1;
+    int fa_order = rm_lint_type_order[fa->lint_type];
+    int fb_order = rm_lint_type_order[fb->lint_type];
+    if(fa_order != fb_order) {
+        return fa_order - fb_order;
     }
 
     /*  Sort by ranking */

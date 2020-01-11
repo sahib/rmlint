@@ -71,7 +71,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->mtime = rm_sys_stat_mtime_float(statp);
     self->is_new = (self->mtime >= cfg->min_mtime);
 
-    if(type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+    if(type == RM_LINT_TYPE_DUPE_CANDIDATE || type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
         if(cfg->use_absolute_end_offset) {
             self->file_size = CLAMP(actual_file_size, 1, cfg->skip_end_offset);
         } else {

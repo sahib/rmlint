@@ -109,11 +109,6 @@ typedef struct RmParrot {
      * (required for the unpacking feature)
      * */
     RmTrie directory_trie;
-
-    /* List of RmFiles that were created and that are removed
-     * at the end of the parrot run (i.e. on rm_parrot_close())
-     * */
-    GQueue *free_list;
 } RmParrot;
 
 static int rm_parrot_dir_trie_clear_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, _UNUSED void *user_data) {
@@ -155,7 +150,6 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
     polly->is_prefd = is_prefd;
-    // polly->free_list = g_queue_new();
     rm_trie_init(&polly->directory_trie);
 
     for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
@@ -167,13 +161,13 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     }
 
     if(!json_parser_load_from_file(polly->parser, json_path, error)) {
-        goto failure;
+        return NULL;
     }
 
     JsonNode *root = json_parser_get_root(polly->parser);
     if(JSON_NODE_TYPE(root) != JSON_NODE_ARRAY) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("No valid json cache (no array in /)"));
-        goto failure;
+        return NULL;
     }
 
     polly->root = json_node_get_array(root);
@@ -189,23 +183,20 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
                 /* The .json file was created with the -D option
                  * We need to unpack directories while running.
                  * */
-                rm_log_warning_line("»%s« was created with -D, but you're running without.", json_path)
-                rm_log_warning_line("rmlint will unpack duplicate directories into individual files.")
-                rm_log_warning_line("If you do not want this, pass -D to the next run.")
+                rm_log_info_line("»%s« was created with -D, but you're running without.", json_path)
+                rm_log_info_line("rmlint will unpack duplicate directories into individual files.")
+                rm_log_info_line("If you do not want this, pass -D to the next run.")
                 polly->unpack_directories = true;
             } else {
-                rm_log_warning_line("»%s« was created without -D, but you're running with.", json_path)
-                rm_log_warning_line("rmlint will pack duplicate files into directories where applicable.")
-                rm_log_warning_line("If you do not want this, omit -D from the next run.")
+                rm_log_info_line("»%s« was created without -D, but you're running with.", json_path)
+                rm_log_info_line("rmlint will pack duplicate files into directories where applicable.")
+                rm_log_info_line("If you do not want this, omit -D from the next run.")
                 polly->pack_directories = true;
             }
         }
     }
 
     return polly;
-
-failure:
-    return NULL;
 }
 
 static bool rm_parrot_has_next(RmParrot *polly) {
@@ -349,7 +340,8 @@ static int rm_parrot_iter_dir_children(_UNUSED RmTrie *self, RmNode *node, _UNUS
     }
 
     for(GList *iter = children->head; iter; iter = iter->next) {
-        RmFile *child_file = iter->data;
+        // Mask that RM_LINT_TYPE_PART_OF_DIRECTORY as normal duplicate.
+        RmFile *child_file = rm_file_copy(iter->data);
         child_file->lint_type = RM_LINT_TYPE_DUPE_CANDIDATE;
         rm_unpacked_directory_add(unpacker, child_file);
     }
@@ -438,8 +430,13 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
         return true;
     }
 
-    return ((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->actual_file_size) &&
-            (cfg->maxsize == (RmOff)-1 || file->actual_file_size <= cfg->maxsize));
+    if((cfg->minsize == (RmOff)-1 || cfg->minsize <= file->actual_file_size)
+    && (cfg->maxsize == (RmOff)-1 || file->actual_file_size <= cfg->maxsize)) {
+        return true;
+    }
+
+    FAIL_MSG("nope: bad size");
+    return false;
 }
 
 static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file,
@@ -706,6 +703,14 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
             file->is_original = false;
         }
 
+        /* Other lint never should bother for is_original,
+         * since this definition doesn't make sense there.
+         * */
+        if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE
+        && file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            file->is_original = false;
+        }
+
         rm_parrot_update_stats(cage, file);
         file->twin_count = group->length;
 
@@ -749,6 +754,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
     RmCfg *cfg = cage->session->cfg;
     GQueue *group = g_queue_new();
+    GQueue *part_of_directorie_entries = g_queue_new();
     RmDigest *last_digest = NULL;
 
     /* group of files; first group is "other lint" */
@@ -762,12 +768,25 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
         rm_log_debug("Checking `%s`: ", file_path);
 
         /* Check --size, --perms, --hidden */
-        if(!(rm_parrot_check_depth(cfg, file) && rm_parrot_check_size(cfg, file) &&
-             rm_parrot_check_hidden(cfg, file, file_path) &&
-             rm_parrot_check_permissions(cfg, file, file_path) &&
-             rm_parrot_check_types(cfg, file) && rm_parrot_check_crossdev(polly, file) &&
-             rm_parrot_check_path(polly, file, file_path))) {
+        if(!(
+               rm_parrot_check_depth(cfg, file)
+            && rm_parrot_check_size(cfg, file)
+            && rm_parrot_check_hidden(cfg, file, file_path)
+            && rm_parrot_check_permissions(cfg, file, file_path)
+            && rm_parrot_check_types(cfg, file)
+            && rm_parrot_check_crossdev(polly, file)
+            && rm_parrot_check_path(polly, file, file_path)
+        )) {
+            // TODO: Test free logic when this happens.
             rm_log_debug("[nope]\n");
+            continue;
+        }
+
+        /* Special case for part of dirs:
+         * Accumuluate those in a single group that come in front of the other groups.
+         * */
+        if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+            g_queue_push_tail(part_of_directorie_entries, file);
             continue;
         }
 
@@ -777,12 +796,10 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
         rm_log_debug("[okay]\n");
 
-        if(file->digest != NULL) {
-            if(!rm_digest_equal(file->digest, last_digest)) {
-                rm_digest_free(last_digest);
-                last_digest = rm_digest_copy(file->digest);
-                rm_parrot_cage_push_to_group(cage, &group, false);
-            }
+        if(file->digest != NULL && !rm_digest_equal(file->digest, last_digest)) {
+            rm_digest_free(last_digest);
+            last_digest = rm_digest_copy(file->digest);
+            rm_parrot_cage_push_to_group(cage, &group, false);
         }
 
         g_queue_push_tail(group, file);
@@ -794,6 +811,13 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
     rm_parrot_cage_push_to_group(cage, &group, true);
     g_queue_push_tail(cage->parrots, polly);
+
+    if(part_of_directorie_entries->length > 1) {
+        g_queue_push_head(cage->groups, part_of_directorie_entries);
+    } else {
+        g_queue_free(part_of_directorie_entries);
+    }
+
     return true;
 }
 
@@ -811,16 +835,22 @@ static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
         RmFile *head_file = group->head->data;
+
         GQueue *existing_group = g_hash_table_lookup(digest_to_group, head_file->digest);
 
         if(existing_group != NULL) {
-            // Merge the two groups and get rid of the old one.
-            rm_util_queue_push_tail_queue(existing_group, group);
-            g_queue_free(group);
-            GList *old_iter = iter;
-            iter = iter->prev;
-            g_queue_delete_link(cage->groups, old_iter);
-            continue;
+            RmFile *existing_head_file = existing_group->head->data;
+
+            /* Merge only groups with the same type */
+            if(existing_head_file->lint_type == head_file->lint_type) {
+                /* Merge the two groups and get rid of the old one. */
+                rm_util_queue_push_tail_queue(existing_group, group);
+                g_queue_free(group);
+                GList *old_iter = iter;
+                iter = iter->prev;
+                g_queue_delete_link(cage->groups, old_iter);
+                continue;
+            }
         }
 
         // No such group, but remember it.
