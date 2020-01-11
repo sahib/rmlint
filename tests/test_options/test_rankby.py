@@ -5,6 +5,10 @@ from nose import with_setup
 from tests.utils import *
 
 
+def filter_part_of_directory(data):
+    return [e for e in data if e['type'] != 'part_of_directory']
+
+
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_rankby_simple():
     create_file('x', 'ax')
@@ -33,5 +37,6 @@ def test_rankby_dirs():
     create_file('x' * 64, 'dy')
 
     head, *data, foot = run_rmlint('--sort-by s -S a -D')
+    data = filter_part_of_directory(data)
     paths = [os.path.basename(p['path']) for p in data]
-    assert paths == ['ax', 'ay', 'x', 'y', 'b', 'c', 'dx', 'dy']
+    assert paths == ['b', 'c', 'ax', 'ay', 'x', 'y', 'dx', 'dy']

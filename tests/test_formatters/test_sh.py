@@ -17,6 +17,10 @@ def run_shell_script(shell, sh_path, *args):
     ).decode("utf-8")
 
 
+def filter_part_of_directory(data):
+    return [e for e in data if e['type'] != 'part_of_directory']
+
+
 @with_setup(usual_setup_func, usual_teardown_func)
 @parameterized([("sh", ), ("bash", ), ("dash", )])
 def test_basic(shell):
@@ -36,6 +40,7 @@ def test_basic(shell):
     os.remove(os.path.join(TESTDIR_NAME, 'aaa'))
 
     head, *data, footer = run_rmlint('-D -S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    data = filter_part_of_directory(data)
     # subprocess.call('cat ' + os.path.join(TESTDIR_NAME, 'rmlint.sh'), shell=True)
 
     assert footer['duplicate_sets'] == 3
@@ -47,6 +52,7 @@ def test_basic(shell):
     sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
     text = run_shell_script(shell, sh_path, "-dn")
     head, *data, footer = run_rmlint('-D -S a')
+    data = filter_part_of_directory(data)
     assert footer['duplicate_sets'] == 3
     assert footer['total_lint_size'] == 9
     assert footer['total_files'] == 9
@@ -54,6 +60,7 @@ def test_basic(shell):
 
     text = run_shell_script(shell, sh_path, "-d")
     head, *data, footer = run_rmlint('-D -S a')
+    data = filter_part_of_directory(data)
 
     assert footer['duplicate_sets'] == 0
     assert footer['total_lint_size'] == 0
@@ -143,6 +150,7 @@ def test_hardlink_duplicate_directories(shell):
     header, *data, footer = run_rmlint(
         "-D -S a -c sh:hardlink -o sh:{}".format(sh_path),
     )
+    data = filter_part_of_directory(data)
     assert len(data) == 2
     assert data[0]["path"].endswith("dir_a")
     assert data[1]["path"].endswith("dir_b")
@@ -215,6 +223,7 @@ def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
             sh_path
         ),
     )
+    data = filter_part_of_directory(data)
 
     assert len(data) == 2
 

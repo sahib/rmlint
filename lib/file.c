@@ -111,7 +111,6 @@ void rm_file_build_path(RmFile *file, char *buf) {
 RmFile *rm_file_copy(RmFile *file) {
     g_assert(file);
 
-
     RmFile *copy  = g_slice_new0(RmFile);
     memcpy(copy, file, sizeof(RmFile));
 

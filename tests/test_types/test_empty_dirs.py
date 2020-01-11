@@ -45,8 +45,8 @@ def test_hidden():
     head, *data, footer = run_rmlint('-T "none +ed"')
 
     assert footer['total_files'] == 0
-    assert len(data) is 0
+    assert len(data) == 0
 
     head, *data, footer = run_rmlint('-T "none +ed" --hidden')
     assert footer['total_files'] == 1
-    assert len(data) is 0
+    assert len(data) == 0

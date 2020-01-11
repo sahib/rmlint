@@ -4,6 +4,10 @@ from nose import with_setup
 from tests.utils import *
 
 
+def filter_part_of_directory(data):
+    return [e for e in data if e['type'] != 'part_of_directory']
+
+
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_simple():
     create_file('xxx', '.a/1')
@@ -60,10 +64,12 @@ def test_partial_hidden():
     assert all(p['path'].endswith('.hidden') for p in data)
 
     head, *data, footer = run_rmlint('--partial-hidden -D -S a')
+    data = filter_part_of_directory(data)
     assert len(data) == 2
     assert data[0]['path'].endswith('a')
     assert data[0]['type'] == 'duplicate_dir'
     assert data[1]['path'].endswith('b')
 
     head, *data, footer = run_rmlint('-D --no-partial-hidden -S a')
+    data = filter_part_of_directory(data)
     assert len(data) == 0

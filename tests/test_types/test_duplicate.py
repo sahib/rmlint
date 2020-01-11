@@ -45,7 +45,7 @@ def test_small_diffs():
         create_file(create_data(len=N, flips=[-i]), 'b')
         head, *data, footer = run_rmlint('-S a')
 
-        if i == N - i or i is 0:
+        if i == N - i or i == 0:
             assert len(data) == 2
         else:
             assert len(data) == 0

@@ -782,9 +782,11 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
             && rm_parrot_check_crossdev(polly, file)
             && rm_parrot_check_path(polly, file, file_path)
         )) {
-            // TODO: Test free logic when this happens.
             rm_log_debug("[nope]\n");
-            rm_file_destroy(file);
+            if(file->lint_type != RM_LINT_TYPE_PART_OF_DIRECTORY) {
+                rm_file_destroy(file);
+            }
+
             continue;
         }
 

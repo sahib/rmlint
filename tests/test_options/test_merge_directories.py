@@ -4,6 +4,9 @@ from nose import with_setup
 from tests.utils import *
 
 
+def filter_part_of_directory(data):
+    return [entry for entry in data if entry["type"] != "part_of_directory"]
+
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_simple():
     create_file('xxx', '1/a')
@@ -11,6 +14,7 @@ def test_simple():
     create_file('xxx', 'a')
 
     head, *data, footer = run_rmlint('-p -D --rank-by A')
+    data = filter_part_of_directory(data)
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
 
@@ -33,6 +37,7 @@ def test_diff():
     create_file('xxx', '3/a')
     create_file('yyy', '3/b')
     head, *data, footer = run_rmlint('-p -D --rank-by A')
+    data = filter_part_of_directory(data)
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert data[0]['size'] == 3
@@ -50,6 +55,7 @@ def test_same_but_not_dupe():
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
     head, *data, footer = run_rmlint('-p -D --rank-by A')
+    data = filter_part_of_directory(data)
 
     # No duplicate dirs, but 3 duplicate files should be found.
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -65,7 +71,8 @@ def test_hardlinks():
     create_link('2/a', '2/link2')
 
     head, *data, footer = run_rmlint('-p -D -l -S a')
-    assert len(data) is 5
+    data = filter_part_of_directory(data)
+    assert len(data) == 5
     assert data[0]['type'] == 'duplicate_dir'
     assert data[0]['path'].endswith('1')
     assert data[1]['type'] == 'duplicate_dir'
@@ -83,7 +90,8 @@ def test_hardlinks():
     assert not data[4]['is_original']
 
     head, *data, footer = run_rmlint('-D -S a -L')
-    assert len(data) is 2
+    data = filter_part_of_directory(data)
+    assert len(data) == 2
     assert data[0]['type'] == 'duplicate_file'
     assert data[0]['path'].endswith('a')
     assert data[1]['type'] == 'duplicate_file'
@@ -95,6 +103,7 @@ def test_deep_simple():
     create_file('xxx', 'deep/a/b/c/d/1')
     create_file('xxx', 'deep/e/f/g/h/1')
     head, *data, footer = run_rmlint('-D -S a')
+    data = filter_part_of_directory(data)
 
     assert data[0]['path'].endswith('deep/a')
     assert data[1]['path'].endswith('deep/e')
@@ -110,6 +119,7 @@ def test_deep_simple():
     create_file('xxx', 'd/a/1')
     create_file('xxx', 'd/b/empty')
     head, *data, footer = run_rmlint('-p -D -S a')
+    data = filter_part_of_directory(data)
 
     assert data[0]['path'].endswith('d/a')
     assert data[1]['path'].endswith('d/b')
@@ -121,6 +131,7 @@ def test_dirs_with_empty_files_only():
     create_file('', 'a/empty')
     create_file('', 'b/empty')
     head, *data, footer = run_rmlint('-p -D -S a -T df,dd --size 0')
+    data = filter_part_of_directory(data)
 
     assert len(data) == 2
     assert data[0]['path'].endswith('a')
@@ -129,9 +140,11 @@ def test_dirs_with_empty_files_only():
     assert data[1]['type'] == "duplicate_dir"
 
     head, *data, footer = run_rmlint('-p -D -S a -T df,dd')
+    data = filter_part_of_directory(data)
     assert len(data) == 0
 
     head, *data, footer = run_rmlint('-p -D -S a --size 0')
+    data = filter_part_of_directory(data)
     assert len(data) == 2
 
     data.sort(key=lambda elem: elem["path"])
@@ -157,6 +170,7 @@ def test_deep_full():
     # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
     # subprocess.call('./rmlint -p -S a -D ' + TESTDIR_NAME, shell=True)
     head, *data, footer = run_rmlint('-p -D -S a')
+    data = filter_part_of_directory(data)
 
     assert len(data) == 6
 
@@ -170,7 +184,7 @@ def test_deep_full():
     for idx, ending in enumerate(['a/b/c/d/1', 'a/b/c/1', 'a/b/1', 'a/1']):
         assert data[idx + 2]['path'].endswith(ending)
         assert data[idx + 2]['type'] == 'duplicate_file'
-        assert data[idx + 2]['is_original'] == (idx is 0)
+        assert data[idx + 2]['is_original'] == (idx == 0)
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -186,6 +200,7 @@ def test_deep_full_twice():
         ),
         use_default_dir=False
     )
+    data = filter_part_of_directory(data)
 
     assert len(data) == 8
 
@@ -206,7 +221,7 @@ def test_deep_full_twice():
     for idx, ending in enumerate(['a/b/c/d/1', 'a/b/c/1', 'a/b/1', 'a/1']):
         assert data[idx + 4]['path'].endswith(ending)
         assert data[idx + 4]['type'] == 'duplicate_file'
-        assert data[idx + 4]['is_original'] == (idx is 0)
+        assert data[idx + 4]['is_original'] == (idx == 0)
 
     assert data[0]['path'].endswith('deep_a')
     assert data[0]['is_original']
@@ -226,6 +241,7 @@ def test_symlinks():
     create_link('b/z', 'b/x', symlink=True)
 
     head, *data, footer = run_rmlint('-p -D -S a -F')
+    data = filter_part_of_directory(data)
 
     assert len(data) == 2
     assert data[0]['path'].endswith('z')
@@ -234,6 +250,7 @@ def test_symlinks():
     assert not data[1]['is_original']
 
     head, *data, footer = run_rmlint('-p -D -S a -f')
+    data = filter_part_of_directory(data)
 
     assert len(data) == 2
     assert data[0]['path'].endswith('/a')
@@ -302,11 +319,14 @@ def test_keepall_tagged():
                 maybe_km = km_opts,
                 untagged = untagged_path,
                 tagged = tagged_path)
-        return run_rmlint(options, use_default_dir=False)
+        head, *data, footer = run_rmlint(options, use_default_dir=False)
+        data = filter_part_of_directory(data)
+        return [head, *data, footer]
 
 
     ### test 1: simple -km test
     head, *data, footer = do_test('-k -m', dupedir, origdir)
+
     assert len(data) >= 2
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 2
@@ -418,6 +438,7 @@ def test_equal_content_different_layout():
     create_file('yyy', "tree-b/y")
 
     head, *data, footer = run_rmlint('-p -D --rank-by a')
+    data = filter_part_of_directory(data)
 
     assert data[0]["path"].endswith("tree-a")
     assert data[0]["is_original"] is True
@@ -426,6 +447,7 @@ def test_equal_content_different_layout():
 
     # Now, try to honour the layout
     head, *data, footer = run_rmlint('-p -Dj --rank-by a')
+    data = filter_part_of_directory(data)
     for point in data:
         assert point["type"] == "duplicate_file"
 
@@ -436,6 +458,7 @@ def test_nested_content_with_same_layout():
     create_nested('deep', 'uvwabc')
 
     head, *data, footer = run_rmlint('-Dj --rank-by a')
+    data = filter_part_of_directory(data)
 
     assert len(data) == 10
     assert data[0]["path"].endswith("deep/u/v/w")

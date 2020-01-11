@@ -710,6 +710,14 @@ static void rm_digest_paranoid_release_buffers(RmParanoid *paranoid) {
     paranoid->buffers = NULL;
 }
 
+static RmParanoid *rm_digest_paranoid_copy(RmParanoid *paranoid) {
+    RmParanoid *copy = g_slice_new0(RmParanoid);
+    if(paranoid->shadow_hash != NULL) {
+        copy->shadow_hash = rm_digest_copy(paranoid->shadow_hash);
+    }
+    return copy;
+}
+
 static void rm_digest_paranoid_free(RmParanoid *paranoid) {
     rm_digest_free(paranoid->shadow_hash);
     rm_digest_paranoid_release_buffers(paranoid);
@@ -807,7 +815,7 @@ static const RmDigestInterface paranoid_interface = {
     .new = (RmDigestNewFunc)rm_digest_paranoid_new,
     .free = (RmDigestFreeFunc)rm_digest_paranoid_free,
     .update = NULL,
-    .copy = NULL,
+    .copy = (RmDigestCopyFunc)rm_digest_paranoid_copy,
     .steal = (RmDigestStealFunc)rm_digest_paranoid_steal};
 
 ////////////////////////////////
@@ -949,8 +957,11 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
 
     const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
-    copy->state = interface->copy(digest->state);
+    if(interface->copy == NULL) {
+        return NULL;
+    }
 
+    copy->state = interface->copy(digest->state);
     return copy;
 }
 
