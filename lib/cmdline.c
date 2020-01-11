@@ -1477,8 +1477,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     };
 
     const GOptionEntry unusual_option_entries[] = {
-        {"clamp-low"              , 'q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)              , "Limit lower reading barrier"                                 , "P"}    ,
-        {"clamp-top"              , 'Q' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)              , "Limit upper reading barrier"                                 , "P"}    ,
+        {"clamp-low"              , 'q' , 0                , G_OPTION_ARG_CALLBACK , FUNC(clamp_low)              , "Limit lower reading barrier"                                 , "P"}    ,
+        {"clamp-top"              , 'Q' , 0                , G_OPTION_ARG_CALLBACK , FUNC(clamp_top)              , "Limit upper reading barrier"                                 , "P"}    ,
         {"limit-mem"              , 'u' , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(limit_mem)              , "Specify max. memory usage target"                            , "S"}    ,
         {"read-buffer-len"        , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(read_buf_len)           , "Specify read buffer length in bytes"                         , "S"}    ,
         {"sweep-size"             , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_size)             , "Specify max. bytes per pass when scanning disks"             , "S"}    ,

@@ -141,7 +141,6 @@ static void rm_parrot_close(RmParrot *polly) {
     g_free(polly);
 }
 
-// TODO: Pass pack/unpack option to force/unforce automatic packing/unpacking
 static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool is_prefd,
                                 GError **error) {
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
