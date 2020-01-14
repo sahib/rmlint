@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.10.0 Odd Olm] -- Unreleased
+
+### Added
+
+* ``--replay`` works now with ``-D``: ``.json`` created without ``-D`` can now
+  be packed into duplicate directories during replay. Vice versa, duplicate
+  directories can be unpacked if no ``-D`` switch was given.
+
+### Changed
+
+* Related to the ``--replay`` feature: The ``.json`` output now contains
+  ``part_of_directory`` entries if generated with ``-D``. Those are basically
+  duplicates the duplicate directories are composed out of.
+
+### Deprecated
+
+Nothing.
+
+### Removed
+
+Nothing.
+
+### Fixed
+
+* The ``mtime`` comparison was broken when using ``--xattr``.
+* Timestamps for ``xattr`` were locale-sensitive. This has been fixed.
+* Intermediate checksums where written to extended attributes.
+* Several Python related deprecation warnings.
+* ui: Changing the size factor did not let you apply the settings.
+* ``--size`` can now correctly handle very large sizes.
+
 ## [2.9.0 Odd Olm] -- 2019-08-20
 
 ### Added
