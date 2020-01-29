@@ -636,7 +636,12 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
 static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
     RmSession *session = cage->session;
 
+    if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+        return;
+    }
+
     session->total_files += 1;
+
     if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE ||
        file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         session->dup_group_counter += file->is_original;
