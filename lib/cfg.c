@@ -70,6 +70,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->threads = 16;
     cfg->threads_per_disk = 2;
     cfg->verbosity = G_LOG_LEVEL_INFO;
+    cfg->see_symlinks = true;
     cfg->follow_symlinks = false;
 
     /* Optimum buffer size based on /usr without dropping caches:
