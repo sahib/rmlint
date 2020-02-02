@@ -265,7 +265,8 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
 
 static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file,
                                    const char *file_path) {
-    if(!cfg->ignore_hidden) {
+    if(cfg->ignore_hidden == false && cfg->partial_hidden == false) {
+        // no need to check.
         return true;
     }
 
