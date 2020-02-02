@@ -121,9 +121,13 @@
 #  define N_(String) gettext_noop (String)
 #endif
 
-GMutex RM_LOG_MTX;
+static inline GMutex* rm_log_get_mutex(void) {{
+    static GMutex RM_LOG_MTX;
+    return &RM_LOG_MTX;
+}}
 
-#define RM_LOG_INIT g_mutex_init(&RM_LOG_MTX);
+#define RM_LOG_INIT \
+    g_mutex_init(rm_log_get_mutex());
 
 typedef guint64 RmOff;
 
@@ -150,33 +154,33 @@ typedef guint64 RmOff;
 
 ///////////////
 
-#define rm_log_error_line(...)   \
-    g_mutex_lock(&RM_LOG_MTX);   \
-    rm_log_error_prefix()        \
-    rm_log_error(__VA_ARGS__);   \
-    rm_log_error("\n");          \
-    g_mutex_unlock(&RM_LOG_MTX); \
+#define rm_log_error_line(...)           \
+    g_mutex_lock(rm_log_get_mutex());    \
+    rm_log_error_prefix()                \
+    rm_log_error(__VA_ARGS__);           \
+    rm_log_error("\n");                  \
+    g_mutex_unlock(rm_log_get_mutex());  \
 
-#define rm_log_warning_line(...) \
-    g_mutex_lock(&RM_LOG_MTX);   \
-    rm_log_warning_prefix()      \
-    rm_log_warning(__VA_ARGS__); \
-    rm_log_warning("\n");        \
-    g_mutex_unlock(&RM_LOG_MTX); \
+#define rm_log_warning_line(...)         \
+    g_mutex_lock(rm_log_get_mutex());    \
+    rm_log_warning_prefix()              \
+    rm_log_warning(__VA_ARGS__);         \
+    rm_log_warning("\n");                \
+    g_mutex_unlock(rm_log_get_mutex());  \
 
-#define rm_log_info_line(...)    \
-    g_mutex_lock(&RM_LOG_MTX);   \
-    rm_log_info_prefix()         \
-    rm_log_warning(__VA_ARGS__); \
-    rm_log_warning("\n");        \
-    g_mutex_unlock(&RM_LOG_MTX); \
+#define rm_log_info_line(...)            \
+    g_mutex_lock(rm_log_get_mutex());    \
+    rm_log_info_prefix()                 \
+    rm_log_warning(__VA_ARGS__);         \
+    rm_log_warning("\n");                \
+    g_mutex_unlock(rm_log_get_mutex());  \
 
-#define rm_log_debug_line(...)   \
-    g_mutex_lock(&RM_LOG_MTX);   \
-    rm_log_debug_prefix()        \
-    rm_log_debug(__VA_ARGS__);   \
-    rm_log_debug("\n");          \
-    g_mutex_unlock(&RM_LOG_MTX); \
+#define rm_log_debug_line(...)           \
+    g_mutex_lock(rm_log_get_mutex());    \
+    rm_log_debug_prefix()                \
+    rm_log_debug(__VA_ARGS__);           \
+    rm_log_debug("\n");                  \
+    g_mutex_unlock(rm_log_get_mutex());  \
 
 /* Domain for reporting errors. Needed by GOptions */
 #define RM_ERROR_QUARK (g_quark_from_static_string("rmlint"))
