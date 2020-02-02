@@ -21,6 +21,20 @@ def test_default():
         '/a/z',
     }
 
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_merge_directories_with_ignored_symlinks():
+    # Badlinks should not forbid finding duplicate directories
+    # when being filtered out during traversing with -T dd,df.
+    create_file('xxx', 'a/z')
+    create_link('bogus', 'a/link', symlink=True)
+    create_file('xxx', 'b/z')
+    create_link('bogus', 'b/link', symlink=True)
+
+    head, *data, footer = run_rmlint('-T df,dd')
+    assert {e["path"][len(TESTDIR_NAME):] for e in data} == {
+        '/a',
+        '/b',
+    }
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_order():

@@ -43,7 +43,7 @@ CKSUM_TYPES = [
 ]
 
 def runs_as_root():
-    return os.geteuid() is 0
+    return os.geteuid() == 0
 
 
 def get_env_flag(name):
@@ -268,7 +268,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
         data_skip, new_data_skip = data, new_data
 
-        if output_len is not 0:
+        if output_len != 0:
             if new_data:
                 new_data_skip = new_data[:-output_len]
 

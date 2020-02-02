@@ -313,7 +313,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
     bool have_open_emptydirs = false;
     bool clear_emptydir_flags = false;
     bool next_is_symlink = false;
-    bool symlink_message_delivered = false;
 
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
@@ -412,32 +411,22 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
             case FTS_SL:                     /* symbolic link */
                 clear_emptydir_flags = true; /* current dir not empty */
                 if(!cfg->follow_symlinks) {
-                    if(p->fts_level != 0 && !symlink_message_delivered) {
-                        rm_log_debug_line(
-                            "Not following symlink %s because of cfg\n"
-                            "\t(further symlink messages suppressed for this cmdline "
-                            "path)",
-                            p->fts_path);
-                        symlink_message_delivered = TRUE;
+                    bool is_badlink = false;
+                    if(access(p->fts_path, R_OK) == -1 && errno == ENOENT) {
+                        is_badlink = true;
                     }
 
-                    if(access(p->fts_path, R_OK) == -1 && errno == ENOENT) {
-                        /* Oops, that's a badlink. */
-                        if(cfg->find_badlinks) {
-                            ADD_FILE(RM_LINT_TYPE_BADLINK, false);
-                        }
+                    if(is_badlink && cfg->find_badlinks) {
+                        ADD_FILE(RM_LINT_TYPE_BADLINK, false);
                     } else if(cfg->see_symlinks) {
+                        /* NOTE: bad links are also counted as duplicates
+                         *       when -T df,dd (for example) is used.
+                         *       They can serve as input for the treemerge
+                         *       algorithm which might fail when missing.
+                         */
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
-                    if(!symlink_message_delivered) {
-                        rm_log_debug_line(
-                            "Following symlink %s\n"
-                            "\t(further symlink messages suppressed for this cmdline "
-                            "path)",
-                            p->fts_path);
-                        symlink_message_delivered = TRUE;
-                    }
                     next_is_symlink = true;
                     fts_set(ftsp, p, FTS_FOLLOW); /* do recurse */
                 }
