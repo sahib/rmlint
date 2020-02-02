@@ -1072,6 +1072,16 @@ static gboolean rm_cmd_parse_follow_symlinks(_UNUSED const char *option_name,
     return true;
 }
 
+static gboolean rm_cmd_parse_no_follow_symlinks(_UNUSED const char *option_name,
+                                             _UNUSED const gchar *count,
+                                             RmSession *session, _UNUSED GError **error) {
+    RmCfg *cfg = session->cfg;
+    cfg->see_symlinks = false;
+    cfg->follow_symlinks = false;
+
+    return true;
+}
+
 static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
                                                _UNUSED const gchar *count,
                                                RmSession *session,
@@ -1411,7 +1421,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
         {"hidden"                   , 'r'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(hidden)                   , _("Find hidden files")                                                    , NULL}     ,
         {"followlinks"              , 'f'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(follow_symlinks)          , _("Follow symlinks")                                                      , NULL}     ,
-        {"no-followlinks"           , 'F'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->follow_symlinks          , _("Ignore symlinks")                                                      , NULL}     ,
+        {"no-followlinks"           , 'F'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(no_follow_symlinks)       , _("Ignore symlinks")                                                      , NULL}     ,
         {"paranoid"                 , 'p'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(paranoid)                 , _("Use more paranoid hashing")                                            , NULL}     ,
         {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mountpoints")                                             , NULL}     ,
         {"keep-all-tagged"          , 'k'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_tagged          , _("Keep all tagged files")                                                , NULL}     ,

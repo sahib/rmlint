@@ -178,7 +178,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
     if(is_symlink && cfg->follow_symlinks) {
         char *new_path_buf = g_malloc0(PATH_MAX + 1);
         if(readlink(path, new_path_buf, PATH_MAX) == -1) {
-            rm_log_warning_line("failed to follow symbolic link of %s: %s", path, g_strerror(errno));
+            rm_log_debug_line("failed to follow symbolic link of %s: %s", path, g_strerror(errno));
             g_free(new_path_buf);
             return;
         }

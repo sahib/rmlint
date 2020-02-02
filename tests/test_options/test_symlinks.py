@@ -5,6 +5,24 @@ from tests.utils import *
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
+def test_default():
+    # --see-symlinks should be on by default.
+    create_file('xxx', 'a/z')
+    create_link('a/z', 'a/x', symlink=True)
+    create_file('xxx', 'b/z')
+    create_link('b/z', 'b/x', symlink=True)
+    create_link('b/z', 'b/y', symlink=True)
+
+    head, *data, footer = run_rmlint()
+    assert {e["path"][len(TESTDIR_NAME):] for e in data} == {
+        '/b/x',
+        '/b/y',
+        '/b/z',
+        '/a/z',
+    }
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
 def test_order():
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
