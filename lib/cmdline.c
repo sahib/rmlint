@@ -475,6 +475,7 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
             if (path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
+
             all_paths_read &= rm_cfg_add_path(session->cfg, is_prefd, path_buf);
         }
     }

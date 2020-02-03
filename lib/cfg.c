@@ -108,7 +108,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = 0;
 
 #if HAVE_FACCESSAT
-    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
+    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS|AT_SYMLINK_NOFOLLOW);
 #else
     rc = access(path, R_OK);
 #endif
@@ -121,9 +121,9 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
 
     char *real_path = realpath(path, NULL);
     if(real_path == NULL) {
-        rm_log_warning_line(_("Can't get real path for directory or file \"%s\": %s"),
+        rm_log_debug_line(_("Can't get real path for directory or file \"%s\": %s"),
                             path, strerror(errno));
-        return 0;
+        real_path = g_strdup(path);
     }
 
     RmPath *rmpath = g_slice_new(RmPath);
