@@ -92,7 +92,7 @@ typedef struct RmCfg {
     gboolean replay;
     gboolean read_stdin;
     gboolean read_stdin0;
-    gboolean no_backup;
+    gboolean backup;
 
     int permissions;
 

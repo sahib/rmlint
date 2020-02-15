@@ -257,7 +257,7 @@ void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
 
 
     rm_log_debug_line(_("Old result `%s` already exists."), old_path);
-    rm_log_debug_line(_("Moving old file to `%s`. Use --no-backup to disable this."), new_path);
+    rm_log_debug_line(_("Moving old file to `%s`. Leave out --backup to disable this."), new_path);
 
     if(rename(old_path, new_path) < 0) {
         rm_log_perror(_("failed to rename old result file"));
@@ -321,7 +321,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         needs_full_path = true;
         if(access(path, F_OK) == 0) {
             file_existed_already = true;
-            if(!self->session->cfg->no_backup) {
+            if(self->session->cfg->backup) {
                 rm_fmt_backup_old_result_file(self, path);
             }
         }
