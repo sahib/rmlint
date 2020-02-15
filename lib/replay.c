@@ -259,7 +259,8 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
     if(mtime_node) {
-        gdouble stat_mtime = rm_sys_stat_mtime_float(stat_info);
+        /* Note: lstat_buf used here since for symlinks we want their mtime */
+        gdouble stat_mtime = rm_sys_stat_mtime_float(&lstat_buf);
         gdouble json_mtime = json_node_get_double(mtime_node);
 
         /* Allow them a rather large span to deviate to account for inaccuracies */
