@@ -499,15 +499,22 @@ void rm_traverse_tree(RmSession *session) {
         RmPath *rmpath = iter->data;
         RmTravBuffer *buffer = rm_trav_buffer_new(session, rmpath);
 
-        if(S_ISREG(buffer->stat_buf.st_mode)) {
-            /* Append normal paths directly */
-            bool is_hidden = false;
+        /* Append normal paths directly */
+        bool is_hidden = false;
 
-            /* The is_hidden information is only needed for --partial-hidden */
-            if(cfg->partial_hidden) {
-                is_hidden = rm_util_path_is_hidden(rmpath->path);
-            }
+        /* The is_hidden information is only needed for --partial-hidden */
+        if(cfg->partial_hidden) {
+            is_hidden = rm_util_path_is_hidden(rmpath->path);
+        }
 
+        if(S_ISLNK(buffer->stat_buf.st_mode) && !rmpath->realpath_worked) {
+            /* A symlink where we could not get the actual path from
+             * (and it was given directly, e.g. by a find call)
+             */
+            rm_traverse_file(trav_session, &buffer->stat_buf, rmpath->path,
+                             rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_BADLINK, false,
+                             is_hidden, FALSE, 0);
+        } else if(S_ISREG(buffer->stat_buf.st_mode)) {
             rm_traverse_file(trav_session, &buffer->stat_buf, rmpath->path,
                              rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_UNKNOWN, false,
                              is_hidden, FALSE, 0);

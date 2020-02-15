@@ -40,10 +40,13 @@ typedef struct RmPath {
     guint idx;
 
     /* whether path was tagged as preferred path */
-    bool is_prefd;
+    bool is_prefd : 1;
 
     /* whether to treat all files under path as one filesystem */
-    bool treat_as_single_vol;
+    bool treat_as_single_vol : 1;
+
+    /* wether calling realpath() worked on this path */
+    bool realpath_worked : 1;
 } RmPath;
 
 /* Storage struct for all options settable in cmdline. */
