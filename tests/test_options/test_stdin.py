@@ -3,6 +3,7 @@
 from nose import with_setup
 from tests.utils import *
 from subprocess import STDOUT, check_output
+from parameterized import parameterized
 
 import json
 import os
@@ -78,3 +79,28 @@ def test_path_starting_with_dash():
     assert data[0]['path'].endswith('a')
     assert data[1]['path'].endswith('b')
     assert footer['total_lint_size'] == 4
+
+
+# Regression test for https://github.com/sahib/rmlint/issues/400
+# Do not search in current directory when piped empty input.
+@parameterized([("-", ), ("-0", )])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_stdin_empty(stdin_opt):
+    create_file('1234', 'a')
+    create_file('1234', 'b')
+
+    cwd = os.getcwd()
+
+    try:
+        os.chdir(TESTDIR_NAME)
+        proc = subprocess.Popen(
+            [cwd + '/rmlint', stdin_opt, '-o', 'json'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+        data, _ = proc.communicate("")
+        head, *data, footer = json.loads(data.decode('utf-8'))
+    finally:
+        os.chdir(cwd)
+
+    assert len(data) == 0
