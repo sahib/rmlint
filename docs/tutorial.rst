@@ -113,7 +113,7 @@ Valid units include:
 If no units are given, ``rmlint`` will assume bytes.
 
 Limit duplicate matching according to basename
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, ``rmlint`` compares file contents, regardless of file name.
 So if *afile.jpg* has the same content as *bfile.txt* (which is unlikely!),
@@ -414,7 +414,7 @@ Here's the list of currently available formatters and their config options:
 
     Prints a progressbar during the run of ``rmlint``. This is recommended for
     large runs where the ``pretty`` formatter would print thousands of lines.
-	Not recommended in combination with ``pretty``
+    Not recommended in combination with ``pretty``
 
     **Config values:**
 
@@ -564,6 +564,29 @@ as possible! Good practice includes adding a ``$`` anchor at the end of the rege
   **O** ensures that hardlinks are handled well, **m** ensures that the oldest
   file is the original and **a** simply ensures a defined ordering if no other
   criteria applies.
+- If you something very specific about the paths you're searching, then the
+  ``r/R`` or ``x/X`` options are your friend. You can also specify those
+  options multiple times. Have an example here:
+
+  .. code-block:: bash
+
+    # Sort paths with ABC in them first, then DEF, then GHI.
+    # Everthing with »temp«, »tmp« or »cache« in it comes last,
+    # the rest is sandwhiched in between and sorted by their modification time (m).
+    # If something is tied, the modification time is also used a sorting criteria.
+    $ rmlint -S 'r<.*ABC.*>r<.*DEF.*>r<.*GHI.*>R<.*(tmp|temp|cache).*>m' /tmp/t
+
+    # Duplicate(s):
+       ls '/tmp/t/ABC'
+       rm '/tmp/t/DEF'
+       rm '/tmp/t/GHI'
+       rm '/tmp/t/another'
+       rm '/tmp/t/other'
+       rm '/tmp/t/xxx-cache-yyy'
+       rm '/tmp/t/xxx-tmp-yyy'
+       rm '/tmp/t/xxx-tempt-yyy'
+
+  For more information you can also follow this `link <https://github.com/sahib/rmlint/issues/399>`_
 
 Flagging original directories
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

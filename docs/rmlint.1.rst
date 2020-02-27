@@ -929,6 +929,24 @@ This is a collection of common use cases and other tricks:
   ``$ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files``
   ``$ cat unique_files original_files``
 
+* Sort the files by a user-defined regular expression
+
+    .. code-block:: bash
+
+      # Sort a files with ABC or DEF in their basename first,
+      # all files with tmp, temp or cache in their names last,
+      # and everything else by their modified time.
+      $ ./rmlint -S 'x<.*(ABC|DEF).*>X<.*(tmp|temp|cache).*>m' /some/path
+
+* Sort the files by several user-defined regular expressions:
+
+    .. code-block:: bash
+
+      # Sort pathes with ABC in them first, then DEF, then GHI.
+      # Everything with tmp, temp, cache in it comes last, the rest in between.
+      # (see als previous example)
+      $ rmlint -S 'r<.*ABC.*>r<.*DEF.*>r<.*GHI.*>R<.*(tmp|temp|cache).*>m' /some/path
+
 PROBLEMS
 ========
 
