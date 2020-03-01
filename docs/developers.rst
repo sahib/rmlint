@@ -41,11 +41,12 @@ Here's a short step-by-step:
 3. Commit your changes. (``git commit -am "Fixed it all."``)
 4. Check if your commit message is good. (If not: ``git commit --amend``)
 5. Push to the branch (``git push origin my_feature``)
-6. Open a `Pull Request`_.
+6. Open a `Pull Request`_ against the `develop`_ branch.
 7. Enjoy a refreshing Tea and wait until we get back to you.
 
 .. _`Fork it`: https://github.com/sahib/rmlint
 .. _`Pull Request`: http://github.com/sahib/rmlint/pulls
+.. _`develop`: https://github.com/sahib/rmlint/tree/develop
 
 Here are some other things to check before submitting your contribution:
 
