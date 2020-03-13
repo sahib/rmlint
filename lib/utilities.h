@@ -515,4 +515,9 @@ gdouble rm_running_mean_get(RmRunningMean *m);
  */
 void rm_running_mean_unref(RmRunningMean *m);
 
+/**
+ * @brief See GLib docs for g_canonicalize_filename().
+ */
+gchar *rm_canonicalize_filename(const gchar *filename, const gchar *relative_to);
+
 #endif /* RM_UTILITIES_H_INCLUDE*/
