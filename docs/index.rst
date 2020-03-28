@@ -61,10 +61,6 @@ to remove it. It is able to find:
    :target: https://github.com/sahib/rmlint/releases
    :width: 8%
 
-.. image:: https://badge.waffle.io/sahib/rmlint.svg?label=ready&title=Ready
-   :target: https://waffle.io/sahib/rmlint
-   :width: 7%
-
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
    :width: 8%
