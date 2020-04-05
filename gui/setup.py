@@ -82,9 +82,12 @@ setup(
     name='Shredder',
     version=read_version(),
     description='A gui frontend to rmlint',
+    long_description='A graphical user interface to rmlint using GTK+',
     author='Christopher Pahl',
     author_email='sahib@online.de',
     url='https://rmlint.rtfd.org',
+    license='GPLv3',
+    platforms='any',
     cmdclass={'install': PrePlusPostInstall},
     packages=['shredder', 'shredder.views'],
     package_data={'': [

@@ -312,6 +312,8 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 #endif
 }
 
+#if HAVE_XATTR
+
 GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
     const size_t buf_size = 4096;
     const size_t val_size = 1024;
@@ -480,3 +482,5 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
     g_hash_table_destroy(map);
     return result;
 }
+
+#endif

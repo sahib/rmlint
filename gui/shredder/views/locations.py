@@ -474,7 +474,7 @@ class LocationView(View):
         self.selected_label.set_markup(
             '{sel} {dirs} － {pref} of them preferred'.format(
                 sel=count,
-                dirs='directory' if count is 1 else 'directories',
+                dirs='directory' if count == 1 else 'directories',
                 pref=prefd_paths
             )
         )

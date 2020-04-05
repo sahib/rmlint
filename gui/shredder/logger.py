@@ -39,7 +39,7 @@ def create_logger(name=None, path=None, verbosity=logging.DEBUG):
     logger = logging.getLogger(name)
 
     # This is hack to see if this function was already called
-    if len(logging.getLogger(None).handlers) is 2:
+    if len(logging.getLogger(None).handlers) == 2:
         return logger
 
     # Defaultformatter, used for File logging,
