@@ -624,6 +624,11 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
+        if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
+           file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            // -k and -m only applies to dupes.
+            return;
+        }
 
         has_prefd |= file->is_prefd;
         has_non_prefd |= !file->is_prefd;
@@ -699,7 +704,6 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
             group
         );
     }
-
     rm_parrot_fix_must_match_tagged(cage, group);
     rm_parrot_fix_duplicate_entries(cage, group);
 
