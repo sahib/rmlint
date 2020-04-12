@@ -282,10 +282,14 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         file->free_digest = false;
     }
 
-    // stat() reports directories as size zero.
-    // Fix this by actually using the size field from the json node.
-    if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE && stat_info->st_mode & S_IFDIR) {
-        file->actual_file_size = json_object_get_int_member(object, "size");
+    if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        // stat() reports directories as size zero.
+        // Fix this by actually using the size field from the json node.
+        if(stat_info->st_mode & S_IFDIR) {
+            file->actual_file_size = json_object_get_int_member(object, "size");
+        }
+
+        file->n_children = (size_t)json_object_get_int_member(object, "n_children");
     }
 
     if(file->is_original) {
@@ -642,6 +646,9 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
     }
 
     session->total_files += 1;
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        session->total_files += file->n_children;
+    }
 
     if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE ||
        file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
@@ -649,10 +656,15 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
         if(!file->is_original) {
             session->dup_counter += 1;
 
+            if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+                session->dup_counter += file->n_children;
+            }
+
             if(!RM_FILE_IS_HARDLINK(file)) {
                 session->total_lint_size += file->actual_file_size;
             }
         }
+
     } else {
         session->other_lint_cnt += 1;
     }

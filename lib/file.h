@@ -264,6 +264,11 @@ typedef struct RmFile {
      * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
      */
     struct RmDirectory *parent_dir;
+
+    /* Number of children this file has.
+     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
+     * */
+    size_t n_children;
 } RmFile;
 
 /* Defines a path variable containing the file's path */

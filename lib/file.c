@@ -65,6 +65,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->path_depth = rm_util_path_depth(path);
     self->file_size = 0;
     self->actual_file_size = 0;
+    self->n_children = 0;
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
@@ -123,6 +124,7 @@ RmFile *rm_file_copy(RmFile *file) {
     copy->shred_group = NULL;
     copy->signal = NULL;
     copy->parent_dir = NULL;
+    copy->n_children = 0;
 
 	return copy;
 }

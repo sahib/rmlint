@@ -383,6 +383,8 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     file->file_size = rm_tm_calc_file_size(self);
     file->actual_file_size = file->file_size;
     file->is_prefd = (self->prefd_files >= self->dupe_count);
+    file->parent_dir = (RmDirectory *)self;
+    file->n_children = self->dupe_count;
 }
 
 static RmFile *rm_directory_as_new_file(RmTreeMerger *merger, const RmDirectory *self) {
@@ -1026,10 +1028,6 @@ void rm_tm_finish(RmTreeMerger *self) {
 void rm_tm_destroy(RmTreeMerger *self) {
     g_hash_table_unref(self->result_table);
     g_hash_table_unref(self->file_groups);
-
-    // TODO: What was that supposed to do?
-    // GList *digest_keys = g_hash_table_get_keys(self->known_hashs);
-    // g_list_free_full(digest_keys, (GDestroyNotify)rm_digest_free);
     g_hash_table_unref(self->known_hashs);
 
     g_queue_clear(&self->valid_dirs);

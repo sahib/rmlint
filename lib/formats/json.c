@@ -334,6 +334,11 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
         rm_fmt_json_key_bool(out, "is_original", file->is_original);
         rm_fmt_json_sep(self, out);
 
+        if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            rm_fmt_json_key_int(out, "n_children", file->n_children);
+            rm_fmt_json_sep(self, out);
+        }
+
         if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
             if(file->twin_count >= 0) {
                 rm_fmt_json_key_int(out, "twins", file->twin_count);

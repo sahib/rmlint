@@ -76,7 +76,6 @@ void rm_tm_finish(RmTreeMerger *self);
  */
 void rm_tm_destroy(RmTreeMerger *self);
 
-
 /**
  * A duplicate directory.
  */
