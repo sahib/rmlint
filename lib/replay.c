@@ -282,7 +282,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         file->free_digest = false;
     }
 
-    if (type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         // stat() reports directories as size zero.
         // Fix this by actually using the size field from the json node.
         if(stat_info->st_mode & S_IFDIR) {
@@ -290,6 +290,12 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         }
 
         file->n_children = (size_t)json_object_get_int_member(object, "n_children");
+    }
+
+    // If the file is a symbolic link and we remove it,
+    // we should not count the target size.
+    if(type == RM_LINT_TYPE_DUPE_CANDIDATE && file->is_symlink) {
+        file->actual_file_size = lstat_buf.st_size;
     }
 
     if(file->is_original) {

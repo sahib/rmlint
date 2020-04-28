@@ -102,11 +102,16 @@ static void rm_fmt_prog(RmSession *session,
         fprintf(out, _("other suspicious item(s) found, which may vary in size.\n"));
     }
 
+    if(session->cfg->replay) {
+        ARROW fprintf(out, _("This run was a replay from a previous run. No I/O done!\n"));
+    }
+
     gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
     char *elapsed_time = rm_format_elapsed_time(elapsed, 3);
     ARROW fprintf(out, _("Scanning took in total %s%s%s.\n"),
                   MAYBE_RED(out, session), elapsed_time, MAYBE_RESET(out, session));
     g_free(elapsed_time);
+
 
     bool first_print_flag = true;
     GHashTableIter iter;
