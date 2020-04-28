@@ -77,7 +77,7 @@ static bool rm_sh_emit_handler_user(RmFmtHandlerShScript *self, char **out, _UNU
         return false;
     }
 
-    *out = g_strdup_printf("user_command '%s' '%s'", dupe_escaped, orig_escaped);
+    *out = g_strdup_printf("user_command  '%s' '%s'", dupe_escaped, orig_escaped);
     return true;
 }
 
@@ -98,7 +98,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     int link_type = rm_util_link_type(dupe_path, orig_path);
     switch(link_type) {
     case RM_LINK_REFLINK:
-        *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
+        *out = g_strdup_printf("skip_reflink  '%s' '%s'", dupe_escaped, orig_escaped);
         return TRUE;
     case RM_LINK_SAME_FILE:
     case RM_LINK_NOT_FILE:
@@ -112,7 +112,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
     case RM_LINK_HARDLINK:
     case RM_LINK_MAYBE_REFLINK:
     case RM_LINK_NONE:
-        *out = g_strdup_printf("clone '%s' '%s'", dupe_escaped, orig_escaped);
+        *out = g_strdup_printf("clone         '%s' '%s'", dupe_escaped, orig_escaped);
         return TRUE;
     default:
         g_assert_not_reached();
@@ -132,7 +132,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
     int link_type = rm_util_link_type(dupe_path, orig_path);
     switch(link_type) {
     case RM_LINK_REFLINK:
-        *out = g_strdup_printf("skip_reflink '%s' '%s'", dupe_escaped, orig_escaped);
+        *out = g_strdup_printf("skip_reflink  '%s' '%s'", dupe_escaped, orig_escaped);
         return TRUE;
     case RM_LINK_SAME_FILE:
     case RM_LINK_NOT_FILE:
@@ -146,7 +146,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
     case RM_LINK_SYMLINK:
     case RM_LINK_MAYBE_REFLINK:
     case RM_LINK_NONE:
-        *out = g_strdup_printf("cp_reflink '%s' '%s'", dupe_escaped, orig_escaped);
+        *out = g_strdup_printf("cp_reflink    '%s' '%s'", dupe_escaped, orig_escaped);
         return TRUE;
     default:
         g_assert_not_reached();
@@ -159,7 +159,7 @@ static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, _
         return false;
     }
 
-    *out = g_strdup_printf("cp_symlink '%s' '%s'", dupe_escaped, orig_escaped);
+    *out = g_strdup_printf("cp_symlink    '%s' '%s'", dupe_escaped, orig_escaped);
     return true;
 }
 
@@ -171,7 +171,7 @@ static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, 
     if (self->last_original && RM_FILE_HARDLINK_HEAD(file) == self->last_original) {
         *out = g_strdup_printf("skip_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
     } else {
-        *out = g_strdup_printf("cp_hardlink '%s' '%s'", dupe_escaped, orig_escaped);
+        *out = g_strdup_printf("cp_hardlink   '%s' '%s'", dupe_escaped, orig_escaped);
     }
     return true;
 }
@@ -181,7 +181,7 @@ static bool rm_sh_emit_handler_remove(RmFmtHandlerShScript *self, char **out, _U
         return false;
     }
 
-    *out = g_strdup_printf("remove_cmd '%s' '%s'", dupe_escaped, orig_escaped);
+    *out = g_strdup_printf("remove_cmd    '%s' '%s'", dupe_escaped, orig_escaped);
     return true;
 }
 
@@ -390,7 +390,7 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
             comment = "# original";
         }
 
-        prefix = g_strdup_printf("original_cmd '%s'", file_escaped);
+        prefix = g_strdup_printf("\noriginal_cmd  '%s'", file_escaped);
         self->last_original = file;
     } else if(self->last_original) {
 
