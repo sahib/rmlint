@@ -150,7 +150,7 @@ original_check() {
 
     # Check they are not the exact same file (hardlinks allowed):
     if [ "$1" = "$2" ]; then
-        echo "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....{COL_RESET}"
+        echo "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....${COL_RESET}"
         return 1
     fi
 
@@ -160,6 +160,7 @@ original_check() {
     else
         if [ "$(check_for_equality "$1" "$2")" -ne "0" ]; then
             echo "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}"
+            return 1
         fi
     fi
 }
