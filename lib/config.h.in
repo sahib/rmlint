@@ -206,4 +206,13 @@ typedef guint64 RmOff;
     #define INLINE inline
 #endif
 
+#ifdef __GNUC__
+    #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#elif defined(__CLANG__)
+    #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+    /* give up */
+    #define WARN_UNUSED_RESULT
+#endif
+
 #endif
