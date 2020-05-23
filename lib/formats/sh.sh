@@ -38,6 +38,9 @@ DO_DELETE_EMPTY_DIRS=
 # Set to true on -k
 DO_KEEP_DIR_TIMESTAMPS=
 
+# Set to true on -i
+DO_ASK_BEFORE_DELETE=
+
 ##################################
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
@@ -257,9 +260,11 @@ remove_cmd() {
             if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
                 touch -r "$(dirname "$1")" "$STAMPFILE"
             fi
-
-            rm -rf "$1"
-
+            if [ -n "$DO_ASK_BEFORE_DELETE" ]; then
+              rm -ri "$1"
+            else
+              rm -rf "$1"
+            fi
             if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
                 # Swap back old directory timestamp:
                 touch -r "$STAMPFILE" "$(dirname "$1")"
@@ -325,13 +330,14 @@ OPTIONS:
   -c   Clean up empty directories while deleting duplicates.
   -q   Do not show progress.
   -k   Keep the timestamp of directories when removing duplicates.
+  -i   Ask before deleting each file
 EOF
 }
 
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxnrpqck" OPTION
+while getopts "dhxnrpqcki" OPTION
 do
   case $OPTION in
      h)
@@ -348,6 +354,7 @@ do
        DO_DRY_RUN=true
        DO_REMOVE=false
        DO_ASK=false
+       DO_ASK_BEFORE_DELETE=false
        ;;
      r)
        DO_CLONE_READONLY=true
@@ -364,6 +371,9 @@ do
      k)
        DO_KEEP_DIR_TIMESTAMPS=true
        STAMPFILE=$(mktemp 'rmlint.XXXXXXXX.stamp')
+       ;;
+     i)
+       DO_ASK_BEFORE_DELETE=true
        ;;
      *)
        usage
