@@ -20,8 +20,6 @@ fi
 USER='%s'
 GROUP='%s'
 
-STAMPFILE=$(mktemp 'rmlint.XXXXXXXX.stamp')
-
 # Set to true on -n
 DO_DRY_RUN=
 
@@ -365,6 +363,7 @@ do
        ;;
      k)
        DO_KEEP_DIR_TIMESTAMPS=true
+       STAMPFILE=$(mktemp 'rmlint.XXXXXXXX.stamp')
        ;;
      *)
        usage
