@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.10.0 Odd Olm] -- Unreleased
+## [2.10.0 Ludicrous Lemur] -- Unreleased
 
 ### Added
 
