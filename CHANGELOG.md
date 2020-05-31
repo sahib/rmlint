@@ -10,13 +10,17 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 * ``--replay`` works now with ``-D``: ``.json`` created without ``-D`` can now
   be packed into duplicate directories during replay. Vice versa, duplicate
-  directories can be unpacked if no ``-D`` switch was given.
+  directories can be unpacked if no ``-D`` switch was given. This feature is
+  still considered to be experimental. There might be still a few rough edges.
+  The output will warn you when the feature is in-use and offers instructions
+  on how to disable it.
 
 ### Changed
 
 * Related to the ``--replay`` feature: The ``.json`` output now contains
   ``part_of_directory`` entries if generated with ``-D``. Those are basically
   duplicates the duplicate directories are composed out of.
+* The ``sh`` output now visually denotes groups of duplicates with a newline.
 
 ### Deprecated
 
@@ -34,6 +38,7 @@ Nothing.
 * Several Python related deprecation warnings.
 * ui: Changing the size factor did not let you apply the settings.
 * ``--size`` can now correctly handle very large sizes.
+* "Evil" (think procfs) filesystem detection triggered wrongly sometimes.
 
 ## [2.9.0 Odd Olm] -- 2019-08-20
 
