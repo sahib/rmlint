@@ -182,14 +182,16 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
                 /* The .json file was created with the -D option
                  * We need to unpack directories while running.
                  * */
-                rm_log_info_line("»%s« was created with -D, but you're running without.", json_path)
-                rm_log_info_line("rmlint will unpack duplicate directories into individual files.")
-                rm_log_info_line("If you do not want this, pass -D to the next run.")
+                rm_log_info_line("»%s« was created with -D, but you're running without.", json_path);
+                rm_log_info_line("rmlint will unpack duplicate directories into individual files.");
+                rm_log_info_line("If you do not want this, pass -D to the next run.");
+                rm_log_info_line("NOTE: This feature is still considered EXPERIMENTAL!");
                 polly->unpack_directories = true;
             } else {
-                rm_log_info_line("»%s« was created without -D, but you're running with.", json_path)
-                rm_log_info_line("rmlint will pack duplicate files into directories where applicable.")
-                rm_log_info_line("If you do not want this, omit -D from the next run.")
+                rm_log_info_line("»%s« was created without -D, but you're running with.", json_path);
+                rm_log_info_line("rmlint will pack duplicate files into directories where applicable.");
+                rm_log_info_line("If you do not want this, omit -D from the next run.");
+                rm_log_info_line("NOTE: This feature is still considered EXPERIMENTAL!");
                 polly->pack_directories = true;
             }
         }
