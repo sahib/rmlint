@@ -87,7 +87,7 @@ typedef struct stat RmStat;
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
-static inline int rm_sys_stat(const char *path, RmStat *buf) {
+WARN_UNUSED_RESULT static inline int rm_sys_stat(const char *path, RmStat *buf)  {
 #if HAVE_STAT64 && !RM_IS_APPLE
     return stat64(path, buf);
 #else
@@ -95,7 +95,7 @@ static inline int rm_sys_stat(const char *path, RmStat *buf) {
 #endif
 }
 
-static inline int rm_sys_lstat(const char *path, RmStat *buf) {
+WARN_UNUSED_RESULT static inline int rm_sys_lstat(const char *path, RmStat *buf) {
 #if HAVE_STAT64 && !RM_IS_APPLE
     return lstat64(path, buf);
 #else

@@ -652,7 +652,11 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
 
         if(evilfs_found != NULL) {
             RmStat dir_stat;
-            rm_sys_stat(wrap_entry->dir, &dir_stat);
+            if(rm_sys_stat(wrap_entry->dir, &dir_stat) < 0) {
+                /* not an evil fs if we can't read it */
+                continue;
+            }
+
             g_hash_table_insert(table->evilfs_table,
                                 GUINT_TO_POINTER(dir_stat.st_dev),
                                 GUINT_TO_POINTER(1));
@@ -673,14 +677,16 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
 
         if(fs_supports_reflinks(wrap_entry->type, wrap_entry->dir)) {
             RmStat dir_stat;
-            rm_sys_stat(wrap_entry->dir, &dir_stat);
-            g_hash_table_insert(table->reflinkfs_table,
-                                GUINT_TO_POINTER(dir_stat.st_dev),
-                                wrap_entry->type);
-            rm_log_debug_line("Filesystem %s: reflink capable", wrap_entry->dir);
-        } else {
-            rm_log_debug_line("Filesystem %s: not reflink capable", wrap_entry->dir);
+            if(rm_sys_stat(wrap_entry->dir, &dir_stat) == 0) {
+                g_hash_table_insert(table->reflinkfs_table,
+                                    GUINT_TO_POINTER(dir_stat.st_dev),
+                                    wrap_entry->type);
+                rm_log_debug_line("Filesystem %s: reflink capable", wrap_entry->dir);
+                continue;
+            }
         }
+
+        rm_log_debug_line("Filesystem %s: not reflink capable", wrap_entry->dir);
     }
 
     return self;
