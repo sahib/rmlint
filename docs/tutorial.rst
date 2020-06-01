@@ -443,10 +443,10 @@ Technically it only computes a hash of your file which might, by its nature,
 collide with the hash of a totally different file. If we assume a *perfect* hash
 function (i.e. one that distributes its hash values perfectly even over all
 possible values), the probability of having a hash-collision is
-:math:`\frac{1}{2^{160}}` for the default 160-bit hash.  Of course hash
+:math:`\frac{1}{2^{512}}` for the default ``blake2b`` 512-bit hash.  Of course hash
 functions are not totally random, so the collision probability is slightly higher.
 Due to the "birthday paradox", collision starts to become a real risk if you have
-more than about :math:`2^{80}` files of the same size.
+more than about :math:`2^{256}` files of the same size.
 
 If you're wary, you might want to make a bit more paranoid than the default. By
 default the ``blake2b`` (previously ``sha1`` was the default) hash algorithm is
