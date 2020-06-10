@@ -40,7 +40,7 @@ def _guess_rmlint_version():
     )
     result, _, data = proc.communicate_utf8()
     if result and data:
-        match = re.search(r'version (\d.\d.\d)', data)
+        match = re.search(r'version (\d+\.\d+\.\d+)', data)
         if match:
             return match.group(1)
 
