@@ -347,7 +347,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 
 
 			if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY && file->parent_dir) {
-				rm_fmt_json_key(out, "parent_path", rm_directory_get_dirname(file->parent_dir));
+				rm_fmt_json_key_unsafe(out, "parent_path", rm_directory_get_dirname(file->parent_dir));
 				rm_fmt_json_sep(self, out);
 
 			}
