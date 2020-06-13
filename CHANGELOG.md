@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.10.1 Ludicrous Lemur] -- 2020-06-13
+
+### Added
+
+* implement -i option for rmlint.sh to ask before removal of each file (thanks JLuszawski)
+
+### Fixed
+
+* Fix version display in Shredder UI (thanks JLuszawski)
+* Broken JSON output in case of paths with double quotes (thanks EvilMcJerkface)
+
 ## [2.10.0 Ludicrous Lemur] -- 2020-05-31
 
 ### Added
