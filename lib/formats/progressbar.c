@@ -424,13 +424,13 @@ static void rm_fmt_prog(RmSession *session,
             self->update_interval = 50; /* milliseconds */
         }
 
-        fprintf(out, "\e[?25l"); /* Hide the cursor */
+        fprintf(out, "\033[?25l"); /* Hide the cursor */
         fflush(out);
         return;
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN || rm_session_was_aborted()) {
-        fprintf(out, "\e[?25h"); /* show the cursor */
+        fprintf(out, "\033[?25h"); /* show the cursor */
         fflush(out);
 
         if(rm_session_was_aborted()) {
