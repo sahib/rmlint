@@ -75,11 +75,11 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
 
     if(file->digest != NULL) {
         checksum_size = rm_digest_get_bytes(file->digest) * 2 + 1;
-        checksum_str = g_slice_alloc0(checksum_size);
+        checksum_str = g_malloc0(checksum_size);
         checksum_str[checksum_size - 1] = 0;
         rm_digest_hexstring(file->digest, checksum_str);
     } else {
-        checksum_str = g_slice_alloc0(1);
+        checksum_str = g_malloc0(1);
         *checksum_str = 0;
     }
 
@@ -99,7 +99,7 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     g_free(clean_path);
 
     if(checksum_str != NULL) {
-        g_slice_free1(checksum_size, checksum_str);
+        g_free(checksum_str);
     }
 }
 
