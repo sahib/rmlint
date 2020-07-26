@@ -56,6 +56,7 @@ typedef struct RmFmtHandlerProgress {
     RmFmtProgressState last_state;
     struct winsize terminal;
     GTimer *timer;
+    size_t terminal_query_count;
 
     /* Estimated Time of Arrival calculation */
     RmRunningMean speed_mean;
@@ -438,8 +439,12 @@ static void rm_fmt_prog(RmSession *session,
         }
     }
 
-    /* Try to get terminal width, might fail on some terminals. */
-    ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
+    if(self->terminal_query_count % 250 == 0) {
+        /* Try to get terminal width, might fail on some terminals. */
+        ioctl(fileno(out), TIOCGWINSZ, &self->terminal);
+    }
+
+    self->terminal_query_count++;
 
     // Adjust the text width if we have not a lot of space.
     // Favour text over progress bar in this case until we run out of space.
@@ -535,6 +540,8 @@ static RmFmtHandlerProgress PROGRESS_HANDLER_IMPL = {
     .stripe_offset = 0,
     .last_eta = {0},
     .last_eta_update = 0,
-    .last_state = RM_PROGRESS_STATE_INIT};
+    .last_state = RM_PROGRESS_STATE_INIT,
+    .terminal_query_count = 0,
+};
 
 RmFmtHandler *PROGRESS_HANDLER = (RmFmtHandler *)&PROGRESS_HANDLER_IMPL;
