@@ -66,9 +66,10 @@ print_progress_prefix() {
     fi
 }
 
+# NOTE: In the template file, these must be written %%s to avoid interpretation.
 handle_emptyfile() {
     print_progress_prefix
-    echo "${COL_GREEN}Deleting empty file:${COL_RESET} $1"
+    printf "${COL_GREEN}Deleting empty file:${COL_RESET} %%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
     fi
@@ -76,7 +77,7 @@ handle_emptyfile() {
 
 handle_emptydir() {
     print_progress_prefix
-    echo "${COL_GREEN}Deleting empty directory: ${COL_RESET}$1"
+    printf "${COL_GREEN}Deleting empty directory:${COL_RESET} %%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rmdir "$1"
     fi
@@ -84,7 +85,7 @@ handle_emptydir() {
 
 handle_bad_symlink() {
     print_progress_prefix
-    echo "${COL_GREEN} Deleting symlink pointing nowhere: ${COL_RESET}$1"
+    printf "${COL_GREEN} Deleting symlink pointing nowhere:${COL_RESET} %%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         rm -f "$1"
     fi
@@ -92,7 +93,7 @@ handle_bad_symlink() {
 
 handle_unstripped_binary() {
     print_progress_prefix
-    echo "${COL_GREEN} Stripping debug symbols of: ${COL_RESET}$1"
+    printf "${COL_GREEN} Stripping debug symbols of:${COL_RESET} %%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         strip -s "$1"
     fi
@@ -100,25 +101,25 @@ handle_unstripped_binary() {
 
 handle_bad_user_id() {
     print_progress_prefix
-    echo "${COL_GREEN}chown ${USER}${COL_RESET} $1"
+    printf "${COL_GREEN}chown %%s${COL_RESET} %%s\n" "$USER" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chown "$USER" "$1"
+        chown -- "$USER" "$1"
     fi
 }
 
 handle_bad_group_id() {
     print_progress_prefix
-    echo "${COL_GREEN}chgrp ${GROUP}${COL_RESET} $1"
+    printf "${COL_GREEN}chgrp %%s${COL_RESET} %%s\n" "$GROUP" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chgrp "$GROUP" "$1"
+        chgrp -- "$GROUP" "$1"
     fi
 }
 
 handle_bad_user_and_group_id() {
     print_progress_prefix
-    echo "${COL_GREEN}chown ${USER}:${GROUP}${COL_RESET} $1"
+    printf "${COL_GREEN}chown %%s:%%s${COL_RESET} %%s\n" "$USER" "$GROUP" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chown "$USER:$GROUP" "$1"
+        chown -- "$USER:$GROUP" "$1"
     fi
 }
 
@@ -129,29 +130,27 @@ handle_bad_user_and_group_id() {
 check_for_equality() {
     if [ -f "$1" ]; then
         # Use the more lightweight builtin `cmp` for regular files:
-        cmp -s "$1" "$2"
-        echo $?
+        cmp -s -- "$1" "$2"
     else
         # Fallback to `rmlint --equal` for directories:
-        "$RMLINT_BINARY" -p --equal %s "$1" "$2"
-        echo $?
+        "$RMLINT_BINARY" -p --equal %s -- "$1" "$2"
     fi
 }
 
 original_check() {
     if [ ! -e "$2" ]; then
-        echo "${COL_RED}^^^^^^ Error: original has disappeared - cancelling.....${COL_RESET}"
+        printf "${COL_RED}^^^^^^ Error: original has disappeared - cancelling.....${COL_RESET}\n"
         return 1
     fi
 
     if [ ! -e "$1" ]; then
-        echo "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling.....${COL_RESET}"
+        printf "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling.....${COL_RESET}\n"
         return 1
     fi
 
     # Check they are not the exact same file (hardlinks allowed):
     if [ "$1" = "$2" ]; then
-        echo "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....${COL_RESET}"
+        printf "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....${COL_RESET}\n"
         return 1
     fi
 
@@ -159,8 +158,8 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if [ "$(check_for_equality "$1" "$2")" -ne "0" ]; then
-            echo "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}"
+        if ! check_for_equality "$1" "$2"; then
+            printf "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}\n"
             return 1
         fi
     fi
@@ -168,14 +167,14 @@ original_check() {
 
 cp_symlink() {
     print_progress_prefix
-    echo "${COL_YELLOW}Symlinking to original: ${COL_RESET}$1"
+    printf "${COL_YELLOW}Symlinking to original: ${COL_RESET}%%s\n" "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             # replace duplicate with symlink
-            rm -rf "$1"
-            ln -s "$2" "$1"
+            rm -rf -- "$1"
+            ln -s -- "$2" "$1"
             # make the symlink's mtime the same as the original
-            touch -mr "$2" -h "$1"
+            touch -mr "$2" -h -- "$1"
         fi
     fi
 }
@@ -187,12 +186,12 @@ cp_hardlink() {
         return $?
     fi
     print_progress_prefix
-    echo "${COL_YELLOW}Hardlinking to original: ${COL_RESET}$1"
+    printf "${COL_YELLOW}Hardlinking to original: ${COL_RESET}%%s\n" "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             # replace duplicate with hardlink
-            rm -rf "$1"
-            ln "$2" "$1"
+            rm -rf -- "$1"
+            ln "$2" -- "$1"
         fi
     fi
 }
@@ -205,15 +204,15 @@ cp_reflink() {
     fi
     print_progress_prefix
     # reflink $1 to $2's data, preserving $1's  mtime
-    echo "${COL_YELLOW}Reflinking to original: ${COL_RESET}$1"
+    printf "${COL_YELLOW}Reflinking to original: ${COL_RESET}%%s\n" "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
-            touch -mr "$1" "$0"
+            touch -mr "$1" -- "$0"
             if [ -d "$1" ]; then
-                rm -rf "$1"
+                rm -rf -- "$1"
             fi
-            cp --archive --reflink=always "$2" "$1"
-            touch -mr "$0" "$1"
+            cp --archive --reflink=always -- "$2" "$1"
+            touch -mr "$0" -- "$1"
         fi
     fi
 }
@@ -222,30 +221,30 @@ clone() {
     print_progress_prefix
     # clone $1 from $2's data
     # note: no original_check() call because rmlint --dedupe takes care of this
-    echo "${COL_YELLOW}Cloning to: ${COL_RESET}$1"
+    printf "${COL_YELLOW}Cloning to: ${COL_RESET}%%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            $SUDO_COMMAND $RMLINT_BINARY --dedupe %s --dedupe-readonly "$2" "$1"
+            $SUDO_COMMAND $RMLINT_BINARY --dedupe %s --dedupe-readonly -- "$2" "$1"
         else
-            $RMLINT_BINARY --dedupe %s "$2" "$1"
+            $RMLINT_BINARY --dedupe %s -- "$2" "$1"
         fi
     fi
 }
 
 skip_hardlink() {
     print_progress_prefix
-    echo "${COL_BLUE}Leaving as-is (already hardlinked to original): ${COL_RESET}$1"
+    printf "${COL_BLUE}Leaving as-is (already hardlinked to original): ${COL_RESET}%%s\n" "$1"
 }
 
 skip_reflink() {
     print_progress_prefix
-    echo "${COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}$1"
+    printf "${COL_BLUE}Leaving as-is (already reflinked to original): ${COL_RESET}%%s\n" "$1"
 }
 
 user_command() {
     print_progress_prefix
 
-    echo "${COL_YELLOW}Executing user command: ${COL_RESET}$1"
+    printf "${COL_YELLOW}Executing user command: ${COL_RESET}%%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         # You can define this function to do what you want:
         %s
@@ -254,29 +253,29 @@ user_command() {
 
 remove_cmd() {
     print_progress_prefix
-    echo "${COL_YELLOW}Deleting: ${COL_RESET}$1"
+    printf "${COL_YELLOW}Deleting: ${COL_RESET}%%s\n" "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
-                touch -r "$(dirname "$1")" "$STAMPFILE"
+                touch -r "$(dirname "$1")" -- "$STAMPFILE"
             fi
             if [ -n "$DO_ASK_BEFORE_DELETE" ]; then
-              rm -ri "$1"
+              rm -ri -- "$1"
             else
-              rm -rf "$1"
+              rm -rf -- "$1"
             fi
             if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
                 # Swap back old directory timestamp:
-                touch -r "$STAMPFILE" "$(dirname "$1")"
-                rm "$STAMPFILE"
+                touch -r "$STAMPFILE" -- "$(dirname "$1")"
+                rm -- "$STAMPFILE"
             fi
 
             if [ -n "$DO_DELETE_EMPTY_DIRS" ]; then
                 DIR=$(dirname "$1")
-                while [ ! "$(ls -A "$DIR")" ]; do
+                while [ -z "$(ls -A -- "$DIR")" ]; do
                     print_progress_prefix 0
-                    echo "${COL_GREEN}Deleting resulting empty dir: ${COL_RESET}$DIR"
-                    rmdir "$DIR"
+                    printf "${COL_GREEN}Deleting resulting empty dir: ${COL_RESET}%%s\n" "$DIR"
+                    rmdir -- "$DIR"
                     DIR=$(dirname "$DIR")
                 done
             fi
@@ -286,7 +285,7 @@ remove_cmd() {
 
 original_cmd() {
     print_progress_prefix
-    echo "${COL_GREEN}Keeping:  ${COL_RESET}$1"
+    printf "${COL_GREEN}Keeping:  ${COL_RESET}%%s\n" "$1"
 }
 
 ##################
@@ -310,7 +309,7 @@ EOF
     if [ -z "$eof_check" ]
     then
         # Count Ctrl-D and Enter as aborted too.
-        echo "${COL_RED}Aborted on behalf of the user.${COL_RESET}"
+        printf "${COL_RED}Aborted on behalf of the user.${COL_RESET}\n"
         exit 1;
     fi
 }
@@ -383,7 +382,7 @@ done
 
 if [ -z $DO_REMOVE ]
 then
-    echo "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}"
+    printf "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}\n"
 fi
 
 if [ -z $DO_ASK ]
@@ -394,9 +393,9 @@ fi
 
 if [ -n "$DO_DRY_RUN" ]
 then
-    echo "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
-    echo "#${COL_YELLOW} /// ${COL_RESET} This is only a dry run; nothing will be modified! ${COL_YELLOW}///${COL_RESET}"
-    echo "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
+    printf "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}\n"
+    printf "#${COL_YELLOW} /// ${COL_RESET} This is only a dry run; nothing will be modified! ${COL_YELLOW}///${COL_RESET}\n"
+    printf "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}\n"
 fi
 
 ######### START OF AUTOGENERATED OUTPUT #########

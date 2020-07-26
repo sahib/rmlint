@@ -50,15 +50,11 @@ def build_config_template(target, source, env):
         handle.write(config_h)
 
 
-def prepare_c_source(text, escape_percentages=True):
+def prepare_c_source(text):
     # Prepare the Python source to be compatible with C-strings
+    text = text.replace('\\', '\\\\')
     text = text.replace('"', '\\"')
-    text = text.replace('\\n', '\\\\n')
     text = '\\n"\n"'.join(text.splitlines())
-
-    if escape_percentages:
-        text = text.replace('%', '%%')
-        text = text.replace('%%s', '%s')
 
     return text
 
@@ -67,7 +63,7 @@ def build_python_formatter(target, source, env):
     text = source[0].get_text_contents()
 
     with codecs.open('lib/formats/py.py', 'r') as handle:
-        py_source = prepare_c_source(handle.read(), False)
+        py_source = prepare_c_source(handle.read())
 
     with codecs.open(target[0].get_abspath(), 'w') as handle:
         handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
