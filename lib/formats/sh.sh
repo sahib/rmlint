@@ -171,10 +171,15 @@ cp_symlink() {
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             # replace duplicate with symlink
-            rm -rf -- "$1"
-            ln -s -- "$2" "$1"
-            # make the symlink's mtime the same as the original
-            touch -mr "$2" -h -- "$1"
+            mv -- "$1" "$1.temp"
+            if ln -s "$2" "$1"; then
+                # make the symlink's mtime the same as the original
+                touch -mr "$2" -h "$1"
+                rm -rf -- "$1.temp"
+            else
+               # Failed to link file, move back:
+                mv -- "$1.temp" "$1"
+            fi
         fi
     fi
 }
@@ -185,13 +190,19 @@ cp_hardlink() {
         cp_symlink "$@"
         return $?
     fi
+
     print_progress_prefix
     printf "${COL_YELLOW}Hardlinking to original: ${COL_RESET}%%s\n" "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
             # replace duplicate with hardlink
-            rm -rf -- "$1"
-            ln "$2" -- "$1"
+            mv -- "$1" "$1.temp"
+            if ln "$2" "$1"; then
+                rm -rf -- "$1.temp"
+            else
+               # Failed to link file, move back:
+                mv -- "$1.temp" "$1"
+            fi
         fi
     fi
 }

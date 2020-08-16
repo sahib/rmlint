@@ -436,6 +436,8 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     RM_DEFINE_PATH(file);
     char *path = rm_fmt_sh_escape_path(file_path);
 
+    bool count_as_line = true;
+
     switch(file->lint_type) {
     case RM_LINT_TYPE_EMPTY_DIR:
         fprintf(out, "handle_emptydir '%s' # empty folder\n", path);
@@ -463,13 +465,18 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
         rm_fmt_write_duplicate(self, out, file);
         break;
     case RM_LINT_TYPE_PART_OF_DIRECTORY:
+        count_as_line = false;
         break;
     default:
+        count_as_line = false;
         rm_log_warning("warning: sh: unknown type in encountered: %d\n", file->lint_type);
         break;
     }
 
-    self->line_count++;
+    if(count_as_line) {
+        self->line_count++;
+    }
+
     g_free(path);
 }
 
