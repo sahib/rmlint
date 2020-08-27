@@ -160,13 +160,15 @@ static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
     return rm_digest_hexstring(file->digest, buf);
 }
 
-static int rm_xattr_is_fail(const char *name, char *path, int rc) {
+static int rm_xattr_is_fail(const char *name, char *path, bool warn, int rc) {
     if(rc != -1) {
         return 0;
     }
 
     if(errno != ENOTSUP && errno != ENODATA) {
-        rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
+        if(warn) {
+            rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
+        }
         return errno;
     }
 
@@ -179,7 +181,7 @@ static int rm_xattr_set(RmFile *file,
                         size_t value_size,
                         bool follow_link) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("setxattr", file_path,
+    return rm_xattr_is_fail("setxattr", file_path, false,
                             rm_sys_setxattr(file_path, key, value, value_size, 0, follow_link));
 }
 
@@ -190,14 +192,14 @@ static int rm_xattr_get(RmFile *file,
                         bool follow_link) {
     RM_DEFINE_PATH(file);
 
-    return rm_xattr_is_fail("getxattr", file_path,
+    return rm_xattr_is_fail("getxattr", file_path, false,
                             rm_sys_getxattr(file_path, key, out_value, value_size, follow_link));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key, bool follow_link) {
     RM_DEFINE_PATH(file);
     return rm_xattr_is_fail(
-            "removexattr", file_path,
+            "removexattr", file_path, true,
             rm_sys_removexattr(file_path, key, follow_link));
 }
 
@@ -324,7 +326,7 @@ GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
 
     int rc = rm_sys_listxattr(path, buf, buf_size-1, follow_symlinks);
     if(rc < 0) {
-        rm_xattr_is_fail("listxattr", (char *)path, rc);
+        rm_xattr_is_fail("listxattr", (char *)path, true, rc);
         return NULL;
     }
 
@@ -362,7 +364,7 @@ GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
 
         rc = rm_sys_getxattr(path, key, val, val_size, follow_symlinks);
         if(rc < 0) {
-            rm_xattr_is_fail("getxattr", (char *)path, rc);
+            rm_xattr_is_fail("getxattr", (char *)path, true, rc);
             g_free(key);
             g_free(val);
             failed = true;
