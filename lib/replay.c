@@ -235,14 +235,15 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     path = json_node_get_string(path_node);
 
     /* Check for the lint type */
-    RmLintType type =
-        rm_file_string_to_lint_type(json_object_get_string_member(object, "type"));
-
-    if(type == RM_LINT_TYPE_UNKNOWN) {
-        rm_log_warning_line(_("lint type '%s' not recognised"),
-                            json_object_get_string_member(object, "type"));
+    JsonNode *type_node = json_object_get_member(object, "type");
+    if(type_node == NULL) {
+        rm_log_warning_line(_("lint type of node not recognised"));
         return NULL;
     }
+
+    RmLintType type =
+        rm_file_string_to_lint_type(json_node_get_string(type_node));
+
 
     /* Collect file information (for rm_file_new) */
     RmStat lstat_buf, stat_buf;
@@ -274,7 +275,11 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
     /* Fill up the RmFile */
     file = rm_file_new(polly->session, path, stat_info, type, 0, 0, 0);
-    file->is_original = json_object_get_boolean_member(object, "is_original");
+    JsonNode *is_original_node = json_object_get_member(object, "is_original");
+    if(is_original_node != NULL) {
+        file->is_original = json_node_get_boolean(is_original_node);
+    }
+
     file->is_symlink = (lstat_buf.st_mode & S_IFLNK);
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
 
@@ -288,10 +293,16 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         // stat() reports directories as size zero.
         // Fix this by actually using the size field from the json node.
         if(stat_info->st_mode & S_IFDIR) {
-            file->actual_file_size = json_object_get_int_member(object, "size");
+            JsonNode *actual_file_size_node = json_object_get_member(object, "size");
+            if(actual_file_size_node != NULL) {
+                file->actual_file_size = json_node_get_int(actual_file_size_node);
+            }
         }
 
-        file->n_children = (size_t)json_object_get_int_member(object, "n_children");
+        JsonNode *n_children_node = json_object_get_member(object, "n_children");
+        if(n_children_node != NULL) {
+            file->n_children = (size_t)json_node_get_int(n_children_node);
+        }
     }
 
     // If the file is a symbolic link and we remove it,
@@ -312,7 +323,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     /* Fake the checksum using RM_DIGEST_EXT */
     JsonNode *cksum_node = json_object_get_member(object, "checksum");
     if(cksum_node != NULL) {
-        const char *cksum = json_object_get_string_member(object, "checksum");
+        const char *cksum = json_node_get_string(cksum_node);
         if(cksum != NULL) {
             rm_digest_update(file->digest, (unsigned char *)cksum, strlen(cksum));
         }
@@ -327,14 +338,17 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
-        const char *parent_path = json_object_get_string_member(object, "parent_path");
-        GQueue *children = rm_trie_search(&polly->directory_trie, parent_path);
-        if(children == NULL) {
-            children = g_queue_new();
-            rm_trie_insert(&polly->directory_trie, parent_path, children);
-        }
+        JsonNode *parent_path_node = json_object_get_member(object, "parent_path");
+        if(parent_path_node != NULL) {
+            const char *parent_path = json_node_get_string(parent_path_node);
+            GQueue *children = rm_trie_search(&polly->directory_trie, parent_path);
+            if(children == NULL) {
+                children = g_queue_new();
+                rm_trie_insert(&polly->directory_trie, parent_path, children);
+            }
 
-        g_queue_push_tail(children, file);
+            g_queue_push_tail(children, file);
+        }
     }
 
     return file;
