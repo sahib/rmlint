@@ -109,7 +109,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = 0;
 
 #if HAVE_FACCESSAT
-    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS|AT_SYMLINK_NOFOLLOW);
+    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS);
 #else
     rc = access(path, R_OK);
 #endif
