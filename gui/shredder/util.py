@@ -761,7 +761,7 @@ EXPONENTS = {
     'Kilobyte': 1,
     'Megabyte': 2,
     'Gigabyte': 3,
-    'Terrabye': 4,
+    'Terrabyte': 4,
     'Petabyte': 5
 }
 

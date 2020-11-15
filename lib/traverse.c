@@ -403,7 +403,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
                                      rmpath->treat_as_single_vol, p->fts_level);
-                    rm_log_warning_line(_("Added big file %s"), p->fts_path);
+                    rm_log_info_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
                 }
