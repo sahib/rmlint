@@ -175,7 +175,7 @@ def check_gettext(context):
 def check_fiemap(context):
     rc = 1
 
-    if GetOption('with_gettext') is False:
+    if GetOption('with_fiemap') is False:
         rc = 0
 
     if rc and tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
