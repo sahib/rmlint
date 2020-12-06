@@ -106,18 +106,28 @@ void rm_cfg_set_default(RmCfg *cfg) {
 }
 
 guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
-    int rc = 0;
-
-#if HAVE_FACCESSAT
-    rc = faccessat(AT_FDCWD, path, R_OK, AT_EACCESS|AT_SYMLINK_NOFOLLOW);
-#else
-    rc = access(path, R_OK);
-#endif
+    int rc = access(path, R_OK);
 
     if(rc != 0) {
-        rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
-                            strerror(errno));
-        return 0;
+        /* We have to check here if it's maybe a symbolic link.
+         * Do this by checking with readlink() - if it succeeds
+         * it is most likely a symbolic link. We do not really need
+         * the link path, so we just a size-one array.
+         *
+         * faccessat() cannot be trusted, since it works differently
+         * on different platforms (i.e. between glibc and musl)
+         * (lesson learned, see https://github.com/sahib/rmlint/pull/444)
+         * */
+        char dummy[1] = {0};
+        rc = readlink(path, dummy, 1);
+        if(rc < 0) {
+            rm_log_warning_line(
+                _("Can't open directory or file \"%s\": %s"),
+                path,
+                strerror(errno)
+            );
+            return 0;
+        }
     }
 
     bool realpath_worked = true;
