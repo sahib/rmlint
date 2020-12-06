@@ -64,9 +64,12 @@ class PrePlusPostInstall(install):
         print('==> Compiling GLib Schema files')
 
         try:
+            schema_dir = os.path.join(PREFIX, 'share/glib-2.0/schemas')
             subprocess.call([
                 'glib-compile-schemas',
-                os.path.join(PREFIX, 'share/glib-2.0/schemas')
+                schema_dir,
+                "--targetdir",
+                schema_dir,
             ])
         except subprocess.CalledProcessError as err:
             print('==> Could not update schemas: ', err)
