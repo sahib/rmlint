@@ -638,10 +638,9 @@ FORMATTERS
   * *no_header*: Do not write a first line describing the column headers.
   * *unique*: Include unique files in the output.
 
-* ``sh``: Output all found lint as shell script This formatter is activated
-    as default.
+* ``sh``: Output all found lint as shell script This formatter is activated as default.
 
-  available options:
+  Available options:
 
   * *cmd*: Specify a user defined command to run on duplicates.
     The command can be any valid ``/bin/sh``-expression. The duplicate
