@@ -132,6 +132,7 @@ def handle_badugid(path, **kwargs):
 
 OPERATIONS = {
     "duplicate_dir": handle_duplicate_dir,
+    'part_of_directory': handle_duplicate_file,
     "duplicate_file": handle_duplicate_file,
     "unique_file": handle_unique_file,
     "emptydir": handle_empty_dir,
@@ -156,6 +157,7 @@ def exec_operation(item, original=None, args=None):
 
 MESSAGES = {
     'duplicate_dir':    '{c[yellow]}Deleting duplicate directory:',
+    'part_of_directory': '{c[green]}Deleting part of original directory:  ',
     'duplicate_file':   '{c[yellow]}Deleting duplicate:',
     'unique_file':      'checking',
     'emptydir':         '{c[green]}Deleting empty directory:',
@@ -170,6 +172,7 @@ MESSAGES = {
 ORIGINAL_MESSAGES = {
     'duplicate_file':   '{c[green]}Keeping original:  ',
     'duplicate_dir':    '{c[green]}Keeping original directory:  ',
+    'part_of_directory': '{c[green]}Keeping part of original directory:  ',
 }
 
 
