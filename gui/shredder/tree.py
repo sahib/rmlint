@@ -583,7 +583,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         return partial_model
 
     ###################################
-    # PyGObject convinience interface #
+    # PyGObject convenience interface #
     ###################################
 
     def set_value(self, iter_, column, value):
@@ -864,7 +864,7 @@ class PathTreeView(Gtk.TreeView):
         self.expand_all()
 
     def get_selected_nodes(self):
-        """Extra convinience method for getting the currently selected nodes"""
+        """Extra convenience method for getting the currently selected nodes"""
         model, rows = self.get_selection().get_selected_rows()
         for tp_path in rows:
             node = model.trie.resolve(tp_path.get_indices())
