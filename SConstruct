@@ -569,7 +569,7 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
-# Actually instance the Environement with all collected information:
+# Actually instance the Environment with all collected information:
 env = Environment(**options)
 Export('env')
 

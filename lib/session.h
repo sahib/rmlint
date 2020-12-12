@@ -59,7 +59,7 @@ struct RmFmtTable;
 typedef struct RmSession {
     RmCfg *cfg;
 
-    /* Stores for RmFile during traversal, preproces and shredder */
+    /* Stores for RmFile during traversal, preprocess and shredder */
     struct RmFileTables *tables;
 
     /* Table of mountpoints used in the system */

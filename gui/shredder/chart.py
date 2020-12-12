@@ -415,7 +415,7 @@ class RingChart(Chart):
         # Figure out the background color of the drawing area
         alloc = area.get_allocation()
 
-        # Caluclate the font size of the inner label.
+        # Calculate the font size of the inner label.
         # Make it smaller if not enough place but cut off at a size of 12
         inner_circle = (1.4 / max_layers)
         inner_circle *= min(alloc.width, alloc.height) / 2
