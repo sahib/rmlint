@@ -188,7 +188,7 @@ char *rm_util_get_username(void);
 char *rm_util_get_groupname(void);
 
 ////////////////////////////////////
-//       GENERAL UTILITES         //
+//       GENERAL UTILITIES         //
 ////////////////////////////////////
 
 #define RM_LIST_NEXT(node) ((node) ? node->next : NULL)
@@ -203,7 +203,7 @@ char *rm_util_strsub(const char *string, const char *subs, const char *with);
 /**
  * @brief Check if a file has an invalid gid/uid or both.
  *
- * @return the appropiate RmLintType for the file
+ * @return the appropriate RmLintType for the file
  */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist);
 
@@ -408,7 +408,7 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check);
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
 
 /////////////////////////////////
-//    FIEMAP IMPLEMENATION     //
+//    FIEMAP IMPLEMENTATION     //
 /////////////////////////////////
 
 /**

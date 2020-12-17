@@ -158,7 +158,7 @@ class RunnerView(View):
         self.group_treeview.set_valign(Gtk.Align.FILL)
 
         # This is needed to make sure operations on the one update
-        # the other. Interally the same nodes are updated, but it has
+        # the other. Internally the same nodes are updated, but it has
         # to be made sure that the models get updated.
         self.group_treeview.set_twin(self.treeview)
         self.treeview.set_twin(self.group_treeview)

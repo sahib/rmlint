@@ -572,7 +572,7 @@ static gulong rm_shred_group_potential_file_count(RmShredGroup *group) {
     }
 }
 
-/* Governer to limit memory usage by limiting how many RmShredGroups can be
+/* Governor to limit memory usage by limiting how many RmShredGroups can be
  * active at any one time
  * NOTE: group_lock must be held before calling rm_shred_check_paranoid_mem_alloc
  */
@@ -1223,12 +1223,12 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
               (cfg->keep_all_untagged || cfg->must_match_untagged)) {
         return (a->is_prefd - b->is_prefd);
     } else {
-        int comparasion = rm_pp_cmp_orig_criteria(a, b, session);
-        if(comparasion == 0) {
+        int comparison = rm_pp_cmp_orig_criteria(a, b, session);
+        if(comparison == 0) {
             return b->is_original - a->is_original;
         }
 
-        return comparasion;
+        return comparison;
     }
 }
 
