@@ -123,8 +123,7 @@ def test_xattr_detail(extra_opts):
 
             # --write-unfinished will also write the unfinished one.
             xattr_3 = must_read_xattr(path_3)
-            assert xattr_3["user.rmlint.blake2b.cksum"] == \
-                    b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
+            assert xattr_3 == {}
 
             # unique file which was not hashed -> does not need to be touched.
             xattr_4 = must_read_xattr(path_4)
