@@ -690,8 +690,13 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
         return;
     }
 
-    if(session->cfg->write_unfinished == false && g_queue_get_length(group) <= 1) {
-        /* Do not write solitary files unless requested */
+    if(g_queue_get_length(group) <= 1) {
+        /* Do not write unique file checksums */
+        return;
+    }
+
+    if (session->cfg->clamp_is_used) {
+        /* Not writing checksums because we're not reading the whole file. */
         return;
     }
 
@@ -1711,7 +1716,6 @@ void rm_shred_output_tm_results(RmFile *file, gpointer data) {
 
     RmSession *session = data;
     rm_fmt_write(file, session->formats);
-
 }
 
 void rm_shred_run(RmSession *session) {

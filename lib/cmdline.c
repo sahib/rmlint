@@ -608,6 +608,8 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string,
                                       bool start_or_end, GError **error) {
     if(strchr(string, '.') || g_str_has_suffix(string, "%")) {
         gdouble factor = rm_cmd_parse_clamp_factor(string, error);
+        session->cfg->clamp_is_used = true;
+
         if(start_or_end) {
             session->cfg->use_absolute_start_offset = false;
             session->cfg->skip_start_factor = factor;
