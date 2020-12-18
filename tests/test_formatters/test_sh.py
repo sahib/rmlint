@@ -95,6 +95,12 @@ def test_paranoia(shell):
     sh_script = os.path.join(TESTDIR_NAME, 'rmlint.sh')
     text = run_shell_script(shell, sh_script, '-d', '-p', '-x')
 
+    assert 'files no longer identical' in text
+
+    # Check that file contents of c are still intact
+    with open(os.path.join(TESTDIR_NAME, 'c'), 'r') as handle:
+        assert handle.read() == 'xxxx'
+
     # Change back 'c':
     with open(os.path.join(TESTDIR_NAME, 'c'), 'w') as handle:
         handle.write('xxx')
@@ -108,7 +114,6 @@ def test_paranoia(shell):
     assert footer['total_files'] == 2 # +1
     assert footer['duplicates'] == 1
 
-    assert 'files no longer identical' in text
 
     # Remove original:
     os.remove(os.path.join(TESTDIR_NAME, 'a'))
