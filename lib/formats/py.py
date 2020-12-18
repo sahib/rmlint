@@ -146,8 +146,9 @@ OPERATIONS = {
 
 def exec_operation(item, original=None, args=None):
     try:
-        OPERATIONS[item['type']](
-            item['path'], original=original, item=item, args=args)
+        op = OPERATIONS.get(item['type'])
+        if op is not None:
+            op(item['path'], original=original, item=item, args=args)
     except OSError as err:
         print('{c[red]}# {err}{c[reset]}'.format(
             err=err, c=COLORS
@@ -197,15 +198,21 @@ def main(args, data):
             c=COLORS, p=item['progress'])
 
         if item['is_original']:
-            msg = ORIGINAL_MESSAGES[item['type']].format(c=COLORS)
-            print('{prog}{v}{c[reset]} {path}'.format(
-                c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
-            last_original_item = item
-            # Do not handle originals.
+            msg_template = MESSAGES.get(item['type'])
+            if msg_template is not None:
+                msg = msg_template.format(c=COLORS)
+                print('{prog}{v}{c[reset]} {path}'.format(
+                    c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
+                last_original_item = item
+
+            # Do not handle originals further.
             continue
 
-        msg = MESSAGES[item['type']].format(
-            c=COLORS, u=args.user, g=args.group)
+        msg_template = MESSAGES.get(item['type'])
+        if msg_template is None:
+            continue
+
+        msg = msg_template.format(c=COLORS, u=args.user, g=args.group)
         print('{prog}{v}{c[reset]} {path}'.format(
             c=COLORS, prog=progress_prefix, v=msg, path=item['path']))
         exec_operation(item, original=last_original_item, args=args)
