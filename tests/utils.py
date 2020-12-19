@@ -19,6 +19,12 @@ import xattr
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 
+# Some systems use a symbolic link for /tmp
+# For example macOS will have a /tmp -> /private/tmp link.
+# Some tests might fail if we use the unresolved version,
+# so fix it here.
+TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
+
 CKSUM_TYPES = [
     'murmur',
     'metro',

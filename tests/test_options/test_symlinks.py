@@ -14,12 +14,14 @@ def test_default():
     create_link('b/z', 'b/y', symlink=True)
 
     head, *data, footer = run_rmlint()
-    assert {e["path"][len(TESTDIR_NAME):] for e in data} == {
-        '/b/x',
-        '/b/y',
-        '/b/z',
-        '/a/z',
+    expected = {
+        os.path.join(TESTDIR_NAME, 'b/x'),
+        os.path.join(TESTDIR_NAME, 'b/y'),
+        os.path.join(TESTDIR_NAME, 'b/z'),
+        os.path.join(TESTDIR_NAME, 'a/z'),
     }
+
+    assert {e["path"] for e in data} == expected
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_merge_directories_with_ignored_symlinks():
@@ -31,9 +33,9 @@ def test_merge_directories_with_ignored_symlinks():
     create_link('bogus', 'b/link', symlink=True)
 
     head, *data, footer = run_rmlint('-T df,dd')
-    assert {e["path"][len(TESTDIR_NAME):] for e in data if e["type"] == "duplicate_dir"} == {
-        '/a',
-        '/b',
+    assert {e["path"] for e in data if e["type"] == "duplicate_dir"} == {
+        os.path.join(TESTDIR_NAME, 'a'),
+        os.path.join(TESTDIR_NAME, 'b'),
     }
 
 @with_setup(usual_setup_func, usual_teardown_func)
