@@ -29,6 +29,5 @@ def test_bad_symlinks_as_direct_args():
     assert data[0]['type'] == 'badlink'
     assert data[1]['type'] == 'badlink'
 
-    print({data[0]['path'], data[1]['path']})
     assert {data[0]['path'], data[1]['path']} == \
             {link_a_path, link_b_path}
