@@ -21,4 +21,4 @@ script:
     - scons config
     - export RM_TS_PRINT_CMD=1
     - export RM_TS_PEDANTIC=0
-    - sudo -E nosetests -s -v -a '!slow'
+    - sudo -E nosetests -d -s -v -a '!slow'
