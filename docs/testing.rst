@@ -6,7 +6,7 @@ complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
 The tests are based on ``nosetest`` and are written in ``python>=3.0``.
-Every testcase just runs the (previously built) ``rmlint`` binary a
+Every testcase just runs the (previously built) ``rmlint`` binary
 and parses its json output. So they are technically blackbox-tests.
 
 On every commit, those tests are additionally run on `TravisCI`_.
