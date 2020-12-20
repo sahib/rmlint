@@ -9,6 +9,12 @@ The tests are based on ``nosetest`` and are written in ``python>=3.0``.
 Every testcase just runs the (previously built) ``rmlint`` binary
 and parses its json output. So they are technically blackbox-tests.
 
+To ensure required test dependencies are present:
+
+.. code-block:: bash
+
+   $ pip3 install -r test-requirements.txt
+
 On every commit, those tests are additionally run on `TravisCI`_.
 
 .. _`TravisCI`: https://travis-ci.org/sahib/rmlint
