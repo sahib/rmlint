@@ -129,3 +129,24 @@ Rules
     @with_setup(usual_setup_func, usual_teardown_func)
     def test_debian_support():
         assert random.choice([True, False]):
+
+Note for Mac Developers
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``touch`` command included with macOS does not include a ``-d`` option, 
+which is necessary for certain tests to function. The simplest way to work 
+around this is to install the ``coreutils`` package via `Homebrew`_, which 
+provides a GNU version of ``touch``:
+
+.. _`Homebrew`: https://brew.sh
+
+.. code-block:: bash
+
+   $ brew install coreutils
+
+Then prepend the ``coreutils`` GNU command directory to your ``PATH`` when 
+running the test suite:
+
+.. code-block:: bash
+
+   $ PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH" nosetests ...
