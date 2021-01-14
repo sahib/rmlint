@@ -738,13 +738,14 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        if(file == group->head->data
+        // just use "is_original" value from json
+        /*if(file == group->head->data
         || (cfg->keep_all_tagged && file->is_prefd)
         || (cfg->keep_all_untagged && !file->is_prefd)) {
             file->is_original = true;
         } else {
             file->is_original = false;
-        }
+        }*/
 
         /* Other lint never should bother for is_original,
          * since this definition doesn't make sense there.
