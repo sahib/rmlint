@@ -32,6 +32,7 @@
 #include "preprocess.h"
 #include "session.h"
 #include "traverse.h"
+#include "utime.h"
 #include "xattr.h"
 
 #if HAVE_BTRFS_H
@@ -204,6 +205,8 @@ void rm_session_acknowledge_abort(const gint abort_count) {
 /**
  * *********** dedupe session main ************
  **/
+
+
 int rm_session_dedupe_main(RmCfg *cfg) {
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
     g_assert(cfg->path_count == g_slist_length(cfg->paths));
@@ -235,8 +238,9 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         }
     }
 
-    // Also use --is-reflink on both files before doing extra work:
-    if(rm_util_link_type(source->path, dest->path) == RM_LINK_REFLINK) {
+    int link_type = rm_util_link_type(source->path, dest->path);
+    if(RM_LINK_REFLINK == link_type) {
+        // avoid rework:
         rm_log_debug_line("Already an exact reflink!");
         return EXIT_SUCCESS;
     }
@@ -270,9 +274,9 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     } dedupe;
     memset(&dedupe, 0, sizeof(dedupe));
 
-    dedupe.info._DEST_FD =
-        rm_sys_open(dest->path, cfg->dedupe_readonly ? O_RDONLY : O_RDWR);
+    int open_mode = cfg->dedupe_readonly ? O_RDONLY : O_RDWR;
 
+    dedupe.info._DEST_FD = rm_sys_open(dest->path, open_mode);
     if(dedupe.info._DEST_FD < 0) {
         rm_log_error_line(
             _("dedupe: error %i: failed to open dest file.%s"),
