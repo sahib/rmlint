@@ -212,6 +212,11 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         return EXIT_FAILURE;
     }
 
+    if(!rm_session_check_kernel_version(4, _MIN_LINUX_SUBVERSION)) {
+        rm_log_warning_line("Cloning needs at least linux >= 4.%d.", _MIN_LINUX_SUBVERSION);
+        return EXIT_FAILURE;
+    }
+
     g_assert(cfg->paths);
     RmPath *dest = cfg->paths->data;
     g_assert(cfg->paths->next);
@@ -254,11 +259,6 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     static const gint64 min_dedupe_chunk = 16 * 1024;
 
     rm_log_debug_line("Cloning using %s", _DEDUPE_IOCTL_NAME);
-
-    if(!rm_session_check_kernel_version(4, _MIN_LINUX_SUBVERSION)) {
-        rm_log_warning_line("This needs at least linux >= 4.%d.", _MIN_LINUX_SUBVERSION);
-        return EXIT_FAILURE;
-    }
 
     struct {
         struct _FILE_DEDUPE_RANGE args;
