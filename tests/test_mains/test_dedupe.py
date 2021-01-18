@@ -88,6 +88,22 @@ def test_equal_files():
 
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
+def test_hardlinks():
+    path_a = create_file('1234', 'a')
+    path_b = path_a + '_hardlink'
+    create_link('a', 'a_hardlink', symlink=False)
+
+    with assert_exit_code(0):
+        run_rmlint(
+            '--dedupe',
+            path_a, path_b,
+            use_default_dir=False,
+            with_json=False,
+            verbosity="")
+
+
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
 def test_different_files():
     path_a = create_file('1234', 'a')
     path_b = create_file('4321', 'b')
