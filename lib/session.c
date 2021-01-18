@@ -247,8 +247,12 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         return EXIT_FAILURE;
     }
 
-    struct stat source_stat;
-    fstat(source_fd, &source_stat);
+    RmStat source_stat;
+    if(rm_sys_stat(source->path, &source_stat) < 0) {
+        rm_log_error_line("failed to stat %s: %s", source->path, g_strerror(errno));
+        return EXIT_FAILURE;
+    }
+
     gint64 bytes_deduped = 0;
 
     /* a poorly-documented limit for dedupe ioctl's */
