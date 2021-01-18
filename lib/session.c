@@ -252,6 +252,17 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     }
 
     int open_mode = cfg->dedupe_readonly ? O_RDONLY : O_RDWR;
+
+    if(RM_LINK_HARDLINK == link_type) {
+        rm_log_debug_line("dedupe: removing hardlink so we can clone to it");
+        if(unlink(dest->path) == -1) {
+            rm_log_error_line(_("dedupe: failed to delete hardlink"));
+            rm_sys_close(source_fd);
+            return EXIT_FAILURE;
+        }
+        open_mode = O_CREAT | O_WRONLY;
+    }
+
     int dest_fd = rm_sys_open(dest->path, open_mode);
 
     if(dest_fd < 0) {
@@ -268,6 +279,38 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     if(rm_sys_stat(source->path, &source_stat) < 0) {
         rm_log_error_line("failed to stat %s: %s", source->path, g_strerror(errno));
         return EXIT_FAILURE;
+    }
+
+    if(RM_LINK_HARDLINK == link_type) {
+        rm_log_debug_line("dedupe: creating clone");
+        int result = EXIT_SUCCESS;
+        if(ioctl(dest_fd, FICLONE, source_fd) == -1) {
+            rm_log_error_line(_("dedupe: error %s create clone via FICLONE; original hardlink has been deleted!"), g_strerror(errno));
+            result = EXIT_FAILURE;
+        }
+        else {
+            // Copy metadata from original to clone
+            struct utimbuf puttime;
+            puttime.modtime = source_stat.st_mtime;
+            puttime.actime = source_stat.st_atime;
+
+            if (utime(dest->path, &puttime)) {
+                rm_log_warning_line("dedupe: failed to preserve times for %s", source->path);
+            }
+
+            if (lchown (dest->path, source_stat.st_uid, source_stat.st_gid) != 0) {
+                rm_log_warning_line("dedupe: failed to preserve ownership for %s", source->path);
+                // try to preserve group ID
+                (void) lchown(dest->path, -1, source_stat.st_gid);
+            }
+
+            if (lchmod(dest->path, source_stat.st_mode) != 0) {
+                rm_log_warning_line("dedupe: failed to preserve permissions for %s", source->path);
+            }
+        }
+        rm_sys_close(source_fd);
+        rm_sys_close(dest_fd);
+        return result;
     }
 
     gint64 bytes_deduped = 0;
