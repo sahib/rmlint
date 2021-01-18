@@ -217,7 +217,11 @@ def test_clone_handler():
         )
 
     # parse output file for expected clone command
-    counts = pattern_count(sh_path, ["clone '", "skip_reflink '"])
+    patterns = [
+            "clone         '",
+            "skip_reflink  '"]
+    counts = pattern_count(sh_path, patterns)
+    print(counts)
     assert counts[0] == 1
     assert counts[1] == 0
 
@@ -237,6 +241,6 @@ def test_clone_handler():
             with_json=False
         )
 
-    counts = pattern_count(sh_path, ["clone '", "skip_reflink '"])
+    counts = pattern_count(sh_path, patterns)
     assert counts[0] == 0
     assert counts[1] == 1
