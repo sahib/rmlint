@@ -251,6 +251,19 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         return EXIT_FAILURE;
     }
 
+    int open_mode = cfg->dedupe_readonly ? O_RDONLY : O_RDWR;
+    int dest_fd = rm_sys_open(dest->path, open_mode);
+
+    if(dest_fd < 0) {
+        rm_log_error_line(
+            _("dedupe: error %i: failed to open dest file.%s"),
+            errno,
+            cfg->dedupe_readonly ? "" : _("\n\t(if target is a read-only snapshot "
+                                          "then -r option is required)"));
+        rm_sys_close(source_fd);
+        return EXIT_FAILURE;
+    }
+
     RmStat source_stat;
     if(rm_sys_stat(source->path, &source_stat) < 0) {
         rm_log_error_line("failed to stat %s: %s", source->path, g_strerror(errno));
@@ -273,19 +286,7 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         struct _FILE_DEDUPE_RANGE_INFO info;
     } dedupe;
     memset(&dedupe, 0, sizeof(dedupe));
-
-    int open_mode = cfg->dedupe_readonly ? O_RDONLY : O_RDWR;
-
-    dedupe.info._DEST_FD = rm_sys_open(dest->path, open_mode);
-    if(dedupe.info._DEST_FD < 0) {
-        rm_log_error_line(
-            _("dedupe: error %i: failed to open dest file.%s"),
-            errno,
-            cfg->dedupe_readonly ? "" : _("\n\t(if target is a read-only snapshot "
-                                          "then -r option is required)"));
-        rm_sys_close(source_fd);
-        return EXIT_FAILURE;
-    }
+    dedupe.info._DEST_FD = dest_fd;
 
     /* fsync's needed to flush extent mapping */
     if(fsync(source_fd) != 0) {
