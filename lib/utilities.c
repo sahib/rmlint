@@ -86,7 +86,7 @@
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 
 ////////////////////////////////////
-//       GENERAL UTILITES         //
+//       GENERAL UTILITIES         //
 ////////////////////////////////////
 
 char *rm_util_strsub(const char *string, const char *subs, const char *with) {
@@ -629,7 +629,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             /* fsname as show by `mount` */
             const char *name;
 
-            /* Wether to warn about the exclusion on this */
+            /* Whether to warn about the exclusion on this */
             bool unusual;
         } evilfs_types[] = {{"bindfs", 1},
                             {"nullfs", 1},
@@ -889,7 +889,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev,
     }
 
     /* probably a btrfs subvolume which is not a mountpoint;
-     * walk up tree until we get to a recognisable partition
+     * walk up tree until we get to a recognizable partition
      * */
     char *prev = g_strdup(path);
     while(TRUE) {
@@ -978,7 +978,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 }
 
 /////////////////////////////////
-//    FIEMAP IMPLEMENATION     //
+//    FIEMAP IMPLEMENTATION     //
 /////////////////////////////////
 
 #if HAVE_FIEMAP

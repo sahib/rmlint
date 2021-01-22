@@ -167,7 +167,7 @@ void rm_session_acknowledge_abort(const gint abort_count) {
     g_mutex_unlock(&m);
 }
 
-/* FIDEDUPERANGE supercedes the btrfs-only BTRFS_IOC_FILE_EXTENT_SAME as of Linux 4.5 and
+/* FIDEDUPERANGE supersedes the btrfs-only BTRFS_IOC_FILE_EXTENT_SAME as of Linux 4.5 and
  * should work for ocfs2 and xfs as well as btrfs.  We should still support the older
  * btrfs ioctl so that this still works on Linux 4.2 to 4.4.  The two ioctl's are
  * identical apart from field names so we can use #define's to accommodate both. */

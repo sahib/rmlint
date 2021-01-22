@@ -175,7 +175,7 @@ def check_gettext(context):
 def check_fiemap(context):
     rc = 1
 
-    if GetOption('with_gettext') is False:
+    if GetOption('with_fiemap') is False:
         rc = 0
 
     if rc and tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
@@ -569,7 +569,7 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
-# Actually instance the Environement with all collected information:
+# Actually instance the Environment with all collected information:
 env = Environment(**options)
 Export('env')
 

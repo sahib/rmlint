@@ -122,7 +122,7 @@ General Options
     Examples::
 
     $ rmlint -o json                 # Stream the json output to stdout
-    $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp
+    $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv file to /tmp
 
 :``-c --config=spec[=value]`` (**default\:** *none*):
 

@@ -198,7 +198,7 @@ const char *rm_digest_type_to_string(RmDigestType type);
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed);
 
 /**
- * @brief Deallocate memory assocated with a RmDigest.
+ * @brief Deallocate memory associated with a RmDigest.
  */
 void rm_digest_free(RmDigest *digest);
 

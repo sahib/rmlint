@@ -405,7 +405,7 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
                 polly->unpacker
             );
 
-            /* we cant get rid of the actual directory now */
+            /* we can't get rid of the actual directory now */
             rm_file_destroy(file);
 
             /* call self, which will now read from the unpacker;

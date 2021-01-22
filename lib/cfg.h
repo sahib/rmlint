@@ -45,7 +45,7 @@ typedef struct RmPath {
     /* whether to treat all files under path as one filesystem */
     bool treat_as_single_vol : 1;
 
-    /* wether calling realpath() worked on this path */
+    /* whether calling realpath() worked on this path */
     bool realpath_worked : 1;
 } RmPath;
 
@@ -127,7 +127,7 @@ typedef struct RmCfg {
      *     supplied by  the user, i.e.,  the sums of the  lengths of
      *     the associated lists  RmCfg::{paths,json_paths}, which is
      *     not meant to be a useful  number to know, and is simply a
-     *     byproduct of calculating path indicies.
+     *     byproduct of calculating path indices.
      */
     guint path_count;
 

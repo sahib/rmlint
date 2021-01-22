@@ -571,7 +571,7 @@ as possible! Good practice includes adding a ``$`` anchor at the end of the rege
   .. code-block:: bash
 
     # Sort paths with ABC in them first, then DEF, then GHI.
-    # Everthing with »temp«, »tmp« or »cache« in it comes last,
+    # Everything with »temp«, »tmp« or »cache« in it comes last,
     # the rest is sandwhiched in between and sorted by their modification time (m).
     # If something is tied, the modification time is also used a sorting criteria.
     $ rmlint -S 'r<.*ABC.*>r<.*DEF.*>r<.*GHI.*>R<.*(tmp|temp|cache).*>m' /tmp/t
@@ -735,7 +735,7 @@ Replaying results
 Often it is useful to just re-output the results you got from ``rmlint``.
 That's kind of annoying for large datasets, especially when you have big files.
 For this, ``rmlint`` features a special mode, where it re-outputs the result of
-previous runs. By default, ``rmlint`` will spit out a ``.json`` file (ususally
+previous runs. By default, ``rmlint`` will spit out a ``.json`` file (usually
 called ``rmlint.json``). When ``--replay`` is given, you can pass one or more
 of those ``.json`` files to the commandline as they would be normal
 directories. ``rmlint`` will then merge and re-output then. Note however, that

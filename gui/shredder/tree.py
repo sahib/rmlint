@@ -11,7 +11,7 @@ Since this is pure python the performance might not be 100% optimal but we try
 to make the ui rendering as fluid as possible by making most of the costly
 operations non-blocking.
 
-Most of the code should be very clean but some vodoo is hidden.
+Most of the code should be very clean but some voodoo is hidden.
 If you don't find it, that's good. If you do, blame @sahib.
 """
 
@@ -336,7 +336,7 @@ class PathTrie(GObject.Object):
 
     def sort(self, column_id, reverse=False, root=None):
         """Sort the trie nodes by their value in at `column_id`.
-        If reverse is True, biger values appear first.
+        If reverse is True, bigger values appear first.
 
         This implementation is a generator that yields
         each visited node after sorting and a mapping from
@@ -428,7 +428,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         GLib.timeout_add(1000, self._update_intermediate_nodes)
 
         # A node was updated from the outside, i.e. by another model,
-        # or by directly modifiying a PathNode or PathTrie.
+        # or by directly modifying a PathNode or PathTrie.
         self.trie.connect('node-updated', self.on_node_updated)
 
     def _update_intermediate_nodes(self):
@@ -583,7 +583,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         return partial_model
 
     ###################################
-    # PyGObject convinience interface #
+    # PyGObject convenience interface #
     ###################################
 
     def set_value(self, iter_, column, value):
@@ -781,12 +781,12 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
         return False
 
     def sort(self, id_, order=Gtk.SortType.ASCENDING):
-        """Convinience method for do_set_sort_column_id."""
+        """Convenience method for do_set_sort_column_id."""
         self.do_set_sort_column_id(id_, order)
 
 
 def _create_column(title, id_, renderers, fixed_width=100):
-    """Convinience method for creating a TreeView Column.
+    """Convenience method for creating a TreeView Column.
     Several renderers can be given with certain options.
     """
     column = Gtk.TreeViewColumn()
@@ -864,7 +864,7 @@ class PathTreeView(Gtk.TreeView):
         self.expand_all()
 
     def get_selected_nodes(self):
-        """Extra convinience method for getting the currently selected nodes"""
+        """Extra convenience method for getting the currently selected nodes"""
         model, rows = self.get_selection().get_selected_rows()
         for tp_path in rows:
             node = model.trie.resolve(tp_path.get_indices())
@@ -986,7 +986,7 @@ class PathTreeView(Gtk.TreeView):
         self.expand_all()
 
     def on_collapse_all(self, _):
-        """Just collpase everything in the tree."""
+        """Just collapse everything in the tree."""
         self.collapse_all()
 
     def set_twin(self, view):

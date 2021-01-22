@@ -204,7 +204,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
             rm_log_warning("\n");
             rm_log_error_line("%s %d", g_strerror(errno), errno == ENOENT);
         } else {
-            /* This is not reached anymore when execve suceeded */
+            /* This is not reached anymore when execve succeeded */
             break;
         }
 
@@ -886,7 +886,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 
         fclose(stamp_file);
     } else {
-        /* Cannot read a stamp file, assume we gonna creae it. */
+        /* Cannot read a stamp file, assume we have to create it. */
         plain = false;
         success = true;
         rm_log_info_line(_("No stamp file at `%s`, will create one after this run."), timestamp_path);
@@ -1333,7 +1333,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("Specifiyng both -o and -O is not allowed"));
+                    _("Specifying both -o and -O is not allowed"));
         return false;
     } else if(session->output_cnt[0] < 0 && session->cfg->progress_enabled == false) {
         rm_cmd_set_default_outputs(session);
@@ -1755,7 +1755,7 @@ int rm_cmd_main(RmSession *session) {
         g_assert(cfg->cache_file_structs);
 
         /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
-         * on two dupicate directories which is likely not a valid assumption.
+         * on two duplicate directories which is likely not a valid assumption.
          * Emit a warning if the raw -D is used in conjunction with that.
          * */
         const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
