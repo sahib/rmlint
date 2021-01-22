@@ -153,35 +153,3 @@ License
 .. _GPLv3: http://www.gnu.org/copyleft/gpl.htm
 .. _sahib: https://github.com/sahib
 .. _SeeSpotRun: https://github.com/SeeSpotRun
-
-Donations
----------
-
-If you think rmlint saved [*]_ you some serious time and/or space, you might
-consider a donation. You can donate either via *Flattr* or via *PayPal*:
-
-.. image:: http://api.flattr.com/button/flattr-badge-large.png
-   :target: http://flattr.com/thing/302682/libglyr
-   :align: center 
-   :width: 9%
-
-.. raw:: html
-
-   <br />
-   <center>
-       <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
-           <input type="hidden" name="cmd" value="_s-xclick">
-           <input type="hidden" name="hosted_button_id" value="JXCXKRMS8EDVC">
-           <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-           <img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
-       </form>
-   </center>
-   <br />
-
-Or just buy us a beer if we ever meet. Nice emails are okay too.
-
-.. [*] If it freed you from your beloved data: *Sorry.* [*]_
-.. [*] Please file a bug or read the source and provide a patch. [*]_
-.. [*] For more than 100GB of data loss we owe you one beer. [*]_
-.. [*] If you don't like beer or there's only Budweiser available, you can order
-   a Club Mate.
