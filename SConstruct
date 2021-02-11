@@ -605,6 +605,34 @@ conf = Configure(env, custom_tests={
     'check_sysmacro_h': check_sysmacro_h
 })
 
+#######################################################################
+#                      Compiler Checks and Flags                      #
+#######################################################################
+
+if 'CC' in os.environ:
+    conf.env.Replace(CC=os.environ['CC'])
+    print(">> Using compiler: " + os.environ['CC'])
+
+if 'CFLAGS' in os.environ:
+    conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
+    print(">> Appending custom build flags : " + os.environ['CFLAGS'])
+
+if 'LDFLAGS' in os.environ:
+    conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
+    print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
+
+if 'AR' in os.environ:
+    conf.env.Replace(AR=os.environ['AR'])
+    print(">> Using ar: " + os.environ['AR'])
+
+if 'NM' in os.environ:
+    conf.env.Replace(NM=os.environ['NM'])
+    print(">> Using nm: " + os.environ['NM'])
+
+if 'RANLIB' in os.environ:
+    conf.env.Replace(RANLIB=os.environ['RANLIB'])
+    print(">> Using ranlib: " + os.environ['RANLIB'])
+
 if not conf.CheckCC():
     print('Error: Your compiler and/or environment is not correctly configured.')
     Exit(1)
@@ -637,34 +665,6 @@ if conf.env['HAVE_JSON_GLIB']:
 
 if conf.env['HAVE_GIO_UNIX']:
     packages.append('gio-unix-2.0')
-
-###########################################################################
-#                           Compiler Flags                                #
-###########################################################################
-
-if 'CC' in os.environ:
-    conf.env.Replace(CC=os.environ['CC'])
-    print(">> Using compiler: " + os.environ['CC'])
-
-if 'CFLAGS' in os.environ:
-    conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
-    print(">> Appending custom build flags : " + os.environ['CFLAGS'])
-
-if 'LDFLAGS' in os.environ:
-    conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
-    print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
-
-if 'AR' in os.environ:
-    conf.env.Replace(AR=os.environ['AR'])
-    print(">> Using ar: " + os.environ['AR'])
-
-if 'NM' in os.environ:
-    conf.env.Replace(NM=os.environ['NM'])
-    print(">> Using nm: " + os.environ['NM'])
-
-if 'RANLIB' in os.environ:
-    conf.env.Replace(RANLIB=os.environ['RANLIB'])
-    print(">> Using ranlib: " + os.environ['RANLIB'])
 
 # Support museums or other debian flavours:
 conf.check_c11()
