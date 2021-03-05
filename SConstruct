@@ -954,9 +954,9 @@ Type 'scons' to actually compile rmlint now. Good luck.
             compiler=env['CC'],
             prefix=GetOption('prefix'),
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
-            verbose=yesno(ARGUMENTS.get('VERBOSE')),
-            debug=yesno(ARGUMENTS.get('DEBUG')),
-            symbols=yesno(ARGUMENTS.get('SYMBOLS')),
+            verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
+            debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
+            symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
             version='{a}.{b}.{c} "{n}" (rev {r})'.format(
                 a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH,
                 n=VERSION_NAME, r=env.get('gitrev', 'unknown')
