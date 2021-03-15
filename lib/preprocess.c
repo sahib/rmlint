@@ -404,7 +404,7 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
     {
         RM_DEFINE_DIR_PATH(a);
         RM_DEFINE_DIR_PATH(b);
-        return sign * g_ascii_strcasecmp(a_dir_path, b_dir_path);
+        return sign * strcmp(a_dir_path, b_dir_path);
     }
     case 'l':
         return sign * SIGN_DIFF(strlen(a->folder->basename), strlen(b->folder->basename));
