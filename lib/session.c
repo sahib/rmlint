@@ -253,17 +253,22 @@ int rm_session_dedupe_main(RmCfg *cfg) {
 
     int open_mode = cfg->dedupe_readonly ? O_RDONLY : O_RDWR;
 
+    char* temp_path = null;
+    int dest_fd;
+    
     if(RM_LINK_HARDLINK == link_type) {
-        rm_log_debug_line("dedupe: removing hardlink so we can clone to it");
-        if(unlink(dest->path) == -1) {
-            rm_log_error_line(_("dedupe: failed to delete hardlink"));
+        rm_log_debug_line("dedupe: renaming hardlink so we can clone to it");
+        temp_path = g_strconcat(dest->path, "XXXXXX")
+        dest_fd = mkstemp(temp_path);
+        if(temp_fd == -1) {
+            rm_log_error_line(_("dedupe: failed to create temp file"));
             rm_sys_close(source_fd);
             return EXIT_FAILURE;
         }
         open_mode = O_CREAT | O_WRONLY;
     }
 
-    int dest_fd = rm_sys_open(dest->path, open_mode);
+    dest_fd = rm_sys_open(dest->path, open_mode);
 
     if(dest_fd < 0) {
         rm_log_error_line(
@@ -282,10 +287,13 @@ int rm_session_dedupe_main(RmCfg *cfg) {
     }
 
     if(RM_LINK_HARDLINK == link_type) {
+#IFDEF FICLONE
         rm_log_debug_line("dedupe: creating clone");
         int result = EXIT_SUCCESS;
         if(ioctl(dest_fd, FICLONE, source_fd) == -1) {
-            rm_log_error_line(_("dedupe: error %s create clone via FICLONE; original hardlink has been deleted!"), g_strerror(errno));
+            // create hardlink instead
+            rm_log_warning_line(_("dedupe: error %s create clone via FICLONE; attempting to restore original hardlink"), g_strerror(errno));
+            if(link(dest->path, 
             result = EXIT_FAILURE;
         }
         else {
@@ -311,6 +319,10 @@ int rm_session_dedupe_main(RmCfg *cfg) {
         rm_sys_close(source_fd);
         rm_sys_close(dest_fd);
         return result;
+#ELSE
+            rm_log_error_line(_("dedupe: Can't create clone of hardlink because FICLONE not defined on your system"), g_strerror(errno));
+        
+#FI
     }
 
     gint64 bytes_deduped = 0;
