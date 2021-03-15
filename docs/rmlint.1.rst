@@ -441,7 +441,8 @@ Original Detection Options
     - **o**: keep file with lowest number of hardlinks outside of the paths traversed by ``rmlint``.
     - **O**: keep file with highest number of hardlinks outside of the paths traversed by ``rmlint``.
 
-    Alphabetical sort will only use the basename of the file and ignore its case.
+    Alphabetical sort [aA] will only use the basename of the file and ignore its case.
+    Alphabetical sort on dir [fF] uses the full path (excluding basename) and is case-sensitive.
     One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
     **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
 

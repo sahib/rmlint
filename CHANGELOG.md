@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.11.0 Evolving Echidna -- unreleased]
+
+### Added
+
+* Implement --rank-by f option to rank originals by directory full path
+
 ## [2.10.1 Ludicrous Lemur] -- 2020-06-13
 
 ### Added
