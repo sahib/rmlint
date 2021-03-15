@@ -374,9 +374,6 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
     RmFile *fa = ga->files.head->data;
     RmFile *fb = gb->files.head->data;
 
-    RM_DEFINE_PATH(fa);
-    RM_DEFINE_PATH(fb);
-
     int fa_order = rm_lint_type_order[fa->lint_type];
     int fb_order = rm_lint_type_order[fb->lint_type];
     if(fa_order != fb_order) {

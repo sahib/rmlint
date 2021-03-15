@@ -431,6 +431,7 @@ Original Detection Options
 
     - **m**: keep lowest mtime (oldest)           **M**: keep highest mtime (newest)
     - **a**: keep first alphabetically            **A**: keep last alphabetically
+    - **f**: keep first dir path alphabetically   **F**: keep last dir path alphabetically
     - **p**: keep first named path                **P**: keep last named path
     - **d**: keep path with lowest depth          **D**: keep path with highest depth
     - **l**: keep path with shortest basename     **L**: keep path with longest basename
