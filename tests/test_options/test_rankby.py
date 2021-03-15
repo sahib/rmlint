@@ -40,3 +40,22 @@ def test_rankby_dirs():
     data = filter_part_of_directory(data)
     paths = [os.path.basename(p['path']) for p in data]
     assert paths == ['b', 'c', 'ax', 'ay', 'x', 'y', 'dx', 'dy']
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_rankby_dir_path():
+    create_file('x', 'b/x')
+    create_file('x', 'a/y')
+    create_file('yyy', 'a/v')
+    create_file('yyy', 'b/w')
+
+    head, *data, foot = run_rmlint('--sort-by a -S f')
+    relpaths = [os.path.relpath(p['path'], TESTDIR_NAME) for p in data]
+    print(relpaths)
+    assert relpaths == ['a/v', 'b/w', 'a/y', 'b/x']
+
+    head, *data, foot = run_rmlint('--sort-by S -S F')
+    relpaths = [os.path.relpath(p['path'], TESTDIR_NAME) for p in data]
+    print(relpaths)
+    assert relpaths == ['b/w', 'a/v', 'b/x', 'a/y']
+
+
