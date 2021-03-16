@@ -357,6 +357,9 @@ typedef struct RmShredGroup {
     /* number of file clusters */
     gsize n_clusters;
 
+    /* number of file clusters that don't have external checksums */
+    gsize n_unhashed_clusters;
+
     /* number of distinct inodes */
     gsize n_inodes;
 
@@ -690,8 +693,8 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
         return;
     }
 
-    if(g_queue_get_length(group) <= 1) {
-        /* Do not write unique file checksums */
+    if(g_queue_get_length(group) <= 1 && !session->cfg->hash_uniques) {
+        /* Do not write incomplete unique file checksums */
         return;
     }
 
@@ -793,7 +796,8 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 }
 
 static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
-    return 1 && (group->num_files >= 2)
+    return 1
+           && (group->num_files >= 2)
            /* it takes 2 to tango */
            && (group->n_pref > 0 || !NEEDS_PREF(group))
            /* we have at least one file from preferred path, or we don't care */
@@ -802,7 +806,7 @@ static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
            && (group->n_new > 0 || !NEEDS_NEW(group))
            /* we have at least one file newer than cfg->min_mtime, or we don't care */
            && (!group->unique_basename || !group->session->cfg->unmatched_basenames);
-    /* we have more than one unique basename, or we don't care */
+           /* we have more than one unique basename, or we don't care */
 }
 
 /* call unlocked; should be no contention issues since group is finished */
@@ -846,10 +850,12 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
  * Assume group already protected by group_lock.
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
-    if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group) &&
-       group->hash_offset < group->file_size &&
-       (group->n_clusters > 1 ||
-        (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
+    if(group->status == RM_SHRED_GROUP_DORMANT
+        && (rm_shred_group_qualifies(group) || group->session->cfg->hash_uniques)
+        && group->hash_offset < group->file_size
+        && ((group->session->cfg->hash_uniques && group->n_unhashed_clusters > 0)
+            || group->n_clusters > 1
+            || (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
         /* group can go active */
         group->status = RM_SHRED_GROUP_START_HASHING;
     }
@@ -912,6 +918,9 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->n_npref += rm_file_n_nprefd(file);
         shred_group->n_new += rm_file_n_new(file);
         shred_group->n_clusters++;
+        if(file->ext_cksum == NULL) {
+            shred_group->n_unhashed_clusters++;
+        }
         shred_group->n_inodes += RM_FILE_INODE_COUNT(file);
 
         g_assert(file->hash_offset == shred_group->hash_offset);

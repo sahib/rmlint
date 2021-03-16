@@ -93,6 +93,7 @@ typedef struct RmCfg {
     gboolean read_stdin;
     gboolean read_stdin0;
     gboolean backup;
+    gboolean hash_uniques;
 
     int permissions;
 
