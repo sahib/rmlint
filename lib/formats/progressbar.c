@@ -33,6 +33,9 @@
 
 #include <sys/ioctl.h>
 
+/* Add 4096 bytes to each file size to give better ETA estimate*/
+const RmOff FILE_OVERHEAD = 4096;
+
 typedef struct RmFmtHandlerProgress {
     /* must be first */
     RmFmtHandler parent;
@@ -62,6 +65,7 @@ typedef struct RmFmtHandlerProgress {
     RmRunningMean speed_mean;
     RmRunningMean eta_mean;
     RmOff last_shred_bytes_read;
+    RmOff last_shred_files_remaining;
     gint64 last_check_time;
 
     /* Last calculation of ETA for caching purpose */
@@ -97,12 +101,17 @@ static gdouble rm_fmt_progress_calculate_eta(
     // This does not involve bytes that were just skipped due to bad checksums.
     RmOff diff = session->shred_bytes_read - self->last_shred_bytes_read;
 
+    if(self->last_shred_files_remaining - session->shred_files_remaining) {
+        diff += FILE_OVERHEAD * (self->last_shred_files_remaining - session->shred_files_remaining);
+    }
+
     // took is the length of the time interval it took in seconds.
     gint64 now = g_get_monotonic_time();
     gdouble took = (now - self->last_check_time) / (1000.0 * 1000.0);
 
     self->last_check_time = now;
     self->last_shred_bytes_read = session->shred_bytes_read;
+    self->last_shred_files_remaining = session->shred_files_remaining;
 
     if(diff > 0) {
         // speed is the average time a single file took to process or filter in files/sec.
@@ -117,7 +126,7 @@ static gdouble rm_fmt_progress_calculate_eta(
         return -1;
     }
 
-    gdouble eta_sec = session->shred_bytes_remaining / mean_speed;
+    gdouble eta_sec = (session->shred_bytes_remaining + FILE_OVERHEAD * session->shred_files_remaining) / mean_speed;
     rm_running_mean_add(&self->eta_mean, eta_sec);
 
     gdouble mean_eta = rm_running_mean_get(&self->eta_mean);
