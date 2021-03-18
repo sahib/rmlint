@@ -85,10 +85,11 @@ static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *o
     json_generator_set_pretty(
         self->generator, !rm_fmt_get_config_value(session->formats, "json", "oneline"));
 
-    json_generator_set_root(self->generator, json_node_alloc());
-    self->root = json_generator_get_root(self->generator);
+
     self->array = json_array_new();
+    self->root = json_node_alloc();
     json_node_init_array(self->root, self->array);
+    json_generator_set_root(self->generator, self->root);
 
     self->id_set = g_hash_table_new(NULL, NULL);
 }
@@ -100,6 +101,12 @@ static void rm_fmt_json_close(RmFmtHandlerJSON *self) {
     if(!json_generator_to_stream(self->generator, self->stream, false, &error)) {
         rm_log_error_line("Error writing to json stream");
     }
+
+    // free up memory
+    json_array_unref(self->array);
+    json_node_unref(self->root);
+    g_object_unref(self->generator);
+    g_object_unref(self->stream);
 
     g_hash_table_unref(self->id_set);
 }
