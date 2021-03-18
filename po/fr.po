@@ -295,10 +295,6 @@ msgid "Loading json-results `%s'"
 msgstr "Chargement de JSON Cache `%s'"
 
 #: lib/replay.c
-msgid "json-glib is needed for using --replay."
-msgstr "json-lib est nécessaire pour utiliser l'argument --replay"
-
-#: lib/replay.c
 msgid "Please recompile `rmlint` with it installed."
 msgstr "Merci de recompiler `rmlint` une fois celui ci installé"
 
@@ -1000,9 +996,6 @@ msgstr ""
 #, c-format
 msgid "No stamp file at `%s`, will create one after this run."
 msgstr ""
-
-#~ msgid "caching is not supported due to missing json-glib library."
-#~ msgstr "Cache non supporté, librairie json-glib manquante."
 
 #~ msgid "Loading json-cache `%s'"
 #~ msgstr "Chargement de JSON Cache `%s'"

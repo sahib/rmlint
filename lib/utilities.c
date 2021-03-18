@@ -79,10 +79,6 @@
 #include <blkid/blkid.h>
 #endif
 
-#if HAVE_JSON_GLIB
-#include <json-glib/json-glib.h>
-#endif
-
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 
 ////////////////////////////////////

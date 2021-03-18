@@ -75,7 +75,6 @@ static void rm_cmd_show_version(void) {
                     {.name = "sha512",         .enabled = HAVE_SHA512},
                     {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
-                    {.name = "replay",         .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
