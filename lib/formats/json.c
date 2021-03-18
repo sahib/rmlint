@@ -46,7 +46,9 @@ typedef struct RmFmtHandlerJSON {
     GOutputStream *stream;
     JsonGenerator *generator;
     JsonNode *root;
-    JsonArray *array;
+
+    bool need_comma_before_next_elem;
+    bool pretty;
 
 } RmFmtHandlerJSON;
 
@@ -75,40 +77,53 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
     return hash;
 }
 
-//////////////////////////////////////////
-//  POOR MAN'S JSON FORMATTING TOOLBOX  //
-//////////////////////////////////////////
+static void rm_fmt_json_sep(RmFmtHandlerJSON *self) {
+    g_output_stream_printf(
+        self->stream, NULL, NULL, NULL, ",%s", self->pretty ? "\n " : "");
+}
 
 static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *out) {
+    self->need_comma_before_next_elem = false;
     self->stream = g_unix_output_stream_new(fileno(out), false);
     self->generator = json_generator_new();
-    json_generator_set_pretty(
-        self->generator, !rm_fmt_get_config_value(session->formats, "json", "oneline"));
+    self->pretty = !rm_fmt_get_config_value(session->formats, "json", "oneline");
+    json_generator_set_pretty(self->generator, self->pretty);
 
-
-    self->array = json_array_new();
     self->root = json_node_alloc();
-    json_node_init_array(self->root, self->array);
     json_generator_set_root(self->generator, self->root);
 
     self->id_set = g_hash_table_new(NULL, NULL);
+
+    // write the start of the json array
+    g_output_stream_printf(self->stream, NULL, NULL, NULL, "[\n");
 }
 
 static void rm_fmt_json_close(RmFmtHandlerJSON *self) {
-    // write the json to file
-    GError *error = NULL;
-    rm_log_warning_line("Writing json output, may take a while...");
-    if(!json_generator_to_stream(self->generator, self->stream, false, &error)) {
-        rm_log_error_line("Error writing to json stream");
-    }
-
     // free up memory
-    json_array_unref(self->array);
     json_node_unref(self->root);
     g_object_unref(self->generator);
+
+    // write the end of the json array
+    g_output_stream_printf(self->stream, NULL, NULL, NULL, "]\n");
     g_object_unref(self->stream);
 
     g_hash_table_unref(self->id_set);
+}
+
+static void rm_fmt_object_write_and_free(JsonObject *obj, RmFmtHandlerJSON *self) {
+    if(self->need_comma_before_next_elem) {
+        rm_fmt_json_sep(self);
+    } else {
+        self->need_comma_before_next_elem = true;
+    }
+    GError *error = NULL;
+    json_node_set_object(self->root, obj);
+    json_generator_set_root(self->generator, self->root);
+
+    if(!json_generator_to_stream(self->generator, self->stream, false, &error)) {
+        rm_log_error_line("Error writing to json stream");
+    }
+    json_object_unref(obj);
 }
 
 /////////////////////////
@@ -137,8 +152,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         }
         json_object_set_boolean_member(header, "merge_directories",
                                        session->cfg->merge_directories);
-
-        json_array_add_object_element(self->array, header);
+        rm_fmt_object_write_and_free(header, self);
     }
 }
 
@@ -156,7 +170,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent,
         json_object_set_int_member(footer, "duplicates", session->dup_counter);
         json_object_set_int_member(footer, "duplicate_sets", session->dup_group_counter);
         json_object_set_int_member(footer, "total_lint_size", session->total_lint_size);
-        json_array_add_object_element(self->array, footer);
+        rm_fmt_object_write_and_free(footer, self);
     }
     rm_fmt_json_close(self);
 }
@@ -218,46 +232,46 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
 
     if(file->digest) {
         json_object_set_string_member(elem, "checksum", checksum_str);
-        json_object_set_string_member(elem, "path", file_path);
-        json_object_set_int_member(elem, "size", file->actual_file_size);
-        json_object_set_int_member(elem, "depth", file->depth);
-        json_object_set_int_member(elem, "inode", file->inode);
-        json_object_set_int_member(elem, "disk_id", file->dev);
-        json_object_set_boolean_member(elem, "is_original", file->is_original);
-
-        if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
-            json_object_set_int_member(elem, "n_children", file->n_children);
-        }
-
-        if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
-            if(file->twin_count >= 0) {
-                json_object_set_int_member(elem, "twins", file->twin_count);
-            }
-
-            if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY && file->parent_dir) {
-                json_object_set_string_member(elem, "parent_path",
-                                              rm_directory_get_dirname(file->parent_dir));
-            }
-
-            if(session->cfg->find_hardlinked_dupes) {
-                RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
-
-                if(hardlink_head && hardlink_head != file && file->digest) {
-                    char *orig_checksum_str = rm_fmt_json_cksum(hardlink_head);
-                    RM_DEFINE_PATH(hardlink_head);
-                    guint32 orig_id = rm_fmt_json_generate_id(
-                        self, hardlink_head, hardlink_head_path, orig_checksum_str);
-                    g_free(orig_checksum_str);
-                    json_object_set_int_member(elem, "hardlink_of", orig_id);
-                }
-            }
-        }
-
-        json_object_set_double_member(elem, "mtime", file->mtime);
     }
 
-    json_array_add_object_element(self->array, elem);
+    json_object_set_string_member(elem, "path", file_path);
+    json_object_set_int_member(elem, "size", file->actual_file_size);
+    json_object_set_int_member(elem, "depth", file->depth);
+    json_object_set_int_member(elem, "inode", file->inode);
+    json_object_set_int_member(elem, "disk_id", file->dev);
+    json_object_set_boolean_member(elem, "is_original", file->is_original);
 
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        json_object_set_int_member(elem, "n_children", file->n_children);
+    }
+
+    if(file->lint_type != RM_LINT_TYPE_UNIQUE_FILE) {
+        if(file->twin_count >= 0) {
+            json_object_set_int_member(elem, "twins", file->twin_count);
+        }
+
+        if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY && file->parent_dir) {
+            json_object_set_string_member(elem, "parent_path",
+                                          rm_directory_get_dirname(file->parent_dir));
+        }
+
+        if(session->cfg->find_hardlinked_dupes) {
+            RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
+
+            if(hardlink_head && hardlink_head != file && file->digest) {
+                char *orig_checksum_str = rm_fmt_json_cksum(hardlink_head);
+                RM_DEFINE_PATH(hardlink_head);
+                guint32 orig_id = rm_fmt_json_generate_id(
+                    self, hardlink_head, hardlink_head_path, orig_checksum_str);
+                g_free(orig_checksum_str);
+                json_object_set_int_member(elem, "hardlink_of", orig_id);
+            }
+        }
+    }
+
+    json_object_set_double_member(elem, "mtime", file->mtime);
+
+    rm_fmt_object_write_and_free(elem, self);
     g_free(checksum_str);
 }
 
