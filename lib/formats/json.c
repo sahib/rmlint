@@ -1,4 +1,4 @@
-	/*
+/*
  *  This file is part of rmlint.
  *
  *  rmlint is free software: you can redistribute it and/or modify
@@ -23,18 +23,18 @@
  *
  */
 
+#include <assert.h>
+#include <gio/gunixoutputstream.h>
+#include <glib.h>
+#include <json-glib/json-glib.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "../checksums/murmur3.h"
 #include "../formats.h"
 #include "../preprocess.h"
-#include "../utilities.h"
 #include "../treemerge.h"
-
-#include <glib.h>
-#include <json-glib/json-glib.h>
-#include <gio/gunixoutputstream.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include "../utilities.h"
 
 typedef struct RmFmtHandlerJSON {
     /* must be first */
@@ -79,24 +79,21 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
 //  POOR MAN'S JSON FORMATTING TOOLBOX  //
 //////////////////////////////////////////
 
-
 static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *out) {
     self->stream = g_unix_output_stream_new(fileno(out), false);
-    self->generator = json_generator_new ();
-    json_generator_set_pretty(self->generator, !rm_fmt_get_config_value(session->formats, "json", "oneline"));
-
+    self->generator = json_generator_new();
+    json_generator_set_pretty(
+        self->generator, !rm_fmt_get_config_value(session->formats, "json", "oneline"));
 
     json_generator_set_root(self->generator, json_node_alloc());
     self->root = json_generator_get_root(self->generator);
     self->array = json_array_new();
     json_node_init_array(self->root, self->array);
 
-
     self->id_set = g_hash_table_new(NULL, NULL);
 }
 
 static void rm_fmt_json_close(RmFmtHandlerJSON *self) {
-
     // write the json to file
     GError *error = NULL;
     rm_log_warning_line("Writing json output, may take a while...");
@@ -105,43 +102,41 @@ static void rm_fmt_json_close(RmFmtHandlerJSON *self) {
     }
 
     g_hash_table_unref(self->id_set);
-
 }
-
-
 
 /////////////////////////
 //  ACTUAL CALLBACKS   //
 /////////////////////////
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
-
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
     rm_fmt_json_open(session, self, out);
 
     if(!rm_fmt_get_config_value(session->formats, "json", "no_header")) {
-
         JsonObject *header = json_object_new();
-        json_object_set_string_member (header, "description", "rmlint json-dump of lint files");
-        json_object_set_string_member (header, "cwd", session->cfg->iwd);
-        json_object_set_string_member (header, "args", session->cfg->joined_argv);
-        json_object_set_string_member (header, "version", RM_VERSION);
-        json_object_set_string_member (header, "rev", RM_VERSION_GIT_REVISION);
-        json_object_set_int_member (header, "progress", 0); /* Header is always first. */
-        json_object_set_string_member (header, "checksum_type",
-                            rm_digest_type_to_string(session->cfg->checksum_type));
+        json_object_set_string_member(header, "description",
+                                      "rmlint json-dump of lint files");
+        json_object_set_string_member(header, "cwd", session->cfg->iwd);
+        json_object_set_string_member(header, "args", session->cfg->joined_argv);
+        json_object_set_string_member(header, "version", RM_VERSION);
+        json_object_set_string_member(header, "rev", RM_VERSION_GIT_REVISION);
+        json_object_set_int_member(header, "progress", 0); /* Header is always first. */
+        json_object_set_string_member(
+            header, "checksum_type",
+            rm_digest_type_to_string(session->cfg->checksum_type));
         if(session->hash_seed) {
             json_object_set_int_member(header, "hash_seed", session->hash_seed);
         }
-        json_object_set_boolean_member (header, "merge_directories", session->cfg->merge_directories);
+        json_object_set_boolean_member(header, "merge_directories",
+                                       session->cfg->merge_directories);
 
         json_array_add_object_element(self->array, header);
-
     }
 }
 
-static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
+static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent,
+                        _UNUSED FILE *out) {
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
     if(!rm_fmt_get_config_value(session->formats, "json", "no_footer")) {
@@ -159,7 +154,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, _UNUSE
     rm_fmt_json_close(self);
 }
 
-static char* rm_fmt_json_cksum(RmFile *file) {
+static char *rm_fmt_json_cksum(RmFile *file) {
     if(file->digest == NULL) {
         return NULL;
     }
@@ -170,14 +165,16 @@ static char* rm_fmt_json_cksum(RmFile *file) {
     return checksum_str;
 }
 
-static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSED FILE *out, RmFile *file) {
+static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
+                        _UNUSED FILE *out, RmFile *file) {
     if(rm_fmt_get_config_value(session->formats, "json", "no_body")) {
         return;
     }
 
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
-            if(!file->digest || !(session->cfg->write_unfinished || session->cfg->hash_uniques)) {
+            if(!file->digest ||
+               !(session->cfg->write_unfinished || session->cfg->hash_uniques)) {
                 return;
             }
         }
@@ -196,23 +193,19 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSE
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
 
-
     RM_DEFINE_PATH(file);
 
     JsonObject *elem = json_object_new();
-    json_object_set_int_member(elem, "id",
-                            rm_fmt_json_generate_id(self, file, file_path, checksum_str));
-    json_object_set_string_member(elem, "type", rm_file_lint_type_to_string(file->lint_type));
+    json_object_set_int_member(
+        elem, "id", rm_fmt_json_generate_id(self, file, file_path, checksum_str));
+    json_object_set_string_member(elem, "type",
+                                  rm_file_lint_type_to_string(file->lint_type));
     gdouble progress = 0;
     if(session->shred_bytes_after_preprocess) {
-        progress = CLAMP(
-            100 - 100 * (
-                (gdouble)session->shred_bytes_remaining /
-                (gdouble)session->shred_bytes_after_preprocess
-            ),
-            0,
-            100
-            );
+        progress = CLAMP(100 - 100 * ((gdouble)session->shred_bytes_remaining /
+                                      (gdouble)session->shred_bytes_after_preprocess),
+                         0,
+                         100);
         json_object_set_int_member(elem, "progress", progress);
     }
 
@@ -234,9 +227,10 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSE
                 json_object_set_int_member(elem, "twins", file->twin_count);
             }
 
-			if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY && file->parent_dir) {
-				json_object_set_string_member(elem, "parent_path", rm_directory_get_dirname(file->parent_dir));
-			}
+            if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY && file->parent_dir) {
+                json_object_set_string_member(elem, "parent_path",
+                                              rm_directory_get_dirname(file->parent_dir));
+            }
 
             if(session->cfg->find_hardlinked_dupes) {
                 RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
@@ -262,16 +256,14 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSE
 
 static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
     /* Initialize parent */
-    .parent =
-        {
-            .size = sizeof(JSON_HANDLER_IMPL),
-            .name = "json",
-            .head = rm_fmt_head,
-            .elem = rm_fmt_elem,
-            .prog = NULL,
-            .foot = rm_fmt_foot,
-            .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", NULL},
-        }
-    };
+    .parent = {
+        .size = sizeof(JSON_HANDLER_IMPL),
+        .name = "json",
+        .head = rm_fmt_head,
+        .elem = rm_fmt_elem,
+        .prog = NULL,
+        .foot = rm_fmt_foot,
+        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", NULL},
+    }};
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;
