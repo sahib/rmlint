@@ -75,7 +75,6 @@ static void rm_cmd_show_version(void) {
                     {.name = "sha512",         .enabled = HAVE_SHA512},
                     {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
-                    {.name = "replay",         .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
@@ -1488,6 +1487,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
         {"threads-per-disk"       , 0   , HIDDEN           , G_OPTION_ARG_INT      , &cfg->threads_per_disk       , "Specify number of reader threads per physical disk"          , NULL}   ,
         {"write-unfinished"       , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums"                                 , NULL}   ,
+        {"hash-uniques"           , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_uniques           , "Hash (whole of) unique files too (for json or xattr output)" , NULL}   ,
         {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
         {"xattr-read"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr  , "Read cached checksums from file attributes"                  , NULL}   ,
         {"xattr-clear"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->clear_xattr_fields     , "Clear xattrs from all seen files"                            , NULL}   ,
