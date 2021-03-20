@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.11.0 Evolving Echidna -- unreleased]
++
++### Added
++
++* Implement --hash-uniques option to generate full checksums of unique files too.
++* Implement --hash-unmatched option, similar to --hash-uniques but only for size twins.
+
 ## [2.10.1 Ludicrous Lemur] -- 2020-06-13
 
 ### Added
