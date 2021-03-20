@@ -79,13 +79,6 @@ class Application(Gtk.Application):
         self.cmd_opts = options
         self.settings = self.win = None
 
-        # Check compile time features of rmlint that we need later.
-        if not have_feature('replay'):
-            LOGGER.error('No support for +replay in rmlint binary.')
-            LOGGER.error('Please recompile with --with-json-glib…')
-            LOGGER.error('…and `json-glib-1.0` installed on your system.')
-            sys.exit(-1)
-
     def do_activate(self, **kw):
         Gtk.Application.do_activate(self, **kw)
         self.win.present()
