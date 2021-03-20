@@ -662,21 +662,6 @@ static void rm_tm_output_file(RmTreeMerger *self, RmFile *file) {
     g_hash_table_remove(self->free_map, file);
 }
 
-static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
-    for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
-        file->twin_count = -1;
-        rm_tm_output_file(self, file);
-    }
-
-    /* Recursively propagate to children */
-    for(GList *iter = directory->children.head; iter; iter = iter->next) {
-        RmDirectory *child = iter->data;
-        rm_tm_write_unfinished_cksums(self, child);
-    }
-}
-
 static int rm_tm_sort_paths(const RmDirectory *da, const RmDirectory *db,
                             _UNUSED RmTreeMerger *self) {
     return da->depth - db->depth;
@@ -912,11 +897,6 @@ static void rm_tm_extract(RmTreeMerger *self) {
                     mask->is_original = true;
                 }
             }
-
-            if(self->session->cfg->write_unfinished) {
-                rm_tm_write_unfinished_cksums(self, directory);
-            }
-
         }
 
         rm_tm_output_group(self, &file_adaptor_group);

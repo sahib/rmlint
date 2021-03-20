@@ -447,7 +447,6 @@ static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
     session->cfg->write_cksum_to_xattr = true;
     session->cfg->read_cksum_from_xattr= true;
     session->cfg->clear_xattr_fields = false;
-    session->cfg->write_unfinished = true;
     return true;
 }
 
@@ -1487,7 +1486,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"sweep-files"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
         {"threads-per-disk"       , 0   , HIDDEN           , G_OPTION_ARG_INT      , &cfg->threads_per_disk       , "Specify number of reader threads per physical disk"          , NULL}   ,
-        {"write-unfinished"       , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums"                                 , NULL}   ,
+        {"write-unfinished"       , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums (deprecated)"                    , NULL}   ,
         {"hash-uniques"           , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_uniques           , "Hash (whole of) unique files too (for json or xattr output)" , NULL}   ,
         {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
         {"xattr-read"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr  , "Read cached checksums from file attributes"                  , NULL}   ,
@@ -1601,6 +1600,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         error = g_error_new(
             RM_ERROR_QUARK, 0,
             _("--replay (-Y) is incompatible with --dedupe or --is-reflink")
+        ); goto cleanup;
+    }
+
+    if(cfg->write_unfinished) {
+        error = g_error_new(
+            RM_ERROR_QUARK, 0,
+            _("--write-unfinished is deprecated, use --hash-uniques")
         ); goto cleanup;
     }
 

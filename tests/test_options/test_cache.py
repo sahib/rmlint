@@ -24,23 +24,29 @@ def create_files():
     create_file('c' * 2, '4.c')
     create_file('c' * 2, '4.d')
 
-    # duplicate_dirs + with --write_unfinished
+    # duplicate_dirs + with --hash-uniques
     create_file('x', 'dir_a/1')
     create_file('x', 'dir_b/1')
 
 
 def check(data, write_cache):
-    unfinished = [p['path'] for p in data if p['type'] == 'unique_file']
+    unique = [p['path'] for p in data if p['type'] == 'unique_file']
     dupe_files = [p['path'] for p in data if p['type'] == 'duplicate_file']
     dupe_trees = [p['path'] for p in data if p['type'] == 'duplicate_dir']
+    files_in_dupe_dirs = [p['path'] for p in data if p['type'] == 'part_of_directory']
 
     path_in = lambda name, paths: os.path.join(TESTDIR_NAME, name) in paths
 
     if write_cache:
-        assert len(unfinished) == 3
-        assert path_in('1.b', unfinished)
-        assert path_in('dir_a/1', unfinished)
-        assert path_in('dir_b/1', unfinished)
+        assert len(unique) == 3
+        assert path_in('3.a', unique)
+        assert path_in('3.a_', unique)
+        assert path_in('1.b', unique)
+
+        assert len(files_in_dupe_dirs) == 2
+        assert path_in('dir_a/1', files_in_dupe_dirs)
+        assert path_in('dir_b/1', files_in_dupe_dirs)
+
 
     assert len(dupe_trees) == 2
     assert path_in('dir_a', dupe_trees)
@@ -63,7 +69,7 @@ def test_xattr_basic():
     for _ in range(2):
         for write_cache in True, False:
             if write_cache:
-                head, *data, footer = run_rmlint('-U -D -S pa --xattr-write')
+                head, *data, footer = run_rmlint('--hash-uniques -D -S pa --xattr-write')
             else:
                 head, *data, footer = run_rmlint('-D -S pa --xattr-read')
 
@@ -105,14 +111,14 @@ def test_xattr_detail(extra_opts):
                 b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
         assert xattr_1 == xattr_2
 
-        # no --write-unfinished given.
+        # no --hash-uniques given.
         assert xattr_3 == {}
 
         # Repeating the caching option should have no effect on the output.
         for _ in range(10):
-            head, *data, footer = run_rmlint(base_options + ' --xattr')
-            # one more due to the unique_file
-            assert len(data) == 3
+            head, *data, footer = run_rmlint(base_options + ' --xattr --hash-uniques')
+            # three more due to the two unique_file's and also the device image
+            assert len(data) == 5
 
             xattr_1 = must_read_xattr(path_1)
             xattr_2 = must_read_xattr(path_2)
@@ -121,13 +127,15 @@ def test_xattr_detail(extra_opts):
                     b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
             assert xattr_1 == xattr_2
 
-            # --write-unfinished will also write the unfinished one.
+            # --hash-uniques will also write the uniques.
             xattr_3 = must_read_xattr(path_3)
-            assert xattr_3 == {}
+            assert xattr_3["user.rmlint.blake2b.cksum"] == \
+                    b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
 
             # unique file which was not hashed -> does not need to be touched.
             xattr_4 = must_read_xattr(path_4)
-            assert xattr_4 == {}
+            assert xattr_4["user.rmlint.blake2b.cksum"] == \
+                    b'b8c25c0482c3323cd3fc544cd9e0fb05eee191aedce56e307d1ea1af96f96fe63d2ac82b0a3ba5c42b7b58da92cd438065b25a51170f183889651419a242d24f\x00'
 
         # Try clearing the attributes:
         head, *data, footer = run_rmlint(base_options + '--xattr-clear')

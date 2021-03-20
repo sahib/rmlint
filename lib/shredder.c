@@ -763,13 +763,6 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
 
     bool needs_free = !(cfg->cache_file_structs) || force_free;
 
-    /* May not free though when unfinished checksums are written.
-     * Those are freed by the output module.
-     */
-    if(cfg->write_unfinished) {
-        needs_free = false;
-    }
-
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
                         GUINT_TO_POINTER(needs_free));
