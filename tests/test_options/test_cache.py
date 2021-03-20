@@ -107,27 +107,62 @@ def test_xattr_detail(extra_opts):
         xattr_1 = must_read_xattr(path_1)
         xattr_2 = must_read_xattr(path_2)
         xattr_3 = must_read_xattr(path_3)
+        xattr_4 = must_read_xattr(path_4)
         assert xattr_1["user.rmlint.blake2b.cksum"] == \
                 b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
         assert xattr_1 == xattr_2
 
-        # no --hash-uniques given.
+        # no --hash-unatched given.
         assert xattr_3 == {}
 
-        # Repeating the caching option should have no effect on the output.
+        # no --hash-uniques given.
+        assert xattr_4 == {}
+
+        # Run several times with --hash-unmatched.
+        for _ in range(10):
+            head, *data, footer = run_rmlint(base_options + ' --xattr --hash-unmatched')
+            # one more due to the size twin
+            assert len(data) == 3
+
+            xattr_1 = must_read_xattr(path_1)
+            xattr_2 = must_read_xattr(path_2)
+            xattr_3 = must_read_xattr(path_3)
+            xattr_4 = must_read_xattr(path_4)
+            assert xattr_1["user.rmlint.blake2b.cksum"] == \
+                    b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
+            assert xattr_1 == xattr_2
+
+            # size-twin with --hash-unmatched.
+            xattr_3 = must_read_xattr(path_3)
+            assert xattr_3["user.rmlint.blake2b.cksum"] == \
+                    b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
+
+            # unique-length file which was not hashed -> does not need to be touched.
+            assert xattr_4 == {}
+
+        # Try clearing the attributes:
+        head, *data, footer = run_rmlint(base_options + '--xattr-clear')
+        assert len(data) == 2
+        assert must_read_xattr(path_1) == {}
+        assert must_read_xattr(path_2) == {}
+        assert must_read_xattr(path_3) == {}
+        assert must_read_xattr(path_4) == {}
+
+        # Run several times with --hash-uniques.
         for _ in range(10):
             head, *data, footer = run_rmlint(base_options + ' --xattr --hash-uniques')
-            # three more due to the two unique_file's and also the device image
+            # two more due to the 'longer' file and also the device image
             assert len(data) == 5
 
             xattr_1 = must_read_xattr(path_1)
             xattr_2 = must_read_xattr(path_2)
             xattr_3 = must_read_xattr(path_3)
+            xattr_4 = must_read_xattr(path_4)
             assert xattr_1["user.rmlint.blake2b.cksum"] == \
                     b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
             assert xattr_1 == xattr_2
 
-            # --hash-uniques will also write the uniques.
+            # size-twin with --hash-unmatched.
             xattr_3 = must_read_xattr(path_3)
             assert xattr_3["user.rmlint.blake2b.cksum"] == \
                     b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
@@ -137,10 +172,3 @@ def test_xattr_detail(extra_opts):
             assert xattr_4["user.rmlint.blake2b.cksum"] == \
                     b'b8c25c0482c3323cd3fc544cd9e0fb05eee191aedce56e307d1ea1af96f96fe63d2ac82b0a3ba5c42b7b58da92cd438065b25a51170f183889651419a242d24f\x00'
 
-        # Try clearing the attributes:
-        head, *data, footer = run_rmlint(base_options + '--xattr-clear')
-        assert len(data) == 2
-        assert must_read_xattr(path_1) == {}
-        assert must_read_xattr(path_2) == {}
-        assert must_read_xattr(path_3) == {}
-        assert must_read_xattr(path_4) == {}

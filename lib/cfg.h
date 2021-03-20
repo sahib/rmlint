@@ -94,6 +94,7 @@ typedef struct RmCfg {
     gboolean read_stdin0;
     gboolean backup;
     gboolean hash_uniques;
+    gboolean hash_unmatched;
 
     int permissions;
 

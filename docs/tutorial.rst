@@ -795,14 +795,19 @@ Here's just a list of options that are nice to know, but are not essential:
   Especially keep in mind that you need to have write access to the files for this to work.
 
   Note that the above example will only save checksums for duplicate files.
-  Alternatively, with the ``--hash-uniques`` option, checksums are calulated
-  and saved in xattributes for all files.  This may make the first run very
-  slow but will greatly speed up future runs.
+  Alternatively, with the ``--hash-unmatched`` options, checksums are calulated
+  and saved in xattributes for all files that have "size twins", ie files of
+  the same length.  This may make the first run very slow but will greatly speed up
+  future runs.
 
   .. code-block:: python
 
-    $ rmlint large_dataset/ --xattr --hash-uniques
+    $ rmlint large_dataset/ --xattr --hash-unmatched
     $ rmlint large_dataset/ --xattr
+
+  There is also the the ``--hash-uniques`` option, which is similar to
+  ``--hash-unmatched`` but also hashes files with no size twins.  This will be
+  even slower than ``--hash-unmatched`` on the first run.
 
 - ``-r`` (``--hidden``): Include hidden files and directories.  The default
   is to ignore these, to save you from destroying git repositories (or similar

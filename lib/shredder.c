@@ -693,7 +693,8 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
         return;
     }
 
-    if(g_queue_get_length(group) <= 1 && !session->cfg->hash_uniques) {
+    if(g_queue_get_length(group) <= 1 &&
+        !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
         /* Do not write incomplete unique file checksums */
         return;
     }
@@ -843,14 +844,37 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
  * Assume group already protected by group_lock.
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
-    if(group->status == RM_SHRED_GROUP_DORMANT
-        && (rm_shred_group_qualifies(group) || group->session->cfg->hash_uniques)
-        && group->hash_offset < group->file_size
-        && ((group->session->cfg->hash_uniques && group->n_unhashed_clusters > 0)
-            || group->n_clusters > 1
-            || (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
-        /* group can go active */
+    if(group->status != RM_SHRED_GROUP_DORMANT) {
+        // group already hashing
+        return;
+    }
+    if(group->hash_offset == group->file_size) {
+        //hashes complete
+        return;
+    }
+    if(!rm_shred_group_qualifies(group) && !group->session->cfg->hash_uniques && !group->session->cfg->hash_unmatched) {
+        // no hashing requred (yet)
+        return;
+    }
+
+    if(group->session->cfg->hash_uniques && group->n_unhashed_clusters > 0) {
+        // hash any files with cfg->hash_uniques
         group->status = RM_SHRED_GROUP_START_HASHING;
+    }
+    else if (group->n_clusters > 1) {
+        // we have potential match candidates; start hashing
+        group->status = RM_SHRED_GROUP_START_HASHING;
+    }
+    else if(group->n_inodes == 1 && group->n_unhashed_clusters > 0 && group->session->cfg->merge_directories) {
+        /* special case of hardlinked files that still need hashing to help identify matching directories */
+        group->status = RM_SHRED_GROUP_START_HASHING;
+    }
+    else if (group->session->cfg->hash_unmatched && group->held_files->length > 0) {
+        RmFile* head = group->held_files->head->data;
+        if(head->digest) {
+            // with hash_unmatched, keep going once we start
+            group->status = RM_SHRED_GROUP_START_HASHING;
+        }
     }
 }
 

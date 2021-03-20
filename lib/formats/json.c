@@ -263,7 +263,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
-            if(!file->digest || !session->cfg->hash_uniques) {
+            if(!file->digest || !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
                 return;
             }
         }
