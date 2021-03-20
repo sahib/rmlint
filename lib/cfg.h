@@ -83,7 +83,7 @@ typedef struct RmCfg {
     gboolean write_cksum_to_xattr;
     gboolean read_cksum_from_xattr;
     gboolean clear_xattr_fields;
-    gboolean write_unfinished;
+    gboolean write_unfinished; // deprecated
     gboolean build_fiemap;
     gboolean use_buffered_read;
     gboolean fake_fiemap;
@@ -93,6 +93,8 @@ typedef struct RmCfg {
     gboolean read_stdin;
     gboolean read_stdin0;
     gboolean backup;
+    gboolean hash_uniques;
+    gboolean hash_unmatched;
 
     int permissions;
 

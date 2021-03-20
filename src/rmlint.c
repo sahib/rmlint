@@ -30,7 +30,7 @@
 #include "../lib/api.h"
 #include "../lib/config.h"
 
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
+#if !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
 #endif
 

@@ -20,7 +20,6 @@ def build_config_template(target, source, env):
             INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
             HAVE_LIBINTL=env['HAVE_GETTEXT'],
             HAVE_LIBELF=env['HAVE_LIBELF'],
-            HAVE_JSON_GLIB=env['HAVE_JSON_GLIB'],
             HAVE_GIO_UNIX=env['HAVE_GIO_UNIX'],
             HAVE_FIEMAP=env['HAVE_FIEMAP'],
             HAVE_XATTR=env['HAVE_XATTR'],

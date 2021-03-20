@@ -67,14 +67,15 @@ def test_path_starting_with_dash():
 
     try:
         os.chdir(TESTDIR_NAME)
-        data = check_output(
+        proc = subprocess.Popen(
             [cwd + '/rmlint', '-o', 'json', '-S', 'a', '--', subdir],
-            stderr=STDOUT
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE
         )
+        data, _ = proc.communicate("")
+        head, *data, footer = json.loads(data.decode('utf-8'))
     finally:
         os.chdir(cwd)
-
-    head, *data, footer = json.loads(data.decode('utf-8'))
 
     assert data[0]['path'].endswith('a')
     assert data[1]['path'].endswith('b')

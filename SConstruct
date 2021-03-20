@@ -515,7 +515,7 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'gui']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -599,17 +599,11 @@ conf.env['HAVE_BLKID'] = 0
 conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
 
 conf.env['HAVE_JSON_GLIB'] = 0
-conf.check_pkg('json-glib-1.0', 'HAVE_JSON_GLIB', required=False)
+conf.check_pkg('json-glib-1.0', 'HAVE_JSON_GLIB', required=True)
 
-if GetOption('with_json-glib') is False:
-    conf.env['HAVE_JSON_GLIB'] = 0
-
-packages = ['glib-2.0']
+packages = ['glib-2.0', 'json-glib-1.0']
 if conf.env['HAVE_BLKID']:
     packages.append('blkid')
-
-if conf.env['HAVE_JSON_GLIB']:
-    packages.append('json-glib-1.0')
 
 if conf.env['HAVE_GIO_UNIX']:
     packages.append('gio-unix-2.0')
@@ -885,7 +879,6 @@ if 'config' in COMMAND_LINE_TARGETS:
     Support for SHA512 (needs glib >= 2.31)               : {sha512}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
-    Support for reading json caches (needs json-glib)     : {json_glib}
     Checking for proper support of big files >= 4GB       : {bigfiles}
         (needs either sizeof(off_t) >= 8 ...)             : {bigofft}
         (... or presence of stat64)                       : {bigstat}
@@ -916,7 +909,6 @@ Type 'scons' to actually compile rmlint now. Good luck.
             locale=yesno(env['HAVE_LIBINTL']),
             msgfmt=yesno(env['HAVE_MSGFMT']),
             xattr=yesno(env['HAVE_XATTR']),
-            json_glib=yesno(env['HAVE_JSON_GLIB']),
             nonrotational=yesno(env['HAVE_GIO_UNIX'] & env['HAVE_BLKID']),
             gio_unix=yesno(env['HAVE_GIO_UNIX']),
             blkid=yesno(env['HAVE_BLKID']),

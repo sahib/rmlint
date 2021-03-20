@@ -38,7 +38,6 @@
 #include <math.h>
 #include <string.h>
 
-#if HAVE_JSON_GLIB
 #include <json-glib/json-glib.h>
 
 typedef struct RmUnpackedDirectory {
@@ -560,7 +559,7 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
     case RM_LINT_TYPE_BADUGID:
         return cfg->find_badids;
     case RM_LINT_TYPE_UNIQUE_FILE:
-        return cfg->write_unfinished;
+        return cfg->hash_uniques || cfg->hash_unmatched;
     case RM_LINT_TYPE_PART_OF_DIRECTORY:
         return true;
     case RM_LINT_TYPE_UNKNOWN:
@@ -961,22 +960,3 @@ void rm_parrot_cage_close(RmParrotCage *cage) {
     }
 }
 
-#else
-
-bool rm_parrot_cage_load(_UNUSED RmParrotCage *cage, _UNUSED const char *json_path,
-                         _UNUSED bool is_prefd) {
-    return false;
-}
-
-void rm_parrot_cage_open(_UNUSED RmParrotCage *cage, _UNUSED RmSession *session) {
-    rm_log_error_line(_("json-glib is needed for using --replay."));
-    rm_log_error_line(_("Please recompile `rmlint` with it installed."));
-}
-
-void rm_parrot_cage_flush(_UNUSED RmParrotCage *cage) {
-}
-
-void rm_parrot_cage_close(_UNUSED RmParrotCage *cage) {
-}
-
-#endif
