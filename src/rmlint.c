@@ -30,6 +30,7 @@
 #include "../lib/api.h"
 #include "../lib/config.h"
 #include "../lib/gui.h"
+#include "../lib/hash-utility.h"
 
 #if !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
@@ -148,6 +149,7 @@ int main(int argc, const char **argv) {
 #endif
 
     maybe_run_alt_main(argc, argv, "--gui", "shredder", &rm_gui_launch);
+    maybe_run_alt_main(argc, argv, "--hash", "rmlint-hasher", &rm_hasher_main);
 
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
