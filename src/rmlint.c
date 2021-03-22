@@ -29,6 +29,7 @@
 
 #include "../lib/api.h"
 #include "../lib/config.h"
+#include "../lib/gui.h"
 
 #if !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
@@ -101,13 +102,28 @@ static void i18n_init(void) {
 #endif
 }
 
+static void maybe_run_alt_main(int argc, const char **argv, char *match_first,
+                               char *alt_main_name, int (*alt_main)(int, const char **)) {
+    if(argc < 2) {
+        return;
+    }
+    if(g_strcmp0(match_first, argv[1]) == 0) {
+        argv[1] = alt_main_name;
+        exit(alt_main(argc - 1, &argv[1]));
+    }
+    for(int i = 2; i < argc; i++) {
+        if(g_strcmp0(match_first, argv[i]) == 0) {
+            rm_log_error_line("%s must be first argument", match_first);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 int main(int argc, const char **argv) {
     int exit_state = EXIT_FAILURE;
     RM_LOG_INIT;
-
     RmCfg cfg;
     rm_cfg_set_default(&cfg);
-
     RmSession session;
     rm_session_init(&session, &cfg);
 
@@ -130,6 +146,8 @@ int main(int argc, const char **argv) {
     /* Very old glib. Debian, Im looking at you. */
     g_type_init();
 #endif
+
+    maybe_run_alt_main(argc, argv, "--gui", "shredder", &rm_gui_launch);
 
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
