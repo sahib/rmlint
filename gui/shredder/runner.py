@@ -137,7 +137,7 @@ def map_cfg(option, val):
 
 
 def _create_rmlint_process(
-        cfg, cwd, untagged, tagged, replay_path=None, outputs=None
+        cfg, cwd, untagged, tagged, keep_cached_originals, replay_path=None, outputs=None
 ):
     """Create a correctly configured rmlint GSuprocess for gui purposes.
     If `replay_path` is not None, "--replay `replay_path`" will be appended.
@@ -212,6 +212,9 @@ def _create_rmlint_process(
         if tagged:
             cmdline.append('//')
             cmdline += tagged
+
+        if keep_cached_originals:
+            cmdline += ['--keep-cached-originals']
 
         LOGGER.info('Running: ' + ' '.join(cmdline))
         process = launcher.spawnv(cmdline)
@@ -331,7 +334,8 @@ class Runner(GObject.Object):
         self.was_replayed = False
         self.process = _create_rmlint_process(
             self.settings, self._tmpdir.name,
-            self.untagged_paths, self.tagged_paths
+            self.untagged_paths, self.tagged_paths,
+            False
         )
         self._data_stream = Gio.DataInputStream.new(
             self.process.get_stdout_pipe()
@@ -395,6 +399,7 @@ class Runner(GObject.Object):
             self.settings,
             self._tmpdir.name,
             self.untagged_paths, self.tagged_paths,
+            True,
             replay_path=replay_path,
             outputs=[
                 ('sh', self.get_sh_path()),
