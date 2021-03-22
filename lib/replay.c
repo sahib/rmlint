@@ -696,9 +696,22 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
     }
 }
 
+static int rm_parrot_sort(RmFile *a, RmFile *b, RmSession *session) {
+    if(session->cfg->keep_cached_originals) {
+        if(a->is_original && !b->is_original) {
+            return -1;
+        }
+        if(!a->is_original && b->is_original) {
+            return 1;
+        }
+    }
+    return rm_shred_cmp_orig_criteria(a, b, session);
+}
+
 static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool pack_directories) {
     RmCfg *cfg = cage->session->cfg;
 
+    // maybe kick out some files due to new mtime limits
     if(cfg->filter_mtime) {
         gsize older = 0;
         for(GList *iter = group->head; iter; iter = iter->next) {
@@ -712,6 +725,7 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
         }
     }
 
+    // maybe kick out some files due to filename criteria
     if(cfg->match_with_extension
     || cfg->match_without_extension
     || cfg->match_basename
@@ -728,20 +742,23 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
     rm_parrot_fix_must_match_tagged(cage, group);
     rm_parrot_fix_duplicate_entries(cage, group);
 
+    // put group back into proper order
     g_queue_sort(
         group,
-        (GCompareDataFunc)rm_shred_cmp_orig_criteria,
+        (GCompareDataFunc)rm_parrot_sort,
         cage->session
     );
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
+        // reassign original status
         if(file == group->head->data
         || (cfg->keep_all_tagged && file->is_prefd)
         || (cfg->keep_all_untagged && !file->is_prefd)) {
             file->is_original = true;
-        } else {
+        }
+        else if(!cfg->keep_cached_originals) {
             file->is_original = false;
         }
 
@@ -752,7 +769,28 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
         && file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
             file->is_original = false;
         }
+    }
 
+    // check we have at least one 'original' file
+    bool have_original = false;
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if(file->is_original) {
+            have_original = true;
+            break;
+        }
+    }
+
+    if(!have_original && group->length > 0) {
+        RmFile *first = group->head->data;
+        if(first->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE
+            || first->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            first->is_original = true;
+        }
+    }
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
         rm_parrot_update_stats(cage, file);
         file->twin_count = group->length;
 
@@ -936,7 +974,7 @@ void rm_parrot_cage_flush(RmParrotCage *cage) {
 
     if(pack_directories) {
         cage->tree_merger = rm_tm_new(cage->session);
-        rm_tm_set_callback(cage->tree_merger, (RmTreeMergeOutputFunc)rm_parrot_cage_output_treemerge_results, cage); 
+        rm_tm_set_callback(cage->tree_merger, (RmTreeMergeOutputFunc)rm_parrot_cage_output_treemerge_results, cage);
     }
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
