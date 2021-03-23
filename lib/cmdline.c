@@ -42,6 +42,7 @@
 #include "cmdline.h"
 #include "formats.h"
 #include "hash-utility.h"
+#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
 #include "replay.h"
@@ -336,12 +337,6 @@ static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
     return true;
 }
 
-static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
-                                                  [1] = G_LOG_LEVEL_ERROR,
-                                                  [2] = G_LOG_LEVEL_WARNING,
-                                                  [3] = G_LOG_LEVEL_MESSAGE |
-                                                        G_LOG_LEVEL_INFO,
-                                                  [4] = G_LOG_LEVEL_DEBUG};
 static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
                                          bool null_separated) {
     char delim = null_separated ? 0 : '\n';
@@ -789,13 +784,6 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
     return success;
 }
 
-static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
-    cfg->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-        verbosity_counter,
-        1,
-        (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
-}
-
 static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
                                          GError **error) {
     /* Handle the paranoia option */
@@ -931,21 +919,6 @@ static gboolean rm_cmd_parse_no_progress(_UNUSED const char *option_name,
                                          _UNUSED GError **error) {
     rm_fmt_clear(session->formats);
     rm_cmd_set_default_outputs(session);
-    rm_cmd_set_verbosity_from_cnt(session->cfg, session->verbosity_count);
-    return true;
-}
-
-static gboolean rm_cmd_parse_loud(_UNUSED const char *option_name,
-                                  _UNUSED const gchar *count, RmSession *session,
-                                  _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->verbosity_count);
-    return true;
-}
-
-static gboolean rm_cmd_parse_quiet(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *count, RmSession *session,
-                                   _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, --session->verbosity_count);
     return true;
 }
 
@@ -1284,11 +1257,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"xattr"            , 'C' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                    ,
 
         /* Non-trivial switches */
-        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
-        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
-        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
-        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)   , _("Re-output a json file")                , "path/to/rmlint.json"} ,
-        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)    , _("Test for equality of PATHS")           , "PATHS"}           ,
+        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress)    , _("Enable progressbar")                   , NULL} ,
+        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_louder  , _("Be more verbose (-vvv for much more)") , NULL} ,
+        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_quieter , _("Be less verbose (-VVV for much less)") , NULL} ,
+        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)      , _("Re-output a json file")                , "path/to/rmlint.json"} ,
+        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)       , _("Test for equality of PATHS")           , "PATHS"}           ,
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
@@ -1386,9 +1359,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     };
 
     /* clang-format on */
-
-    /* Initialize default verbosity */
-    rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot set current working directory"));
@@ -1568,7 +1538,7 @@ cleanup:
 
     if(cfg->progress_enabled) {
         /* Set verbosity to minimal */
-        rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
+        rm_logger_set_verbosity(1);
     }
 
     g_option_context_free(option_parser);

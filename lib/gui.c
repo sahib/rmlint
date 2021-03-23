@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "logger.h"
 
 /*
  * Debian and Ubuntu based distributions fuck up setuptools

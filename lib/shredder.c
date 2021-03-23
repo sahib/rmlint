@@ -34,6 +34,7 @@
 #include "hasher.h"
 
 #include "formats.h"
+#include "logger.h"
 #include "preprocess.h"
 #include "utilities.h"
 

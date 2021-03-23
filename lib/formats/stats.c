@@ -24,6 +24,7 @@
  */
 
 #include "../formats.h"
+#include "../logger.h"
 
 #include <glib.h>
 #include <search.h>

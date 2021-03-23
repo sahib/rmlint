@@ -28,6 +28,7 @@
 #include "config.h"
 #include "file.h"
 #include "formats.h"
+#include "logger.h"
 #include "preprocess.h"
 #include "session.h"
 #include "shredder.h"

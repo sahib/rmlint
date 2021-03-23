@@ -30,40 +30,12 @@
 #include "../lib/api.h"
 #include "../lib/config.h"
 #include "../lib/gui.h"
+#include "../lib/logger.h"
 #include "../lib/hash-utility.h"
 
 #if !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
 #endif
-
-static char *remove_color_escapes(char *message) {
-    char *dst = message;
-    for(char *src = message; src && *src; src++) {
-        if(*src == '\x1b') {
-            src = strchr(src, 'm');
-        } else {
-            *dst++ = *src;
-        }
-    }
-
-    if(dst) {
-        *dst = 0;
-    }
-    return message;
-}
-
-static void logging_callback(_UNUSED const gchar *log_domain,
-                             GLogLevelFlags log_level,
-                             const gchar *message,
-                             gpointer user_data) {
-    RmSession *session = user_data;
-    if(session->cfg->verbosity >= log_level) {
-        if(!session->cfg->with_stderr_color) {
-            message = remove_color_escapes((char *)message);
-        }
-        fputs(message, stderr);
-    }
-}
 
 static void signal_handler(int signum) {
     switch(signum) {
@@ -129,7 +101,7 @@ int main(int argc, const char **argv) {
     rm_session_init(&session, &cfg);
 
     /* call logging_callback on every message */
-    g_log_set_default_handler(logging_callback, &session);
+    g_log_set_default_handler(rm_logger_callback, &session);
 
     i18n_init();
 

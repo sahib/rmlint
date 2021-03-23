@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "logger.h"
 #include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.

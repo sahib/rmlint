@@ -24,6 +24,7 @@
  */
 
 #include "../formats.h"
+#include "../logger.h"
 #include "../utilities.h"
 #include "../preprocess.h"
 
