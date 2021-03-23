@@ -83,8 +83,66 @@
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 
 ////////////////////////////////////
+//       SYSCALL WRAPPERS         //
+////////////////////////////////////
+
+int rm_sys_stat(const char *path, RmStat *buf)  {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return stat64(path, buf);
+#else
+    return stat(path, buf);
+#endif
+}
+
+int rm_sys_lstat(const char *path, RmStat *buf) {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return lstat64(path, buf);
+#else
+    return lstat(path, buf);
+#endif
+}
+
+
+int rm_sys_open(const char *path, int mode) {
+#if HAVE_STAT64
+#ifdef O_LARGEFILE
+    mode |= O_LARGEFILE;
+#endif
+#endif
+
+    return open(path, mode, (S_IRUSR | S_IWUSR));
+}
+
+
+void rm_sys_close(int fd) {
+    if(close(fd) == -1) {
+        rm_log_perror("close(2) failed");
+    }
+}
+
+gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
+                                   RmOff offset) {
+#if RM_IS_APPLE || RM_IS_CYGWIN
+    if(lseek(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+        return 0;
+    }
+    return readv(fd, iov, iovcnt);
+#elif RM_PLATFORM_32
+    if(lseek64(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+        return 0;
+    }
+    return readv(fd, iov, iovcnt);
+#else
+    return preadv(fd, iov, iovcnt, offset);
+#endif
+}
+
+////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
+
 
 char *rm_util_strsub(const char *string, const char *subs, const char *with) {
     gchar *result = NULL;
