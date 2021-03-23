@@ -93,15 +93,19 @@ static void maybe_run_alt_main(int argc, const char **argv, char *match_first,
 }
 
 int main(int argc, const char **argv) {
-    int exit_state = EXIT_FAILURE;
-    RM_LOG_INIT;
-    RmCfg cfg;
-    rm_cfg_set_default(&cfg);
-    RmSession session;
-    rm_session_init(&session, &cfg);
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+    /* Very old glib. Debian, Im looking at you. */
+    g_type_init();
+#endif
 
+    int exit_state = EXIT_FAILURE;
+
+    RM_LOG_INIT;
     /* call logging_callback on every message */
-    g_log_set_default_handler(rm_logger_callback, &session);
+    g_log_set_default_handler(rm_logger_callback, NULL);
+
+    maybe_run_alt_main(argc, argv, "--gui", "shredder", &rm_gui_launch);
+    maybe_run_alt_main(argc, argv, "--hash", "rmlint-hasher", &rm_hasher_main);
 
     i18n_init();
 
@@ -115,13 +119,12 @@ int main(int argc, const char **argv) {
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
 
-    maybe_run_alt_main(argc, argv, "--gui", "shredder", &rm_gui_launch);
-    maybe_run_alt_main(argc, argv, "--hash", "rmlint-hasher", &rm_hasher_main);
+    RmCfg cfg;
+    rm_cfg_set_default(&cfg);
+    RmSession session;
+    rm_session_init(&session, &cfg);
+
 
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
