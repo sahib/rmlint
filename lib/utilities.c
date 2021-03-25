@@ -1188,7 +1188,7 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
 
 #endif
 
-static gboolean rm_util_is_path_double(char *path1, char *path2) {
+static gboolean rm_util_is_path_double(const char *path1, const char *path2) {
     char *basename1 = rm_util_basename(path1);
     char *basename2 = rm_util_basename(path2);
     return (strcmp(basename1, basename2) == 0 &&
@@ -1223,7 +1223,7 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
     return result;
 }
 
-RmLinkType rm_util_link_type(char *path1, char *path2) {
+RmLinkType rm_util_link_type(const char *path1, const char *path2) {
 #if _RM_OFFSET_DEBUG
     rm_log_debug_line("Checking link type for %s vs %s", path1, path2);
 #endif

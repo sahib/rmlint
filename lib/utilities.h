@@ -389,7 +389,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
  * @brief Test if two files have identical fiemaps.
  * @retval see RmOffsetsMatchCode enum definition.
  */
-RmLinkType rm_util_link_type(char *path1, char *path2);
+RmLinkType rm_util_link_type(const char *path1, const char *path2);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //
