@@ -33,13 +33,23 @@
 
 /**
  * @brief
+ *
+ * @param argc arg count passed from main
+ * @param argv command line args; argv[0] is normally "rmlint-dedupe"
+ * @retval EXIT_SUCCESS or EXIT_FAILURE
+ *
+ **/
+int rm_dedupe_main(int argc, const char **argv);
+
+/**
+ * @brief
  * the linux OS doesn't provide any easy way to check if two files are
  * reflinks / clones (eg:
  * https://unix.stackexchange.com/questions/263309/how-to-verify-a-file-copy-is-reflink-cow
  *
  * `rmlint --is-reflink file_a file_b` provides this functionality rmlint.
  * return values:
- * 
+ *
  *
  * @param argc arg count passed from main
  * @param argv command line args; argv[0] is normally "rmlint-is-reflink"

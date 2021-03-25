@@ -26,6 +26,7 @@
 #include <locale.h>
 #include <stdlib.h>
 #include <string.h>
+#include<assert.h>
 
 #include "../lib/api.h"
 #include "../lib/config.h"
@@ -111,6 +112,8 @@ int main(int argc, const char **argv) {
 
     maybe_run_alt_main(argc, argv, "--is-reflink", "rmlint-is-reflink", &rm_is_reflink_main);
 
+    maybe_run_alt_main(argc, argv, "--dedupe", "rmlint-dedupe", &rm_dedupe_main);
+
     i18n_init();
 
     struct sigaction sa;
@@ -133,11 +136,9 @@ int main(int argc, const char **argv) {
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
-        if(cfg.dedupe) {
-            exit_state = rm_session_dedupe_main(&cfg);
-        } else {
-            exit_state = rm_cmd_main(&session);
-        }
+        assert(!cfg.dedupe);
+        assert(!cfg.is_reflink);
+        exit_state = rm_cmd_main(&session);
     }
 
     rm_session_clear(&session);
