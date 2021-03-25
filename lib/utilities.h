@@ -38,7 +38,7 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
-/* return values for rm_offsets_match */
+/* return values for rm_util_link_type */
 typedef enum RmLinkType {
     RM_LINK_REFLINK         = EXIT_SUCCESS,
     RM_LINK_NONE            = EXIT_FAILURE,
@@ -387,7 +387,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 
 /**
  * @brief Test if two files have identical fiemaps.
- * @retval see RmOffsetsMatchCode enum definition.
+ * @retval see RmLinkType enum definition.
  */
 RmLinkType rm_util_link_type(const char *path1, const char *path2);
 

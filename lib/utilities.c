@@ -32,6 +32,7 @@
 
 #include "config.h"
 #include "logger.h"
+#include "reflink.h"
 #include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.
@@ -1308,87 +1309,8 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2) {
         RM_RETURN(RM_LINK_SYMLINK);
     }
 
-#if HAVE_FIEMAP
-
-    RmOff logical_current = 0;
-
-    bool is_last_1 = false;
-    bool is_last_2 = false;
-    bool is_inline_1 = false;
-    bool is_inline_2 = false;
-    bool at_least_one_checked = false;
-
-    while(!rm_session_was_aborted()) {
-        RmOff logical_next_1 = 0;
-        RmOff logical_next_2 = 0;
-
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1, &is_inline_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2, &is_inline_2);
-
-        if(is_last_1 != is_last_2) {
-            RM_RETURN(RM_LINK_NONE);
-        }
-
-        if(is_last_1 && is_last_2 && at_least_one_checked) {
-            RM_RETURN(RM_LINK_REFLINK);
-        }
-
-        if(physical_1 != physical_2) {
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
-                              ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
-                              logical_current, physical_1, physical_2);
-#endif
-            RM_RETURN(RM_LINK_NONE);
-        }
-        if(logical_next_1 != logical_next_2) {
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line("File offsets differ after %" G_GUINT64_FORMAT
-                              " bytes: %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
-                              logical_current, logical_next_1, logical_next_2);
-#endif
-            RM_RETURN(RM_LINK_NONE);
-        }
-
-        if(is_inline_1 || is_inline_2) {
-            RM_RETURN(RM_LINK_INLINE_EXTENTS);
-        }
-
-        if(physical_1 == 0) {
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line(
-                "Can't determine whether files are clones");
-#endif
-            RM_RETURN(RM_LINK_ERROR);
-        }
-
-#if _RM_OFFSET_DEBUG
-        rm_log_debug_line("Offsets match at fd1=%d, fd2=%d, logical=%" G_GUINT64_FORMAT ", physical=%" G_GUINT64_FORMAT,
-                          fd1, fd2, logical_current, physical_1);
-#endif
-        if(logical_next_1 <= logical_current) {
-            /* oops we seem to be getting nowhere (this shouldn't really happen) */
-            rm_log_info_line(
-                "rm_util_link_type() giving up: file1_offset_next<=file_offset_current for %s vs %s", path1, path2);
-            RM_RETURN(RM_LINK_ERROR)
-        }
-
-        if(logical_next_1 >= (RmOff)stat1.st_size) {
-            /* phew, we got to the end */
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line("Files are clones (share same data)")
-#endif
-            RM_RETURN(RM_LINK_REFLINK)
-        }
-
-        logical_current = logical_next_1;
-        at_least_one_checked = true;
-    }
-
-    RM_RETURN(RM_LINK_ERROR);
-#else
-    RM_RETURN(RM_LINK_NONE);
-#endif
+    RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
+    RM_RETURN(reflink_type);
 
 #undef RM_RETURN
 }

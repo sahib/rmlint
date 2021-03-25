@@ -26,6 +26,8 @@
 #ifndef RM_REFLINK_H
 #define RM_REFLINK_H
 
+#include "utilities.h"
+
 /**
  * @file reflink.h
  * @brief Launchers for reflink-related utilities
@@ -58,5 +60,8 @@ int rm_dedupe_main(int argc, const char **argv);
  *
  **/
 int rm_is_reflink_main(int argc, const char **argv);
+
+
+RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size);
 
 #endif /* end of include guard */

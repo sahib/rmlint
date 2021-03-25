@@ -83,6 +83,90 @@
 #endif
 
 
+RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) { 
+#if HAVE_FIEMAP
+
+    RmOff logical_current = 0;
+
+    bool is_last_1 = false;
+    bool is_last_2 = false;
+    bool is_inline_1 = false;
+    bool is_inline_2 = false;
+    bool at_least_one_checked = false;
+
+    while(!rm_session_was_aborted()) {
+        RmOff logical_next_1 = 0;
+        RmOff logical_next_2 = 0;
+
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1, &is_inline_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2, &is_inline_2);
+
+        if(is_last_1 != is_last_2) {
+            return RM_LINK_NONE;
+        }
+
+        if(is_last_1 && is_last_2 && at_least_one_checked) {
+            return RM_LINK_REFLINK;
+        }
+
+        if(physical_1 != physical_2) {
+#if _RM_OFFSET_DEBUG
+            rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
+                              ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, physical_1, physical_2);
+#endif
+            return RM_LINK_NONE;
+        }
+        if(logical_next_1 != logical_next_2) {
+#if _RM_OFFSET_DEBUG
+            rm_log_debug_line("File offsets differ after %" G_GUINT64_FORMAT
+                              " bytes: %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, logical_next_1, logical_next_2);
+#endif
+            return RM_LINK_NONE;
+        }
+
+        if(is_inline_1 || is_inline_2) {
+            return RM_LINK_INLINE_EXTENTS;
+        }
+
+        if(physical_1 == 0) {
+#if _RM_OFFSET_DEBUG
+            rm_log_debug_line(
+                "Can't determine whether files are clones");
+#endif
+            return RM_LINK_ERROR;
+        }
+
+#if _RM_OFFSET_DEBUG
+        rm_log_debug_line("Offsets match at fd1=%d, fd2=%d, logical=%" G_GUINT64_FORMAT ", physical=%" G_GUINT64_FORMAT,
+                          fd1, fd2, logical_current, physical_1);
+#endif
+        if(logical_next_1 <= logical_current) {
+            /* oops we seem to be getting nowhere (this shouldn't really happen) */
+            rm_log_info_line(
+                "rm_util_link_type() giving up: file1_offset_next<=file_offset_current");
+            return RM_LINK_ERROR;
+        }
+
+        if(logical_next_1 >= (guint64)file_size) {
+            /* phew, we got to the end */
+#if _RM_OFFSET_DEBUG
+            rm_log_debug_line("Files are clones (share same data)")
+#endif
+            return RM_LINK_REFLINK;
+        }
+
+        logical_current = logical_next_1;
+        at_least_one_checked = true;
+    }
+
+    return RM_LINK_ERROR;
+#else
+    return RM_LINK_NONE;
+#endif
+}
+
 static void print_usage(GOptionContext *context) {
     char* usage = g_option_context_get_help(context, TRUE, NULL);
     printf("%s", usage);
