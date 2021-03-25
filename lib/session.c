@@ -394,8 +394,8 @@ int rm_session_is_reflink_main(RmCfg *cfg) {
     case RM_LINK_NONE:
         rm_log_debug_line("Offsets differ");
         break;
-    case RM_LINK_MAYBE_REFLINK:
-        rm_log_debug_line("Can't read file offsets (maybe inline extents?)");
+    case RM_LINK_INLINE_EXTENTS:
+        rm_log_debug_line("File(s) have inline extents so can't be reflinked");
         break;
     default:
         break;

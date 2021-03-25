@@ -44,7 +44,7 @@ typedef enum RmLinkType {
     RM_LINK_NONE            = EXIT_FAILURE,
     RM_LINK_NOT_FILE        = 3,
     RM_LINK_WRONG_SIZE      = 4,
-    RM_LINK_MAYBE_REFLINK   = 5,
+    RM_LINK_INLINE_EXTENTS  = 5,
     RM_LINK_SAME_FILE       = 6,
     RM_LINK_PATH_DOUBLE     = 7,
     RM_LINK_HARDLINK        = 8,
@@ -375,7 +375,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last);
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last, bool* is_inline);
 
 /**
  * @brief Lookup the physical offset of a file path at any given offset.

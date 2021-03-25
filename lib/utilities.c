@@ -1068,16 +1068,24 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
     return fm;
 }
 
+static void rm_util_set_nullable_bool(bool *ptr, bool value) {
+    if(ptr != NULL) {
+        *ptr = value;
+    }
+}
+
 /* Return physical (disk) offset of the beginning of the file extent containing the
  * specified logical file_offset.
  * If a pointer to file_offset_next is provided then read fiemap extents until
  * the next non-contiguous extent (fragment) is encountered and writes the corresponding
  * file offset to &file_offset_next.
  * */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last) {
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last, bool *is_inline) {
     RmOff result = 0;
     bool done = FALSE;
     bool first = TRUE;
+    rm_util_set_nullable_bool(is_last, FALSE);
+    rm_util_set_nullable_bool(is_inline, FALSE);
 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
@@ -1123,12 +1131,14 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
                 *file_offset_next = fm_ext.fe_logical + fm_ext.fe_length;
             }
 
+            if(fm_ext.fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
+                rm_util_set_nullable_bool(is_inline, TRUE);
+            }
+
             if(fm_ext.fe_flags & FIEMAP_EXTENT_LAST) {
                 done = TRUE;
 
-                if(is_last != NULL) {
-                    *is_last = TRUE;
-                }
+                rm_util_set_nullable_bool(is_last, TRUE);
             }
 
             if(fm_ext.fe_length <= 0) {
@@ -1159,7 +1169,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL, NULL);
     rm_sys_close(fd);
     return result;
 }
@@ -1167,7 +1177,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 #else /* Probably FreeBSD */
 
 RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
-                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last) {
+                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last, _UNUSED bool *is_inline) {
     return 0;
 }
 
@@ -1304,14 +1314,16 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
 
     bool is_last_1 = false;
     bool is_last_2 = false;
+    bool is_inline_1 = false;
+    bool is_inline_2 = false;
     bool at_least_one_checked = false;
 
     while(!rm_session_was_aborted()) {
         RmOff logical_next_1 = 0;
         RmOff logical_next_2 = 0;
 
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2);
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1, &is_inline_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2, &is_inline_2);
 
         if(is_last_1 != is_last_2) {
             RM_RETURN(RM_LINK_NONE);
@@ -1338,12 +1350,16 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
             RM_RETURN(RM_LINK_NONE);
         }
 
+        if(is_inline_1 || is_inline_2) {
+            RM_RETURN(RM_LINK_INLINE_EXTENTS);
+        }
+
         if(physical_1 == 0) {
 #if _RM_OFFSET_DEBUG
             rm_log_debug_line(
-                "Can't determine whether files are clones (maybe inline extents?)");
+                "Can't determine whether files are clones");
 #endif
-            RM_RETURN(RM_LINK_MAYBE_REFLINK);
+            RM_RETURN(RM_LINK_ERROR);
         }
 
 #if _RM_OFFSET_DEBUG
