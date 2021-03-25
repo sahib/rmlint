@@ -41,7 +41,7 @@
 /* return values for rm_util_link_type */
 typedef enum RmLinkType {
     RM_LINK_REFLINK         = EXIT_SUCCESS,
-    RM_LINK_NONE            = EXIT_FAILURE,
+    RM_LINK_ERROR           = EXIT_FAILURE,
     RM_LINK_NOT_FILE        = 3,
     RM_LINK_WRONG_SIZE      = 4,
     RM_LINK_INLINE_EXTENTS  = 5,
@@ -50,7 +50,7 @@ typedef enum RmLinkType {
     RM_LINK_HARDLINK        = 8,
     RM_LINK_SYMLINK         = 9,
     RM_LINK_XDEV            = 10,
-    RM_LINK_ERROR           = 11,
+    RM_LINK_NONE            = 11,
 } RmLinkType;
 
 
