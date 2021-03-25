@@ -199,17 +199,17 @@ int rm_dedupe_main(int argc, const char **argv) {
     GOptionContext *context = g_option_context_new ("file1 file2");
     g_option_context_add_main_entries (context, options, NULL);
     g_option_context_set_help_enabled(context, TRUE);
-    g_option_context_set_summary(context, "Deduplicate two identical files on a reflink-capable filesystem, if possible");
+    g_option_context_set_summary(context, _("Dedupe matching extents from source to dest (if filesystem supports)"));
 
     if (!g_option_context_parse (context, &argc, (char ***)&argv, &error))
     {
-        rm_log_error_line("Error parsing command line:\n%s", error->message);
+        rm_log_error_line(_("Error parsing command line:\n%s"), error->message);
         return(EXIT_FAILURE);
     }
 
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
     if(argc != 3) {
-        rm_log_error(_("Error: rmlint --dedupe must have exactly two files\n\n"));
+        rm_log_error("Error: rmlint --dedupe %s\n\n", _("must have exactly two files\n\n"));
         print_usage(context);
         return EXIT_FAILURE;
     }
@@ -383,7 +383,7 @@ int rm_is_reflink_main(int argc, const char **argv) {
     g_option_context_set_help_enabled(context, TRUE);
 
     char *summary = g_strdup_printf(
-        "Check if two files are reflinks (share data extents)\n"
+        _("%s\n"
         "Returns %i of the files are reflinks\n"
         "Other return codes:\n"
         "     %i  if an error occurred during checking\n"
@@ -395,7 +395,8 @@ int rm_is_reflink_main(int argc, const char **argv) {
         "     %i  if the files are hardlinks\n"
         "     %i  if the files are symlinks\n"
         "    %i  if the files are on different devices\n"
-        "    %i  anything else that is not a reflink",
+        "    %i  anything else that is not a reflink"),
+        _("Test if two files are reflinks (share same data extents)"),
         RM_LINK_REFLINK, RM_LINK_ERROR, RM_LINK_NOT_FILE, RM_LINK_WRONG_SIZE,
         RM_LINK_INLINE_EXTENTS, RM_LINK_SAME_FILE, RM_LINK_PATH_DOUBLE,
         RM_LINK_HARDLINK, RM_LINK_SYMLINK, RM_LINK_XDEV, RM_LINK_NONE);
@@ -404,12 +405,12 @@ int rm_is_reflink_main(int argc, const char **argv) {
 
     if (!g_option_context_parse (context, &argc, (char ***)&argv, &error))
     {
-        rm_log_error_line("Error parsing command line:\n%s", error->message);
+        rm_log_error_line(_("Error parsing command line:\n%s"), error->message);
         return(EXIT_FAILURE);
     }
 
     if (argc != 3) {
-        rm_log_error(_("Error: rmlint --is-reflink must have exactly two files\n\n"));
+        rm_log_error("Error: rmlint --is-reflink %s\n\n", _("must have exactly two files"));
         print_usage(context);
         return EXIT_FAILURE;
     }
@@ -420,21 +421,5 @@ int rm_is_reflink_main(int argc, const char **argv) {
     const char *b = argv[2];
     rm_log_debug_line("Testing if %s is clone of %s", a, b);
 
-    int result = rm_util_link_type(a, b);
-    switch(result) {
-    case RM_LINK_REFLINK:
-        rm_log_debug_line("Offsets match");
-        break;
-    case RM_LINK_NONE:
-        rm_log_debug_line("Offsets differ");
-        break;
-    case RM_LINK_INLINE_EXTENTS:
-        rm_log_debug_line("File[s] have inline extents so can't be reflinks");
-        break;
-    default:
-        rm_log_debug_line("Can't determine if reflinks");
-        break;
-    }
-
-    return result;
+    return rm_util_link_type(a, b);
 }
