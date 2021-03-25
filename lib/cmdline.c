@@ -1113,18 +1113,38 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
                                    _UNUSED GError **error) {
-    rm_log_warning_line("option --btrfs-clone is deprecated, use --dedupe");
-    session->cfg->dedupe = true;
-    return true;
+    rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
+    return false;
 }
 
 static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
                                    _UNUSED GError **error) {
-    session->cfg->dedupe_readonly = true;
-    return true;
+    rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
+    return false;
+}
+
+static gboolean rm_cmd_parse_dedupe_xattr(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_error_line("option --dedupe-xattr is deprecated, use --dedupe --xattr");
+    return false;
+}
+
+static gboolean rm_cmd_parse_dedupe_readonly(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_error_line("option --dedupe-readonly is deprecated, use --dedupe --readonly");
+    return false;
+}
+
+static gboolean rm_cmd_parse_write_unfinished(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_error_line("option --write-unfinished is deprecated, use --hash-unmatched");
+    return false;
 }
 
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
@@ -1288,10 +1308,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"backup"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->backup                   , _("Do create backups of previous result files")                           , NULL}     ,
 
         /* COW filesystem deduplication support */
-        {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
-        {"dedupe-xattr"             , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_check_xattr       , _("Check extended attributes to see if the file is already deduplicated") , NULL}     ,
-        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
-        {"is-reflink"               , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_reflink               , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
+        {"dedupe"                   , 0    , 0         , 0                      , NULL                           , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
+        {"dedupe-xattr"             , 0    , 0         , G_OPTION_ARG_CALLBACK  , FUNC(dedupe_xattr)             , "Deprecated, use --dedupe --xattr"                                        , NULL}     ,
+        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_CALLBACK  , FUNC(dedupe_readonly)          , "Deprecated, use --dedupe --readonly"                                     , NULL}     ,
+        {"is-reflink"               , 0    , 0         , 0                      , NULL                           , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
@@ -1332,7 +1352,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"sweep-files"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
         {"threads-per-disk"       , 0   , HIDDEN           , G_OPTION_ARG_INT      , &cfg->threads_per_disk       , "Specify number of reader threads per physical disk"          , NULL}   ,
-        {"write-unfinished"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums (deprecated)"                    , NULL}   ,
+        {"write-unfinished"       , 0   , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(write_unfinished)       , "Output unfinished checksums (deprecated)"                    , NULL}   ,
         {"hash-uniques"           , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_uniques           , "Hash (whole of) unique files too (for json or xattr output)" , NULL}   ,
         {"hash-unmatched"         , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_unmatched         , "Same as --hash-uniques but only for files with size twin"    , NULL}   ,
         {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
@@ -1354,7 +1374,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     const GOptionEntry deprecated_option_entries[] = {
         {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Deprecated, use --dedupe instead"                  , NULL},
-        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe-readonly instead"         , NULL},
+        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe --readonly instead"       , NULL},
         {NULL                       , 0    , HIDDEN              , 0                          , NULL                      , NULL                                                , NULL}
     };
 
@@ -1437,25 +1457,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(!rm_cmd_set_paths(session, paths)) {
         error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
-        goto cleanup;
-    }
-
-    if(cfg->replay && (cfg->dedupe || cfg->is_reflink)) {
-        error = g_error_new(
-            RM_ERROR_QUARK, 0,
-            _("--replay (-Y) is incompatible with --dedupe or --is-reflink")
-        ); goto cleanup;
-    }
-
-    if(cfg->write_unfinished) {
-        error = g_error_new(
-            RM_ERROR_QUARK, 0,
-            _("--write-unfinished is deprecated, use --hash-unmatched or --hash-uniques")
-        ); goto cleanup;
-    }
-
-    if(cfg->dedupe) {
-        /* dedupe session; regular rmlint configs are ignored */
         goto cleanup;
     }
 

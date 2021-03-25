@@ -136,8 +136,6 @@ int main(int argc, const char **argv) {
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
         /* Do all the real work */
-        assert(!cfg.dedupe);
-        assert(!cfg.is_reflink);
         exit_state = rm_cmd_main(&session);
     }
 
