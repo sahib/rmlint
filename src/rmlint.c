@@ -108,11 +108,11 @@ int main(int argc, const char **argv) {
 
     maybe_run_alt_main(argc, argv, "--gui", "shredder", &rm_gui_launch);
 
-    maybe_run_alt_main(argc, argv, "--hash", "rmlint-hasher", &rm_hasher_main);
+    maybe_run_alt_main(argc, argv, "--hash", "rmlint --hash", &rm_hasher_main);
 
-    maybe_run_alt_main(argc, argv, "--is-reflink", "rmlint-is-reflink", &rm_is_reflink_main);
+    maybe_run_alt_main(argc, argv, "--is-reflink", "rmlint --is-reflink", &rm_is_reflink_main);
 
-    maybe_run_alt_main(argc, argv, "--dedupe", "rmlint-dedupe", &rm_dedupe_main);
+    maybe_run_alt_main(argc, argv, "--dedupe", "rmlint --dedupe", &rm_dedupe_main);
 
     i18n_init();
 

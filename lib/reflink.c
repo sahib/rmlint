@@ -83,7 +83,7 @@
 #endif
 
 
-RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) { 
+RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
 #if HAVE_FIEMAP
 
     RmOff logical_current = 0;
@@ -196,22 +196,25 @@ int rm_dedupe_main(int argc, const char **argv) {
 
 
     GError *error = NULL;
-    GOptionContext *context = g_option_context_new ("rmlint --dedupe: deduplicate two identical files on a reflink-capable filesystem");
+    GOptionContext *context = g_option_context_new ("file1 file2");
     g_option_context_add_main_entries (context, options, NULL);
     g_option_context_set_help_enabled(context, TRUE);
+    g_option_context_set_summary(context, "Deduplicate two identical files on a reflink-capable filesystem, if possible");
+
     if (!g_option_context_parse (context, &argc, (char ***)&argv, &error))
     {
         rm_log_error_line("Error parsing command line:\n%s", error->message);
         return(EXIT_FAILURE);
     }
 
-    g_option_context_free(context);
-
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
     if(argc != 3) {
-        rm_log_error(_("rmlint --dedupe must have exactly two files\n"));
+        rm_log_error(_("Error: rmlint --dedupe must have exactly two files\n\n"));
+        print_usage(context);
         return EXIT_FAILURE;
     }
+
+    g_option_context_free(context);
 
     const char* source_path = argv[1];
     const char* dest_path = argv[2];
@@ -375,22 +378,44 @@ int rm_is_reflink_main(int argc, const char **argv) {
 
 
     GError *error = NULL;
-    GOptionContext *context = g_option_context_new ("rmlint --is-reflink file1 files2: check if two files are reflinks (share data extents)");
+    GOptionContext *context = g_option_context_new ("file1 file2");
     g_option_context_add_main_entries (context, options, NULL);
     g_option_context_set_help_enabled(context, TRUE);
+
+    char *summary = g_strdup_printf(
+        "Check if two files are reflinks (share data extents)\n"
+        "Returns %i of the files are reflinks\n"
+        "Other return codes:\n"
+        "     %i  if an error occurred during checking\n"
+        "     %i  if not a file\n"
+        "     %i  if file sizes differ\n"
+        "     %i  if files have inline extents\n"
+        "     %i  if the two files are the same file and path\n"
+        "     %i  if the two files are the same file but with different paths\n"
+        "     %i  if the files are hardlinks\n"
+        "     %i  if the files are symlinks\n"
+        "    %i  if the files are on different devices\n"
+        "    %i  anything else that is not a reflink",
+        RM_LINK_REFLINK, RM_LINK_ERROR, RM_LINK_NOT_FILE, RM_LINK_WRONG_SIZE,
+        RM_LINK_INLINE_EXTENTS, RM_LINK_SAME_FILE, RM_LINK_PATH_DOUBLE,
+        RM_LINK_HARDLINK, RM_LINK_SYMLINK, RM_LINK_XDEV, RM_LINK_NONE);
+
+    g_option_context_set_summary(context, summary);
+
     if (!g_option_context_parse (context, &argc, (char ***)&argv, &error))
     {
         rm_log_error_line("Error parsing command line:\n%s", error->message);
         return(EXIT_FAILURE);
     }
 
-    g_option_context_free(context);
-
     if (argc != 3) {
-        rm_log_error(_("rmlint --is-reflink must have exactly two arguments"));
+        rm_log_error(_("Error: rmlint --is-reflink must have exactly two files\n\n"));
         print_usage(context);
         return EXIT_FAILURE;
     }
+    g_option_context_free(context);
+    g_free(summary);
+
     const char *a = argv[1];
     const char *b = argv[2];
     rm_log_debug_line("Testing if %s is clone of %s", a, b);
