@@ -32,6 +32,7 @@
 #include "../lib/gui.h"
 #include "../lib/logger.h"
 #include "../lib/hash-utility.h"
+#include "../lib/reflink.h"
 
 #if !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
@@ -105,7 +106,10 @@ int main(int argc, const char **argv) {
     g_log_set_default_handler(rm_logger_callback, NULL);
 
     maybe_run_alt_main(argc, argv, "--gui", "shredder", &rm_gui_launch);
+
     maybe_run_alt_main(argc, argv, "--hash", "rmlint-hasher", &rm_hasher_main);
+
+    maybe_run_alt_main(argc, argv, "--is-reflink", "rmlint-is-reflink", &rm_is_reflink_main);
 
     i18n_init();
 
@@ -131,8 +135,6 @@ int main(int argc, const char **argv) {
         /* Do all the real work */
         if(cfg.dedupe) {
             exit_state = rm_session_dedupe_main(&cfg);
-        } else if(cfg.is_reflink) {
-            exit_state = rm_session_is_reflink_main(&cfg);
         } else {
             exit_state = rm_cmd_main(&session);
         }
