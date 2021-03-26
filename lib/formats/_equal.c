@@ -42,9 +42,6 @@ typedef struct RmFmtHandlerEqual {
     /* Set to true once a mismatch (differing cksum) was found */
     bool mismatch_found;
 
-    /* Set to true once a match was found */
-    bool match_found;
-
     /* session->cfg->paths turned to a set for efficient member test */
     GHashTable *input_paths;
 } RmFmtHandlerEqual;
@@ -107,7 +104,7 @@ static void rm_fmt_elem(
 
         if(self->last_checksum != NULL) {
             if(!strncmp(checksum, self->last_checksum, cksum_bytes)) {
-                self->match_found = TRUE;
+                session->equal_exit_code = EXIT_SUCCESS;
             } else {
                 self->mismatch_found = TRUE;
                 rm_log_debug_line(
@@ -126,13 +123,10 @@ static void rm_fmt_elem(
 }
 
 static void rm_fmt_foot(
-        RmSession *session,
+        _UNUSED RmSession *session,
         RmFmtHandler *parent,
         _UNUSED FILE *out) {
     RmFmtHandlerEqual *self = (RmFmtHandlerEqual *)parent;
-    if(!self->match_found || self->mismatch_found) {
-        session->equal_exit_code = EXIT_FAILURE;
-    }
     g_hash_table_unref(self->input_paths);
     g_free(self->last_checksum);
 }
@@ -150,7 +144,6 @@ static RmFmtHandlerEqual EQUAL_HANDLE_IMPL = {
     },
     .last_checksum = NULL,
     .mismatch_found = false,
-    .match_found = false
 };
 
 RmFmtHandler *EQUAL_HANDLER = (RmFmtHandler *) &EQUAL_HANDLE_IMPL;

@@ -112,6 +112,7 @@ void rm_session_clear(RmSession *session) {
 
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
+    rm_fmt_close(session->formats);
     g_ptr_array_free(session->pattern_cache, TRUE);
 
     if(session->mounts) {
