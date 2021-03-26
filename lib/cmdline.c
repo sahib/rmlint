@@ -1687,6 +1687,7 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
+    rm_fmt_close(session->formats);
 
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line("BUG: Number of remaining bytes is %" LLU

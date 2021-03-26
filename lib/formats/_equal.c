@@ -39,8 +39,11 @@ typedef struct RmFmtHandlerEqual {
     /* Checksum of the last checked file (or NULL) */
     char *last_checksum;
 
-    /* Set to true once a mismatch (colliding cksum) was found */
+    /* Set to true once a mismatch (differing cksum) was found */
     bool mismatch_found;
+
+    /* Set to true once a match was found */
+    bool match_found;
 
     /* session->cfg->paths turned to a set for efficient member test */
     GHashTable *input_paths;
@@ -50,9 +53,8 @@ typedef struct RmFmtHandlerEqual {
 //  ACTUAL CALLBACKS   //
 /////////////////////////
 
-static void rm_fmt_report_failure(RmFmtHandlerEqual *self, RmSession *session) {
+static void rm_fmt_report_failure(_UNUSED RmFmtHandlerEqual *self, RmSession *session) {
     session->equal_exit_code = EXIT_FAILURE;
-    self->mismatch_found = true;
 }
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
@@ -78,7 +80,6 @@ static void rm_fmt_elem(
 
     /*  No need to check anymore, it's not equal. */
     if(self->mismatch_found) {
-        rm_fmt_report_failure(self, session);
         return;
     }
 
@@ -86,45 +87,52 @@ static void rm_fmt_elem(
         /* We do not want to handle unique files here.
          * If it is unique, it will be not equal...
          * */
-        rm_fmt_report_failure(self, session);
-        return;
+        self->mismatch_found = TRUE;
     }
+    else {
 
-    RM_DEFINE_PATH(file);
+        RM_DEFINE_PATH(file);
 
-    if(g_hash_table_contains(self->input_paths, file_path) == false) {
-        /* Ignore; this path was not given explicitly on the cmdline */
-        return;
-    }
-
-    size_t cksum_bytes = rm_digest_get_bytes(file->digest) * 2 + 1;
-    char *checksum = g_malloc0(cksum_bytes);
-
-    memset(checksum, '0', cksum_bytes);
-    checksum[cksum_bytes - 1] = 0;
-    rm_digest_hexstring(file->digest, checksum);
-
-    if(self->last_checksum != NULL) {
-        if(!strncmp(checksum, self->last_checksum, cksum_bytes)) {
-            session->equal_exit_code = EXIT_SUCCESS;
-        } else {
-            rm_fmt_report_failure(self, session);
-            rm_log_debug_line(
-                    "First differing items:\n\t%s (%s)\n\tlast checksum: (%s)",
-                    file_path, checksum, self->last_checksum
-            );
+        if(g_hash_table_contains(self->input_paths, file_path) == false) {
+            /* Ignore; this path was not given explicitly on the cmdline */
+            return;
         }
-        g_free(self->last_checksum);
+
+        size_t cksum_bytes = rm_digest_get_bytes(file->digest) * 2 + 1;
+        char *checksum = g_malloc0(cksum_bytes);
+
+        memset(checksum, '0', cksum_bytes);
+        checksum[cksum_bytes - 1] = 0;
+        rm_digest_hexstring(file->digest, checksum);
+
+        if(self->last_checksum != NULL) {
+            if(!strncmp(checksum, self->last_checksum, cksum_bytes)) {
+                self->match_found = TRUE;
+            } else {
+                self->mismatch_found = TRUE;
+                rm_log_debug_line(
+                        "First differing items:\n\t%s (%s)\n\tlast checksum: (%s)",
+                        file_path, checksum, self->last_checksum
+                );
+            }
+            g_free(self->last_checksum);
+        }
+        self->last_checksum = checksum;
+    }
+    if(self->mismatch_found) {
+        rm_fmt_report_failure(self, session);
     }
 
-    self->last_checksum = checksum;
 }
 
 static void rm_fmt_foot(
-        _UNUSED RmSession *session,
+        RmSession *session,
         RmFmtHandler *parent,
         _UNUSED FILE *out) {
     RmFmtHandlerEqual *self = (RmFmtHandlerEqual *)parent;
+    if(!self->match_found || self->mismatch_found) {
+        session->equal_exit_code = EXIT_FAILURE;
+    }
     g_hash_table_unref(self->input_paths);
     g_free(self->last_checksum);
 }
@@ -141,7 +149,8 @@ static RmFmtHandlerEqual EQUAL_HANDLE_IMPL = {
         .valid_keys = {NULL},
     },
     .last_checksum = NULL,
-    .mismatch_found = false
+    .mismatch_found = false,
+    .match_found = false
 };
 
 RmFmtHandler *EQUAL_HANDLER = (RmFmtHandler *) &EQUAL_HANDLE_IMPL;
