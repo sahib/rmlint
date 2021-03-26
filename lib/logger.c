@@ -74,7 +74,6 @@ void rm_logger_set_verbosity(const gint new_verbosity) {
         verbosity,
         1,
         (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
-    printf("New verbosity: %i, log level %i\n", verbosity, min_log_level);
 }
 
 void rm_logger_set_pretty(const gboolean is_pretty) {
@@ -82,7 +81,6 @@ void rm_logger_set_pretty(const gboolean is_pretty) {
 }
 
 void rm_logger_incr_verbosity_by(const gint incr) {
-    printf("Current verbosity: %i, increasing by %i\n", verbosity, incr);
     verbosity += incr;
     rm_logger_set_verbosity(verbosity);
 }
