@@ -382,24 +382,36 @@ int rm_is_reflink_main(int argc, const char **argv) {
     g_option_context_add_main_entries (context, options, NULL);
     g_option_context_set_help_enabled(context, TRUE);
 
+    const char** desc = rm_link_type_to_desc();
+
     char *summary = g_strdup_printf(
-        _("%s\n"
-        "Returns %i of the files are reflinks\n"
-        "Other return codes:\n"
-        "     %i  if an error occurred during checking\n"
-        "     %i  if not a file\n"
-        "     %i  if file sizes differ\n"
-        "     %i  if files have inline extents\n"
-        "     %i  if the two files are the same file and path\n"
-        "     %i  if the two files are the same file but with different paths\n"
-        "     %i  if the files are hardlinks\n"
-        "     %i  if the files are symlinks\n"
-        "    %i  if the files are on different devices\n"
-        "    %i  anything else that is not a reflink"),
+        "%s\n"
+        "%s\n\n"
+        "%s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n"
+        "     %i:  %s\n",
         _("Test if two files are reflinks (share same data extents)"),
-        RM_LINK_REFLINK, RM_LINK_ERROR, RM_LINK_NOT_FILE, RM_LINK_WRONG_SIZE,
-        RM_LINK_INLINE_EXTENTS, RM_LINK_SAME_FILE, RM_LINK_PATH_DOUBLE,
-        RM_LINK_HARDLINK, RM_LINK_SYMLINK, RM_LINK_XDEV, RM_LINK_NONE);
+        _("Returns 0 if the files are reflinks."),
+        _("Other return codes:"),
+        RM_LINK_ERROR, desc[RM_LINK_ERROR],
+        RM_LINK_NOT_FILE, desc[RM_LINK_NOT_FILE],
+        RM_LINK_WRONG_SIZE, desc[RM_LINK_WRONG_SIZE],
+        RM_LINK_INLINE_EXTENTS, desc[RM_LINK_INLINE_EXTENTS],
+        RM_LINK_SAME_FILE, desc[RM_LINK_SAME_FILE],
+        RM_LINK_PATH_DOUBLE, desc[RM_LINK_PATH_DOUBLE],
+        RM_LINK_HARDLINK, desc[RM_LINK_HARDLINK],
+        RM_LINK_SYMLINK, desc[RM_LINK_SYMLINK],
+        RM_LINK_XDEV, desc[RM_LINK_XDEV],
+        RM_LINK_NONE, desc[RM_LINK_NONE]);
+
 
     g_option_context_set_summary(context, summary);
 
@@ -421,5 +433,8 @@ int rm_is_reflink_main(int argc, const char **argv) {
     const char *b = argv[2];
     rm_log_debug_line("Testing if %s is clone of %s", a, b);
 
-    return rm_util_link_type(a, b);
+    int result = rm_util_link_type(a, b);
+    rm_log_info("Link type for '%s' and '%s', result:\n", a, b);
+    rm_log_warning("%s\n", desc[result]);
+    return result;
 }

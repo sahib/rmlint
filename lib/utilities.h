@@ -53,6 +53,7 @@ typedef enum RmLinkType {
     RM_LINK_NONE            = 11,
 } RmLinkType;
 
+    
 
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
@@ -390,6 +391,13 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
  * @retval see RmLinkType enum definition.
  */
 RmLinkType rm_util_link_type(const char *path1, const char *path2);
+
+
+/**
+ * @brief Map RmLinkType to description.
+ * @retval Array of descriptions.
+ */
+const char** rm_link_type_to_desc(void);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //

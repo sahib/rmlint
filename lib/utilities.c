@@ -83,6 +83,7 @@
 
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 
+
 ////////////////////////////////////
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
@@ -1314,6 +1315,25 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2) {
 
 #undef RM_RETURN
 }
+
+const char** rm_link_type_to_desc() {
+    static const char* RM_LINK_TYPE_TO_DESC[] = {
+    N_("Reflink"),
+    N_("An error occurred during checking"),
+    "Undefined",
+    N_("Not a file"),
+    N_("File sizes differ"),
+    N_("Files have inline extents"),
+    N_("Same file and path"),
+    N_("Same file but with different path"),
+    N_("Hardlink"),
+    N_("Symlink"),
+    N_("Files are on different devices"),
+    N_("Not linked")
+    };
+    return RM_LINK_TYPE_TO_DESC;
+}
+
 
 
 /////////////////////////////////
