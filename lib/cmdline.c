@@ -1580,6 +1580,8 @@ static int rm_cmd_replay_main(RmSession *session) {
 
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
+    session->equal_exit_code = EXIT_SUCCESS;
+
     RmCfg *cfg = session->cfg;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);

@@ -53,7 +53,6 @@ typedef struct RmFmtHandlerEqual {
 static void rm_fmt_report_failure(RmFmtHandlerEqual *self, RmSession *session) {
     session->equal_exit_code = EXIT_FAILURE;
     self->mismatch_found = true;
-    rm_session_abort();
 }
 
 static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, _UNUSED FILE *out) {
