@@ -96,7 +96,10 @@ def test_replay_match_basename():
         p=replay_path
     ))
 
-    assert len(data) == 3
+    # second 'a' file should be kicked out
+    assert len(data) == 2
+    paths = set([p['path'] for p in data])
+    assert os.path.join(TESTDIR_NAME, 'test1/b') in paths
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
