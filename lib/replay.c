@@ -585,6 +585,11 @@ static int rm_parrot_fix_match_opts(RmFile *file, GQueue *group) {
     return 1;
 }
 
+/* RmHRFunc to remove file if it matches headfile's basename */
+static int rm_parrot_remove_matched_basenames(RmFile *file, RmFile *head) {
+    return file != head && rm_file_basenames_cmp(file, head)==0;
+}
+
 static int rm_parrot_sort_by_path(gconstpointer a, gconstpointer b, _UNUSED gpointer data) {
     const RmFile *file_a = a;
     const RmFile *file_b = b;
@@ -715,8 +720,7 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
 
     if(cfg->match_with_extension
     || cfg->match_without_extension
-    || cfg->match_basename
-    || cfg->unmatched_basenames) {
+    || cfg->match_basename) {
         /* This is probably a sucky way to do it, due to n^2,
          * but I doubt that will make a large performance difference.
          */
@@ -726,6 +730,13 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
             group
         );
     }
+    if(cfg->unmatched_basenames) {
+        rm_util_queue_foreach_remove(
+            group,
+            (RmRFunc)rm_parrot_remove_matched_basenames,
+            group->head->data
+        );
+    };
     rm_parrot_fix_must_match_tagged(cage, group);
     rm_parrot_fix_duplicate_entries(cage, group);
 
