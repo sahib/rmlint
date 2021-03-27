@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
+#include <utime.h>
 
 #include "config.h"
 
@@ -218,6 +219,8 @@ int rm_dedupe_main(int argc, const char **argv) {
 
     const char* source_path = argv[1];
     const char* dest_path = argv[2];
+
+
     rm_log_debug_line("Cloning %s -> %s", source_path, dest_path);
 
     if(check_xattr) {
@@ -231,8 +234,6 @@ int rm_dedupe_main(int argc, const char **argv) {
             return EXIT_SUCCESS;
         }
     }
-
-    // Also use --is-reflink on both files before doing extra work:
 
     RmLinkType link_type = rm_util_link_type(source_path, dest_path);
     if(link_type == RM_LINK_REFLINK) {
@@ -250,111 +251,183 @@ int rm_dedupe_main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
-    struct stat source_stat;
-    fstat(source_fd, &source_stat);
-    gint64 bytes_deduped = 0;
+    int open_mode = dedupe_readonly ? O_RDONLY : O_RDWR;
 
-    /* a poorly-documented limit for dedupe ioctl's */
-    static const gint64 max_dedupe_chunk = 16 * 1024 * 1024;
+    char *cloneto_path = NULL;
+    int cloneto_fd;
 
-    /* how fine a resolution to use once difference detected;
-     * use btrfs default node size (16k): */
-    static const gint64 min_dedupe_chunk = 16 * 1024;
-
-    rm_log_debug_line("Cloning using %s", _DEDUPE_IOCTL_NAME);
-
-    if(!rm_session_check_kernel_version(4, _MIN_LINUX_SUBVERSION)) {
-        rm_log_warning_line("This needs at least linux >= 4.%d.", _MIN_LINUX_SUBVERSION);
-        return EXIT_FAILURE;
+    if(link_type == RM_LINK_HARDLINK) {
+        rm_log_debug_line("dedupe: renaming hardlink so we can clone to it");
+        cloneto_path = g_strconcat(dest_path, ".XXXXXX", NULL);
+        cloneto_fd = g_mkstemp(cloneto_path);
+        if(cloneto_fd == -1) {
+            rm_log_error_line(_("dedupe: failed to create temp file"));
+            rm_sys_close(source_fd);
+            return EXIT_FAILURE;
+        }
+        open_mode = O_CREAT | O_WRONLY;
+    } else {
+        cloneto_fd = rm_sys_open(dest_path, open_mode);
+        cloneto_path = g_strdup(dest_path);
     }
 
-    struct {
-        struct _FILE_DEDUPE_RANGE args;
-        struct _FILE_DEDUPE_RANGE_INFO info;
-    } dedupe;
-    memset(&dedupe, 0, sizeof(dedupe));
+    int result = EXIT_SUCCESS;
+    RmStat source_stat;
 
-    dedupe.info._DEST_FD =
-        rm_sys_open(dest_path, dedupe_readonly ? O_RDONLY : O_RDWR);
+    if(cloneto_fd < 0) {
+        rm_log_error_line(_("dedupe: error %i: failed to open dest file.%s"),
+                          errno,
+                          dedupe_readonly
+                              ? ""
+                              : _("\n\t(if target is a read-only snapshot "
+                                  "then -r option is required)"));
+        result = EXIT_FAILURE;
+    } else if(rm_sys_stat(source_path, &source_stat) < 0) {
+        rm_log_error_line("failed to stat %s: %s", source_path, g_strerror(errno));
+        result = EXIT_FAILURE;
+    } else if(link_type == RM_LINK_HARDLINK) {
+#ifdef FICLONE
+        rm_log_debug_line("dedupe: creating clone");
+        if(ioctl(cloneto_fd, FICLONE, source_fd) == -1) {
+            // create hardlink instead
+            rm_log_warning_line(_("dedupe: error %s create clone via FICLONE; original "
+                                  "hardlink left unchanged"),
+                                g_strerror(errno));
+            unlink(cloneto_path);
+            result = EXIT_FAILURE;
+        } else {
+            // Copy metadata from original to clone
+            struct utimbuf puttime;
+            puttime.modtime = source_stat.st_mtime;
+            puttime.actime = source_stat.st_atime;
 
-    if(dedupe.info._DEST_FD < 0) {
-        rm_log_error_line(
-            _("dedupe: error %i: failed to open dest file.%s"),
-            errno,
-            dedupe_readonly ? "" : _("\n\t(if target is a read-only snapshot "
-                                          "then -r option is required)"));
-        rm_sys_close(source_fd);
-        return EXIT_FAILURE;
-    }
+            if(utime(cloneto_path, &puttime)) {
+                rm_log_warning_line("dedupe: failed to preserve times for %s",
+                                    source_path);
+            }
 
-    /* fsync's needed to flush extent mapping */
-    if(fsync(source_fd) != 0) {
-        rm_log_warning_line("Error syncing source file %s: %s", source_path,
-                            strerror(errno));
-    }
+            if(lchown(cloneto_path, source_stat.st_uid, source_stat.st_gid) != 0) {
+                rm_log_warning_line("dedupe: failed to preserve ownership for %s",
+                                    source_path);
+                // try to preserve group ID
+                (void)lchown(cloneto_path, -1, source_stat.st_gid);
+            }
 
-    if(fsync(dedupe.info._DEST_FD) != 0) {
-        rm_log_warning_line("Error syncing dest file %s: %s", dest_path,
-                            strerror(errno));
-    }
+            if(lchmod(cloneto_path, source_stat.st_mode) != 0) {
+                rm_log_warning_line("dedupe: failed to preserve permissions for %s",
+                                    source_path);
+            }
+        }
+        rm_sys_close(cloneto_fd);
+        cloneto_fd = -1;
+        /* atomically rename temp file to over-write dest */
+        if(rename(cloneto_path, dest_path) != 0) {
+            rm_log_error_line("Clone rename from '%s' to '%s' failed", cloneto_path,
+                              dest_path);
+            // probably safer to leave a mess than to:
+            // unlink(cloneto_path);
+            result = EXIT_FAILURE;
+        }
+#else
+        rm_log_error_line(_("dedupe: Can't create clone of hardlink because FICLONE not "
+                            "defined on your system"),
+                          g_strerror(errno));
+        result = EXIT_FAILURE;
+#endif
+    } else {
+        gint64 bytes_deduped = 0;
+        /* a poorly-documented limit for dedupe ioctl's */
+        static const gint64 max_dedupe_chunk = 16 * 1024 * 1024;
 
-    int ret = 0;
-    gint64 dedupe_chunk = max_dedupe_chunk;
-    while(bytes_deduped < source_stat.st_size && !rm_session_was_aborted()) {
-        dedupe.args.dest_count = 1;
-        /* TODO: multiple destinations at same time? */
-        dedupe.args._SRC_OFFSET = bytes_deduped;
-        dedupe.info._DEST_OFFSET = bytes_deduped;
+        /* how fine a resolution to use once difference detected;
+         * use btrfs default node size (16k): */
+        static const gint64 min_dedupe_chunk = 16 * 1024;
 
-        /* try to dedupe the rest of the file */
-        dedupe.args._SRC_LENGTH = MIN(dedupe_chunk, source_stat.st_size - bytes_deduped);
+        rm_log_debug_line("Cloning using %s", _DEDUPE_IOCTL_NAME);
 
-        ret = ioctl(source_fd, _DEDUPE_IOCTL, &dedupe);
+        struct {
+            struct _FILE_DEDUPE_RANGE args;
+            struct _FILE_DEDUPE_RANGE_INFO info;
+        } dedupe;
+        memset(&dedupe, 0, sizeof(dedupe));
+        dedupe.info._DEST_FD = cloneto_fd;
 
-        if(ret != 0) {
-            break;
-        } else if(dedupe.info.status == _DATA_DIFFERS) {
-            if(dedupe_chunk != min_dedupe_chunk) {
-                dedupe_chunk = min_dedupe_chunk;
-                rm_log_debug_line("Dropping to %"G_GINT64_FORMAT"-byte chunks "
-                                  "after %"G_GINT64_FORMAT" bytes",
-                                  dedupe_chunk, bytes_deduped);
-                continue;
-            } else {
+        /* fsync's needed to flush extent mapping */
+        if(fsync(source_fd) != 0) {
+            rm_log_warning_line("Error syncing source file %s: %s", source_path,
+                                strerror(errno));
+        }
+
+        if(fsync(dedupe.info._DEST_FD) != 0) {
+            rm_log_warning_line("Error syncing dest file %s: %s", dest_path,
+                                strerror(errno));
+        }
+
+        int ret = 0;
+        gint64 dedupe_chunk = max_dedupe_chunk;
+        while(bytes_deduped < source_stat.st_size && !rm_session_was_aborted()) {
+            dedupe.args.dest_count = 1;
+            /* TODO: multiple destinations at same time? */
+            dedupe.args._SRC_OFFSET = bytes_deduped;
+            dedupe.info._DEST_OFFSET = bytes_deduped;
+
+            /* try to dedupe the rest of the file */
+            dedupe.args._SRC_LENGTH =
+                MIN(dedupe_chunk, source_stat.st_size - bytes_deduped);
+
+            ret = ioctl(source_fd, _DEDUPE_IOCTL, &dedupe);
+
+            if(ret != 0) {
+                break;
+            } else if(dedupe.info.status == _DATA_DIFFERS) {
+                if(dedupe_chunk != min_dedupe_chunk) {
+                    dedupe_chunk = min_dedupe_chunk;
+                    rm_log_debug_line("Dropping to %" G_GINT64_FORMAT
+                                      "-byte chunks "
+                                      "after %" G_GINT64_FORMAT " bytes",
+                                      dedupe_chunk, bytes_deduped);
+                    continue;
+                } else {
+                    break;
+                }
+            } else if(dedupe.info.status != 0) {
+                ret = -dedupe.info.status;
+                errno = ret;
+                break;
+            } else if(dedupe.info.bytes_deduped == 0) {
                 break;
             }
-        } else if(dedupe.info.status != 0) {
-            ret = -dedupe.info.status;
-            errno = ret;
-            break;
-        } else if(dedupe.info.bytes_deduped == 0) {
-            break;
+
+            bytes_deduped += dedupe.info.bytes_deduped;
+        }
+        rm_log_debug_line("Bytes deduped: %" G_GINT64_FORMAT, bytes_deduped);
+
+        if(ret != 0) {
+            rm_log_perrorf(_("%s returned error: (%d)"), _DEDUPE_IOCTL_NAME, ret);
+        } else if(bytes_deduped == 0) {
+            rm_log_info_line(_("Files don't match - not deduped"));
+        } else if(bytes_deduped < source_stat.st_size) {
+            rm_log_info_line(_("Only first %" G_GINT64_FORMAT " bytes deduped "
+                               "- files not fully identical"),
+                             bytes_deduped);
         }
 
-        bytes_deduped += dedupe.info.bytes_deduped;
+        if(bytes_deduped == source_stat.st_size) {
+            if(check_xattr && !dedupe_readonly) {
+                rm_xattr_mark_deduplicated(dest_path, follow_symlinks);
+            }
+            result = EXIT_SUCCESS;
+        } else {
+            result = EXIT_FAILURE;
+        }
     }
-    rm_log_debug_line("Bytes deduped: %"G_GINT64_FORMAT, bytes_deduped);
-
-    if (ret!=0) {
-        rm_log_perrorf(_("%s returned error: (%d)"), _DEDUPE_IOCTL_NAME, ret);
-    } else if(bytes_deduped == 0) {
-        rm_log_info_line(_("Files don't match - not deduped"));
-    } else if(bytes_deduped < source_stat.st_size) {
-        rm_log_info_line(_("Only first %"G_GINT64_FORMAT" bytes deduped "
-                           "- files not fully identical"),
-                         bytes_deduped);
-    }
-
     rm_sys_close(source_fd);
-    rm_sys_close(dedupe.info._DEST_FD);
-
-    if(bytes_deduped == source_stat.st_size) {
-        if(check_xattr && !dedupe_readonly) {
-            rm_xattr_mark_deduplicated(dest_path, follow_symlinks);
-        }
-
-        return EXIT_SUCCESS;
+    if(cloneto_fd > 0) {
+        rm_sys_close(cloneto_fd);
     }
+    g_free(cloneto_path);
+
+    return result;
 
 #else
     (void)cfg;

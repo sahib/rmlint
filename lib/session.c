@@ -150,4 +150,3 @@ void rm_session_acknowledge_abort(const gint abort_count) {
         }
     g_mutex_unlock(&m);
 }
-
