@@ -25,6 +25,7 @@
 
 #include "xattr.h"
 #include "config.h"
+#include "logger.h"
 
 #include <errno.h>
 #include <string.h>

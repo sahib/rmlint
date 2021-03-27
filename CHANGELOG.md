@@ -9,17 +9,31 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Fixed
 
 * Json encoding issues
+* Avoid generating ``rmlint.sh`` or other output files for ``rmlint --dedupe`` or ``rmlint --is-reflink`
+* Error message when trying to clone from original to its hardlink
+* Fix bug with ``--unmatched-basename`` option in ``--replay`` mode
+* Possible bug with ``--equal``
 
 ### Added
 
 * Implement --hash-uniques option to generate full checksums of unique files too.
 * Implement --hash-unmatched option, similar to --hash-uniques but only for size twins.
+* Implement --rank-by f option to rank originals by directory full path
+* Can now atomically clone from original to its hardlink via ``rmlint --dedupe`` 
 
 ### Changed
 
-* Improve ETA estimation.
+* Option ``--dedupe`` option parsing changed.
+  Previously:
+  ``rmlint --dedupe [--dedupe-xattr] [--dedupe-readonly] [-v] [-V] <src> <dest>``
+  Now:
+  ``rmlint --dedupe [--xattr] [--readonly] [--followlinks] [--inline-extents] [-v] [-V] <src> <dest>``
 * Made json-glib a hard dependency
 
+### Deprecated
+* ``--write-unfinished``.  Use ``--hash-unmatched``.
+* ``--dedupe-xattr``.  Use ``--dedupe --xattr``
+* ``--dedupe-readonly``.  Use ``--dedupe --readonly``
 
 ## [2.10.1 Ludicrous Lemur] -- 2020-06-13
 

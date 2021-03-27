@@ -78,6 +78,7 @@
 #include <sys/types.h>
 
 #include "formats.h"
+#include "logger.h"
 #include "pathtricia.h"
 #include "preprocess.h"
 #include "shredder.h"

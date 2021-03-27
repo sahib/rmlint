@@ -31,6 +31,8 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "logger.h"
+#include "reflink.h"
 #include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.
@@ -81,9 +83,68 @@
 
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 
+
+////////////////////////////////////
+//       SYSCALL WRAPPERS         //
+////////////////////////////////////
+
+int rm_sys_stat(const char *path, RmStat *buf)  {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return stat64(path, buf);
+#else
+    return stat(path, buf);
+#endif
+}
+
+int rm_sys_lstat(const char *path, RmStat *buf) {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return lstat64(path, buf);
+#else
+    return lstat(path, buf);
+#endif
+}
+
+
+int rm_sys_open(const char *path, int mode) {
+#if HAVE_STAT64
+#ifdef O_LARGEFILE
+    mode |= O_LARGEFILE;
+#endif
+#endif
+
+    return open(path, mode, (S_IRUSR | S_IWUSR));
+}
+
+
+void rm_sys_close(int fd) {
+    if(close(fd) == -1) {
+        rm_log_perror("close(2) failed");
+    }
+}
+
+gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
+                                   RmOff offset) {
+#if RM_IS_APPLE || RM_IS_CYGWIN
+    if(lseek(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+        return 0;
+    }
+    return readv(fd, iov, iovcnt);
+#elif RM_PLATFORM_32
+    if(lseek64(fd, offset, SEEK_SET) == -1) {
+        rm_log_perror("seek in emulated preadv failed");
+        return 0;
+    }
+    return readv(fd, iov, iovcnt);
+#else
+    return preadv(fd, iov, iovcnt, offset);
+#endif
+}
+
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
+
 
 char *rm_util_strsub(const char *string, const char *subs, const char *with) {
     gchar *result = NULL;
@@ -1009,16 +1070,24 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
     return fm;
 }
 
+static void rm_util_set_nullable_bool(bool *ptr, bool value) {
+    if(ptr != NULL) {
+        *ptr = value;
+    }
+}
+
 /* Return physical (disk) offset of the beginning of the file extent containing the
  * specified logical file_offset.
  * If a pointer to file_offset_next is provided then read fiemap extents until
  * the next non-contiguous extent (fragment) is encountered and writes the corresponding
  * file offset to &file_offset_next.
  * */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last) {
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last, bool *is_inline) {
     RmOff result = 0;
     bool done = FALSE;
     bool first = TRUE;
+    rm_util_set_nullable_bool(is_last, FALSE);
+    rm_util_set_nullable_bool(is_inline, FALSE);
 
     /* used for detecting contiguous extents */
     unsigned long expected = 0;
@@ -1064,12 +1133,14 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
                 *file_offset_next = fm_ext.fe_logical + fm_ext.fe_length;
             }
 
+            if(fm_ext.fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
+                rm_util_set_nullable_bool(is_inline, TRUE);
+            }
+
             if(fm_ext.fe_flags & FIEMAP_EXTENT_LAST) {
                 done = TRUE;
 
-                if(is_last != NULL) {
-                    *is_last = TRUE;
-                }
+                rm_util_set_nullable_bool(is_last, TRUE);
             }
 
             if(fm_ext.fe_length <= 0) {
@@ -1100,7 +1171,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL, NULL);
     rm_sys_close(fd);
     return result;
 }
@@ -1108,7 +1179,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 #else /* Probably FreeBSD */
 
 RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
-                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last) {
+                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last, _UNUSED bool *is_inline) {
     return 0;
 }
 
@@ -1119,7 +1190,7 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
 
 #endif
 
-static gboolean rm_util_is_path_double(char *path1, char *path2) {
+static gboolean rm_util_is_path_double(const char *path1, const char *path2) {
     char *basename1 = rm_util_basename(path1);
     char *basename2 = rm_util_basename(path2);
     return (strcmp(basename1, basename2) == 0 &&
@@ -1154,7 +1225,7 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
     return result;
 }
 
-RmLinkType rm_util_link_type(char *path1, char *path2) {
+RmLinkType rm_util_link_type(const char *path1, const char *path2) {
 #if _RM_OFFSET_DEBUG
     rm_log_debug_line("Checking link type for %s vs %s", path1, path2);
 #endif
@@ -1239,84 +1310,30 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         RM_RETURN(RM_LINK_SYMLINK);
     }
 
-#if HAVE_FIEMAP
-
-    RmOff logical_current = 0;
-
-    bool is_last_1 = false;
-    bool is_last_2 = false;
-    bool at_least_one_checked = false;
-
-    while(!rm_session_was_aborted()) {
-        RmOff logical_next_1 = 0;
-        RmOff logical_next_2 = 0;
-
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2);
-
-        if(is_last_1 != is_last_2) {
-            RM_RETURN(RM_LINK_NONE);
-        }
-
-        if(is_last_1 && is_last_2 && at_least_one_checked) {
-            RM_RETURN(RM_LINK_REFLINK);
-        }
-
-        if(physical_1 != physical_2) {
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
-                              ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
-                              logical_current, physical_1, physical_2);
-#endif
-            RM_RETURN(RM_LINK_NONE);
-        }
-        if(logical_next_1 != logical_next_2) {
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line("File offsets differ after %" G_GUINT64_FORMAT
-                              " bytes: %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
-                              logical_current, logical_next_1, logical_next_2);
-#endif
-            RM_RETURN(RM_LINK_NONE);
-        }
-
-        if(physical_1 == 0) {
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line(
-                "Can't determine whether files are clones (maybe inline extents?)");
-#endif
-            RM_RETURN(RM_LINK_MAYBE_REFLINK);
-        }
-
-#if _RM_OFFSET_DEBUG
-        rm_log_debug_line("Offsets match at fd1=%d, fd2=%d, logical=%" G_GUINT64_FORMAT ", physical=%" G_GUINT64_FORMAT,
-                          fd1, fd2, logical_current, physical_1);
-#endif
-        if(logical_next_1 <= logical_current) {
-            /* oops we seem to be getting nowhere (this shouldn't really happen) */
-            rm_log_info_line(
-                "rm_util_link_type() giving up: file1_offset_next<=file_offset_current for %s vs %s", path1, path2);
-            RM_RETURN(RM_LINK_ERROR)
-        }
-
-        if(logical_next_1 >= (RmOff)stat1.st_size) {
-            /* phew, we got to the end */
-#if _RM_OFFSET_DEBUG
-            rm_log_debug_line("Files are clones (share same data)")
-#endif
-            RM_RETURN(RM_LINK_REFLINK)
-        }
-
-        logical_current = logical_next_1;
-        at_least_one_checked = true;
-    }
-
-    RM_RETURN(RM_LINK_ERROR);
-#else
-    RM_RETURN(RM_LINK_NONE);
-#endif
+    RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
+    RM_RETURN(reflink_type);
 
 #undef RM_RETURN
 }
+
+const char** rm_link_type_to_desc() {
+    static const char* RM_LINK_TYPE_TO_DESC[] = {
+    N_("Reflink"),
+    N_("An error occurred during checking"),
+    "Undefined",
+    N_("Not a file"),
+    N_("File sizes differ"),
+    N_("Files have inline extents"),
+    N_("Same file and path"),
+    N_("Same file but with different path"),
+    N_("Hardlink"),
+    N_("Symlink"),
+    N_("Files are on different devices"),
+    N_("Not linked")
+    };
+    return RM_LINK_TYPE_TO_DESC;
+}
+
 
 
 /////////////////////////////////

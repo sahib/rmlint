@@ -281,6 +281,11 @@ typedef struct RmFile {
 /* Fill path always */
 #define RM_DEFINE_PATH(file) RM_DEFINE_PATH_IF_NEEDED(file, true)
 
+/* Defines a path string for the file's folder */
+#define RM_DEFINE_DIR_PATH(file)                             \
+    char file##_dir_path[PATH_MAX];                          \
+    rm_file_build_dir_path((RmFile *)file, file##_dir_path); \
+
 #define RM_FILE_HARDLINK_HEAD(file) \
     (file->hardlinks ? (RmFile *)file->hardlinks->head->data : NULL)
 
@@ -363,6 +368,11 @@ void rm_file_set_path(RmFile *file, char *path);
  * @brief Internal helper function for RM_DEFINE_PATH using folder tree and basename.
  */
 void rm_file_build_path(RmFile *file, char *buf);
+
+/**
+ * @brief Internal helper function for RM_DEFINE_DIR_PATH using folder tree.
+ */
+void rm_file_build_dir_path(RmFile *file, char *buf);
 
 /**
  * @brief Make a copy of a file.

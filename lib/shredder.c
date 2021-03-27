@@ -34,6 +34,7 @@
 #include "hasher.h"
 
 #include "formats.h"
+#include "logger.h"
 #include "preprocess.h"
 #include "utilities.h"
 
@@ -1660,7 +1661,7 @@ static bool rm_shred_can_process(RmFile *file, RmShredTag *main) {
 static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
 
-    if(rm_session_was_aborted()) {
+    if(rm_session_was_aborted() || session->equal_exit_code==EXIT_FAILURE) {
         file->status = RM_FILE_STATE_IGNORE;
         rm_shred_sift(file);
         return 1;

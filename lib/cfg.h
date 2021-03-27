@@ -83,7 +83,6 @@ typedef struct RmCfg {
     gboolean write_cksum_to_xattr;
     gboolean read_cksum_from_xattr;
     gboolean clear_xattr_fields;
-    gboolean write_unfinished; // deprecated
     gboolean build_fiemap;
     gboolean use_buffered_read;
     gboolean fake_fiemap;
@@ -180,13 +179,6 @@ typedef struct RmCfg {
      * (or directories)
      */
     gboolean run_equal_mode;
-    /* --dedupe options */
-    bool dedupe;
-    bool dedupe_check_xattr;
-    bool dedupe_readonly;
-
-    /* for --is-reflink option */
-    bool is_reflink;
 
     /* don't use sse accelerations */
     bool no_sse;

@@ -30,6 +30,7 @@
 
 #include "file.h"
 #include "formats.h"
+#include "logger.h"
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.
@@ -373,9 +374,6 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
 
     RmFile *fa = ga->files.head->data;
     RmFile *fb = gb->files.head->data;
-
-    RM_DEFINE_PATH(fa);
-    RM_DEFINE_PATH(fb);
 
     int fa_order = rm_lint_type_order[fa->lint_type];
     int fb_order = rm_lint_type_order[fb->lint_type];

@@ -32,6 +32,7 @@
 
 #include "../checksums/murmur3.h"
 #include "../formats.h"
+#include "../logger.h"
 #include "../preprocess.h"
 #include "../treemerge.h"
 #include "../utilities.h"
@@ -79,7 +80,7 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
 
 static void rm_fmt_json_sep(RmFmtHandlerJSON *self) {
     g_output_stream_printf(
-        self->stream, NULL, NULL, NULL, ",%s", self->pretty ? "\n " : "");
+        self->stream, NULL, NULL, NULL, ",%s", self->pretty ? " " : "\n");
 }
 
 static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *out) {

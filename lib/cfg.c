@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "cfg.h"
+#include "logger.h"
 #include "utilities.h"
 
 static void rm_path_free(RmPath *rmpath) {

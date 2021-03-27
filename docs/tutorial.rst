@@ -516,7 +516,8 @@ Here's a table of letters you can supply to the ``-S`` option:
 
 ===== ========================================================================================== ===== =================================
 **m** keep lowest mtime (oldest)                                                                 **M** keep highest mtime (newest)
-**a** keep first alphabetically                                                                  **A** keep last alphabetically
+**a** keep first basename alphabetically                                                         **A** keep last basename alphabetically
+**f** keep first dir path alphabetically                                                         **F** keep last dir path alphabetically
 **p** keep first named path                                                                      **P** keep last named path
 **d** keep path with lowest depth                                                                **D** keep path with highest depth
 **l** keep path with shortest basename                                                           **L** keep path with longest basename
@@ -532,7 +533,9 @@ specified first in the rmlint command, then finally based on alphabetical order
 of file name. Note that "original directory" criteria (see below) take
 precedence over any ``-S`` options.
 
-Alphabetical sort will only use the basename of the file and ignore its case.
+Alphabetical sort on basename (a or A) will only use the basename of the file and ignore its case.
+Alphabetical sort on dir path (f or F) will use the full path of the file's directory and is case-sensitive.
+
 One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
 **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
 

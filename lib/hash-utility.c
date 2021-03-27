@@ -30,6 +30,7 @@
 
 #include "../lib/config.h"
 #include "../lib/hasher.h"
+#include "../lib/logger.h"
 #include "../lib/utilities.h"
 
 typedef struct RmHasherSession {

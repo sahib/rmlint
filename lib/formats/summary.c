@@ -24,6 +24,7 @@
  */
 
 #include "../formats.h"
+#include "../logger.h"
 
 #include <glib.h>
 #include <search.h>
@@ -55,7 +56,7 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(rm_session_was_aborted()) {
+    if(rm_session_was_aborted() || session->equal_exit_code==EXIT_FAILURE) {
         /* Clear the whole terminal line.
          * Progressbar might leave some junk.
          */

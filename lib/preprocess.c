@@ -30,6 +30,7 @@
 
 #include "cmdline.h"
 #include "formats.h"
+#include "logger.h"
 #include "preprocess.h"
 #include "shredder.h"
 #include "utilities.h"
@@ -400,6 +401,12 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
         return sign * FLOAT_SIGN_DIFF(a->mtime, b->mtime, MTIME_TOL);
     case 'a':
         return sign * g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
+    case 'f':
+    {
+        RM_DEFINE_DIR_PATH(a);
+        RM_DEFINE_DIR_PATH(b);
+        return sign * strcmp(a_dir_path, b_dir_path);
+    }
     case 'l':
         return sign * SIGN_DIFF(strlen(a->folder->basename), strlen(b->folder->basename));
     case 'd':
