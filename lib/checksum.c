@@ -47,6 +47,7 @@
 #include "checksums/sha3/sha3.h"
 #include "checksums/xxhash/xxhash.h"
 
+#include "logger.h"
 #include "utilities.h"
 
 #define _RM_CHECKSUM_DEBUG 0

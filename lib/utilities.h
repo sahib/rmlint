@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -38,21 +39,22 @@
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
 
-/* return values for rm_offsets_match */
+/* return values for rm_util_link_type */
 typedef enum RmLinkType {
     RM_LINK_REFLINK         = EXIT_SUCCESS,
-    RM_LINK_NONE            = EXIT_FAILURE,
+    RM_LINK_ERROR           = EXIT_FAILURE,
     RM_LINK_NOT_FILE        = 3,
     RM_LINK_WRONG_SIZE      = 4,
-    RM_LINK_MAYBE_REFLINK   = 5,
+    RM_LINK_INLINE_EXTENTS  = 5,
     RM_LINK_SAME_FILE       = 6,
     RM_LINK_PATH_DOUBLE     = 7,
     RM_LINK_HARDLINK        = 8,
     RM_LINK_SYMLINK         = 9,
     RM_LINK_XDEV            = 10,
-    RM_LINK_ERROR           = 11,
+    RM_LINK_NONE            = 11,
 } RmLinkType;
 
+    
 
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
@@ -87,21 +89,9 @@ typedef struct stat RmStat;
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
-WARN_UNUSED_RESULT static inline int rm_sys_stat(const char *path, RmStat *buf)  {
-#if HAVE_STAT64 && !RM_IS_APPLE
-    return stat64(path, buf);
-#else
-    return stat(path, buf);
-#endif
-}
+WARN_UNUSED_RESULT int rm_sys_stat(const char *path, RmStat *buf);
 
-WARN_UNUSED_RESULT static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_STAT64 && !RM_IS_APPLE
-    return lstat64(path, buf);
-#else
-    return lstat(path, buf);
-#endif
-}
+WARN_UNUSED_RESULT int rm_sys_lstat(const char *path, RmStat *buf);
 
 static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
@@ -111,40 +101,11 @@ static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #endif
 }
 
-static inline int rm_sys_open(const char *path, int mode) {
-#if HAVE_STAT64
-#ifdef O_LARGEFILE
-    mode |= O_LARGEFILE;
-#endif
-#endif
+int rm_sys_open(const char *path, int mode);
 
-    return open(path, mode, (S_IRUSR | S_IWUSR));
-}
+void rm_sys_close(int fd);
 
-static inline void rm_sys_close(int fd) {
-    if(close(fd) == -1) {
-        rm_log_perror("close(2) failed");
-    }
-}
-
-static inline gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt,
-                                   RmOff offset) {
-#if RM_IS_APPLE || RM_IS_CYGWIN
-    if(lseek(fd, offset, SEEK_SET) == -1) {
-        rm_log_perror("seek in emulated preadv failed");
-        return 0;
-    }
-    return readv(fd, iov, iovcnt);
-#elif RM_PLATFORM_32
-    if(lseek64(fd, offset, SEEK_SET) == -1) {
-        rm_log_perror("seek in emulated preadv failed");
-        return 0;
-    }
-    return readv(fd, iov, iovcnt);
-#else
-    return preadv(fd, iov, iovcnt, offset);
-#endif
-}
+gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, RmOff offset);
 
 /////////////////////////////////////
 //   UID/GID VALIDITY CHECKING     //
@@ -416,7 +377,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last);
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last, bool* is_inline);
 
 /**
  * @brief Lookup the physical offset of a file path at any given offset.
@@ -428,9 +389,16 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 
 /**
  * @brief Test if two files have identical fiemaps.
- * @retval see RmOffsetsMatchCode enum definition.
+ * @retval see RmLinkType enum definition.
  */
-RmLinkType rm_util_link_type(char *path1, char *path2);
+RmLinkType rm_util_link_type(const char *path1, const char *path2);
+
+
+/**
+ * @brief Map RmLinkType to description.
+ * @retval Array of descriptions.
+ */
+const char** rm_link_type_to_desc(void);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //

@@ -30,6 +30,7 @@
 
 #include "file.h"
 #include "formats.h"
+#include "logger.h"
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.

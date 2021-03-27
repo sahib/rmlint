@@ -797,6 +797,21 @@ Here's just a list of options that are nice to know, but are not essential:
   processed file. But be sure to read the caveats stated in the `manpage`_!
   Especially keep in mind that you need to have write access to the files for this to work.
 
+  Note that the above example will only save checksums for duplicate files.
+  Alternatively, with the ``--hash-unmatched`` options, checksums are calulated
+  and saved in xattributes for all files that have "size twins", ie files of
+  the same length.  This may make the first run very slow but will greatly speed up
+  future runs.
+
+  .. code-block:: python
+
+    $ rmlint large_dataset/ --xattr --hash-unmatched
+    $ rmlint large_dataset/ --xattr
+
+  There is also the the ``--hash-uniques`` option, which is similar to
+  ``--hash-unmatched`` but also hashes files with no size twins.  This will be
+  even slower than ``--hash-unmatched`` on the first run.
+
 - ``-r`` (``--hidden``): Include hidden files and directories.  The default
   is to ignore these, to save you from destroying git repositories (or similar
   programs) that save their information in a ``.git`` directory where ``rmlint``
@@ -877,6 +892,8 @@ little `tool`_ which makes it really easy to extract data from a ``json`` file:
     $ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
     # Now we only need to combine both files:
     $ cat unique_files original_files
+    # Alternatively in one step:
+    $ rmlint t -o json -c json:unique |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
 
 Filter by regular expressions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

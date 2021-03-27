@@ -42,6 +42,7 @@
 #include "cmdline.h"
 #include "formats.h"
 #include "hash-utility.h"
+#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
 #include "replay.h"
@@ -49,6 +50,8 @@
 #include "traverse.h"
 #include "treemerge.h"
 #include "utilities.h"
+
+#define EXIT_EQUAL_UNKNOWN 2
 
 /* define paranoia levels */
 static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
@@ -75,7 +78,6 @@ static void rm_cmd_show_version(void) {
                     {.name = "sha512",         .enabled = HAVE_SHA512},
                     {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
-                    {.name = "replay",         .enabled = HAVE_JSON_GLIB},
                     {.name = "xattr",          .enabled = HAVE_XATTR},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
@@ -124,119 +126,6 @@ static void rm_cmd_show_manpage(void) {
     exit(0);
 }
 
-/*
-* Debian and Ubuntu based distributions fuck up setuptools
-* by expecting packages to be installed to dist-packages and not site-packages
-* like expected by setuptools. This breaks a lot of packages with the reasoning
-* to reduce conflicts between system and user packages:
-*
-*    https://stackoverflow.com/questions/9387928/whats-the-difference-between-dist-packages-and-site-packages
-*
-* We try to work around this by manually installing dist-packages to the
-* sys.path by first calling a small bootstrap script.
-*/
-static const char RM_PY_BOOTSTRAP[] =
-    ""
-    "# This is a bootstrap script for the rmlint-gui.                              \n"
-    "# See the src/rmlint.c in rmlint's source for more info.                      \n"
-    "import sys, os, site                                                          \n"
-    "                                                                              \n"
-    "# Also default to dist-packages on debian(-based):                            \n"
-    "sites = site.getsitepackages()                                                \n"
-    "sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites]) \n"
-    "sys.path.extend(sites)                                                        \n"
-    "                                                                              \n"
-    "# Cleanup self:                                                               \n"
-    "try:                                                                          \n"
-    "    os.remove(sys.argv[0])                                                    \n"
-    "except:                                                                       \n"
-    "    print('Note: Could not remove bootstrap script at ', sys.argv[0])         \n"
-    "                                                                              \n"
-    "# Run shredder by importing the main:                                         \n"
-    "try:                                                                          \n"
-    "    import shredder                                                           \n"
-    "    shredder.run_gui()                                                        \n"
-    "except ImportError as err:                                                    \n"
-    "    print('Failed to load shredder:', err)                                    \n"
-    "    print('This might be due to a corrupted install; try reinstalling.')      \n";
-
-static void rm_cmd_start_gui(int argc, const char **argv) {
-    const char *commands[] = {"python3", "python", NULL};
-    const char **command = &commands[0];
-
-    GError *error = NULL;
-    gchar *bootstrap_path = NULL;
-    int bootstrap_fd =
-        g_file_open_tmp(".shredder-bootstrap.py.XXXXXX", &bootstrap_path, &error);
-
-    if(bootstrap_fd < 0) {
-        rm_log_warning("Could not bootstrap gui: Unable to create tempfile: %s",
-                       error->message);
-        g_error_free(error);
-        return;
-    }
-
-    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, sizeof(RM_PY_BOOTSTRAP)) < 0) {
-        rm_log_warning_line("Could not bootstrap gui: Unable to write to tempfile: %s",
-                            g_strerror(errno));
-        return;
-    }
-
-    close(bootstrap_fd);
-
-    while(*command) {
-        const char *all_argv[512];
-        const char **argp = &all_argv[0];
-        memset(all_argv, 0, sizeof(all_argv));
-
-        *argp++ = *command;
-        *argp++ = bootstrap_path;
-
-        for(size_t i = 0; i < (size_t)argc && i < sizeof(all_argv) / 2; i++) {
-            *argp++ = argv[i];
-        }
-
-        if(execvp(*command, (char *const *)all_argv) == -1) {
-            rm_log_warning("Executed: %s ", *command);
-            for(int j = 0; j < (argp - all_argv); j++) {
-                rm_log_warning("%s ", all_argv[j]);
-            }
-            rm_log_warning("\n");
-            rm_log_error_line("%s %d", g_strerror(errno), errno == ENOENT);
-        } else {
-            /* This is not reached anymore when execve suceeded */
-            break;
-        }
-
-        /* Try next command... */
-        command++;
-    }
-}
-
-static int rm_cmd_maybe_switch_to_gui(int argc, const char **argv) {
-    for(int i = 0; i < argc; i++) {
-        if(g_strcmp0("--gui", argv[i]) == 0) {
-            argv[i] = "shredder";
-            rm_cmd_start_gui(argc - i - 1, &argv[i + 1]);
-
-            /* We returned? Something's wrong */
-            return EXIT_FAILURE;
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
-
-static int rm_cmd_maybe_switch_to_hasher(int argc, const char **argv) {
-    for(int i = 0; i < argc; i++) {
-        if(g_strcmp0("--hash", argv[i]) == 0) {
-            argv[i] = argv[0];
-            exit(rm_hasher_main(argc - i, &argv[i]));
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
 
 /* clang-format off */
 static const struct FormatSpec {
@@ -447,16 +336,9 @@ static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
     session->cfg->write_cksum_to_xattr = true;
     session->cfg->read_cksum_from_xattr= true;
     session->cfg->clear_xattr_fields = false;
-    session->cfg->write_unfinished = true;
     return true;
 }
 
-static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {[0] = G_LOG_LEVEL_CRITICAL,
-                                                  [1] = G_LOG_LEVEL_ERROR,
-                                                  [2] = G_LOG_LEVEL_WARNING,
-                                                  [3] = G_LOG_LEVEL_MESSAGE |
-                                                        G_LOG_LEVEL_INFO,
-                                                  [4] = G_LOG_LEVEL_DEBUG};
 static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
                                          bool null_separated) {
     char delim = null_separated ? 0 : '\n';
@@ -904,13 +786,6 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
     return success;
 }
 
-static void rm_cmd_set_verbosity_from_cnt(RmCfg *cfg, int verbosity_counter) {
-    cfg->verbosity = VERBOSITY_TO_LOG_LEVEL[CLAMP(
-        verbosity_counter,
-        1,
-        (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
-}
-
 static void rm_cmd_set_paranoia_from_cnt(RmCfg *cfg, int paranoia_counter,
                                          GError **error) {
     /* Handle the paranoia option */
@@ -1046,21 +921,6 @@ static gboolean rm_cmd_parse_no_progress(_UNUSED const char *option_name,
                                          _UNUSED GError **error) {
     rm_fmt_clear(session->formats);
     rm_cmd_set_default_outputs(session);
-    rm_cmd_set_verbosity_from_cnt(session->cfg, session->verbosity_count);
-    return true;
-}
-
-static gboolean rm_cmd_parse_loud(_UNUSED const char *option_name,
-                                  _UNUSED const gchar *count, RmSession *session,
-                                  _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, ++session->verbosity_count);
-    return true;
-}
-
-static gboolean rm_cmd_parse_quiet(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *count, RmSession *session,
-                                   _UNUSED GError **error) {
-    rm_cmd_set_verbosity_from_cnt(session->cfg, --session->verbosity_count);
     return true;
 }
 
@@ -1255,18 +1115,38 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
                                    _UNUSED GError **error) {
-    rm_log_warning_line("option --btrfs-clone is deprecated, use --dedupe");
-    session->cfg->dedupe = true;
-    return true;
+    rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
+    return false;
 }
 
 static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, RmSession *session,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
                                    _UNUSED GError **error) {
-    session->cfg->dedupe_readonly = true;
-    return true;
+    rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
+    return false;
+}
+
+static gboolean rm_cmd_parse_dedupe_xattr(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_error_line("option --dedupe-xattr is deprecated, use --dedupe --xattr");
+    return false;
+}
+
+static gboolean rm_cmd_parse_dedupe_readonly(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_error_line("option --dedupe-readonly is deprecated, use --dedupe --readonly");
+    return false;
+}
+
+static gboolean rm_cmd_parse_write_unfinished(_UNUSED const char *option_name,
+                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
+                                   _UNUSED GError **error) {
+    rm_log_error_line("option --write-unfinished is deprecated, use --hash-unmatched");
+    return false;
 }
 
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
@@ -1367,19 +1247,6 @@ static char * rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
 bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     RmCfg *cfg = session->cfg;
 
-    /* Handle --gui before all other processing,
-     * since we need to pass other args to the python interpreter.
-     * This is not possible with GOption alone.
-     */
-    if(rm_cmd_maybe_switch_to_gui(argc, (const char **)argv) == EXIT_FAILURE) {
-        rm_log_error_line(_("Could not start graphical user interface."));
-        return false;
-    }
-
-    if(rm_cmd_maybe_switch_to_hasher(argc, (const char **)argv) == EXIT_FAILURE) {
-        return false;
-    }
-
     /* List of paths we got passed (or NULL) */
     char **paths = NULL;
 
@@ -1412,11 +1279,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"xattr"            , 'C' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                        ,
 
         /* Non-trivial switches */
-        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress) , _("Enable progressbar")                   , NULL} ,
-        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(loud)     , _("Be more verbose (-vvv for much more)") , NULL} ,
-        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(quiet)    , _("Be less verbose (-VVV for much less)") , NULL} ,
-        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)   , _("Re-output a json file")                , "path/to/rmlint.json"} ,
-        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)    , _("Test for equality of PATHS")           , "PATHS"}           ,
+        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress)    , _("Enable progressbar")                   , NULL} ,
+        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_louder  , _("Be more verbose (-vvv for much more)") , NULL} ,
+        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_quieter , _("Be less verbose (-VVV for much less)") , NULL} ,
+        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)      , _("Re-output a json file")                , "path/to/rmlint.json"} ,
+        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)       , _("Test for equality of PATHS")           , "PATHS"}           ,
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
@@ -1443,10 +1310,10 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"backup"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->backup                   , _("Do create backups of previous result files")                           , NULL}     ,
 
         /* COW filesystem deduplication support */
-        {"dedupe"                   , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe                   , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
-        {"dedupe-xattr"             , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_check_xattr       , _("Check extended attributes to see if the file is already deduplicated") , NULL}     ,
-        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->dedupe_readonly          , _("(--dedupe option) even dedupe read-only snapshots (needs root)")       , NULL}     ,
-        {"is-reflink"               , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->is_reflink               , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
+        {"dedupe"                   , 0    , 0         , 0                      , NULL                           , _("Dedupe matching extents from source to dest (if filesystem supports)") , NULL}     ,
+        {"dedupe-xattr"             , 0    , 0         , G_OPTION_ARG_CALLBACK  , FUNC(dedupe_xattr)             , "Deprecated, use --dedupe --xattr"                                        , NULL}     ,
+        {"dedupe-readonly"          , 0    , 0         , G_OPTION_ARG_CALLBACK  , FUNC(dedupe_readonly)          , "Deprecated, use --dedupe --readonly"                                     , NULL}     ,
+        {"is-reflink"               , 0    , 0         , 0                      , NULL                           , _("Test if two files are reflinks (share same data extents)")             , NULL}     ,
 
         /* Callback */
         {"show-man" , 'H' , EMPTY , G_OPTION_ARG_CALLBACK , rm_cmd_show_manpage , _("Show the manpage")            , NULL} ,
@@ -1487,7 +1354,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"sweep-files"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
         {"threads-per-disk"       , 0   , HIDDEN           , G_OPTION_ARG_INT      , &cfg->threads_per_disk       , "Specify number of reader threads per physical disk"          , NULL}   ,
-        {"write-unfinished"       , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums"                                 , NULL}   ,
+        {"write-unfinished"       , 0   , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(write_unfinished)       , "Output unfinished checksums (deprecated)"                    , NULL}   ,
+        {"hash-uniques"           , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_uniques           , "Hash (whole of) unique files too (for json or xattr output)" , NULL}   ,
+        {"hash-unmatched"         , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_unmatched         , "Same as --hash-uniques but only for files with size twin"    , NULL}   ,
         {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
         {"xattr-read"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr  , "Read cached checksums from file attributes"                  , NULL}   ,
         {"xattr-clear"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->clear_xattr_fields     , "Clear xattrs from all seen files"                            , NULL}   ,
@@ -1507,14 +1376,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     const GOptionEntry deprecated_option_entries[] = {
         {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Deprecated, use --dedupe instead"                  , NULL},
-        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe-readonly instead"         , NULL},
+        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe --readonly instead"       , NULL},
         {NULL                       , 0    , HIDDEN              , 0                          , NULL                      , NULL                                                , NULL}
     };
 
     /* clang-format on */
-
-    /* Initialize default verbosity */
-    rm_cmd_set_verbosity_from_cnt(cfg, session->verbosity_count);
 
     if(!rm_cmd_set_cwd(cfg)) {
         g_set_error(&error, RM_ERROR_QUARK, 0, _("Cannot set current working directory"));
@@ -1593,18 +1459,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     if(!rm_cmd_set_paths(session, paths)) {
         error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
-        goto cleanup;
-    }
-
-    if(cfg->replay && (cfg->dedupe || cfg->is_reflink)) {
-        error = g_error_new(
-            RM_ERROR_QUARK, 0,
-            _("--replay (-Y) is incompatible with --dedupe or --is-reflink")
-        ); goto cleanup;
-    }
-
-    if(cfg->dedupe) {
-        /* dedupe session; regular rmlint configs are ignored */
         goto cleanup;
     }
 
@@ -1687,7 +1541,7 @@ cleanup:
 
     if(cfg->progress_enabled) {
         /* Set verbosity to minimal */
-        rm_cmd_set_verbosity_from_cnt(session->cfg, 1);
+        rm_logger_set_verbosity(1);
     }
 
     g_option_context_free(option_parser);
@@ -1728,6 +1582,8 @@ static int rm_cmd_replay_main(RmSession *session) {
 
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
+    session->equal_exit_code = EXIT_EQUAL_UNKNOWN;
+
     RmCfg *cfg = session->cfg;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
@@ -1834,6 +1690,7 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
 
+
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line("BUG: Number of remaining bytes is %" LLU
                           " (not 0). Please report this.",
@@ -1849,7 +1706,7 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(exit_state == EXIT_SUCCESS && cfg->run_equal_mode) {
-        return session->equal_exit_code;
+        return session->equal_exit_code == EXIT_SUCCESS ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
     if(exit_state == EXIT_SUCCESS && rm_session_was_aborted()) {

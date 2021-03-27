@@ -799,7 +799,7 @@ OTHER STAND-ALONE COMMANDS
 
     By default this will use hashing to compare the files and/or directories.
 
-:``rmlint --dedupe [-r] [-v|-V] <src> <dest>``:
+:``rmlint --dedupe [OPTION…] <src> <dest>``:
 
     If the filesystem supports files sharing physical storage between multiple
     files, and if ``src`` and ``dest`` have same content, this command makes the
@@ -808,26 +808,33 @@ OTHER STAND-ALONE COMMANDS
 
     This command is similar to ``cp --reflink=always <src> <dest>``
     except that it (a) checks that ``src`` and ``dest`` have identical data, and
-    it makes no changes to ``dest``'s metadata.
+    (b) it makes no changes to ``dest``'s metadata.
 
-    Running with ``-r`` option will enable deduplication of read-only [btrfs]
-    snapshots (requires root).
+    Options:
+    * -h, --help               Show help options
+    * -x, --xattr              Check extended attributes to see if the file is already deduplicated
+    * -r, --readonly           Even dedupe read-only [btrfs] snapshots (needs root)
+    * -f, --followlinks        Follow symlinks
+    * -i, --inline-extents     Try to dedupe files with inline extents
+    * -v, --loud               Be more verbose (-vvv for much more)
+    * -V, --quiet              Be less verbose (-VVV for much less)
+
 
 :``rmlint --is-reflink [-v|-V] <file1> <file2>``:
     Tests whether ``file1`` and ``file2`` are reflinks (reference same data).
     This command makes ``rmlint`` exit with one of the following exit codes:
 
-    * 0: files are reflinks
-    * 1: files are not reflinks
-    * 3: not a regular file
-    * 4: file sizes differ
-    * 5: fiemaps can't be read
-    * 6: file1 and file2 are the same path
-    * 7: file1 and file2 are the same file under different mountpoints
-    * 8: files are hardlinks
-    * 9: files are symlinks
-    * 10: files are not on same device
-    * 11: other error encountered
+    * 0: Files are reflinks
+    * 1: An error occurred during checking
+    * 3: Not a regular file
+    * 4: File sizes differ
+    * 5: Files have inline extents
+    * 6: Same file and path
+    * 7: Same file but with different path
+    * 8: Hardlink
+    * 9: Symlink
+    * 10: Files are on different devices
+    * 11: Not linked
 
 
 EXAMPLES

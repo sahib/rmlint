@@ -28,6 +28,7 @@
 #include "config.h"
 #include "file.h"
 #include "formats.h"
+#include "logger.h"
 #include "preprocess.h"
 #include "session.h"
 #include "shredder.h"
@@ -38,7 +39,6 @@
 #include <math.h>
 #include <string.h>
 
-#if HAVE_JSON_GLIB
 #include <json-glib/json-glib.h>
 
 typedef struct RmUnpackedDirectory {
@@ -560,7 +560,7 @@ static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
     case RM_LINT_TYPE_BADUGID:
         return cfg->find_badids;
     case RM_LINT_TYPE_UNIQUE_FILE:
-        return cfg->write_unfinished;
+        return cfg->hash_uniques || cfg->hash_unmatched;
     case RM_LINT_TYPE_PART_OF_DIRECTORY:
         return true;
     case RM_LINT_TYPE_UNKNOWN:
@@ -583,6 +583,11 @@ static int rm_parrot_fix_match_opts(RmFile *file, GQueue *group) {
     }
 
     return 1;
+}
+
+/* RmHRFunc to remove file if it matches headfile's basename */
+static int rm_parrot_remove_matched_basenames(RmFile *file, RmFile *head) {
+    return file != head && rm_file_basenames_cmp(file, head)==0;
 }
 
 static int rm_parrot_sort_by_path(gconstpointer a, gconstpointer b, _UNUSED gpointer data) {
@@ -715,8 +720,7 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
 
     if(cfg->match_with_extension
     || cfg->match_without_extension
-    || cfg->match_basename
-    || cfg->unmatched_basenames) {
+    || cfg->match_basename) {
         /* This is probably a sucky way to do it, due to n^2,
          * but I doubt that will make a large performance difference.
          */
@@ -726,6 +730,13 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
             group
         );
     }
+    if(cfg->unmatched_basenames) {
+        rm_util_queue_foreach_remove(
+            group,
+            (RmRFunc)rm_parrot_remove_matched_basenames,
+            group->head->data
+        );
+    };
     rm_parrot_fix_must_match_tagged(cage, group);
     rm_parrot_fix_duplicate_entries(cage, group);
 
@@ -961,22 +972,3 @@ void rm_parrot_cage_close(RmParrotCage *cage) {
     }
 }
 
-#else
-
-bool rm_parrot_cage_load(_UNUSED RmParrotCage *cage, _UNUSED const char *json_path,
-                         _UNUSED bool is_prefd) {
-    return false;
-}
-
-void rm_parrot_cage_open(_UNUSED RmParrotCage *cage, _UNUSED RmSession *session) {
-    rm_log_error_line(_("json-glib is needed for using --replay."));
-    rm_log_error_line(_("Please recompile `rmlint` with it installed."));
-}
-
-void rm_parrot_cage_flush(_UNUSED RmParrotCage *cage) {
-}
-
-void rm_parrot_cage_close(_UNUSED RmParrotCage *cage) {
-}
-
-#endif

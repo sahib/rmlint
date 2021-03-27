@@ -30,6 +30,7 @@
 #include <fcntl.h>
 
 #include "hasher.h"
+#include "logger.h"
 #include "utilities.h"
 
 /* Flags for the fadvise() call that tells the kernel

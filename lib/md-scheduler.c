@@ -24,6 +24,7 @@
  */
 
 #include "md-scheduler.h"
+#include "logger.h"
 
 /* How many milliseconds to sleep if we encounter an empty file queue.
  * This prevents a "starving" RmShredDevice from hogging cpu and cluttering up

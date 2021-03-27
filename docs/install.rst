@@ -16,13 +16,13 @@ Hard dependencies:
 ~~~~~~~~~~~~~~~~~~
 
 * **glib** :math:`\geq 2.32` (general C Utility Library)
+* **libjson-glib** (parsing rmlint's own json as caching layer)
 
 Soft dependencies:
 ~~~~~~~~~~~~~~~~~~
 
 * **libblkid** (detecting mountpoints)
 * **libelf** (nonstripped binary detection)
-* **libjson-glib** (parsing rmlint's own json as caching layer)
 
 Build dependencies:
 ~~~~~~~~~~~~~~~~~~~
