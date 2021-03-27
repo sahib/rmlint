@@ -34,6 +34,12 @@
 
 #include <sys/ioctl.h>
 
+/* Add 4096 bytes to each file size to give better ETA estimate*/
+const RmOff FILE_OVERHEAD = 4096;
+
+/* average speed over 100 calls */
+const RmOff AVERAGE_OVER = 100;
+
 typedef struct RmFmtHandlerProgress {
     /* must be first */
     RmFmtHandler parent;
@@ -60,9 +66,10 @@ typedef struct RmFmtHandlerProgress {
     size_t terminal_query_count;
 
     /* Estimated Time of Arrival calculation */
-    RmRunningMean speed_mean;
-    RmRunningMean eta_mean;
+    RmRunningMean diff_mean;
+    RmRunningMean took_mean;
     RmOff last_shred_bytes_read;
+    RmOff last_shred_files_remaining;
     gint64 last_check_time;
 
     /* Last calculation of ETA for caching purpose */
@@ -104,25 +111,24 @@ static gdouble rm_fmt_progress_calculate_eta(
 
     self->last_check_time = now;
     self->last_shred_bytes_read = session->shred_bytes_read;
+    self->last_shred_files_remaining = session->shred_files_remaining;
 
-    if(diff > 0) {
-        // speed is the average time a single file took to process or filter in files/sec.
-        gdouble speed = diff / took;
 
-        // Average the mean, to make sure that we do not directly give in to "speed bumps"
-        rm_running_mean_add(&self->speed_mean, speed);
-    }
+	// Average the mean, to make sure that we do not directly give in to "speed bumps"
+	rm_running_mean_add(&self->diff_mean, diff);
+	rm_running_mean_add(&self->took_mean, took);
 
-    gdouble mean_speed = rm_running_mean_get(&self->speed_mean);
-    if(FLOAT_SIGN_DIFF(mean_speed, 0.0, MTIME_TOL) <= 0) {
-        return -1;
-    }
+	gdouble diff_mean = rm_running_mean_get(&self->diff_mean);
+	gdouble took_mean = rm_running_mean_get(&self->took_mean);
 
-    gdouble eta_sec = session->shred_bytes_remaining / mean_speed;
-    rm_running_mean_add(&self->eta_mean, eta_sec);
+	if(diff_mean > 0 && took_mean > 0) {
+		// speed is the average time a single file took to process or filter in files/sec.
+		gdouble mean_speed = diff_mean / took_mean;
+	    gdouble eta_sec = (session->shred_bytes_remaining + FILE_OVERHEAD * session->shred_files_remaining) / mean_speed;
+	    return eta_sec;
+	}
+	return -1;
 
-    gdouble mean_eta = rm_running_mean_get(&self->eta_mean);
-    return mean_eta;
 }
 
 static char *rm_fmt_progress_get_cached_eta(
@@ -403,8 +409,8 @@ static void rm_fmt_prog(RmSession *session,
         const char *update_interval_str =
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
-        rm_running_mean_init(&self->speed_mean, 10);
-        rm_running_mean_init(&self->eta_mean, 25);
+        rm_running_mean_init(&self->diff_mean, AVERAGE_OVER);
+        rm_running_mean_init(&self->took_mean, AVERAGE_OVER);
         self->last_shred_bytes_read = 0;
         self->last_check_time = g_get_monotonic_time();
 
@@ -513,8 +519,8 @@ static void rm_fmt_prog(RmSession *session,
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
         fprintf(out, "\n\n");
         g_timer_destroy(self->timer);
-        rm_running_mean_unref(&self->speed_mean);
-        rm_running_mean_unref(&self->eta_mean);
+        rm_running_mean_unref(&self->diff_mean);
+        rm_running_mean_unref(&self->took_mean);
     }
 }
 
