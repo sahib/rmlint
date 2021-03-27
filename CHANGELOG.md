@@ -10,6 +10,23 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Implement --hash-uniques option to generate full checksums of unique files too.
 * Implement --hash-unmatched option, similar to --hash-uniques but only for size twins.
 * Implement --rank-by f option to rank originals by directory full path
+* Can now atomically clone from original to its hardlink via ``rmlint --dedupe`` 
+
+### Changed
+
+* Option ``--dedupe`` option parsing changed.
+  Previously:
+  ``rmlint --dedupe [--dedupe-xattr] [--dedupe-readonly] [-v] [-V] <src> <dest>``
+  Now:
+  ``rmlint --dedupe [--xattr] [--readonly] [--followlinks] [--inline-extents] [-v] [-V] <src> <dest>``
+
+### Fixed
+
+* Avoid generating ``rmlint.sh`` or other output files for ``rmlint --dedupe`` or ``rmlint --is-reflink`
+* Error message when trying to clone from original to its hardlink
+* Fix bug with ``--unmatched-basename`` option in ``--replay`` mode
+
+
 
 ## [2.10.1 Ludicrous Lemur] -- 2020-06-13
 
