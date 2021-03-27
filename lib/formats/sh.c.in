@@ -304,7 +304,7 @@ static char *rm_fmt_sh_get_extra_dedupe_args(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     if(cfg->write_cksum_to_xattr) {
-        return " --dedupe-xattr";
+        return " --xattr";
     }
 
     return "";
