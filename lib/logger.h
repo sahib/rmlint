@@ -80,10 +80,10 @@ static inline GMutex *rm_log_get_mutex(void) {
     rm_log_warning(_("WARNING")); \
     rm_log_warning(": " RESET);
 
-#define rm_log_info_prefix()   \
-    rm_log_warning(GREEN);     \
-    rm_log_warning(_("INFO")); \
-    rm_log_warning(": " RESET);
+#define rm_log_info_prefix()  \
+    rm_log_info(GREEN);       \
+    rm_log_info(_("INFO"));   \
+    rm_log_info(": " RESET);
 
 #define rm_log_debug_prefix() \
     rm_log_debug(BLUE);       \
@@ -104,10 +104,10 @@ static inline GMutex *rm_log_get_mutex(void) {
     rm_log_warning("\n");                                \
     g_mutex_unlock(rm_log_get_mutex());
 
-#define rm_log_info_line(...)                         \
-    g_mutex_lock(rm_log_get_mutex());                 \
-    rm_log_info_prefix() rm_log_warning(__VA_ARGS__); \
-    rm_log_warning("\n");                             \
+#define rm_log_info_line(...)                        \
+    g_mutex_lock(rm_log_get_mutex());                \
+    rm_log_info_prefix() rm_log_info(__VA_ARGS__);   \
+    rm_log_info("\n");                               \
     g_mutex_unlock(rm_log_get_mutex());
 
 #define rm_log_debug_line(...)                       \
