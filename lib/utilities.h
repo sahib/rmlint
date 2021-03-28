@@ -89,9 +89,32 @@ typedef struct stat RmStat;
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
-WARN_UNUSED_RESULT int rm_sys_stat(const char *path, RmStat *buf);
+WARN_UNUSED_RESULT static inline int rm_sys_stat(const char *path, RmStat *buf)  {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return stat64(path, buf);
+#else
+    return stat(path, buf);
+#endif
+}
 
-WARN_UNUSED_RESULT int rm_sys_lstat(const char *path, RmStat *buf);
+WARN_UNUSED_RESULT static inline int rm_sys_lstat(const char *path, RmStat *buf) {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return lstat64(path, buf);
+#else
+    return lstat(path, buf);
+#endif
+}
+
+
+static inline int rm_sys_open(const char *path, int mode) {
+#if HAVE_STAT64
+#ifdef O_LARGEFILE
+    mode |= O_LARGEFILE;
+#endif
+#endif
+
+    return open(path, mode, (S_IRUSR | S_IWUSR));
+}
 
 static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
@@ -100,8 +123,6 @@ static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
     return (gdouble)stat->st_mtim.tv_sec + stat->st_mtim.tv_nsec / 1000000000.0;
 #endif
 }
-
-int rm_sys_open(const char *path, int mode);
 
 void rm_sys_close(int fd);
 

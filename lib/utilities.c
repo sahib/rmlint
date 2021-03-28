@@ -88,34 +88,6 @@
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
-int rm_sys_stat(const char *path, RmStat *buf)  {
-#if HAVE_STAT64 && !RM_IS_APPLE
-    return stat64(path, buf);
-#else
-    return stat(path, buf);
-#endif
-}
-
-int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_STAT64 && !RM_IS_APPLE
-    return lstat64(path, buf);
-#else
-    return lstat(path, buf);
-#endif
-}
-
-
-int rm_sys_open(const char *path, int mode) {
-#if HAVE_STAT64
-#ifdef O_LARGEFILE
-    mode |= O_LARGEFILE;
-#endif
-#endif
-
-    return open(path, mode, (S_IRUSR | S_IWUSR));
-}
-
-
 void rm_sys_close(int fd) {
     if(close(fd) == -1) {
         rm_log_perror("close(2) failed");
