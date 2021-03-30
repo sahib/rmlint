@@ -112,7 +112,9 @@ void rm_session_clear(RmSession *session) {
     g_timer_destroy(session->timer_since_proc_start);
     g_free(cfg->sort_criteria);
 
-    rm_mds_free(session->mds, FALSE);
+    if(session->mds) {
+        rm_mds_free(session->mds, FALSE);
+    }
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
