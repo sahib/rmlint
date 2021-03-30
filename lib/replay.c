@@ -44,34 +44,6 @@
 #include <json-glib/json-glib.h>
 
 
-static RmLintType rm_parrot_map_lint_type(RmLintType json_type) {
-    switch (json_type) {
-    // these can't change without changing file mtime:
-    case RM_LINT_TYPE_DUPE_CANDIDATE:
-    case RM_LINT_TYPE_NONSTRIPPED:
-    case RM_LINT_TYPE_UNKNOWN:
-    case RM_LINT_TYPE_EMPTY_FILE:
-        return json_type;
-    // these are handled separately:
-    case RM_LINT_TYPE_EMPTY_DIR:
-    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
-        return json_type;
-    // these might all have changed without changing file mtime so need to be re-checked:
-    case RM_LINT_TYPE_BADLINK:
-    case RM_LINT_TYPE_BADUID:
-    case RM_LINT_TYPE_BADGID:
-    case RM_LINT_TYPE_BADUGID:
-        return RM_LINT_TYPE_UNKNOWN;
-    // these could now be duplicates:
-    case RM_LINT_TYPE_UNIQUE_FILE:
-    case RM_LINT_TYPE_PART_OF_DIRECTORY:
-        return RM_LINT_TYPE_DUPE_CANDIDATE;
-    default:
-        assert(FALSE);
-    }
-}
-
-
 static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *object, bool json_is_prefd) {
     RmCfg *cfg = session->cfg;
 
@@ -159,7 +131,7 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
                 // ignore
                 return FALSE;
             default:
-                file_type = rm_parrot_map_lint_type(json_lint_type);
+                file_type = RM_LINT_TYPE_UNKNOWN;
             }
         }
 
