@@ -133,8 +133,11 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
             RmLintType json_lint_type = rm_file_string_to_lint_type(type_str);
             switch(json_lint_type) {
             case RM_LINT_TYPE_EMPTY_DIR:
-                // need to re-scan
-                if(!rm_traverse_is_emptydir(path, cfg, depth)) {
+                if(!cfg->find_emptydirs) {
+                    return FALSE;
+                }
+                else if(!rm_traverse_is_emptydir(path, cfg, depth)) {
+                    // no longer empty; ignore
                     return FALSE;
                 }
                 file_type = RM_LINT_TYPE_EMPTY_DIR;
