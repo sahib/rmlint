@@ -152,6 +152,50 @@ def test_replay_must_match_tagged():
     assert (os.path.join(TESTDIR_NAME, 'test_a/a'), True) in paths
 
 
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_keep_cached_originals():
+    create_file('xxx', 'test_a/a')
+    create_file('xxx', 'test_b/a')
+    create_file('xxx', 'test_a/b')
+    create_file('xxx', 'test_b/c')
+
+    replay_path = '/tmp/replay.json'
+
+    head, *data, footer = run_rmlint('-o json:{p} -S fa'.format(
+        p=replay_path
+    ))
+    assert len(data) == 4
+    assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_a/a')
+
+    # reverse the sort order but respect tagged originals from first run
+    head, *data, footer = run_rmlint('--replay {p} -S FA --keep-cached-originals'.format(
+        p=replay_path
+    ))
+    assert len(data) == 4
+    assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_a/a')
+    assert data[1]['path'] == os.path.join(TESTDIR_NAME, 'test_b/c')
+
+    # reverse the sort order, without --keep-cached-originals
+    head, *data, footer = run_rmlint('--replay {p} -S FA'.format(
+        p=replay_path
+    ))
+    assert len(data) == 4
+    assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_b/c')
+
+    # cached originals vs -k: cached originals should be first original but -k should still be respected
+    head, *data, footer = run_rmlint('--replay {p} {a} // {b} -k -S fa --keep-cached-originals'.format(
+        p=replay_path,
+        a=os.path.join(TESTDIR_NAME, 'test_a'),
+        b=os.path.join(TESTDIR_NAME, 'test_b')
+    ))
+    assert len(data) == 4
+    assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_a/a')
+    assert data[1]['path'] == os.path.join(TESTDIR_NAME, 'test_b/a')
+    assert (all (data[i]['is_original'] for i in range(3)))
+    assert (not data[3]['is_original'])
+
+
+
 @attr('slow')
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_sorting():
