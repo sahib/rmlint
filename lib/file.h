@@ -81,6 +81,8 @@ typedef enum RmLintType {
      * They land still in the json output with this type.
      */
     RM_LINT_TYPE_PART_OF_DIRECTORY,
+
+    RM_LINT_TYPE_ERROR
 } RmLintType;
 
 struct RmSession;
@@ -188,6 +190,9 @@ typedef struct RmFile {
     /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
     bool is_on_subvol_fs : 1;
 
+    /* Set to true if was read from [json] cache as an original */
+    bool cached_original : 1;
+
     /* The pre-matched file cluster that this file belongs to (or NULL) */
     GQueue *cluster;
 
@@ -224,7 +229,7 @@ typedef struct RmFile {
     /* digest of this file read from file extended attributes (previously written by
      * rmlint)
      */
-    char *ext_cksum;
+    const char *ext_cksum;
 
     /* Those are never used at the same time.
      * disk_offset is used during computation,

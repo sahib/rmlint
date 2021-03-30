@@ -45,8 +45,11 @@ typedef struct RmPath {
     /* whether to treat all files under path as one filesystem */
     bool treat_as_single_vol : 1;
 
-    /* wether calling realpath() worked on this path */
+    /* whether calling realpath() worked on this path */
     bool realpath_worked : 1;
+
+    /* path mapped as node of pathtricia tree */
+    RmNode *node;
 } RmPath;
 
 /* Storage struct for all options settable in cmdline. */
@@ -112,7 +115,7 @@ typedef struct RmCfg {
     RmOff skip_start_offset;
     RmOff skip_end_offset;
 
-    /* paths passed by command line (or stdin) */
+    /* paths passed by command line (or stdin), stored as list of RmPath's */
     GSList *paths;
     GSList *json_paths;
 
@@ -199,5 +202,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
  * @brief free all data associated with cfg->paths.
  */
 void rm_cfg_free_paths(RmCfg *cfg);
+
+bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long *path_index, bool *is_hidden, bool *is_on_subvol_fs, short *depth);
 
 #endif /* end of include guard */

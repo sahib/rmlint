@@ -1089,7 +1089,6 @@ static gboolean rm_cmd_parse_replay(_UNUSED const char *option_name,
                                     const gchar *json_path, RmSession *session,
                                     _UNUSED GError **error) {
     session->cfg->replay = true;
-    session->cfg->cache_file_structs = true;
     rm_cfg_add_path(session->cfg, false, json_path);
     return true;
 }
@@ -1536,38 +1535,6 @@ cleanup:
     return !(session->cmdline_parse_error);
 }
 
-static int rm_cmd_replay_main(RmSession *session) {
-    /* User chose to replay some json files. */
-    RmParrotCage cage;
-    rm_parrot_cage_open(&cage, session);
-
-    bool one_valid_json = false;
-    RmCfg *cfg = session->cfg;
-
-    for(GSList *iter = cfg->json_paths; iter; iter = iter->next) {
-        RmPath *jsonpath = iter->data;
-
-        if(!rm_parrot_cage_load(&cage, jsonpath->path, jsonpath->is_prefd)) {
-            rm_log_warning_line("Loading %s failed.", jsonpath->path);
-        } else {
-            one_valid_json = true;
-        }
-    }
-
-    if(!one_valid_json) {
-        rm_log_error_line(_("No valid .json files given, aborting."));
-        return EXIT_FAILURE;
-    }
-
-    rm_parrot_cage_flush(&cage);
-    rm_fmt_flush(session->formats);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
-
-    rm_parrot_cage_close(&cage);
-    return EXIT_SUCCESS;
-}
-
 int rm_cmd_main(RmSession *session) {
     int exit_state = EXIT_SUCCESS;
     session->equal_exit_code = EXIT_EQUAL_UNKNOWN;
@@ -1575,12 +1542,6 @@ int rm_cmd_main(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_INIT);
-
-    if(cfg->replay) {
-        return rm_cmd_replay_main(session);
-    }
-
-    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
     if(cfg->list_mounts) {
         session->mounts = rm_mounts_table_new(cfg->fake_fiemap);
@@ -1592,10 +1553,19 @@ int rm_cmd_main(RmSession *session) {
 
     session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
 
-    rm_traverse_tree(session);
+    rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
-    rm_log_debug_line("List build finished at %.3f with %d files",
-                      g_timer_elapsed(session->timer, NULL), session->total_files);
+    if(cfg->replay) {
+        if(rm_parrot_load(session) != EXIT_SUCCESS) {
+            return EXIT_FAILURE;
+        }
+    }
+    else {
+        rm_traverse_tree(session);
+
+        rm_log_debug_line("List build finished at %.3f with %d files",
+                          g_timer_elapsed(session->timer, NULL), session->total_files);
+    }
 
     if(cfg->merge_directories) {
         g_assert(cfg->cache_file_structs);

@@ -37,6 +37,8 @@ void rm_traverse_tree(RmSession *session);
 bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
                              bool is_prefd, unsigned long path_index,
                              RmLintType file_type, bool is_symlink, bool is_hidden,
-                             bool is_on_subvol_fs, short depth);
+                             bool is_on_subvol_fs, short depth, bool tagged_original, const char *ext_cksum);
+
+bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth);
 
 #endif

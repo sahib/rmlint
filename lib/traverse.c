@@ -111,7 +111,8 @@ static char *rm_traverse_rel_realpath(const char *link_path, char *pointing_to) 
 bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
                              bool is_prefd, unsigned long path_index,
                              RmLintType file_type, bool is_symlink, bool is_hidden,
-                             bool is_on_subvol_fs, short depth) {
+                             bool is_on_subvol_fs, short depth,
+                             bool tagged_original, const char *ext_cksum) {
     RmCfg *cfg = session->cfg;
 
     if(rm_fmt_is_a_output(session->formats, path)) {
@@ -172,11 +173,17 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
     RmFile *file =
         rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth, NULL);
 
+    //if(path_needs_free) {
+    //    g_free(path);
+    //}
+
     if(file != NULL) {
         file->is_symlink = is_symlink;
         file->is_hidden = is_hidden;
         file->is_on_subvol_fs = is_on_subvol_fs;
         file->link_count = statp->st_nlink;
+        file->cached_original = tagged_original;
+        file->ext_cksum = ext_cksum;
 
         rm_file_list_insert_file(file, session);
 
@@ -214,7 +221,7 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
         session, (RmStat *)stat_buf, p->fts_path, is_prefd, path_index, lint_type, \
         is_symlink,                                                                     \
         rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),           \
-        rmpath->treat_as_single_vol, p->fts_level);
+        rmpath->treat_as_single_vol, p->fts_level, FALSE, NULL);
 
 #if RM_PLATFORM_32 && HAVE_STAT64
 
@@ -254,6 +261,84 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
     _ADD_FILE(lint_type, is_symlink, (RmStat *)p->fts_statp)
 
 #endif
+
+bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
+    /* Initialize ftsp */
+    int fts_flags = FTS_PHYSICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
+    FTS *ftsp = fts_open((const char *const[2]){path, NULL}, fts_flags, NULL);
+    if(ftsp == NULL) {
+        rm_log_error_line("fts_open() == NULL");
+        return FALSE;
+    }
+
+    FTSENT *p, *chp;
+    chp = fts_children(ftsp, 0);
+    if(chp == NULL) {
+        rm_log_warning_line("fts_children() == NULL");
+        return FALSE;
+    }
+
+    bool is_emptydir = TRUE;
+    while(!rm_session_was_aborted() && (p = fts_read(ftsp)) != NULL && is_emptydir) {
+        switch(p->fts_info) {
+        case FTS_D: /* preorder directory */
+            if(cfg->depth != 0 && p->fts_level + current_depth >= cfg->depth) {
+                /* continuing into folder would exceed maxdepth*/
+                is_emptydir = FALSE;
+                rm_log_debug_line("Not descending into %s because max depth reached",
+                                  p->fts_path);
+            } else if(!(cfg->crossdev) && p->fts_dev != chp->fts_dev) {
+                /* continuing into folder would cross file systems*/
+                is_emptydir = FALSE;
+                rm_log_info(
+                    "Not descending into %s because it is a different filesystem\n",
+                    p->fts_path);
+            }
+            break;
+        case FTS_DC: /* directory that causes cycles */
+            is_emptydir = FALSE;
+            rm_log_warning_line(_("filesystem loop detected at %s (skipping)"),
+                                p->fts_path);
+            break;
+        case FTS_DNR: /* unreadable directory */
+            is_emptydir = FALSE;
+            rm_log_warning_line(_("cannot read directory %s: %s"), p->fts_path,
+                                g_strerror(p->fts_errno));
+            break;
+        case FTS_DOT: /* dot or dot-dot */
+        case FTS_DP: /* postorder directory */
+        case FTS_INIT: /* initialized only */
+            break;
+        case FTS_ERR: /* error; errno is set */
+            is_emptydir = FALSE;
+            rm_log_warning_line(_("error %d in fts_read for %s (skipping)"), errno,
+                                p->fts_path);
+            break;
+            break;
+        case FTS_SLNONE: /* symbolic link without target */
+        case FTS_W:                      /* whiteout object */
+        case FTS_NS:                     /* rm_sys_stat(2) failed */
+        case FTS_SL:                     /* symbolic link */
+        case FTS_NSOK:    /* no rm_sys_stat(2) requested */
+        case FTS_F:       /* regular file */
+        case FTS_DEFAULT: /* any file type not explicitly described by one of the
+                             above*/
+            is_emptydir = FALSE;
+            break;
+        default:
+            /* unknown case; assume current dir not empty but otherwise do nothing */
+            is_emptydir = FALSE;
+            rm_log_error_line(_("Unknown fts_info flag %d for file %s"), p->fts_info,
+                              p->fts_path);
+            break;
+        }
+    }
+    fts_close(ftsp);
+    return is_emptydir;
+}
+
+
+
 
 static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
     RmCfg *cfg = session->cfg;
@@ -378,7 +463,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                                      path_index, RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
-                                     rmpath->treat_as_single_vol, p->fts_level);
+                                     rmpath->treat_as_single_vol, p->fts_level,
+                                     FALSE, NULL);
                     rm_log_info_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
@@ -487,11 +573,11 @@ void rm_traverse_tree(RmSession *session) {
              */
             rm_traverse_file(session, &buffer->stat_buf, rmpath->path,
                              rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_BADLINK, false,
-                             is_hidden, FALSE, 0);
+                             is_hidden, FALSE, 0, FALSE, NULL);
         } else if(S_ISREG(buffer->stat_buf.st_mode)) {
             rm_traverse_file(session, &buffer->stat_buf, rmpath->path,
                              rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_UNKNOWN, false,
-                             is_hidden, FALSE, 0);
+                             is_hidden, FALSE, 0, FALSE, NULL);
 
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {

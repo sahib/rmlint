@@ -1544,7 +1544,7 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
 
     /* maybe create group's digest from external checksums */
     RmFile *headfile = group->held_files->head->data;
-    char *cksum = headfile->ext_cksum;
+    const char *cksum = headfile->ext_cksum;
     if(cksum && !group->digest) {
         group->digest = rm_digest_new(RM_DIGEST_EXT, 0);
         rm_digest_update(group->digest, (unsigned char *)cksum, strlen(cksum));
@@ -1821,8 +1821,8 @@ void rm_shred_run(RmSession *session) {
     session->shred_bytes_total = session->shred_bytes_remaining;
     rm_mds_start(session->mds);
 
-    /* should complete shred session and then free: */
-    rm_mds_free(session->mds, FALSE);
+    /* should complete shred session */
+    rm_mds_finish(session->mds);
     rm_hasher_free(tag.hasher, TRUE);
 
     session->shredder_finished = TRUE;

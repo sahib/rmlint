@@ -1,4 +1,3 @@
-
 /**
 *  This file is part of rmlint.
 *
@@ -31,6 +30,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <json-glib/json-glib.h>
 
 #include "config.h"     // INLINE
 #include "treemerge.h"  // RmTreeMerger
@@ -77,6 +77,9 @@ typedef struct RmSession {
 
     /* Disk Scheduler */
     struct _RmMDS *mds;
+
+    /* Json Parser (for --replay) */
+    JsonParser *json_parser;
 
     /* Cache of already compiled GRegex patterns */
     GPtrArray *pattern_cache;

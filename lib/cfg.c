@@ -109,15 +109,20 @@ void rm_cfg_set_default(RmCfg *cfg) {
 }
 
 static RmPath *rm_path_new(char *real_path, bool is_prefd, guint idx,
-    bool treat_as_single_vol, bool realpath_worked) {
+    bool treat_as_single_vol, bool realpath_worked, RmTrie *tree) {
     RmPath *ret = g_slice_new(RmPath);
     ret->path = real_path;
     ret->is_prefd = is_prefd;
     ret->idx = idx;
     ret->treat_as_single_vol = treat_as_single_vol;
     ret->realpath_worked = realpath_worked;
+    if(tree) {
+        ret->node = rm_trie_insert(tree, real_path, NULL);
+    }
     return ret;
 }
+
+
 
 guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = access(path, R_OK);
@@ -157,10 +162,11 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     }
 
     bool is_json = cfg->replay && g_str_has_suffix(real_path, ".json");
+    RmTrie *tree = is_json ? NULL : &cfg->file_trie;
     bool treat_as_single_vol = (strncmp(path, "//", 2) == 0);
 
     RmPath *rmpath = rm_path_new(real_path, is_prefd, cfg->path_count,
-            treat_as_single_vol, realpath_worked);
+            treat_as_single_vol, realpath_worked, tree);
 
     if(is_json) {
         cfg->json_paths = g_slist_prepend(cfg->json_paths, rmpath);
@@ -171,6 +177,45 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     cfg->paths = g_slist_prepend(cfg->paths, rmpath);
     return 1;
 }
+
+bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long *path_index, bool *is_hidden, bool *is_on_subvol_fs, short *depth) {
+    // Note:  depends on cfg->paths having all preferred paths at start
+    // of list for is_prefd to work!!!
+
+    // set defaults
+    *is_prefd = FALSE;
+    *path_index = 0;
+    *is_on_subvol_fs = FALSE;
+    *is_hidden = FALSE;
+    *depth  = 0;
+
+    // search up tree from target (node) to see if we encounter a cmdline search path
+    for(short d=0; node != NULL && d<=cfg->depth; d++) {
+        for(GSList *iter = cfg->paths; iter; iter=iter->next) {
+            RmPath *path = iter->data;
+            if(path->node == node) {
+                *is_prefd = path->is_prefd;
+                *path_index = path->idx;
+                *is_on_subvol_fs = path->treat_as_single_vol;
+                *depth = d;
+                return TRUE;
+            }
+        }
+        if(node->basename && node->basename[0]=='.') {
+            // file is hidden relative to search paths
+            *is_hidden = TRUE;
+            if(cfg->ignore_hidden) {
+                // file is hidden from search path
+                return FALSE;
+            }
+        }
+        //TODO: partial hidden
+
+        node = node->parent;
+    }
+    return FALSE;
+}
+
 
 void rm_cfg_free_paths(RmCfg *cfg) {
     g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);
