@@ -211,6 +211,7 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
     } else if(*basename == '.') {
         return true;
     } else {
+        // true if any paths above us are hidden
         return !!memchr(hierarchy, 1, hierarchy_len);
     }
 }
