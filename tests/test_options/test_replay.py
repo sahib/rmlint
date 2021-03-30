@@ -191,9 +191,8 @@ def test_replay_keep_cached_originals():
     assert len(data) == 4
     assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_a/a')
     assert data[1]['path'] == os.path.join(TESTDIR_NAME, 'test_b/a')
-    assert (all (data[i]['is_original'] for i in range(3)))
+    assert (all(data[i]['is_original'] for i in range(3)))
     assert (not data[3]['is_original'])
-
 
 
 @attr('slow')
@@ -219,7 +218,7 @@ def test_sorting():
     all_opts = opts + opts.upper()
 
     combos = []
-    is_legal_combo = lambda x: len(x) == len(set(x.lower()))
+    def is_legal_combo(x): return len(x) == len(set(x.lower()))
 
     # Limit to 3-tuple combinations. 4-5-tuple combinations (just do +1)
     # are possible if you have enough time (=> ~(10! / 2) tests).
@@ -267,14 +266,14 @@ def test_replay_no_dir():
         os.chdir(TESTDIR_NAME)
         replay_path = '/tmp/replay.json'
         head, *data, footer = run_rmlint(
-                '-o json:{p}'.format(p=replay_path),
-                use_default_dir=False,
+            '-o json:{p}'.format(p=replay_path),
+            use_default_dir=False,
         )
         assert len(data) == 3
 
         head, *data, footer = run_rmlint(
-                '--replay {}'.format(replay_path),
-                use_default_dir=False,
+            '--replay {}'.format(replay_path),
+            use_default_dir=False,
         )
         assert len(data) == 3
     finally:
@@ -468,8 +467,11 @@ EXPECTED_WITHOUT_TREEMERGE = {
     }
 }
 
-EXPECTED_LEN_WITH_TREEMERGE = sum( [ len(EXPECTED_WITH_TREEMERGE[key]) for key in EXPECTED_WITH_TREEMERGE])
-EXPECTED_LEN_WITHOUT_TREEMERGE = sum( [ len(EXPECTED_WITHOUT_TREEMERGE[key]) for key in EXPECTED_WITHOUT_TREEMERGE])
+EXPECTED_LEN_WITH_TREEMERGE = sum(
+    [len(EXPECTED_WITH_TREEMERGE[key]) for key in EXPECTED_WITH_TREEMERGE])
+EXPECTED_LEN_WITHOUT_TREEMERGE = sum(
+    [len(EXPECTED_WITHOUT_TREEMERGE[key]) for key in EXPECTED_WITHOUT_TREEMERGE])
+
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_replay_pack_directories():
