@@ -1562,10 +1562,9 @@ int rm_cmd_main(RmSession *session) {
     }
     else {
         rm_traverse_tree(session);
-
-        rm_log_debug_line("List build finished at %.3f with %d files",
-                          g_timer_elapsed(session->timer, NULL), session->total_files);
     }
+    rm_log_debug_line("List build finished at %.3f with %d files",
+                      g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
         g_assert(cfg->cache_file_structs);
