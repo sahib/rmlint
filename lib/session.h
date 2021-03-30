@@ -27,10 +27,10 @@
 #define RM_SESSION_H
 
 #include <glib.h>
+#include <json-glib/json-glib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <json-glib/json-glib.h>
 
 #include "config.h"     // INLINE
 #include "treemerge.h"  // RmTreeMerger
@@ -177,7 +177,7 @@ static INLINE bool rm_session_was_aborted(void) {
     extern volatile int rm_session_abort_count;
     const gint n = g_atomic_int_get(&rm_session_abort_count);
 
-    if (n) {
+    if(n) {
         void rm_session_acknowledge_abort(gint);
         rm_session_acknowledge_abort(n);
     }
@@ -202,7 +202,6 @@ bool rm_session_check_kernel_version(int need_major, int need_minor);
  * @return exit_status for exit()
  */
 int rm_session_dedupe_main(RmCfg *cfg);
-
 
 /**
  * @brief Trigger rmlint in --is-reflink mode.

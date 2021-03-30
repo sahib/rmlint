@@ -23,29 +23,25 @@
  *
  */
 
+#include <errno.h>
+#include <glib.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <glib.h>
-
 #include "file.h"
 #include "formats.h"
+#include "fts/fts.h"
 #include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
 #include "utilities.h"
 #include "xattr.h"
 
-#include "fts/fts.h"
-
 //////////////////////
 // TRAVERSE SESSION //
 //////////////////////
-
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //
@@ -95,7 +91,7 @@ static char *rm_traverse_rel_realpath(const char *link_path, char *pointing_to) 
     }
 
     // Most links will already be absolute.
-    if(g_path_is_absolute(pointing_to))  {
+    if(g_path_is_absolute(pointing_to)) {
         return realpath(pointing_to, NULL);
     }
 
@@ -108,11 +104,10 @@ static char *rm_traverse_rel_realpath(const char *link_path, char *pointing_to) 
     return clean_path;
 }
 
-bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
-                             bool is_prefd, unsigned long path_index,
-                             RmLintType file_type, bool is_symlink, bool is_hidden,
-                             bool is_on_subvol_fs, short depth,
-                             bool tagged_original, const char *ext_cksum) {
+bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path, bool is_prefd,
+                      unsigned long path_index, RmLintType file_type, bool is_symlink,
+                      bool is_hidden, bool is_on_subvol_fs, short depth,
+                      bool tagged_original, const char *ext_cksum) {
     RmCfg *cfg = session->cfg;
 
     if(rm_fmt_is_a_output(session->formats, path)) {
@@ -139,8 +134,7 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
             RmOff file_size = statp->st_size;
             if(!cfg->limits_specified ||
                ((cfg->minsize <= file_size) && (file_size <= cfg->maxsize))) {
-                if(rm_mounts_is_evil(session->mounts, statp->st_dev) ==
-                   false) {
+                if(rm_mounts_is_evil(session->mounts, statp->st_dev) == false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
                 } else {
                     /* A file in an evil fs. Ignore. */
@@ -153,11 +147,12 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
         }
     }
 
-    //bool path_needs_free = false;
+    // bool path_needs_free = false;
     if(is_symlink && cfg->follow_symlinks) {
         char *new_path_buf = g_malloc0(PATH_MAX + 1);
         if(readlink(path, new_path_buf, PATH_MAX) == -1) {
-            rm_log_debug_line("failed to follow symbolic link of %s: %s", path, g_strerror(errno));
+            rm_log_debug_line("failed to follow symbolic link of %s: %s", path,
+                              g_strerror(errno));
             g_free(new_path_buf);
             return FALSE;
         }
@@ -167,13 +162,13 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
 
         path = resolved_path;
         is_symlink = false;
-        //path_needs_free = true;
+        // path_needs_free = true;
     }
 
     RmFile *file =
         rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth, NULL);
 
-    //if(path_needs_free) {
+    // if(path_needs_free) {
     //    g_free(path);
     //}
 
@@ -201,7 +196,6 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
         return TRUE;
     }
     return FALSE;
-
 }
 
 static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierarchy,
@@ -217,11 +211,11 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
 }
 
 /* Macro for rm_traverse_directory() for easy file adding */
-#define _ADD_FILE(lint_type, is_symlink, stat_buf)                                      \
-    rm_traverse_file(                                                                   \
+#define _ADD_FILE(lint_type, is_symlink, stat_buf)                                 \
+    rm_traverse_file(                                                              \
         session, (RmStat *)stat_buf, p->fts_path, is_prefd, path_index, lint_type, \
-        is_symlink,                                                                     \
-        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),           \
+        is_symlink,                                                                \
+        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),      \
         rmpath->treat_as_single_vol, p->fts_level, FALSE, NULL);
 
 #if RM_PLATFORM_32 && HAVE_STAT64
@@ -306,8 +300,8 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
             rm_log_warning_line(_("cannot read directory %s: %s"), p->fts_path,
                                 g_strerror(p->fts_errno));
             break;
-        case FTS_DOT: /* dot or dot-dot */
-        case FTS_DP: /* postorder directory */
+        case FTS_DOT:  /* dot or dot-dot */
+        case FTS_DP:   /* postorder directory */
         case FTS_INIT: /* initialized only */
             break;
         case FTS_ERR: /* error; errno is set */
@@ -316,10 +310,10 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
                                 p->fts_path);
             break;
             break;
-        case FTS_SLNONE: /* symbolic link without target */
-        case FTS_W:                      /* whiteout object */
-        case FTS_NS:                     /* rm_sys_stat(2) failed */
-        case FTS_SL:                     /* symbolic link */
+        case FTS_SLNONE:  /* symbolic link without target */
+        case FTS_W:       /* whiteout object */
+        case FTS_NS:      /* rm_sys_stat(2) failed */
+        case FTS_SL:      /* symbolic link */
         case FTS_NSOK:    /* no rm_sys_stat(2) requested */
         case FTS_F:       /* regular file */
         case FTS_DEFAULT: /* any file type not explicitly described by one of the
@@ -337,9 +331,6 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
     fts_close(ftsp);
     return is_emptydir;
 }
-
-
-
 
 static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
     RmCfg *cfg = session->cfg;
@@ -464,8 +455,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                                      path_index, RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
-                                     rmpath->treat_as_single_vol, p->fts_level,
-                                     FALSE, NULL);
+                                     rmpath->treat_as_single_vol, p->fts_level, FALSE,
+                                     NULL);
                     rm_log_info_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
@@ -548,12 +539,8 @@ void rm_traverse_tree(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     RmMDS *mds = session->mds;
-    rm_mds_configure(mds,
-                     (RmMDSFunc)rm_traverse_directory,
-                     session,
-                     0,
-                     cfg->threads_per_disk,
-                     NULL);
+    rm_mds_configure(
+        mds, (RmMDSFunc)rm_traverse_directory, session, 0, cfg->threads_per_disk, NULL);
 
     /* iterate through paths */
     for(GSList *iter = cfg->paths; iter && !rm_session_was_aborted(); iter = iter->next) {
@@ -572,21 +559,21 @@ void rm_traverse_tree(RmSession *session) {
             /* A symlink where we could not get the actual path from
              * (and it was given directly, e.g. by a find call)
              */
-            rm_traverse_file(session, &buffer->stat_buf, rmpath->path,
-                             rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_BADLINK, false,
-                             is_hidden, FALSE, 0, FALSE, NULL);
+            rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
+                             rmpath->idx, RM_LINT_TYPE_BADLINK, false, is_hidden, FALSE,
+                             0, FALSE, NULL);
         } else if(S_ISREG(buffer->stat_buf.st_mode)) {
-            rm_traverse_file(session, &buffer->stat_buf, rmpath->path,
-                             rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_UNKNOWN, false,
-                             is_hidden, FALSE, 0, FALSE, NULL);
+            rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
+                             rmpath->idx, RM_LINT_TYPE_UNKNOWN, false, is_hidden, FALSE,
+                             0, FALSE, NULL);
 
             rm_trav_buffer_free(buffer);
         } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
-            buffer->disk =
-                rm_mds_device_get(mds, rmpath->path, (cfg->fake_pathindex_as_disk)
-                                                         ? rmpath->idx + 1
-                                                         : buffer->stat_buf.st_dev);
+            buffer->disk = rm_mds_device_get(mds, rmpath->path,
+                                             (cfg->fake_pathindex_as_disk)
+                                                 ? rmpath->idx + 1
+                                                 : buffer->stat_buf.st_dev);
             rm_mds_device_ref(buffer->disk, 1);
             rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, rmpath->path,
                              buffer);
@@ -604,7 +591,6 @@ void rm_traverse_tree(RmSession *session) {
                       session->total_files,
                       session->ignored_files,
                       session->ignored_folders);
-
 
     session->traverse_finished = TRUE;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);

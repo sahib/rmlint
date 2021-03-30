@@ -38,16 +38,16 @@
 #include <assert.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <json-glib/json-glib.h>
 #include <math.h>
 #include <string.h>
 
-#include <json-glib/json-glib.h>
-
-
-static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *object, bool json_is_prefd) {
+static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *object,
+                                            bool json_is_prefd) {
     RmCfg *cfg = session->cfg;
 
-    /* Read the path (without generating a warning if it's not there) */ //TODO: why not?
+    /* Read the path (without generating a warning if it's not there) */  // TODO: why
+                                                                          // not?
     JsonNode *path_node = json_object_get_member(object, "path");
     if(path_node == NULL) {
         rm_log_warning_line("path_node is NULL");
@@ -73,11 +73,11 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
     const char *ext_cksum = NULL;
 
     RmNode *node = rm_trie_insert(&cfg->file_trie, path, NULL);
-    if(!rm_cfg_is_traversed(cfg, node, &is_prefd, &path_index, &is_hidden, &is_on_subvol_fs, &depth)){
+    if(!rm_cfg_is_traversed(cfg, node, &is_prefd, &path_index, &is_hidden,
+                            &is_on_subvol_fs, &depth)) {
         rm_log_info_line("Skipping cached file %s because not on search path", path);
         return FALSE;
     }
-
 
     /* Collect file information */
     RmStat lstat_buf, stat_buf;
@@ -92,9 +92,8 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
     if(is_badlink && cfg->find_badlinks) {
         is_symlink = FALSE;
         file_type = RM_LINT_TYPE_BADLINK;
-    }
-    else {
-        if (is_symlink) {
+    } else {
+        if(is_symlink) {
             if(cfg->see_symlinks) {
                 /* NOTE: bad links are also counted as duplicates
                  *       when -T df,dd (for example) is used.
@@ -102,8 +101,7 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
                  *       algorithm which might fail when missing.
                  */
                 file_type = RM_LINT_TYPE_UNKNOWN;
-            }
-            else {
+            } else {
                 // follow the symlink
                 stat_info = &stat_buf;
             }
@@ -118,7 +116,8 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
 
             /* Allow them a rather large span to deviate to account for inaccuracies */
             if(fabs(stat_mtime - json_mtime) > 0.05) {
-                rm_log_warning_line(_("modification time of `%s` changed. Ignoring."), path);
+                rm_log_warning_line(_("modification time of `%s` changed. Ignoring."),
+                                    path);
                 return FALSE;
             }
         }
@@ -127,16 +126,14 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
         JsonNode *type_node = json_object_get_member(object, "type");
         if(type_node == NULL) {
             rm_log_warning_line(_("lint type of node not recognised"));
-        }
-        else {
+        } else {
             const char *type_str = json_node_get_string(type_node);
             RmLintType json_lint_type = rm_file_string_to_lint_type(type_str);
             switch(json_lint_type) {
             case RM_LINT_TYPE_EMPTY_DIR:
                 if(!cfg->find_emptydirs) {
                     return FALSE;
-                }
-                else if(!rm_traverse_is_emptydir(path, cfg, depth)) {
+                } else if(!rm_traverse_is_emptydir(path, cfg, depth)) {
                     // no longer empty; ignore
                     return FALSE;
                 }
@@ -163,14 +160,15 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
     is_prefd |= json_is_prefd;
 
     if(rm_traverse_file(session, stat_info, path, is_prefd, path_index, file_type,
-            is_symlink, is_hidden, is_on_subvol_fs, depth, tagged_original, ext_cksum)) {
+                        is_symlink, is_hidden, is_on_subvol_fs, depth, tagged_original,
+                        ext_cksum)) {
         return TRUE;
     }
     return FALSE;
 }
 
-static gboolean rm_parrot_cage_load(RmSession *session, const char *json_path, bool json_is_prefd) {
-
+static gboolean rm_parrot_cage_load(RmSession *session, const char *json_path,
+                                    bool json_is_prefd) {
     GError *error = NULL;
 
     rm_log_info_line(_("Loading json-results `%s'"), json_path);
@@ -185,11 +183,11 @@ static gboolean rm_parrot_cage_load(RmSession *session, const char *json_path, b
     }
 
     JsonArray *array = json_node_get_array(root);
-    //JsonObject *header = json_array_get_object_element(array, 0);
+    // JsonObject *header = json_array_get_object_element(array, 0);
 
     int file_count = json_array_get_length(array) - 2;  // minus 2 for header and footer
 
-    for(int i=1; i<=file_count; i++) {
+    for(int i = 1; i <= file_count; i++) {
         JsonObject *object = json_array_get_object_element(array, i);
         rm_parrot_load_file_from_object(session, object, json_is_prefd);
     }

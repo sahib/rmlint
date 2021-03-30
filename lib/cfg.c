@@ -21,12 +21,12 @@
 *
 * Hosted on http://github.com/sahib/rmlint
 **/
+#include "cfg.h"
 
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "cfg.h"
 #include "logger.h"
 #include "utilities.h"
 
@@ -109,7 +109,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
 }
 
 static RmPath *rm_path_new(char *real_path, bool is_prefd, guint idx,
-    bool treat_as_single_vol, bool realpath_worked, RmTrie *tree) {
+                           bool treat_as_single_vol, bool realpath_worked, RmTrie *tree) {
     RmPath *ret = g_slice_new(RmPath);
     ret->path = real_path;
     ret->is_prefd = is_prefd;
@@ -121,8 +121,6 @@ static RmPath *rm_path_new(char *real_path, bool is_prefd, guint idx,
     }
     return ret;
 }
-
-
 
 guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = access(path, R_OK);
@@ -141,10 +139,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
         rc = readlink(path, dummy, 1);
         if(rc < 0) {
             rm_log_warning_line(
-                _("Can't open directory or file \"%s\": %s"),
-                path,
-                strerror(errno)
-            );
+                _("Can't open directory or file \"%s\": %s"), path, strerror(errno));
             return 0;
         }
     }
@@ -152,8 +147,8 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     bool realpath_worked = true;
     char *real_path = realpath(path, NULL);
     if(real_path == NULL) {
-        rm_log_debug_line(_("Can't get real path for directory or file \"%s\": %s"),
-                            path, strerror(errno));
+        rm_log_debug_line(_("Can't get real path for directory or file \"%s\": %s"), path,
+                          strerror(errno));
 
         /* Continue with the path we got,
          * this is likely a bad symbolic link */
@@ -166,7 +161,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     bool treat_as_single_vol = (strncmp(path, "//", 2) == 0);
 
     RmPath *rmpath = rm_path_new(real_path, is_prefd, cfg->path_count,
-            treat_as_single_vol, realpath_worked, tree);
+                                 treat_as_single_vol, realpath_worked, tree);
 
     if(is_json) {
         cfg->json_paths = g_slist_prepend(cfg->json_paths, rmpath);
@@ -178,7 +173,9 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     return 1;
 }
 
-bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long *path_index, bool *is_hidden, bool *is_on_subvol_fs, short *depth) {
+bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd,
+                         unsigned long *path_index, bool *is_hidden,
+                         bool *is_on_subvol_fs, short *depth) {
     // Note:  depends on cfg->paths having all preferred paths at start
     // of list for is_prefd to work!!!
 
@@ -187,11 +184,11 @@ bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long
     *path_index = 0;
     *is_on_subvol_fs = FALSE;
     *is_hidden = FALSE;
-    *depth  = 0;
+    *depth = 0;
 
     // search up tree from target (node) to see if we encounter a cmdline search path
-    for(short d=0; node != NULL && d<=cfg->depth; d++) {
-        for(GSList *iter = cfg->paths; iter; iter=iter->next) {
+    for(short d = 0; node != NULL && d <= cfg->depth; d++) {
+        for(GSList *iter = cfg->paths; iter; iter = iter->next) {
             RmPath *path = iter->data;
             if(path->node == node) {
                 *is_prefd = path->is_prefd;
@@ -201,7 +198,7 @@ bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long
                 return TRUE;
             }
         }
-        if(node->basename && node->basename[0]=='.') {
+        if(node->basename && node->basename[0] == '.') {
             // file is hidden relative to search paths
             *is_hidden = TRUE;
             if(cfg->ignore_hidden) {
@@ -209,13 +206,12 @@ bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long
                 return FALSE;
             }
         }
-        //TODO: partial hidden
+        // TODO: partial hidden
 
         node = node->parent;
     }
     return FALSE;
 }
-
 
 void rm_cfg_free_paths(RmCfg *cfg) {
     g_slist_free_full(cfg->paths, (GDestroyNotify)rm_path_free);

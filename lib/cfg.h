@@ -204,6 +204,8 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path);
  */
 void rm_cfg_free_paths(RmCfg *cfg);
 
-bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd, unsigned long *path_index, bool *is_hidden, bool *is_on_subvol_fs, short *depth);
+bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd,
+                         unsigned long *path_index, bool *is_hidden,
+                         bool *is_on_subvol_fs, short *depth);
 
 #endif /* end of include guard */

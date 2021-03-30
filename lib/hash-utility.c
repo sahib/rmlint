@@ -146,21 +146,22 @@ int rm_hasher_main(int argc, const char **argv) {
     char summary[4096];
     memset(summary, 0, sizeof(summary));
 
-    g_snprintf(summary, sizeof(summary),
-               _("Multi-threaded file digest (hash) calculator.\n"
-                 "\n  Available digest types:"
-                 "\n  Cryptographic:"
-                 "\n    %s\n"
-                 "\n  Non-cryptographic:"
-                 "\n    %s\n"
-                 "\n  Supported, but not useful:"
-                 "\n    %s\n"),
-               "sha{1,256,512}, sha3-{256,384,512}, blake{2s,2b,2sp,2bp}, highway{64,128,256}",
+    g_snprintf(
+        summary, sizeof(summary),
+        _("Multi-threaded file digest (hash) calculator.\n"
+          "\n  Available digest types:"
+          "\n  Cryptographic:"
+          "\n    %s\n"
+          "\n  Non-cryptographic:"
+          "\n    %s\n"
+          "\n  Supported, but not useful:"
+          "\n    %s\n"),
+        "sha{1,256,512}, sha3-{256,384,512}, blake{2s,2b,2sp,2bp}, highway{64,128,256}",
 #if HAVE_MM_CRC32_U64
-               "metrocrc, metrocrc256, "
+        "metrocrc, metrocrc256, "
 #endif
-               "metro, metro256, xxhash, murmur",
-               "cumulative, paranoid, ext");
+        "metro, metro256, xxhash, murmur",
+        "cumulative, paranoid, ext");
 
     g_option_group_add_entries(main_group, entries);
     g_option_context_set_main_group(context, main_group);

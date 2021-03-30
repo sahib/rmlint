@@ -23,13 +23,14 @@
  *
  */
 
+#include "formats.h"
+
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "file.h"
-#include "formats.h"
 #include "logger.h"
 
 /* A group of output files.
@@ -192,13 +193,12 @@ gchar *rm_date_time_format_iso8601(GDateTime *datetime) {
         g_string_append_c(outstr, 'Z');
     } else {
         gchar *time_zone = g_date_time_format(datetime, "%:::z");
-        g_string_append (outstr, time_zone);
-        g_free (time_zone);
+        g_string_append(outstr, time_zone);
+        g_free(time_zone);
     }
 
     return g_string_free(outstr, FALSE);
 }
-
 
 void rm_fmt_clear(RmFmtTable *self) {
     if(rm_fmt_len(self) <= 0) {
@@ -230,9 +230,9 @@ void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
         new_path = g_strdup_printf("%s.%s", old_path, timestamp);
     }
 
-
     rm_log_debug_line(_("Old result `%s` already exists."), old_path);
-    rm_log_debug_line(_("Moving old file to `%s`. Leave out --backup to disable this."), new_path);
+    rm_log_debug_line(_("Moving old file to `%s`. Leave out --backup to disable this."),
+                      new_path);
 
     if(rename(old_path, new_path) < 0) {
         rm_log_perror(_("failed to rename old result file"));
@@ -364,9 +364,9 @@ static gint rm_fmt_rank_size(const RmFmtGroup *ga, const RmFmtGroup *gb) {
 
 static int rm_lint_type_order[] = {
     /* Other types have a prio of 0 by default */
-    [RM_LINT_TYPE_PART_OF_DIRECTORY]  = 1,
+    [RM_LINT_TYPE_PART_OF_DIRECTORY] = 1,
     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = 2,
-    [RM_LINT_TYPE_DUPE_CANDIDATE]     = 3,
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = 3,
 };
 
 static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {

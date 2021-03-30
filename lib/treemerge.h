@@ -27,6 +27,7 @@
 #define RM_TREEMERGE_INCLUDE
 
 #include <glib.h>
+
 #include "file.h"
 
 /**
@@ -59,7 +60,8 @@ RmTreeMerger *rm_tm_new(RmSession *session);
 /**
  * @brief Set the output callback
  */
-void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback, gpointer callback_data);
+void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback,
+                        gpointer callback_data);
 
 /**
  * @brief Add an RmFile to the pool of (to be) investigated files.

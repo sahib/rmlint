@@ -27,6 +27,7 @@
 #define RM_SHREDDER_H
 
 #include <glib.h>
+
 #include "session.h"
 
 typedef enum RmShredGroupStatus {

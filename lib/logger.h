@@ -63,11 +63,11 @@ static inline GMutex *rm_log_get_mutex(void) {
 #define RM_LOG_INIT g_mutex_init(rm_log_get_mutex());
 
 /* These colors should only be used with the rm_log_* macros below */
-#define RED    "\x1b[31;01m"
+#define RED "\x1b[31;01m"
 #define YELLOW "\x1b[33;01m"
-#define RESET  "\x1b[0m"
-#define GREEN  "\x1b[32;01m"
-#define BLUE  "\x1b[34;01m"
+#define RESET "\x1b[0m"
+#define GREEN "\x1b[32;01m"
+#define BLUE "\x1b[34;01m"
 
 /* Stupid macros to make printing error lines easier */
 #define rm_log_error_prefix() \
@@ -80,9 +80,9 @@ static inline GMutex *rm_log_get_mutex(void) {
     rm_log_warning(_("WARNING")); \
     rm_log_warning(": " RESET);
 
-#define rm_log_info_prefix()  \
-    rm_log_info(GREEN);       \
-    rm_log_info(_("INFO"));   \
+#define rm_log_info_prefix() \
+    rm_log_info(GREEN);      \
+    rm_log_info(_("INFO"));  \
     rm_log_info(": " RESET);
 
 #define rm_log_debug_prefix() \
@@ -104,10 +104,10 @@ static inline GMutex *rm_log_get_mutex(void) {
     rm_log_warning("\n");                                \
     g_mutex_unlock(rm_log_get_mutex());
 
-#define rm_log_info_line(...)                        \
-    g_mutex_lock(rm_log_get_mutex());                \
-    rm_log_info_prefix() rm_log_info(__VA_ARGS__);   \
-    rm_log_info("\n");                               \
+#define rm_log_info_line(...)                      \
+    g_mutex_lock(rm_log_get_mutex());              \
+    rm_log_info_prefix() rm_log_info(__VA_ARGS__); \
+    rm_log_info("\n");                             \
     g_mutex_unlock(rm_log_get_mutex());
 
 #define rm_log_debug_line(...)                       \

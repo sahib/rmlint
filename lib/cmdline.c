@@ -23,23 +23,22 @@
  *
  */
 
-#include "config.h"
+#include "cmdline.h"
 
 #include <ctype.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 #include <errno.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <math.h>
 #include <search.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "cmdline.h"
+#include "config.h"
 #include "formats.h"
 #include "hash-utility.h"
 #include "logger.h"
@@ -177,7 +176,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
     // Copy and strip the string:
     char size_spec_copy[512] = {0};
     memset(size_spec_copy, 0, sizeof(size_spec_copy));
-    strncpy(size_spec_copy, size_spec, sizeof(size_spec_copy)-1);
+    strncpy(size_spec_copy, size_spec, sizeof(size_spec_copy) - 1);
     char *size_spec_stripped = g_strstrip(size_spec_copy);
 
     if(*size_spec_stripped == 0) {
@@ -200,7 +199,9 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
     double fraction = 0;
 
     char *size_format = size_spec_stripped;
-    for(; *size_format && (*size_format == '.' || g_ascii_isdigit(*size_format)); size_format++);
+    for(; *size_format && (*size_format == '.' || g_ascii_isdigit(*size_format));
+        size_format++)
+        ;
 
     // Set to true when either a format suffix or a fraction was encountered.
     bool need_multiply = false;
@@ -208,18 +209,17 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
     if(*size_format != 0) {
         need_multiply = true;
         FormatSpec key = {.id = size_format};
-        FormatSpec *found = bsearch(
-            &key,
-            SIZE_FORMAT_TABLE,
-            SIZE_FORMAT_TABLE_N,
-            sizeof(FormatSpec),
-            rm_cmd_compare_spec_elem
-        );
+        FormatSpec *found = bsearch(&key,
+                                    SIZE_FORMAT_TABLE,
+                                    SIZE_FORMAT_TABLE_N,
+                                    sizeof(FormatSpec),
+                                    rm_cmd_compare_spec_elem);
 
         if(found != NULL) {
             size_factor *= pow(found->base, found->exponent);
         } else {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Given size_format specifier not found"));
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Given size_format specifier not found"));
             return 0;
         }
 
@@ -273,7 +273,8 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
 
         // Check if an overflow happened during multiplication.
         if(result < base_size) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Size factor would overflow size (max. 2**64 allowed)"));
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Size factor would overflow size (max. 2**64 allowed)"));
             return 0;
         }
     }
@@ -334,7 +335,7 @@ static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
                                    RmSession *session,
                                    _UNUSED GError **error) {
     session->cfg->write_cksum_to_xattr = true;
-    session->cfg->read_cksum_from_xattr= true;
+    session->cfg->read_cksum_from_xattr = true;
     session->cfg->clear_xattr_fields = false;
     return true;
 }
@@ -354,7 +355,7 @@ static bool rm_cmd_read_paths_from_stdin(RmSession *session, bool is_prefd,
     while((path_len = getdelim(&path_buf, &buf_len, delim, stdin)) >= 0) {
         if(path_len > 0) {
             /* replace returned delimiter with null */
-            if (path_buf[path_len - 1] == delim) {
+            if(path_buf[path_len - 1] == delim) {
                 path_buf[path_len - 1] = 0;
             }
 
@@ -381,11 +382,11 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
         char *extension = strchr(pair, '.');
         if(extension == NULL) {
             full_path = "stdout";
-            strncpy(format_name, pair, sizeof(format_name)-1);
+            strncpy(format_name, pair, sizeof(format_name) - 1);
         } else {
             extension += 1;
             full_path = (char *)pair;
-            strncpy(format_name, extension, sizeof(format_name)-1);
+            strncpy(format_name, extension, sizeof(format_name) - 1);
         }
     } else {
         full_path = separator + 1;
@@ -545,7 +546,6 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     return true;
 }
 
-
 /* parse comma-separated strong of lint types and set cfg accordingly */
 typedef struct RmLintTypeOption {
     const char **names;
@@ -607,7 +607,8 @@ static gboolean rm_cmd_parse_lint_types(_UNUSED const char *option_name,
                            &cfg->find_emptyfiles, &cfg->find_duplicates, 0},
         },
         {
-            .names = NAMES{"none", 0}, .enable = OPTS{0},
+            .names = NAMES{"none", 0},
+            .enable = OPTS{0},
         },
         {.names = NAMES{"badids", "bi", 0}, .enable = OPTS{&cfg->find_badids, 0}},
         {.names = NAMES{"badlinks", "bl", 0}, .enable = OPTS{&cfg->find_badlinks, 0}},
@@ -755,11 +756,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
             success = rm_cmd_parse_timestamp(
-                option_name,
-                g_strstrip(stamp_buf),
-                session,
-                error
-            );
+                option_name, g_strstrip(stamp_buf), session, error);
 
             if(!success) {
                 return false;
@@ -773,7 +770,8 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         /* Cannot read a stamp file, assume we gonna creae it. */
         plain = false;
         success = true;
-        rm_log_info_line(_("No stamp file at `%s`, will create one after this run."), timestamp_path);
+        rm_log_info_line(_("No stamp file at `%s`, will create one after this run."),
+                         timestamp_path);
     }
 
     rm_fmt_add(session->formats, "stamp", timestamp_path);
@@ -959,8 +957,9 @@ static gboolean rm_cmd_parse_follow_symlinks(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_no_follow_symlinks(_UNUSED const char *option_name,
-                                             _UNUSED const gchar *count,
-                                             RmSession *session, _UNUSED GError **error) {
+                                                _UNUSED const gchar *count,
+                                                RmSession *session,
+                                                _UNUSED GError **error) {
     RmCfg *cfg = session->cfg;
     cfg->see_symlinks = false;
     cfg->follow_symlinks = false;
@@ -979,18 +978,18 @@ static gboolean rm_cmd_parse_no_partial_hidden(_UNUSED const char *option_name,
     return true;
 }
 static gboolean rm_cmd_parse_hidden(_UNUSED const char *option_name,
-                                               _UNUSED const gchar *_,
-                                               RmSession *session,
-                                               _UNUSED GError **error) {
+                                    _UNUSED const gchar *_,
+                                    RmSession *session,
+                                    _UNUSED GError **error) {
     session->cfg->ignore_hidden = false;
     session->cfg->partial_hidden = false;
     return true;
 }
 
 static gboolean rm_cmd_parse_no_hidden(_UNUSED const char *option_name,
-                                               _UNUSED const gchar *_,
-                                               RmSession *session,
-                                               _UNUSED GError **error) {
+                                       _UNUSED const gchar *_,
+                                       RmSession *session,
+                                       _UNUSED GError **error) {
     session->cfg->ignore_hidden = true;
     session->cfg->partial_hidden = false;
     return true;
@@ -1056,7 +1055,7 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
     }
 
     /* Remember the criteria string */
-    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria)-1);
+    strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria) - 1);
 
     /* ranking the files depends on caching them to the end of the program */
     cfg->cache_file_structs = true;
@@ -1114,36 +1113,41 @@ static gboolean rm_cmd_parse_equal(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
-                                   _UNUSED GError **error) {
+                                         _UNUSED const gchar *x,
+                                         _UNUSED RmSession *session,
+                                         _UNUSED GError **error) {
     rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
     return false;
 }
 
 static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
-                                   _UNUSED GError **error) {
+                                            _UNUSED const gchar *x,
+                                            _UNUSED RmSession *session,
+                                            _UNUSED GError **error) {
     rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
     return false;
 }
 
 static gboolean rm_cmd_parse_dedupe_xattr(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
-                                   _UNUSED GError **error) {
+                                          _UNUSED const gchar *x,
+                                          _UNUSED RmSession *session,
+                                          _UNUSED GError **error) {
     rm_log_error_line("option --dedupe-xattr is deprecated, use --dedupe --xattr");
     return false;
 }
 
 static gboolean rm_cmd_parse_dedupe_readonly(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
-                                   _UNUSED GError **error) {
+                                             _UNUSED const gchar *x,
+                                             _UNUSED RmSession *session,
+                                             _UNUSED GError **error) {
     rm_log_error_line("option --dedupe-readonly is deprecated, use --dedupe --readonly");
     return false;
 }
 
 static gboolean rm_cmd_parse_write_unfinished(_UNUSED const char *option_name,
-                                   _UNUSED const gchar *x, _UNUSED RmSession *session,
-                                   _UNUSED GError **error) {
+                                              _UNUSED const gchar *x,
+                                              _UNUSED RmSession *session,
+                                              _UNUSED GError **error) {
     rm_log_error_line("option --write-unfinished is deprecated, use --hash-unmatched");
     return false;
 }
@@ -1200,8 +1204,8 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 
     if(cfg->read_stdin || cfg->read_stdin0) {
         /* option '-' means read paths from stdin */
-        all_paths_valid &=
-            rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred, cfg->read_stdin0);
+        all_paths_valid &= rm_cmd_read_paths_from_stdin(session, stdin_paths_preferred,
+                                                        cfg->read_stdin0);
     } else if(g_slist_length(cfg->paths) == 0 && all_paths_valid) {
         /* Still no path set? - use `pwd` */
         rm_cfg_add_path(session->cfg, is_prefd, cfg->iwd);
@@ -1223,7 +1227,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     return true;
 }
 
-static char * rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
+static char *rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
     RmCfg *cfg = session->cfg;
     if(cfg->full_argv0_path == NULL) {
         /* Note: this check will only work on linux! */
@@ -1259,7 +1263,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
 
     /* Free short options: AJ
      * (beside special characters and numbers)
-    */
+     */
 
     /* clang-format off */
     const GOptionEntry main_option_entries[] = {
@@ -1413,8 +1417,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         "inversed", "inverted", "Options that enable defaults", session, NULL);
     GOptionGroup *unusual_group =
         g_option_group_new("unusual", "unusual", "Unusual options", session, NULL);
-    GOptionGroup *deprecated_group =
-        g_option_group_new("deprecated", "deprecated", "Deprecated options", session, NULL);
+    GOptionGroup *deprecated_group = g_option_group_new(
+        "deprecated", "deprecated", "Deprecated options", session, NULL);
 
     g_option_group_add_entries(main_group, main_option_entries);
     g_option_group_add_entries(main_group, inversed_option_entries);
@@ -1446,7 +1450,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     if(!rm_cmd_set_paths(session, paths)) {
-        error = g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
+        error =
+            g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
         goto cleanup;
     }
 
@@ -1463,9 +1468,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     }
 
     if(cfg->honour_dir_layout && !cfg->merge_directories) {
-        rm_log_warning_line(_("--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
-        rm_log_warning_line(_("Note that not having duplicate directories enabled as lint type (e.g via -T df)"));
-        rm_log_warning_line(_("will also disable --merge-directories and trigger this warning."));
+        rm_log_warning_line(_(
+            "--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"));
+        rm_log_warning_line(
+            _("Note that not having duplicate directories enabled as lint type (e.g via "
+              "-T df)"));
+        rm_log_warning_line(
+            _("will also disable --merge-directories and trigger this warning."));
     }
 
     if(cfg->progress_enabled) {
@@ -1499,23 +1508,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else if(!rm_cmd_set_outputs(session, &error)) {
         /* Something wrong with the outputs */
     } else if(cfg->keep_all_tagged && cfg->must_match_untagged) {
-        error = \
-            g_error_new(
-                RM_ERROR_QUARK, 0,
-                _(
-                    "-k and -M should not be specified at the same time " \
-                    "(see also: https://github.com/sahib/rmlint/issues/244)"
-                )
-        );
+        error = g_error_new(RM_ERROR_QUARK, 0,
+                            _("-k and -M should not be specified at the same time "
+                              "(see also: https://github.com/sahib/rmlint/issues/244)"));
     } else if(cfg->keep_all_untagged && cfg->must_match_tagged) {
-        error = \
-            g_error_new(
-                RM_ERROR_QUARK, 0,
-                _(
-                    "-K and -m should not be specified at the same time " \
-                    "(see also: https://github.com/sahib/rmlint/issues/244)"
-                )
-        );
+        error = g_error_new(RM_ERROR_QUARK, 0,
+                            _("-K and -m should not be specified at the same time "
+                              "(see also: https://github.com/sahib/rmlint/issues/244)"));
     }
 
 #if HAVE_BUILTIN_CPU_SUPPORTS && HAVE_MM_CRC32_U64
@@ -1560,8 +1559,7 @@ int rm_cmd_main(RmSession *session) {
         if(rm_parrot_load(session) != EXIT_SUCCESS) {
             return EXIT_FAILURE;
         }
-    }
-    else {
+    } else {
         rm_traverse_tree(session);
     }
     rm_log_debug_line("List build finished at %.3f with %d files",
@@ -1570,20 +1568,20 @@ int rm_cmd_main(RmSession *session) {
     if(cfg->merge_directories) {
         g_assert(cfg->cache_file_structs);
 
-        /* Currently we cannot use -D and the cloning on btrfs, since this assumes the same layout
-         * on two dupicate directories which is likely not a valid assumption.
+        /* Currently we cannot use -D and the cloning on btrfs, since this assumes the
+         * same layout on two dupicate directories which is likely not a valid assumption.
          * Emit a warning if the raw -D is used in conjunction with that.
          * */
-        const char *handler_key = rm_fmt_get_config_value(session->formats, "sh", "handler");
+        const char *handler_key =
+            rm_fmt_get_config_value(session->formats, "sh", "handler");
         const char *clone_key = rm_fmt_get_config_value(session->formats, "sh", "clone");
-        if(
-            cfg->honour_dir_layout == false && (
-                (handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
-                clone_key != NULL
-            )
-        ) {
-            rm_log_error_line(_("Using -D together with -c sh:clone is currently not possible. Sorry."));
-            rm_log_error_line(_("Either do not use -D, or attempt to run again with -Dj."));
+        if(cfg->honour_dir_layout == false &&
+           ((handler_key != NULL && strstr(handler_key, "clone") != NULL) ||
+            clone_key != NULL)) {
+            rm_log_error_line(_(
+                "Using -D together with -c sh:clone is currently not possible. Sorry."));
+            rm_log_error_line(
+                _("Either do not use -D, or attempt to run again with -Dj."));
             return EXIT_FAILURE;
         }
 
@@ -1595,7 +1593,8 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->total_files < 2 && session->cfg->run_equal_mode) {
-        rm_log_warning_line(_("Not enough files for --equal (need at least two to compare)"));
+        rm_log_warning_line(
+            _("Not enough files for --equal (need at least two to compare)"));
         return EXIT_FAILURE;
     }
 
@@ -1640,7 +1639,8 @@ int rm_cmd_main(RmSession *session) {
 
     if(cfg->merge_directories) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
-        rm_tm_set_callback(session->dir_merger, (RmTreeMergeOutputFunc)rm_shred_output_tm_results, session);
+        rm_tm_set_callback(session->dir_merger,
+                           (RmTreeMergeOutputFunc)rm_shred_output_tm_results, session);
         rm_tm_finish(session->dir_merger);
     }
 

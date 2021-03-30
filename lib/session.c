@@ -23,6 +23,8 @@
 *
 **/
 
+#include "session.h"
+
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -32,7 +34,6 @@
 #include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
-#include "session.h"
 #include "traverse.h"
 #include "xattr.h"
 

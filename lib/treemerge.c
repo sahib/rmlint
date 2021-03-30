@@ -71,21 +71,20 @@
  */
 // #define _RM_TREEMERGE_DEBUG
 
+#include "treemerge.h"
+
 #include <glib.h>
 #include <string.h>
-
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include "formats.h"
+#include "fts/fts.h"
 #include "logger.h"
 #include "pathtricia.h"
 #include "preprocess.h"
-#include "shredder.h"
-#include "treemerge.h"
 #include "session.h"
-
-#include "fts/fts.h"
+#include "shredder.h"
 
 typedef struct RmDirectory {
     char *dirname;       /* Path to this directory without trailing slash              */
@@ -201,18 +200,19 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
         return false;
     }
 
-    const char **path = path_vec + path_count; *path = 0;
+    const char **path = path_vec + path_count;
+    *path = 0;
     for(const GSList *paths = cfg->paths; paths; paths = paths->next) {
         g_assert(paths->data);
         *(--path) = ((RmPath *)paths->data)->path;
-    } g_assert(path == path_vec);
+    }
+    g_assert(path == path_vec);
 
     /* This tree stores the full file paths.
        It is joined into a full directory tree later.
      */
     RmTrie file_tree;
     rm_trie_init(&file_tree);
-
 
     FTS *fts = fts_open(path_vec, FTS_COMFOLLOW | FTS_PHYSICAL, NULL);
     if(fts == NULL) {
@@ -286,9 +286,9 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     g_free(path_vec);
     return true;
 
-    fail:
-        g_free(path_vec);
-        return false;
+fail:
+    g_free(path_vec);
+    return false;
 }
 
 ///////////////////////////////
@@ -451,12 +451,11 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
     if(self->session->cfg->honour_dir_layout) {
         const char *basename = file->folder->basename;
         gsize basename_cksum_len = 0;
-        guint8 *basename_cksum = rm_digest_sum(
-                RM_DIGEST_BLAKE2B,
-                (const guint8 *)basename,
-                strlen(basename) + 1,  /* include the nul-byte */
-                &basename_cksum_len
-        );
+        guint8 *basename_cksum =
+            rm_digest_sum(RM_DIGEST_BLAKE2B,
+                          (const guint8 *)basename,
+                          strlen(basename) + 1, /* include the nul-byte */
+                          &basename_cksum_len);
         rm_digest_update(directory->digest, basename_cksum, basename_cksum_len);
         g_slice_free1(basename_cksum_len, basename_cksum);
     }
@@ -470,7 +469,8 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
     directory->prefd_files += file->is_prefd;
 }
 
-static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent, RmDirectory *subdir) {
+static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent,
+                                    RmDirectory *subdir) {
     if(subdir->was_merged) {
         return;
     }
@@ -500,12 +500,11 @@ static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent, RmD
     if(self->session->cfg->honour_dir_layout) {
         char *basename = g_path_get_basename(subdir->dirname);
         gsize basename_cksum_len = 0;
-        guint8* basename_cksum = rm_digest_sum(
-                RM_DIGEST_BLAKE2B,
-                (const guint8 *)basename,
-                strlen(basename) + 1,  /* include the nul-byte */
-                &basename_cksum_len
-        );
+        guint8 *basename_cksum =
+            rm_digest_sum(RM_DIGEST_BLAKE2B,
+                          (const guint8 *)basename,
+                          strlen(basename) + 1, /* include the nul-byte */
+                          &basename_cksum_len);
 
         rm_digest_update(parent->digest, basename_cksum, basename_cksum_len);
         g_slice_free1(basename_cksum_len, basename_cksum);
@@ -547,7 +546,8 @@ RmTreeMerger *rm_tm_new(RmSession *session) {
     return self;
 }
 
-void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback, gpointer data) {
+void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback,
+                        gpointer data) {
     g_assert(self);
     self->callback = callback;
     self->callback_data = data;
@@ -702,10 +702,7 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
         RmFile *file = iter->data;
 
         GQueue *file_list = rm_hash_table_setdefault(
-            self->file_groups,
-            file->digest,
-            (RmNewFunc)g_queue_new
-        );
+            self->file_groups, file->digest, (RmNewFunc)g_queue_new);
 
         g_queue_push_head(file_list, file);
     }
@@ -798,7 +795,7 @@ static void rm_tm_output_group(RmTreeMerger *self, GQueue *group) {
 
     bool has_duplicates = false;
 
-    for(GList *iter = group->head; iter; iter=iter->next) {
+    for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if(!file->is_original) {
             has_duplicates = true;
@@ -936,7 +933,8 @@ static void rm_tm_extract(RmTreeMerger *self) {
     GQueue *file_list = NULL;
     while(g_hash_table_iter_next(&iter, NULL, (void **)&file_list)) {
         if(self->session->cfg->partial_hidden) {
-            /* with --partial-hidden we do not want to output left overs that are hidden */
+            /* with --partial-hidden we do not want to output left overs that are hidden
+             */
             rm_util_queue_foreach_remove(file_list, (RmRFunc)rm_tm_hidden_file, NULL);
         }
 
@@ -1028,4 +1026,3 @@ void rm_tm_destroy(RmTreeMerger *self) {
 
     g_slice_free(RmTreeMerger, self);
 }
-

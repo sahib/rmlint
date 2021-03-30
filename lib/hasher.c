@@ -23,13 +23,13 @@
  *
  */
 
+#include "hasher.h"
+
+#include <fcntl.h>
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <fcntl.h>
-
-#include "hasher.h"
 #include "logger.h"
 #include "utilities.h"
 
@@ -146,7 +146,7 @@ static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
     RmBuffer *buffer = rm_buffer_new(hasher->buf_sem, hasher->buf_size);
     gint len = readlink(path, (char *)buffer->data, hasher->buf_size);
 
-    if (len < 0) {
+    if(len < 0) {
         rm_log_perror("Cannot read symbolic link");
         rm_buffer_free(hasher->buf_sem, buffer);
         return FALSE;
@@ -218,9 +218,9 @@ static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             break;
         } else if(bytes_read == 0) {
             rm_log_warning_line(_("Something went wrong reading %s; expected %li bytes, "
-                                "got %li; ignoring"),
-                              path, (long int)bytes_to_read,
-                              (long int)*bytes_actually_read);
+                                  "got %li; ignoring"),
+                                path, (long int)bytes_to_read,
+                                (long int)*bytes_actually_read);
             break;
         }
     }
@@ -263,7 +263,8 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
 
     guint16 n_preadv_buffers = N_PREADV_BUFFERS;
     if(bytes_to_read > 0) {
-        n_preadv_buffers = MIN(n_preadv_buffers, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
+        n_preadv_buffers =
+            MIN(n_preadv_buffers, DIVIDE_CEIL(bytes_to_read, hasher->buf_size));
     }
 
     /* Allocate buffer vector */
@@ -316,7 +317,7 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
                 buffer->user_data = NULL;
                 rm_util_thread_pool_push(hashpipe, buffer);
             } else {
-                rm_buffer_free(hasher->buf_sem,  buffer);
+                rm_buffer_free(hasher->buf_sem, buffer);
             }
         }
 
@@ -479,8 +480,8 @@ gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offse
     gboolean success = false;
 
     if(is_symlink) {
-        success = rm_hasher_symlink_read(task->hasher, task->hashpipe, task->digest,
-                                         path, &bytes_read);
+        success = rm_hasher_symlink_read(task->hasher, task->hashpipe, task->digest, path,
+                                         &bytes_read);
     } else if(task->hasher->use_buffered_read) {
         success = rm_hasher_buffered_read(task->hasher, task->hashpipe, task->digest,
                                           path, start_offset, bytes_to_read, &bytes_read);
@@ -492,7 +493,6 @@ gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offse
 
     if(bytes_read_out != NULL) {
         *bytes_read_out = bytes_read;
-
     }
 
     return success;
