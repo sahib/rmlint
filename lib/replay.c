@@ -274,7 +274,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Fill up the RmFile */
-    file = rm_file_new(polly->session, path, stat_info, type, 0, 0, 0);
+    file = rm_file_new(polly->session, path, stat_info, type, 0, 0, 0, NULL);
     JsonNode *is_original_node = json_object_get_member(object, "is_original");
     if(is_original_node != NULL) {
         file->is_original = json_node_get_boolean(is_original_node);

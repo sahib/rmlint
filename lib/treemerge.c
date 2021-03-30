@@ -367,9 +367,8 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
                                  RmFile *file) {
     memset(file, 0, sizeof(RmFile));
 
-    /* Need to set session first, since set_path expects that */
     file->session = merger->session;
-    rm_file_set_path(file, self->dirname);
+    file->folder = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
     file->digest = self->digest;

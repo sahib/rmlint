@@ -310,7 +310,7 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
-                    RmLintType type, bool is_ppath, unsigned pnum, short depth);
+                    RmLintType type, bool is_ppath, unsigned pnum, short depth, RmNode *folder);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -357,12 +357,6 @@ const char *rm_file_lint_type_to_string(RmLintType type);
  * @return a valid lint type or RM_LINT_TYPE_UNKNOWN
  */
 RmLintType rm_file_string_to_lint_type(const char *type);
-
-/**
- * @brief Set a path to the file. Normally, you should never do this since the
- * path is immutable.
- */
-void rm_file_set_path(RmFile *file, char *path);
 
 /**
  * @brief Internal helper function for RM_DEFINE_PATH using folder tree and basename.

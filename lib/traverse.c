@@ -193,7 +193,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
     }
 
     RmFile *file =
-        rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth);
+        rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth, NULL);
 
     if(path_needs_free) {
         g_free(path);

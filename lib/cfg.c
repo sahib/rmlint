@@ -108,6 +108,17 @@ void rm_cfg_set_default(RmCfg *cfg) {
     rm_trie_init(&cfg->file_trie);
 }
 
+static RmPath *rm_path_new(char *real_path, bool is_prefd, guint idx,
+    bool treat_as_single_vol, bool realpath_worked) {
+    RmPath *ret = g_slice_new(RmPath);
+    ret->path = real_path;
+    ret->is_prefd = is_prefd;
+    ret->idx = idx;
+    ret->treat_as_single_vol = treat_as_single_vol;
+    ret->realpath_worked = realpath_worked;
+    return ret;
+}
+
 guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
     int rc = access(path, R_OK);
 
@@ -145,14 +156,13 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
         realpath_worked = false;
     }
 
-    RmPath *rmpath = g_slice_new(RmPath);
-    rmpath->path = real_path;
-    rmpath->is_prefd = is_prefd;
-    rmpath->idx = cfg->path_count;
-    rmpath->treat_as_single_vol = strncmp(path, "//", 2) == 0;
-    rmpath->realpath_worked = realpath_worked;
+    bool is_json = cfg->replay && g_str_has_suffix(real_path, ".json");
+    bool treat_as_single_vol = (strncmp(path, "//", 2) == 0);
 
-    if(cfg->replay && g_str_has_suffix(rmpath->path, ".json")) {
+    RmPath *rmpath = rm_path_new(real_path, is_prefd, cfg->path_count,
+            treat_as_single_vol, realpath_worked);
+
+    if(is_json) {
         cfg->json_paths = g_slist_prepend(cfg->json_paths, rmpath);
         return 1;
     }

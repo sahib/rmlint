@@ -32,7 +32,7 @@
 #include <unistd.h>
 
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
-                    RmLintType type, bool is_ppath, unsigned path_index, short depth) {
+                    RmLintType type, bool is_ppath, unsigned path_index, short depth, RmNode *folder) {
     RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
@@ -59,7 +59,10 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
-    rm_file_set_path(self, (char *)path);
+    if(!folder) {
+        folder = rm_trie_insert(&cfg->file_trie, path, self);
+    }
+    self->folder = folder;
 
     self->depth = depth;
     self->path_depth = rm_util_path_depth(path);
@@ -97,10 +100,6 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->outer_link_count = -1;
 
     return self;
-}
-
-void rm_file_set_path(RmFile *file, char *path) {
-    file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, file);
 }
 
 void rm_file_build_path(RmFile *file, char *buf) {
@@ -143,7 +142,7 @@ void rm_file_destroy(RmFile *file) {
     }
 
     if(file->ext_cksum) {
-        g_free(file->ext_cksum);
+        g_free((char*)file->ext_cksum);
     }
 
     if(file->free_digest) {
