@@ -1,3 +1,4 @@
+
 /**
 *  This file is part of rmlint.
 *
@@ -79,6 +80,8 @@ typedef struct RmSession {
 
     /* Cache of already compiled GRegex patterns */
     GPtrArray *pattern_cache;
+
+    RmUserList *userlist;
 
     /* Counters for printing useful statistics */
     volatile gint total_files;

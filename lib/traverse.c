@@ -46,28 +46,6 @@
 // TRAVERSE SESSION //
 //////////////////////
 
-typedef struct RmTravSession {
-    RmUserList *userlist;
-    RmSession *session;
-} RmTravSession;
-
-static RmTravSession *rm_traverse_session_new(RmSession *session) {
-    RmTravSession *self = g_new0(RmTravSession, 1);
-    self->session = session;
-    self->userlist = rm_userlist_new();
-    return self;
-}
-
-static void rm_traverse_session_free(RmTravSession *trav_session) {
-    rm_log_debug_line("Found %d files, ignored %d hidden files and %d hidden folders",
-                      trav_session->session->total_files,
-                      trav_session->session->ignored_files,
-                      trav_session->session->ignored_folders);
-
-    rm_userlist_destroy(trav_session->userlist);
-
-    g_free(trav_session);
-}
 
 ///////////////////////////////////////////
 // BUFFER FOR STARTING TRAVERSAL THREADS //
@@ -111,7 +89,7 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 // and constructs an absolute path out of it.
 //
 // See also: https://github.com/sahib/rmlint/issues/333
-static char *rm_traverse_rel_realpath(char *link_path, char *pointing_to) {
+static char *rm_traverse_rel_realpath(const char *link_path, char *pointing_to) {
     if(pointing_to == NULL) {
         return NULL;
     }
@@ -130,16 +108,15 @@ static char *rm_traverse_rel_realpath(char *link_path, char *pointing_to) {
     return clean_path;
 }
 
-static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *path,
+bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path,
                              bool is_prefd, unsigned long path_index,
                              RmLintType file_type, bool is_symlink, bool is_hidden,
                              bool is_on_subvol_fs, short depth) {
-    RmSession *session = trav_session->session;
     RmCfg *cfg = session->cfg;
 
     if(rm_fmt_is_a_output(session->formats, path)) {
         /* ignore files which are rmlint outputs */
-        return;
+        return false;
     }
 
     /* Try to autodetect the type of the lint */
@@ -150,10 +127,10 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
             file_type = RM_LINT_TYPE_EMPTY_FILE;
         } else if(cfg->permissions && access(path, cfg->permissions) == -1) {
             /* bad permissions; ignore file */
-            trav_session->session->ignored_files++;
-            return;
+            session->ignored_files++;
+            return false;
         } else if(cfg->find_badids &&
-                  (gid_check = rm_util_uid_gid_check(statp, trav_session->userlist))) {
+                  (gid_check = rm_util_uid_gid_check(statp, session->userlist))) {
             file_type = gid_check;
         } else if(cfg->find_nonstripped && rm_util_is_nonstripped(path, statp)) {
             file_type = RM_LINT_TYPE_NONSTRIPPED;
@@ -161,27 +138,27 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
             RmOff file_size = statp->st_size;
             if(!cfg->limits_specified ||
                ((cfg->minsize <= file_size) && (file_size <= cfg->maxsize))) {
-                if(rm_mounts_is_evil(trav_session->session->mounts, statp->st_dev) ==
+                if(rm_mounts_is_evil(session->mounts, statp->st_dev) ==
                    false) {
                     file_type = RM_LINT_TYPE_DUPE_CANDIDATE;
                 } else {
                     /* A file in an evil fs. Ignore. */
-                    trav_session->session->ignored_files++;
-                    return;
+                    session->ignored_files++;
+                    return FALSE;
                 }
             } else {
-                return;
+                return FALSE;
             }
         }
     }
 
-    bool path_needs_free = false;
+    //bool path_needs_free = false;
     if(is_symlink && cfg->follow_symlinks) {
         char *new_path_buf = g_malloc0(PATH_MAX + 1);
         if(readlink(path, new_path_buf, PATH_MAX) == -1) {
             rm_log_debug_line("failed to follow symbolic link of %s: %s", path, g_strerror(errno));
             g_free(new_path_buf);
-            return;
+            return FALSE;
         }
 
         char *resolved_path = rm_traverse_rel_realpath(path, new_path_buf);
@@ -189,15 +166,11 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
 
         path = resolved_path;
         is_symlink = false;
-        path_needs_free = true;
+        //path_needs_free = true;
     }
 
     RmFile *file =
         rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth, NULL);
-
-    if(path_needs_free) {
-        g_free(path);
-    }
 
     if(file != NULL) {
         file->is_symlink = is_symlink;
@@ -207,7 +180,7 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
 
         rm_file_list_insert_file(file, session);
 
-        g_atomic_int_add(&trav_session->session->total_files, 1);
+        g_atomic_int_add(&session->total_files, 1);
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
@@ -218,7 +191,10 @@ static void rm_traverse_file(RmTravSession *trav_session, RmStat *statp, char *p
                 rm_xattr_read_hash(file, session);
             }
         }
+        return TRUE;
     }
+    return FALSE;
+
 }
 
 static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierarchy,
@@ -235,7 +211,7 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
 /* Macro for rm_traverse_directory() for easy file adding */
 #define _ADD_FILE(lint_type, is_symlink, stat_buf)                                      \
     rm_traverse_file(                                                                   \
-        trav_session, (RmStat *)stat_buf, p->fts_path, is_prefd, path_index, lint_type, \
+        session, (RmStat *)stat_buf, p->fts_path, is_prefd, path_index, lint_type, \
         is_symlink,                                                                     \
         rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),           \
         rmpath->treat_as_single_vol, p->fts_level);
@@ -279,8 +255,7 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
 
 #endif
 
-static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_session) {
-    RmSession *session = trav_session->session;
+static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
     RmCfg *cfg = session->cfg;
     RmPath *rmpath = buffer->rmpath;
 
@@ -325,9 +300,9 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
 
             if(p->fts_info == FTS_D) {
                 fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
-                g_atomic_int_inc(&trav_session->session->ignored_folders);
+                g_atomic_int_inc(&session->ignored_folders);
             } else {
-                g_atomic_int_inc(&trav_session->session->ignored_files);
+                g_atomic_int_inc(&session->ignored_files);
             }
 
             clear_emptydir_flags = true; /* flag current dir as not empty */
@@ -399,7 +374,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                     /* normal stat failed but 64-bit stat worked
                      * -> must be a big file on 32 bit.
                      */
-                    rm_traverse_file(trav_session, &stat_buf, p->fts_path, is_prefd,
+                    rm_traverse_file(session, &stat_buf, p->fts_path, is_prefd,
                                      path_index, RM_LINT_TYPE_UNKNOWN, false,
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
@@ -484,12 +459,11 @@ done:
 
 void rm_traverse_tree(RmSession *session) {
     RmCfg *cfg = session->cfg;
-    RmTravSession *trav_session = rm_traverse_session_new(session);
 
     RmMDS *mds = session->mds;
     rm_mds_configure(mds,
                      (RmMDSFunc)rm_traverse_directory,
-                     trav_session,
+                     session,
                      0,
                      cfg->threads_per_disk,
                      NULL);
@@ -511,11 +485,11 @@ void rm_traverse_tree(RmSession *session) {
             /* A symlink where we could not get the actual path from
              * (and it was given directly, e.g. by a find call)
              */
-            rm_traverse_file(trav_session, &buffer->stat_buf, rmpath->path,
+            rm_traverse_file(session, &buffer->stat_buf, rmpath->path,
                              rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_BADLINK, false,
                              is_hidden, FALSE, 0);
         } else if(S_ISREG(buffer->stat_buf.st_mode)) {
-            rm_traverse_file(trav_session, &buffer->stat_buf, rmpath->path,
+            rm_traverse_file(session, &buffer->stat_buf, rmpath->path,
                              rmpath->is_prefd, rmpath->idx, RM_LINT_TYPE_UNKNOWN, false,
                              is_hidden, FALSE, 0);
 
@@ -539,7 +513,11 @@ void rm_traverse_tree(RmSession *session) {
     rm_mds_start(mds);
     rm_mds_finish(mds);
 
-    rm_traverse_session_free(trav_session);
+    rm_log_debug_line("Found %d files, ignored %d hidden files and %d hidden folders",
+                      session->total_files,
+                      session->ignored_files,
+                      session->ignored_folders);
+
 
     session->traverse_finished = TRUE;
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);

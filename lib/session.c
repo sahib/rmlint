@@ -85,6 +85,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
     session->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
+    session->userlist = rm_userlist_new();
 
     session->verbosity_count = 2;
     session->paranoia_count = 0;
@@ -114,6 +115,7 @@ void rm_session_clear(RmSession *session) {
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
     g_ptr_array_free(session->pattern_cache, TRUE);
+    rm_userlist_destroy(session->userlist);
 
     if(session->mounts) {
         rm_mounts_table_destroy(session->mounts);
