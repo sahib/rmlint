@@ -91,7 +91,7 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
     /* use stat() after lstat() to find out if it's an symlink.
      * If it's a bad link, this will fail with stat_info still pointing to lstat.
      * */
-    if(rm_sys_stat(path, &stat_buf) == -1) {
+    if(rm_sys_stat(path, &stat_buf) == -1 && cfg->find_badlinks) {
         file_type = RM_LINT_TYPE_BADLINK;
     }
     else {
