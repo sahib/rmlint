@@ -424,6 +424,8 @@ EXPECTED_WITHOUT_TREEMERGE = {
     }
 }
 
+EXPECTED_LEN_WITH_TREEMERGE = sum( [ len(EXPECTED_WITH_TREEMERGE[key]) for key in EXPECTED_WITH_TREEMERGE])
+EXPECTED_LEN_WITHOUT_TREEMERGE = sum( [ len(EXPECTED_WITHOUT_TREEMERGE[key]) for key in EXPECTED_WITHOUT_TREEMERGE])
 
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_replay_pack_directories():
@@ -433,17 +435,17 @@ def test_replay_pack_directories():
     replay_path = '/tmp/replay.json'
 
     head, *data, footer = run_rmlint('-o json:{p} -S ahD'.format(p=replay_path))
-    assert len(data) == 13
+    assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
     # Do the run without any packing first (it should yield the same result)
     head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
-    assert len(data) == 13
+    assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
     # Do the run with packing dupes into directories now:
     head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
-    assert len(data) == 21
+    assert len(data) == EXPECTED_LEN_WITH_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
 
@@ -455,21 +457,15 @@ def test_replay_unpack_directories():
     replay_path = '/tmp/replay.json'
     head, *data, footer = run_rmlint('-o json:{p} -S ahD -D'.format(p=replay_path))
 
-    assert len(data) == 21
+    assert len(data) == EXPECTED_LEN_WITH_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
     # Do a normal --replay run first without any unpacking:
     head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
-    assert len(data) == 21
+    assert len(data) == EXPECTED_LEN_WITH_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
     # # Do the run with unpacking the directories:
     head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
-    assert len(data) == 23
-
-    # NOTE: In this special case we should still carry around the
-    # part_of_directory elements from previous runs.
-    expected = EXPECTED_WITHOUT_TREEMERGE
-    expected["part_of_directory"] = EXPECTED_WITH_TREEMERGE["part_of_directory"]
-
-    assert data_by_type(data) == expected
+    assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
+    assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
