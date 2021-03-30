@@ -86,16 +86,28 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
         // TODO: warning
         return FALSE;
     }
-    is_symlink = S_ISLNK(lstat_buf.st_mode);
 
-    /* use stat() after lstat() to find out if it's an symlink.
-     * If it's a bad link, this will fail with stat_info still pointing to lstat.
-     * */
-    if(rm_sys_stat(path, &stat_buf) == -1 && cfg->find_badlinks) {
+    is_symlink = S_ISLNK(lstat_buf.st_mode);
+    bool is_badlink = is_symlink && rm_sys_stat(path, &stat_buf) == -1;
+    if(is_badlink && cfg->find_badlinks) {
+        is_symlink = FALSE;
         file_type = RM_LINT_TYPE_BADLINK;
     }
     else {
-        // stat_info = &stat_buf;
+        if (is_symlink) {
+            if(cfg->see_symlinks) {
+                /* NOTE: bad links are also counted as duplicates
+                 *       when -T df,dd (for example) is used.
+                 *       They can serve as input for the treemerge
+                 *       algorithm which might fail when missing.
+                 */
+                file_type = RM_LINT_TYPE_UNKNOWN;
+            }
+            else {
+                // follow the symlink
+                stat_info = &stat_buf;
+            }
+        }
 
         /* Check if we're late and issue an warning */
         JsonNode *mtime_node = json_object_get_member(object, "mtime");
