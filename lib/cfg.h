@@ -97,6 +97,7 @@ typedef struct RmCfg {
     gboolean backup;
     gboolean hash_uniques;
     gboolean hash_unmatched;
+    gboolean keep_cached_originals;
 
     int permissions;
 

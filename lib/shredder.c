@@ -1251,15 +1251,20 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     /* Make sure to *never* make a symlink to be the original */
     if(a->is_symlink != b->is_symlink) {
         return a->is_symlink - b->is_symlink;
+    } else if(cfg->keep_cached_originals && b->cached_original != a->cached_original) {
+        /* manual tagging takes priority over automated in this case */
+        return b->cached_original - a->cached_original;
     } else if((a->is_prefd != b->is_prefd) &&
               (cfg->keep_all_untagged || cfg->must_match_untagged)) {
+        /* -[kKmM] options take priority */
         return (a->is_prefd - b->is_prefd);
     } else {
         int comparasion = rm_pp_cmp_orig_criteria(a, b, session);
         if(comparasion == 0) {
+            /* if already tagged original elsewhere then respect that */
             return b->is_original - a->is_original;
         }
-
+        /* fall back to -S criteria */
         return comparasion;
     }
 }

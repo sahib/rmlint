@@ -1370,6 +1370,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
         {"no-sse"                 , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->no_sse                 , "Don't use SSE accelerations"                                 , NULL}   ,
         {"no-mount-table"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->list_mounts            , "Do not try to optimize by listing mounted volumes"           , NULL}   ,
+        {"keep-cached-originals"  , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->keep_cached_originals  , "For --replay runs, preserve any originals in json cache"     , NULL}   ,
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
 
