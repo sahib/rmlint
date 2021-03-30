@@ -358,6 +358,7 @@ void rm_mds_finish(RmMDS *mds) {
     mds->running = FALSE;
     if(mds->pool) {
         g_thread_pool_free(mds->pool, false, true);
+        mds->pool = NULL;
     }
 }
 
