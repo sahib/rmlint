@@ -377,22 +377,7 @@ static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
         RM_PATTERN_SET_CACHED(mask_b, idx, result_b);
     }
 
-    /* Both match */
-    if(result_a && result_b) {
-        return 0;
-    }
-    /* Only a */
-    else if (result_a) {
-        return -1;
-    }
-    /* Only b */
-    else if (result_b) {
-        return 1;   
-    }
-    /* Neither */
-    else {
-        return 0;
-    }
+    return SIGN_DIFF(result_b, result_a);
 }
 
 /*
