@@ -24,12 +24,13 @@
 **/
 
 #include "xattr.h"
-#include "config.h"
-#include "logger.h"
 
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include "config.h"
+#include "logger.h"
 
 #if HAVE_XATTR
 #include <sys/xattr.h>
@@ -50,7 +51,8 @@
 
 #if RM_IS_APPLE
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size, bool follow_link) {
+ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
+                        bool follow_link) {
     int flags = 0;
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -59,8 +61,8 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size, 0, flags);
 }
 
-ssize_t rm_sys_setxattr(
-    const char *path, const char *name, const void *value, size_t size, int flags, bool follow_link) {
+ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+                        size_t size, int flags, bool follow_link) {
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
     }
@@ -88,22 +90,23 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
 
 #else
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size, bool follow_link) {
+ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
+                        bool follow_link) {
     if(!follow_link) {
-    #if HAVE_LXATTR
+#if HAVE_LXATTR
         return lgetxattr(path, name, value, size);
-    #endif
+#endif
     }
 
     return getxattr(path, name, value, size);
 }
 
-ssize_t rm_sys_setxattr(
-    const char *path, const char *name, const void *value, size_t size, int flags, bool follow_link) {
+ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+                        size_t size, int flags, bool follow_link) {
     if(!follow_link) {
-    #if HAVE_LXATTR
+#if HAVE_LXATTR
         return lsetxattr(path, name, value, size, flags);
-    #endif
+#endif
     }
 
     return setxattr(path, name, value, size, flags);
@@ -111,9 +114,9 @@ ssize_t rm_sys_setxattr(
 
 int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     if(!follow_link) {
-    #if HAVE_LXATTR
+#if HAVE_LXATTR
         return lremovexattr(path, name);
-    #endif
+#endif
     }
 
     return removexattr(path, name);
@@ -121,9 +124,9 @@ int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
 
 int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
     if(!follow_link) {
-    #if HAVE_LXATTR
+#if HAVE_LXATTR
         return llistxattr(path, out, out_size);
-    #endif
+#endif
     }
 
     return listxattr(path, out, out_size);
@@ -182,26 +185,24 @@ static int rm_xattr_set(RmFile *file,
                         size_t value_size,
                         bool follow_link) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail("setxattr", file_path, false,
-                            rm_sys_setxattr(file_path, key, value, value_size, 0, follow_link));
+    return rm_xattr_is_fail(
+        "setxattr", file_path, false,
+        rm_sys_setxattr(file_path, key, value, value_size, 0, follow_link));
 }
 
-static int rm_xattr_get(RmFile *file,
-                        const char *key,
-                        char *out_value,
-                        size_t value_size,
-                        bool follow_link) {
+static int rm_xattr_get(
+    RmFile *file, const char *key, char *out_value, size_t value_size, bool follow_link) {
     RM_DEFINE_PATH(file);
 
-    return rm_xattr_is_fail("getxattr", file_path, false,
-                            rm_sys_getxattr(file_path, key, out_value, value_size, follow_link));
+    return rm_xattr_is_fail(
+        "getxattr", file_path, false,
+        rm_sys_getxattr(file_path, key, out_value, value_size, follow_link));
 }
 
 static int rm_xattr_del(RmFile *file, const char *key, bool follow_link) {
     RM_DEFINE_PATH(file);
-    return rm_xattr_is_fail(
-            "removexattr", file_path, true,
-            rm_sys_removexattr(file_path, key, follow_link));
+    return rm_xattr_is_fail("removexattr", file_path, true,
+                            rm_sys_removexattr(file_path, key, follow_link));
 }
 
 #endif
@@ -246,9 +247,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    char cksum_key[64] = {0},
-         mtime_key[64] = {0},
-         mtime_buf[64] = {0},
+    char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
          cksum_hex_str[512] = {0};
 
     memset(cksum_hex_str, 0, sizeof(cksum_hex_str));
@@ -275,8 +274,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
             file_path,
             xattr_mtime,
             file->mtime,
-            file->mtime-xattr_mtime
-        );
+            file->mtime - xattr_mtime);
         rm_xattr_clear_hash(file, session);
         return FALSE;
     }
@@ -325,16 +323,13 @@ GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
     char buf[buf_size];
     memset(buf, 0, buf_size);
 
-    int rc = rm_sys_listxattr(path, buf, buf_size-1, follow_symlinks);
+    int rc = rm_sys_listxattr(path, buf, buf_size - 1, follow_symlinks);
     if(rc < 0) {
         rm_xattr_is_fail("listxattr", (char *)path, true, rc);
         return NULL;
     }
 
-    GHashTable *map = g_hash_table_new_full(
-            g_str_hash, g_str_equal,
-            g_free, g_free
-    );
+    GHashTable *map = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 
     bool failed = false;
     char *curr = buf;
@@ -349,12 +344,12 @@ GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
             break;
         }
 
-        size_t key_len = next-curr;
+        size_t key_len = next - curr;
         if(key_len <= 0) {
             break;
         }
 
-        if(strncmp(curr, prefix, MIN(key_len, sizeof(prefix) -1)) != 0) {
+        if(strncmp(curr, prefix, MIN(key_len, sizeof(prefix) - 1)) != 0) {
             // Skip this key and save some memory. Not one of ours.
             curr = next + 1;
             continue;
@@ -403,7 +398,8 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
 
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
-        rm_log_warning_line("failed to check dedupe state of %s: %s", path, g_strerror(errno));
+        rm_log_warning_line("failed to check dedupe state of %s: %s", path,
+                            g_strerror(errno));
         return EXIT_FAILURE;
     }
 
@@ -452,7 +448,8 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
 
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
-        rm_log_warning_line("failed to mark dedupe state of %s: %s", path, g_strerror(errno));
+        rm_log_warning_line("failed to mark dedupe state of %s: %s", path,
+                            g_strerror(errno));
         return EXIT_FAILURE;
     }
 

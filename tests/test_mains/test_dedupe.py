@@ -11,6 +11,7 @@ from tests.utils import *
 
 REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
 
+
 @contextmanager
 def assert_exit_code(status_code):
     """
@@ -34,6 +35,7 @@ def up(path):
             break
         path = os.path.dirname(path)
 
+
 def is_on_reflink_fs(path):
     parts = psutil.disk_partitions(all=True)
 
@@ -41,7 +43,8 @@ def is_on_reflink_fs(path):
     for up_path in up(path):
         for part in parts:
             if up_path == part.mountpoint:
-                print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
+                print("{0} is {1} mounted at {2}".format(
+                    path, part.fstype, part.mountpoint))
                 return (part.fstype in REFLINK_CAPABLE_FILESYSTEMS)
 
     print("No mountpoint found for {0}", path)
@@ -188,6 +191,8 @@ def test_dedupe_works():
         )
 
 # count the number of line in a file which start with patterns[]
+
+
 def pattern_count(path, patterns):
     counts = [0] * len(patterns)
     with open(path, 'r') as f:
@@ -218,8 +223,8 @@ def test_clone_handler():
 
     # parse output file for expected clone command
     patterns = [
-            "clone         '",
-            "skip_reflink  '"]
+        "clone         '",
+        "skip_reflink  '"]
     counts = pattern_count(sh_path, patterns)
     print(counts)
     assert counts[0] == 1

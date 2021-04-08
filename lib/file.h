@@ -81,6 +81,8 @@ typedef enum RmLintType {
      * They land still in the json output with this type.
      */
     RM_LINT_TYPE_PART_OF_DIRECTORY,
+
+    RM_LINT_TYPE_ERROR
 } RmLintType;
 
 struct RmSession;
@@ -107,7 +109,7 @@ struct RmDirectory;
  */
 typedef struct RmFile {
     /* file path lookup ID (if using swap table)
-        * */
+     * */
     RmOff path_id;
 
     /* file folder as node of folder n-ary tree
@@ -188,6 +190,9 @@ typedef struct RmFile {
     /* Set to true if file belongs to a subvolume-capable filesystem eg btrfs */
     bool is_on_subvol_fs : 1;
 
+    /* Set to true if was read from [json] cache as an original */
+    bool cached_original : 1;
+
     /* The pre-matched file cluster that this file belongs to (or NULL) */
     GQueue *cluster;
 
@@ -208,8 +213,8 @@ typedef struct RmFile {
     RmOff actual_file_size;
 
     /* How many bytes were already read.
-    * (lower or equal file_size)
-    */
+     * (lower or equal file_size)
+     */
     RmOff hash_offset;
 
     /* Flag for when we do intermediate steps within a hash increment because the file is
@@ -224,7 +229,7 @@ typedef struct RmFile {
     /* digest of this file read from file extended attributes (previously written by
      * rmlint)
      */
-    char *ext_cksum;
+    const char *ext_cksum;
 
     /* Those are never used at the same time.
      * disk_offset is used during computation,
@@ -282,9 +287,9 @@ typedef struct RmFile {
 #define RM_DEFINE_PATH(file) RM_DEFINE_PATH_IF_NEEDED(file, true)
 
 /* Defines a path string for the file's folder */
-#define RM_DEFINE_DIR_PATH(file)                             \
-    char file##_dir_path[PATH_MAX];                          \
-    rm_file_build_dir_path((RmFile *)file, file##_dir_path); \
+#define RM_DEFINE_DIR_PATH(file)    \
+    char file##_dir_path[PATH_MAX]; \
+    rm_file_build_dir_path((RmFile *)file, file##_dir_path);
 
 #define RM_FILE_HARDLINK_HEAD(file) \
     (file->hardlinks ? (RmFile *)file->hardlinks->head->data : NULL)
@@ -310,7 +315,8 @@ typedef struct RmFile {
  * @brief Create a new RmFile handle.
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
-                    RmLintType type, bool is_ppath, unsigned pnum, short depth);
+                    RmLintType type, bool is_ppath, unsigned pnum, short depth,
+                    RmNode *folder);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
@@ -357,12 +363,6 @@ const char *rm_file_lint_type_to_string(RmLintType type);
  * @return a valid lint type or RM_LINT_TYPE_UNKNOWN
  */
 RmLintType rm_file_string_to_lint_type(const char *type);
-
-/**
- * @brief Set a path to the file. Normally, you should never do this since the
- * path is immutable.
- */
-void rm_file_set_path(RmFile *file, char *path);
 
 /**
  * @brief Internal helper function for RM_DEFINE_PATH using folder tree and basename.

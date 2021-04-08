@@ -24,6 +24,7 @@
  */
 
 #include "md-scheduler.h"
+
 #include "logger.h"
 
 /* How many milliseconds to sleep if we encounter an empty file queue.
@@ -358,6 +359,7 @@ void rm_mds_finish(RmMDS *mds) {
     mds->running = FALSE;
     if(mds->pool) {
         g_thread_pool_free(mds->pool, false, true);
+        mds->pool = NULL;
     }
 }
 

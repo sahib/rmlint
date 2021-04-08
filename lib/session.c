@@ -23,6 +23,8 @@
 *
 **/
 
+#include "session.h"
+
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -30,8 +32,8 @@
 #include "config.h"
 #include "formats.h"
 #include "logger.h"
+#include "md-scheduler.h"
 #include "preprocess.h"
-#include "session.h"
 #include "traverse.h"
 #include "xattr.h"
 
@@ -85,6 +87,7 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
     session->tables = rm_file_tables_new(session);
     session->formats = rm_fmt_open(session);
     session->pattern_cache = g_ptr_array_new_full(0, (GDestroyNotify)g_regex_unref);
+    session->userlist = rm_userlist_new();
 
     session->verbosity_count = 2;
     session->paranoia_count = 0;
@@ -110,10 +113,14 @@ void rm_session_clear(RmSession *session) {
     g_timer_destroy(session->timer_since_proc_start);
     g_free(cfg->sort_criteria);
 
+    if(session->mds) {
+        rm_mds_free(session->mds, FALSE);
+    }
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
     rm_fmt_close(session->formats);
     g_ptr_array_free(session->pattern_cache, TRUE);
+    rm_userlist_destroy(session->userlist);
 
     if(session->mounts) {
         rm_mounts_table_destroy(session->mounts);

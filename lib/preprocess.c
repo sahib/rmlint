@@ -22,6 +22,8 @@
  * Hosted on http://github.com/sahib/rmlint
  */
 
+#include "preprocess.h"
+
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -31,7 +33,6 @@
 #include "cmdline.h"
 #include "formats.h"
 #include "logger.h"
-#include "preprocess.h"
 #include "shredder.h"
 #include "utilities.h"
 
@@ -149,22 +150,18 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
 
 static ino_t rm_path_parent_inode(RmFile *file) {
     char parent_path[PATH_MAX];
-    rm_trie_build_path(
-        (RmTrie *)&file->session->cfg->file_trie,
-        file->folder->parent,
-        parent_path,
-        PATH_MAX
-    );
+    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie,
+                       file->folder->parent,
+                       parent_path,
+                       PATH_MAX);
 
     RmStat stat_buf;
     int retval = rm_sys_stat(parent_path, &stat_buf);
     if(retval == -1) {
         RM_DEFINE_PATH(file);
-        rm_log_error_line(
-            "Failed to get parent path of %s: stat failed: %s",
-            file_path,
-            g_strerror(errno)
-        );
+        rm_log_error_line("Failed to get parent path of %s: stat failed: %s",
+                          file_path,
+                          g_strerror(errno));
         return 0;
     }
 
@@ -401,8 +398,7 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
         return sign * FLOAT_SIGN_DIFF(a->mtime, b->mtime, MTIME_TOL);
     case 'a':
         return sign * g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
-    case 'f':
-    {
+    case 'f': {
         RM_DEFINE_DIR_PATH(a);
         RM_DEFINE_DIR_PATH(b);
         return sign * strcmp(a_dir_path, b_dir_path);
@@ -562,9 +558,9 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
          * and remove the paths double later on here. Disable for --equal therefore.
          * */
         if(!session->cfg->run_equal_mode) {
-            session->total_filtered_files -=
-                rm_util_queue_foreach_remove(inode_cluster, (RmRFunc)rm_pp_check_path_double,
-                                             session->tables->unique_paths_table);
+            session->total_filtered_files -= rm_util_queue_foreach_remove(
+                inode_cluster, (RmRFunc)rm_pp_check_path_double,
+                session->tables->unique_paths_table);
         }
 
         /* clear the hashtable ready for the next cluster */

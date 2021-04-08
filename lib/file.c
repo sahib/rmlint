@@ -23,16 +23,17 @@
 */
 
 #include "file.h"
-#include "session.h"
-#include "utilities.h"
 
-#include <string.h>
 #include <string.h>
 #include <sys/file.h>
 #include <unistd.h>
 
+#include "session.h"
+#include "utilities.h"
+
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
-                    RmLintType type, bool is_ppath, unsigned path_index, short depth) {
+                    RmLintType type, bool is_ppath, unsigned path_index, short depth,
+                    RmNode *folder) {
     RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
@@ -59,7 +60,10 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
-    rm_file_set_path(self, (char *)path);
+    if(!folder) {
+        folder = rm_trie_insert(&cfg->file_trie, path, self);
+    }
+    self->folder = folder;
 
     self->depth = depth;
     self->path_depth = rm_util_path_depth(path);
@@ -79,7 +83,8 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
             self->file_size = actual_file_size * cfg->skip_end_factor;
         }
 
-        /* Check if the actual slice the file will be > 0; we don't want empty files in shredder */
+        /* Check if the actual slice the file will be > 0; we don't want empty files in
+         * shredder */
         if((self->file_size - start_seek) == 0 && actual_file_size != 0) {
             return NULL;
         }
@@ -99,10 +104,6 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     return self;
 }
 
-void rm_file_set_path(RmFile *file, char *path) {
-    file->folder = rm_trie_insert(&file->session->cfg->file_trie, path, file);
-}
-
 void rm_file_build_path(RmFile *file, char *buf) {
     g_assert(file);
 
@@ -111,13 +112,14 @@ void rm_file_build_path(RmFile *file, char *buf) {
 
 void rm_file_build_dir_path(RmFile *file, char *buf) {
     g_assert(file);
-    rm_trie_build_path(&file->session->cfg->file_trie, file->folder->parent, buf, PATH_MAX);
+    rm_trie_build_path(&file->session->cfg->file_trie, file->folder->parent, buf,
+                       PATH_MAX);
 }
 
 RmFile *rm_file_copy(RmFile *file) {
     g_assert(file);
 
-    RmFile *copy  = g_slice_new0(RmFile);
+    RmFile *copy = g_slice_new0(RmFile);
     memcpy(copy, file, sizeof(RmFile));
 
     /* Only reset/copy the complex fields */
@@ -131,7 +133,7 @@ RmFile *rm_file_copy(RmFile *file) {
     copy->parent_dir = NULL;
     copy->n_children = 0;
 
-	return copy;
+    return copy;
 }
 
 void rm_file_destroy(RmFile *file) {
@@ -143,7 +145,7 @@ void rm_file_destroy(RmFile *file) {
     }
 
     if(file->ext_cksum) {
-        g_free(file->ext_cksum);
+        g_free((char *)file->ext_cksum);
     }
 
     if(file->free_digest) {

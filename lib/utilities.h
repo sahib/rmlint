@@ -26,11 +26,10 @@
 #ifndef RM_UTILITIES_H_INCLUDE
 #define RM_UTILITIES_H_INCLUDE
 
+#include <fcntl.h>
 #include <glib.h>
 #include <stdbool.h>
 #include <stdlib.h>
-
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <time.h>
@@ -53,8 +52,6 @@ typedef enum RmLinkType {
     RM_LINK_XDEV            = 10,
     RM_LINK_NONE            = 11,
 } RmLinkType;
-
-    
 
 #if HAVE_STAT64 && !RM_IS_APPLE
 typedef struct stat64 RmStat;
@@ -89,9 +86,31 @@ typedef struct stat RmStat;
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
-WARN_UNUSED_RESULT int rm_sys_stat(const char *path, RmStat *buf);
+WARN_UNUSED_RESULT static inline int rm_sys_stat(const char *path, RmStat *buf) {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return stat64(path, buf);
+#else
+    return stat(path, buf);
+#endif
+}
 
-WARN_UNUSED_RESULT int rm_sys_lstat(const char *path, RmStat *buf);
+WARN_UNUSED_RESULT static inline int rm_sys_lstat(const char *path, RmStat *buf) {
+#if HAVE_STAT64 && !RM_IS_APPLE
+    return lstat64(path, buf);
+#else
+    return lstat(path, buf);
+#endif
+}
+
+static inline int rm_sys_open(const char *path, int mode) {
+#if HAVE_STAT64
+#ifdef O_LARGEFILE
+    mode |= O_LARGEFILE;
+#endif
+#endif
+
+    return open(path, mode, (S_IRUSR | S_IWUSR));
+}
 
 static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
@@ -100,8 +119,6 @@ static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
     return (gdouble)stat->st_mtim.tv_sec + stat->st_mtim.tv_nsec / 1000000000.0;
 #endif
 }
-
-int rm_sys_open(const char *path, int mode);
 
 void rm_sys_close(int fd);
 
@@ -175,7 +192,7 @@ int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist);
  * @statp: valid stat pointer with st_mode filled (allow-none).
  *
  * @return: if it is a binary with debug symbols.
-  */
+ */
 bool rm_util_is_nonstripped(const char *path, RmStat *statp);
 
 /**
@@ -275,13 +292,13 @@ gint rm_util_list_foreach_remove(GList **list, RmRFunc func, gpointer user_data)
 gint rm_util_slist_foreach_remove(GSList **list, RmRFunc func, gpointer user_data);
 
 /**
-* @brief Pop the first element from a GSList
-*
-* @return pointer to the data associated with the popped element.
-*
-* Note this function returns null if the list is empty, or if the first item
-* has NULL as its data.
-*/
+ * @brief Pop the first element from a GSList
+ *
+ * @return pointer to the data associated with the popped element.
+ *
+ * Note this function returns null if the list is empty, or if the first item
+ * has NULL as its data.
+ */
 gpointer rm_util_slist_pop(GSList **list, GMutex *lock);
 
 /**
@@ -377,7 +394,8 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last, bool* is_inline);
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
+                            bool *is_last, bool *is_inline);
 
 /**
  * @brief Lookup the physical offset of a file path at any given offset.
@@ -393,12 +411,11 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
  */
 RmLinkType rm_util_link_type(const char *path1, const char *path2);
 
-
 /**
  * @brief Map RmLinkType to description.
  * @retval Array of descriptions.
  */
-const char** rm_link_type_to_desc(void);
+const char **rm_link_type_to_desc(void);
 
 //////////////////////////////
 //    TIMESTAMP HELPERS     //

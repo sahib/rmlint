@@ -24,9 +24,9 @@
  */
 
 #include <glib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #include <utime.h>
 
 #include "config.h"
@@ -99,8 +99,10 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
         RmOff logical_next_1 = 0;
         RmOff logical_next_2 = 0;
 
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1, &is_inline_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2, &is_inline_2);
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1,
+                                                 &is_last_1, &is_inline_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2,
+                                                 &is_last_2, &is_inline_2);
 
         if(is_last_1 != is_last_2) {
             return RM_LINK_NONE;
@@ -113,7 +115,7 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
         if(physical_1 != physical_2) {
 #if _RM_OFFSET_DEBUG
             rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
-                              ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              ": %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
                               logical_current, physical_1, physical_2);
 #endif
             return RM_LINK_NONE;
@@ -133,14 +135,14 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
 
         if(physical_1 == 0) {
 #if _RM_OFFSET_DEBUG
-            rm_log_debug_line(
-                "Can't determine whether files are clones");
+            rm_log_debug_line("Can't determine whether files are clones");
 #endif
             return RM_LINK_ERROR;
         }
 
 #if _RM_OFFSET_DEBUG
-        rm_log_debug_line("Offsets match at fd1=%d, fd2=%d, logical=%" G_GUINT64_FORMAT ", physical=%" G_GUINT64_FORMAT,
+        rm_log_debug_line("Offsets match at fd1=%d, fd2=%d, logical=%" G_GUINT64_FORMAT
+                          ", physical=%" G_GUINT64_FORMAT,
                           fd1, fd2, logical_current, physical_1);
 #endif
         if(logical_next_1 <= logical_current) {
@@ -155,7 +157,7 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
 #if _RM_OFFSET_DEBUG
             rm_log_debug_line("Files are clones (share same data)")
 #endif
-            return RM_LINK_REFLINK;
+                return RM_LINK_REFLINK;
         }
 
         logical_current = logical_next_1;
@@ -169,7 +171,7 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
 }
 
 static void print_usage(GOptionContext *context) {
-    char* usage = g_option_context_get_help(context, TRUE, NULL);
+    char *usage = g_option_context_get_help(context, TRUE, NULL);
     printf("%s", usage);
     g_free(usage);
 }
@@ -197,29 +199,30 @@ int rm_dedupe_main(int argc, const char **argv) {
 
 
     GError *error = NULL;
-    GOptionContext *context = g_option_context_new ("file1 file2");
-    g_option_context_add_main_entries (context, options, NULL);
+    GOptionContext *context = g_option_context_new("file1 file2");
+    g_option_context_add_main_entries(context, options, NULL);
     g_option_context_set_help_enabled(context, TRUE);
-    g_option_context_set_summary(context, _("Dedupe matching extents from source to dest (if filesystem supports)"));
+    g_option_context_set_summary(
+        context,
+        _("Dedupe matching extents from source to dest (if filesystem supports)"));
 
-    if (!g_option_context_parse (context, &argc, (char ***)&argv, &error))
-    {
+    if(!g_option_context_parse(context, &argc, (char ***)&argv, &error)) {
         rm_log_error_line(_("Error parsing command line:\n%s"), error->message);
-        return(EXIT_FAILURE);
+        return (EXIT_FAILURE);
     }
 
 #if HAVE_FIDEDUPERANGE || HAVE_BTRFS_H
     if(argc != 3) {
-        rm_log_error("Error: rmlint --dedupe %s\n\n", _("must have exactly two files\n\n"));
+        rm_log_error("Error: rmlint --dedupe %s\n\n",
+                     _("must have exactly two files\n\n"));
         print_usage(context);
         return EXIT_FAILURE;
     }
 
     g_option_context_free(context);
 
-    const char* source_path = argv[1];
-    const char* dest_path = argv[2];
-
+    const char *source_path = argv[1];
+    const char *dest_path = argv[2];
 
     rm_log_debug_line("Cloning %s -> %s", source_path, dest_path);
 
@@ -239,8 +242,7 @@ int rm_dedupe_main(int argc, const char **argv) {
     if(link_type == RM_LINK_REFLINK) {
         rm_log_debug_line("Already an exact reflink!");
         return EXIT_SUCCESS;
-    }
-    else if (link_type == RM_LINK_INLINE_EXTENTS && skip_inline_extents) {
+    } else if(link_type == RM_LINK_INLINE_EXTENTS && skip_inline_extents) {
         rm_log_debug_line("Skipping files with inline extents");
         return EXIT_SUCCESS;
     }
@@ -277,10 +279,9 @@ int rm_dedupe_main(int argc, const char **argv) {
     if(cloneto_fd < 0) {
         rm_log_error_line(_("dedupe: error %i: failed to open dest file.%s"),
                           errno,
-                          dedupe_readonly
-                              ? ""
-                              : _("\n\t(if target is a read-only snapshot "
-                                  "then -r option is required)"));
+                          dedupe_readonly ? ""
+                                          : _("\n\t(if target is a read-only snapshot "
+                                              "then -r option is required)"));
         result = EXIT_FAILURE;
     } else if(rm_sys_stat(source_path, &source_stat) < 0) {
         rm_log_error_line("failed to stat %s: %s", source_path, g_strerror(errno));
@@ -451,11 +452,11 @@ int rm_is_reflink_main(int argc, const char **argv) {
 
 
     GError *error = NULL;
-    GOptionContext *context = g_option_context_new ("file1 file2");
-    g_option_context_add_main_entries (context, options, NULL);
+    GOptionContext *context = g_option_context_new("file1 file2");
+    g_option_context_add_main_entries(context, options, NULL);
     g_option_context_set_help_enabled(context, TRUE);
 
-    const char** desc = rm_link_type_to_desc();
+    const char **desc = rm_link_type_to_desc();
 
     char *summary = g_strdup_printf(
         "%s\n"
@@ -488,14 +489,14 @@ int rm_is_reflink_main(int argc, const char **argv) {
 
     g_option_context_set_summary(context, summary);
 
-    if (!g_option_context_parse (context, &argc, (char ***)&argv, &error))
-    {
+    if(!g_option_context_parse(context, &argc, (char ***)&argv, &error)) {
         rm_log_error_line(_("Error parsing command line:\n%s"), error->message);
-        return(EXIT_FAILURE);
+        return (EXIT_FAILURE);
     }
 
-    if (argc != 3) {
-        rm_log_error("Error: rmlint --is-reflink %s\n\n", _("must have exactly two files"));
+    if(argc != 3) {
+        rm_log_error("Error: rmlint --is-reflink %s\n\n",
+                     _("must have exactly two files"));
         print_usage(context);
         return EXIT_FAILURE;
     }

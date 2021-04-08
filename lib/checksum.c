@@ -29,16 +29,15 @@
  * optimisations which are pretty insane.
  **/
 
+#include "checksum.h"
+
+#include <fcntl.h>
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include "checksum.h"
 
 #include "checksums/blake2/blake2.h"
 #include "checksums/highwayhash.h"
@@ -46,7 +45,6 @@
 #include "checksums/murmur3.h"
 #include "checksums/sha3/sha3.h"
 #include "checksums/xxhash/xxhash.h"
-
 #include "logger.h"
 #include "utilities.h"
 
@@ -73,19 +71,19 @@ void rm_semaphore_destroy(RmSemaphore *sem) {
 }
 
 void rm_semaphore_acquire(RmSemaphore *sem) {
-   g_mutex_lock(&sem->sem_lock);
-   while(sem->n == 0) {
+    g_mutex_lock(&sem->sem_lock);
+    while(sem->n == 0) {
         g_cond_wait(&sem->sem_cond, &sem->sem_lock);
-   }
-   --sem->n;
-   g_mutex_unlock(&sem->sem_lock);
+    }
+    --sem->n;
+    g_mutex_unlock(&sem->sem_lock);
 }
 
 void rm_semaphore_release(RmSemaphore *sem) {
-   g_mutex_lock(&sem->sem_lock);
-   ++sem->n;
-   g_mutex_unlock(&sem->sem_lock);
-   g_cond_signal(&sem->sem_cond);
+    g_mutex_lock(&sem->sem_lock);
+    ++sem->n;
+    g_mutex_unlock(&sem->sem_lock);
+    g_cond_signal(&sem->sem_cond);
 }
 
 ////////////////////
@@ -140,7 +138,8 @@ static gboolean rm_buffer_equal(RmBuffer *a, RmBuffer *b) {
 /* Each digest type must have an RmDigestInterface defined as follows: */
 typedef gpointer (*RmDigestNewFunc)(void);
 typedef void (*RmDigestFreeFunc)(gpointer state);
-typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data, size_t size);
+typedef void (*RmDigestUpdateFunc)(gpointer state, const unsigned char *data,
+                                   size_t size);
 typedef gpointer (*RmDigestCopyFunc)(gpointer state);
 typedef void (*RmDigestStealFunc)(gpointer state, guint8 *result);
 typedef guint (*RmDigestLenFunc)(gpointer state);
@@ -305,7 +304,7 @@ typedef struct RmDigestCumulative {
         RM_DIGEST_CUMULATIVE_T *bigdata;
     };
     RM_DIGEST_CUMULATIVE_T bytes; /* data length */
-    RM_DIGEST_CUMULATIVE_T pos; /* byte offset within data */
+    RM_DIGEST_CUMULATIVE_T pos;   /* byte offset within data */
 } RmDigestCumulative;
 
 static guint rm_digest_cumulative_len(RmDigestCumulative *state) {
@@ -327,10 +326,11 @@ static void rm_digest_cumulative_update(RmDigestCumulative *state,
                                         const unsigned char *data, size_t size) {
     if(!state->data) {
         /* first update sets checksum length */
-        state->bytes = RM_DIGEST_CUMULATIVE_ALIGN * CLAMP(size / RM_DIGEST_CUMULATIVE_ALIGN, 1, RM_DIGEST_CUMULATIVE_MAX_BYTES / RM_DIGEST_CUMULATIVE_ALIGN);
+        state->bytes = RM_DIGEST_CUMULATIVE_ALIGN *
+                       CLAMP(size / RM_DIGEST_CUMULATIVE_ALIGN, 1,
+                             RM_DIGEST_CUMULATIVE_MAX_BYTES / RM_DIGEST_CUMULATIVE_ALIGN);
         state->data = g_slice_alloc0(state->bytes);
     }
-        
     guint8 *ptr = (guint8 *)data;
     guint8 *stop = ptr + size;
 
@@ -567,8 +567,8 @@ static void rm_digest_sha3_512_steal(sha3_context *state, guint8 *result) {
 #define RM_DIGEST_DEFINE_SHA3(BITS)                            \
     static const RmDigestInterface sha3_##BITS##_interface = { \
         .name = ("sha3-" #BITS),                               \
-        .bits = BITS, \
-        .len = NULL, \
+        .bits = BITS,                                          \
+        .len = NULL,                                           \
         .new = (RmDigestNewFunc)rm_digest_sha3_##BITS##_new,   \
         .free = (RmDigestFreeFunc)rm_digest_sha3_free,         \
         .update = (RmDigestUpdateFunc)sha3_Update,             \
@@ -582,8 +582,6 @@ RM_DIGEST_DEFINE_SHA3(512)
 ///////////////////////////
 //      blake hashes     //
 ///////////////////////////
-
-
 
 #define CREATE_BLAKE_INTERFACE(ALGO, ALGO_BIG)                                  \
                                                                                 \
@@ -684,7 +682,7 @@ static void rm_digest_ext_steal(RmDigestExt *state, guint8 *result) {
 static const RmDigestInterface ext_interface = {
     .name = "ext",
     .bits = 0,
-    .len = (RmDigestLenFunc) rm_digest_ext_len,
+    .len = (RmDigestLenFunc)rm_digest_ext_len,
     .new = (RmDigestNewFunc)rm_digest_ext_new,
     .free = (RmDigestFreeFunc)rm_digest_ext_free,
     .update = (RmDigestUpdateFunc)rm_digest_ext_update,
@@ -780,8 +778,8 @@ static void rm_digest_paranoid_buffered_update(RmParanoid *paranoid, RmBuffer *b
             paranoid->twin_candidate_buffer = paranoid->twin_candidate_buffer->next;
         }
         if(paranoid->twin_candidate && !match) {
-        /* reject the twin candidate, also add to rejects list to speed up
-         * rm_digest_equal() */
+            /* reject the twin candidate, also add to rejects list to speed up
+             * rm_digest_equal() */
 #if _RM_CHECKSUM_DEBUG
             rm_log_debug_line("Rejected twin candidate %p for %p",
                               paranoid->twin_candidate, paranoid);
@@ -970,7 +968,7 @@ guint8 *rm_digest_steal(RmDigest *digest) {
     const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     guint8 *result = g_slice_alloc0(digest->bytes);
     interface->steal(digest->state, result);
-    
+
     return result;
 }
 
@@ -1094,18 +1092,18 @@ guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *o
 
 void rm_digest_enable_sse(gboolean use_sse) {
 #if HAVE_MM_CRC32_U64 && HAVE_BUILTIN_CPU_SUPPORTS
-    if (use_sse && __builtin_cpu_supports("sse4.2")) {
+    if(use_sse && __builtin_cpu_supports("sse4.2")) {
         g_atomic_int_set(&RM_DIGEST_USE_SSE, TRUE);
     } else {
         g_atomic_int_set(&RM_DIGEST_USE_SSE, FALSE);
-        if (use_sse) {
+        if(use_sse) {
             rm_log_warning_line("Can't enable sse4.2");
         }
     }
 #else
-    if (use_sse) {
+    if(use_sse) {
         rm_log_warning_line("Can't enable sse4.2");
         g_atomic_int_set(&RM_DIGEST_USE_SSE, FALSE);
     }
-#endif    
+#endif
 }
