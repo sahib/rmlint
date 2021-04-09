@@ -79,6 +79,9 @@ static void rm_fmt_elem(
     if(self->mismatch_found) {
         return;
     }
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        return;
+    }
 
     if(file->digest == NULL) {
         /* We do not want to handle unique files here.
