@@ -480,7 +480,7 @@ def test_replay_pack_directories():
     # Do a run without -D and pack it later during --replay.
     replay_path = '/tmp/replay.json'
 
-    head, *data, footer = run_rmlint('-o json:{p} -S ahD'.format(p=replay_path))
+    head, *data, footer = run_rmlint('-o json:{p} -S ahD -c json:traversed'.format(p=replay_path))
     assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
