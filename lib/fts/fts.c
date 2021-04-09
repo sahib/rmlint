@@ -37,19 +37,14 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
 
+#include <sys/stat.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <glib.h>       // g_assert
+
 #include "fts.h"
 
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <glib.h>  // g_assert
-#include <stdlib.h>
-#include <string.h>
-#include <sys/param.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include "../config.h"
 
 #ifndef FTS_PATH_MAX
 #define FTS_PATH_MAX PATH_MAX

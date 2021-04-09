@@ -25,9 +25,7 @@
 
 #include "logger.h"
 
-#include <glib.h>
 #include <stdio.h>
-#include <string.h>
 
 static gboolean with_stderr_color = TRUE;
 

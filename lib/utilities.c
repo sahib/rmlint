@@ -23,17 +23,11 @@
  *
  */
 
-#include <ctype.h>
-#include <fcntl.h>
+#include <sys/uio.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
-#include "config.h"
-#include "logger.h"
+#include "utilities.h"
 #include "reflink.h"
-#include "session.h"
 
 /* Be safe: This header is not essential and might be missing on some systems.
  * We only include it here, because it fixes some recent warning...
@@ -43,11 +37,8 @@
 #endif
 
 #include <grp.h>
-#include <libgen.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 /* Not available there,
  * but might be on other non-linux systems
@@ -62,12 +53,9 @@
 #endif
 
 /* Internal headers */
-#include "config.h"
 #include "file.h"
-#include "utilities.h"
 
 /* External libraries */
-#include <glib.h>
 
 #if HAVE_LIBELF
 #include <gelf.h>

@@ -23,12 +23,8 @@
  *
  */
 
-#include <glib.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-
 #include "../formats.h"
+
 
 typedef struct RmFmtHandlerTimestamp {
     /* must be first */

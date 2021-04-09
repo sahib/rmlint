@@ -26,7 +26,6 @@
 #ifndef RM_TREEMERGE_INCLUDE
 #define RM_TREEMERGE_INCLUDE
 
-#include <glib.h>
 
 #include "file.h"
 

@@ -24,13 +24,7 @@
  */
 
 #include "../formats.h"
-#include "../logger.h"
-#include "../utilities.h"
-#include "../preprocess.h"
 
-#include <glib.h>
-#include <stdio.h>
-#include <string.h>
 
 static const char PY_SOURCE[] = "<<PYTHON_SOURCE>>";
 

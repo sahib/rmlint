@@ -23,12 +23,7 @@
 **/
 #include "cfg.h"
 
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
 
-#include "logger.h"
-#include "utilities.h"
 
 static void rm_path_free(RmPath *rmpath) {
     free(rmpath->path);

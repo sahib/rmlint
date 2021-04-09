@@ -26,9 +26,7 @@
 #ifndef RM_SHREDDER_H
 #define RM_SHREDDER_H
 
-#include <glib.h>
 
-#include "session.h"
 
 typedef enum RmShredGroupStatus {
     RM_SHRED_GROUP_DORMANT = 0,

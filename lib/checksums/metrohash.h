@@ -27,7 +27,6 @@
 #define METROHASH_METROHASH_H
 
 #include <stdint.h>
-#include <string.h>
 #include <stdbool.h>
 #include "../config.h"
 

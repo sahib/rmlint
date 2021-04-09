@@ -25,7 +25,6 @@
 #ifndef RM_XATTR_H
 #define RM_XATTR_H
 
-#include "file.h"
 #include "session.h"
 
 /**

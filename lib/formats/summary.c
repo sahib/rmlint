@@ -23,14 +23,10 @@
  *
  */
 
-#include <glib.h>
-#include <search.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/ioctl.h>
-
 #include "../formats.h"
-#include "../logger.h"
+
+
+#include <sys/ioctl.h>
 
 typedef struct RmFmtHandlerSummary {
     /* must be first */

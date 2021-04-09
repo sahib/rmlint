@@ -23,14 +23,8 @@
  *
  */
 
-#include <glib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "../formats.h"
-#include "../logger.h"
-#include "../preprocess.h"
-#include "../utilities.h"
+
 
 typedef struct RmFmtHandlerEqual {
     /* must be first */

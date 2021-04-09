@@ -25,12 +25,8 @@
 
 #include "hasher.h"
 
-#include <fcntl.h>
-#include <glib.h>
 #include <stdio.h>
-#include <string.h>
 
-#include "logger.h"
 #include "utilities.h"
 
 /* Flags for the fadvise() call that tells the kernel

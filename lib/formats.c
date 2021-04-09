@@ -26,12 +26,7 @@
 #include "formats.h"
 
 #include <ctype.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "file.h"
-#include "logger.h"
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.

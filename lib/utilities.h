@@ -27,16 +27,12 @@
 #define RM_UTILITIES_H_INCLUDE
 
 #include <fcntl.h>
-#include <glib.h>
-#include <stdbool.h>
-#include <stdlib.h>
 #include <sys/stat.h>
-#include <sys/uio.h>
-#include <time.h>
 #include <unistd.h>
 
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
+#include "logger.h"
 
 /* return values for rm_util_link_type */
 typedef enum RmLinkType {

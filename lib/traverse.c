@@ -23,20 +23,11 @@
  *
  */
 
-#include <errno.h>
-#include <glib.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include "file.h"
 #include "formats.h"
 #include "fts/fts.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
-#include "utilities.h"
 #include "xattr.h"
 
 //////////////////////

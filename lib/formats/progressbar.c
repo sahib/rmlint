@@ -23,15 +23,11 @@
  *
  */
 
-#include <glib.h>
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/ioctl.h>
-
 #include "../formats.h"
-#include "../logger.h"
-#include "../utilities.h"
+
+#include <math.h>
+
+#include <sys/ioctl.h>
 
 /* Add 4096 bytes to each file size to give better ETA estimate*/
 const RmOff FILE_OVERHEAD = 4096;

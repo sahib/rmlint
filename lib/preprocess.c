@@ -22,19 +22,12 @@
  * Hosted on http://github.com/sahib/rmlint
  */
 
+#include "session.h"
 #include "preprocess.h"
 
 #include <ctype.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "cmdline.h"
 #include "formats.h"
-#include "logger.h"
-#include "shredder.h"
-#include "utilities.h"
 
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->folder->basename);

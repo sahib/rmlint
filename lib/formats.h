@@ -26,11 +26,7 @@
 #ifndef RM_OUTPUTS_H
 #define RM_OUTPUTS_H
 
-#include <glib.h>
-#include <stdbool.h>
-#include <stdio.h>
 
-#include "file.h"
 #include "session.h"
 
 ////////////////////

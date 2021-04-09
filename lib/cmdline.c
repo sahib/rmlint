@@ -23,32 +23,17 @@
  *
  */
 
-#include "cmdline.h"
 
 #include <ctype.h>
-#include <errno.h>
-#include <glib.h>
-#include <glib/gstdio.h>
 #include <math.h>
 #include <search.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <time.h>
-#include <unistd.h>
 
-#include "config.h"
 #include "formats.h"
-#include "hash-utility.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
 #include "replay.h"
 #include "shredder.h"
 #include "traverse.h"
-#include "treemerge.h"
-#include "utilities.h"
 
 #define EXIT_EQUAL_UNKNOWN 2
 

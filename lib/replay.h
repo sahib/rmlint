@@ -26,8 +26,6 @@
 #ifndef RM_REPLAY_H
 #define RM_REPLAY_H
 
-#include "session.h"
-#include "stdbool.h"
 
 /**
  * @brief Load json file(s) from disk into rmlint session.

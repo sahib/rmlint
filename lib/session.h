@@ -26,13 +26,9 @@
 #ifndef RM_SESSION_H
 #define RM_SESSION_H
 
-#include <glib.h>
 #include <json-glib/json-glib.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-#include "config.h"     // INLINE
 #include "treemerge.h"  // RmTreeMerger
 
 typedef struct RmFileTables {

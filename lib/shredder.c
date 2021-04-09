@@ -23,21 +23,14 @@
  *
  */
 
+#include "session.h"
 #include "shredder.h"
 
-#include <glib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/uio.h>
-#include <unistd.h>
 
-#include "checksum.h"
 #include "formats.h"
 #include "hasher.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
-#include "utilities.h"
 #include "xattr.h"
 
 /* Enable extra debug messages? */

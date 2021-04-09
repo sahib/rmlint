@@ -23,19 +23,10 @@
  *
  */
 
-#include <assert.h>
 #include <gio/gunixoutputstream.h>
-#include <glib.h>
-#include <json-glib/json-glib.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "../checksums/murmur3.h"
 #include "../formats.h"
-#include "../logger.h"
-#include "../preprocess.h"
-#include "../treemerge.h"
-#include "../utilities.h"
 
 typedef struct RmFmtHandlerJSON {
     /* must be first */

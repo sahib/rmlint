@@ -25,10 +25,8 @@
 #ifndef RM_SETTINGS_H
 #define RM_SETTINGS_H
 
-#include <stdio.h>
 
 #include "checksum.h"
-#include "pathtricia.h"
 #include "utilities.h"
 
 /* Struct for paths passed to rmlint from command line (or stdin) */

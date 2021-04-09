@@ -23,19 +23,11 @@
 *
 **/
 
-#include "session.h"
 
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
 
-#include "config.h"
 #include "formats.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
-#include "traverse.h"
-#include "xattr.h"
 
 
 #if HAVE_UNAME

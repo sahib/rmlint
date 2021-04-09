@@ -17,7 +17,6 @@
  * ---------------------------------------------------------------------- */
 
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "sha3.h"

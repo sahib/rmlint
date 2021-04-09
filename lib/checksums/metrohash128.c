@@ -23,7 +23,6 @@
 // SOFTWARE.
 //
 
-#include <glib.h>
 #include "metrohash.h"
 
 struct _Metro128_state {

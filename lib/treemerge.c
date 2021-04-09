@@ -71,19 +71,11 @@
  */
 // #define _RM_TREEMERGE_DEBUG
 
-#include "treemerge.h"
 
-#include <glib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include "formats.h"
 #include "fts/fts.h"
-#include "logger.h"
-#include "pathtricia.h"
 #include "preprocess.h"
-#include "session.h"
 #include "shredder.h"
 
 typedef struct RmDirectory {

@@ -25,12 +25,7 @@
 
 #include "xattr.h"
 
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
 
-#include "config.h"
-#include "logger.h"
 
 #if HAVE_XATTR
 #include <sys/xattr.h>

@@ -23,12 +23,9 @@
  *
  */
 
-#include <glib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "../formats.h"
-#include "../utilities.h"
+
+
 #define CSV_SEP ","
 #define CSV_QUOTE "\""
 #define CSV_FORMAT \

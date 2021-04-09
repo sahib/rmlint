@@ -26,13 +26,8 @@
 #ifndef RM_FILE_H
 #define RM_FILE_H
 
-#include <glib.h>
-#include <stdbool.h>
-#include <sys/stat.h>
 
 #include "cfg.h"
-#include "pathtricia.h"
-#include "utilities.h"
 
 typedef enum RmFileState {
     /* File still processing

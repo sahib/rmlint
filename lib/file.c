@@ -22,14 +22,9 @@
 * Hosted on http://github.com/sahib/rmlint
 */
 
-#include "file.h"
 
-#include <string.h>
-#include <sys/file.h>
-#include <unistd.h>
 
 #include "session.h"
-#include "utilities.h"
 
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
                     RmLintType type, bool is_ppath, unsigned path_index, short depth,

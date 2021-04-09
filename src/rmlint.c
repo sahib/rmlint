@@ -23,16 +23,11 @@
 *
 **/
 
-#include <assert.h>
-#include <locale.h>
-#include <stdlib.h>
-#include <string.h>
+#include<assert.h>
 
 #include "../lib/api.h"
-#include "../lib/config.h"
 #include "../lib/gui.h"
 #include "../lib/hash-utility.h"
-#include "../lib/logger.h"
 #include "../lib/reflink.h"
 
 #if !GLIB_CHECK_VERSION(2, 36, 0)

@@ -24,10 +24,6 @@
 **/
 #include "pathtricia.h"
 
-#include <glib.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "config.h"
 
@@ -282,7 +278,6 @@ void rm_trie_destroy(RmTrie *self) {
 
 #ifdef _RM_PATHTRICIA_BUILD_MAIN
 
-#include <stdio.h>
 
 static int rm_trie_print_callback(_UNUSED RmTrie *self,
                                   RmNode *node,

@@ -23,13 +23,10 @@
  *
  */
 
-#include <glib.h>
-#include <stdio.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 #include <utime.h>
 
-#include "config.h"
+#include "utilities.h"
 
 #if HAVE_BTRFS_H
 #include <linux/btrfs.h>
@@ -45,8 +42,6 @@
 #define HAVE_FIDEDUPERANGE 0
 #endif
 
-#include "logger.h"
-#include "utilities.h"
 #include "xattr.h"
 
 /* FIDEDUPERANGE supercedes the btrfs-only BTRFS_IOC_FILE_EXTENT_SAME as of Linux 4.5 and
