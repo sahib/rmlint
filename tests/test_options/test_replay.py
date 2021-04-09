@@ -467,10 +467,42 @@ EXPECTED_WITHOUT_TREEMERGE = {
     }
 }
 
+EXPECTED_WITH_TRAVERSED = {
+    'emptyfile': {
+        '/a/empty': False,
+        '/b/empty': False,
+    },
+    'duplicate_dir_candidate': {
+        '/a/sub1': False,
+        '/a/sub2': False,
+        '/a/sub2_copy': False,
+        '/b/sub1': False,
+        '/b/sub2_copy': False,
+        '/b/sub2': False,
+        '/a': False,
+        '': False,
+        '/b': False},
+    'duplicate_file': {
+        '/b/sub1/x1'      : False, #True,
+        '/a/sub1/x1'      : False,
+        '/a/sub1/x2'      : False,
+        '/a/sub2/x3'      : False,
+        '/a/sub2_copy/x3' : False,
+        '/b/sub1/x2'      : False,
+        '/b/sub2/x3'      : False,
+        '/b/sub2_copy/x3' : False,
+        '/a/special'      : False, #True
+        '/b/special'      : False,
+        '/special'        : False,
+    }
+}
+
 EXPECTED_LEN_WITH_TREEMERGE = sum(
     [len(EXPECTED_WITH_TREEMERGE[key]) for key in EXPECTED_WITH_TREEMERGE])
 EXPECTED_LEN_WITHOUT_TREEMERGE = sum(
     [len(EXPECTED_WITHOUT_TREEMERGE[key]) for key in EXPECTED_WITHOUT_TREEMERGE])
+EXPECTED_LEN_WITH_TRAVERSED = sum(
+    [len(EXPECTED_WITH_TRAVERSED[key]) for key in EXPECTED_WITH_TRAVERSED])
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
@@ -481,8 +513,8 @@ def test_replay_pack_directories():
     replay_path = '/tmp/replay.json'
 
     head, *data, footer = run_rmlint('-o json:{p} -S ahD -c json:traversed'.format(p=replay_path))
-    assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
-    assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
+    assert len(data) == EXPECTED_LEN_WITH_TRAVERSED
+    assert data_by_type(data) == EXPECTED_WITH_TRAVERSED
 
     # Do the run without any packing first (it should yield the same result)
     head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
