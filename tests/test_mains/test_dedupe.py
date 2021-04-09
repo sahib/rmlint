@@ -13,19 +13,25 @@ REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
 
 
 @contextmanager
-def assert_exit_code(status_code):
+def assert_exit_code(expected, fussy=False):
     """
     Assert that the with block yields a subprocess.CalledProcessError
     with a certain return code. If nothing is thrown, status_code
     is required to be 0 to survive the test.
+    If the flag `fussy` is True then suprocess must return the
+    exact same error as expected.  If False then any error code
+    is ok, provided the expected result is non-zero.
     """
     try:
         yield
     except subprocess.CalledProcessError as exc:
-        assert exc.returncode == status_code
+        if (fussy) :
+            assert exc.returncode == expected
+        else:
+            assert exc.returncode != 0 and expected != 0
     else:
         # No exception? status_code should be fine.
-        assert status_code == 0
+        assert expected == 0
 
 
 def up(path):
@@ -70,34 +76,29 @@ def needs_reflink_fs(test):
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_equal_files():
-    path_a = create_file('1234', 'a')
-    path_b = create_file('1234', 'b')
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1234' * 4096, 'a')
+    path_b = create_file('1234' * 4096, 'b')
 
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,
             with_json=False,
             verbosity="")
 
-    with assert_exit_code(0):
-        run_rmlint(
-            '--dedupe',
-            path_a, '//', path_b,
-            use_default_dir=False,
-            with_json=False)
-
 
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_hardlinks():
-    path_a = create_file('1234', 'a')
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1234' * 4096, 'a')
     path_b = path_a + '_hardlink'
     create_link('a', 'a_hardlink', symlink=False)
 
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,
@@ -108,11 +109,12 @@ def test_hardlinks():
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_different_files():
-    path_a = create_file('1234', 'a')
-    path_b = create_file('4321', 'b')
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1234' * 4096, 'a')
+    path_b = create_file('4321' * 4096, 'b')
 
     with assert_exit_code(1):
-        run_rmlint(
+        run_rmlint_once(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,
@@ -123,16 +125,17 @@ def test_different_files():
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_bad_arguments():
-    path_a = create_file('1234', 'a')
-    path_b = create_file('1234', 'b')
-    path_c = create_file('1234', 'c')
+    # test files need to be larger than btrfs node size to prevent inline extents
+    path_a = create_file('1234' * 4096, 'a')
+    path_b = create_file('1234' * 4096, 'b')
+    path_c = create_file('1234' * 4096, 'c')
     for paths in [
             path_a,
             ' '.join((path_a, path_b, path_c)),
             ' '.join((path_a, path_a + ".nonexistent"))
     ]:
         with assert_exit_code(1):
-            run_rmlint(
+            run_rmlint_once(
                 '--dedupe',
                 paths,
                 use_default_dir=False,
@@ -147,7 +150,7 @@ def test_directories():
     path_b = os.path.dirname(create_dirs('dir_b'))
 
     with assert_exit_code(1):
-        run_rmlint(
+        run_rmlint_once(
             '--dedupe',
             path_a, path_b,
             use_default_dir=False,
@@ -164,8 +167,8 @@ def test_dedupe_works():
     path_b = create_file('1' * 100000, 'b')
 
     # confirm that files are not reflinks
-    with assert_exit_code(1):
-        run_rmlint(
+    with assert_exit_code(11):
+        run_rmlint_once(
             '--is-reflink', path_a, path_b,
             use_default_dir=False,
             with_json=False,
@@ -174,7 +177,7 @@ def test_dedupe_works():
 
     # reflink our files
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '--dedupe', path_a, path_b,
             use_default_dir=False,
             with_json=False,
@@ -183,7 +186,7 @@ def test_dedupe_works():
 
     # confirm that they are now reflinks
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '--is-reflink', path_a, path_b,
             use_default_dir=False,
             with_json=False,
@@ -214,7 +217,7 @@ def test_clone_handler():
 
     # generate rmlint.sh and check that it correctly selects files for cloning
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '-S a -o sh:{p} -c sh:clone'.format(p=sh_path),
             path_a, path_b,
             use_default_dir=False,
@@ -232,14 +235,14 @@ def test_clone_handler():
 
     # now reflink the two files and check again
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '--dedupe', path_a, path_b,
             use_default_dir=False,
             with_json=False,
             verbosity=""
         )
     with assert_exit_code(0):
-        run_rmlint(
+        run_rmlint_once(
             '-S a -o sh:{p} -c sh:clone'.format(p=sh_path),
             path_a, path_b,
             use_default_dir=False,
