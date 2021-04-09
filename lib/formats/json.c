@@ -193,6 +193,11 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
         return;
     }
 
+    if(file->lint_type==RM_LINT_TYPE_DUPE_DIR_CANDIDATE &&
+            !rm_fmt_get_config_value(session->formats, "json", "traversed")){
+        return;
+    }
+
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
             if(!file->digest ||
@@ -285,7 +290,7 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = rm_fmt_foot,
-        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", NULL},
+        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", "traversed", NULL},
     }};
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;
