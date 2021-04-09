@@ -23,11 +23,11 @@
  *
  */
 
-#include "../formats.h"
-
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "../formats.h"
 
 typedef struct RmFmtHandlerUniques {
     /* must be first */
@@ -35,9 +35,11 @@ typedef struct RmFmtHandlerUniques {
     bool print0;
 } RmFmtHandlerUniques;
 
-static void rm_fmt_head(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, _UNUSED FILE *out) {
+static void rm_fmt_head(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent,
+                        _UNUSED FILE *out) {
     RmFmtHandlerUniques *self = (RmFmtHandlerUniques *)parent;
-    const char *print0_option = rm_fmt_get_config_value(session->formats, "uniques", "print0");
+    const char *print0_option =
+        rm_fmt_get_config_value(session->formats, "uniques", "print0");
     self->print0 = (bool)print0_option;
 }
 

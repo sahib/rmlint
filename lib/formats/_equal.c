@@ -23,14 +23,14 @@
  *
  */
 
-#include "../formats.h"
-#include "../logger.h"
-#include "../utilities.h"
-#include "../preprocess.h"
-
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "../formats.h"
+#include "../logger.h"
+#include "../preprocess.h"
+#include "../utilities.h"
 
 typedef struct RmFmtHandlerEqual {
     /* must be first */
@@ -67,12 +67,10 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, _UNUSED FILE *
     self->input_paths = input_paths;
 }
 
-static void rm_fmt_elem(
-    RmSession *session,
-    RmFmtHandler *self_ref,
-    _UNUSED FILE *out,
-    RmFile *file
-) {
+static void rm_fmt_elem(RmSession *session,
+                        RmFmtHandler *self_ref,
+                        _UNUSED FILE *out,
+                        RmFile *file) {
     RmFmtHandlerEqual *self = (RmFmtHandlerEqual *)self_ref;
 
     /*  No need to check anymore, it's not equal. */
@@ -88,9 +86,7 @@ static void rm_fmt_elem(
          * If it is unique, it will be not equal...
          * */
         self->mismatch_found = TRUE;
-    }
-    else {
-
+    } else {
         RM_DEFINE_PATH(file);
 
         if(g_hash_table_contains(self->input_paths, file_path) == false) {
@@ -111,9 +107,8 @@ static void rm_fmt_elem(
             } else {
                 self->mismatch_found = TRUE;
                 rm_log_debug_line(
-                        "First differing items:\n\t%s (%s)\n\tlast checksum: (%s)",
-                        file_path, checksum, self->last_checksum
-                );
+                    "First differing items:\n\t%s (%s)\n\tlast checksum: (%s)", file_path,
+                    checksum, self->last_checksum);
             }
             g_free(self->last_checksum);
         }
@@ -122,13 +117,11 @@ static void rm_fmt_elem(
     if(self->mismatch_found) {
         rm_fmt_report_failure(self, session);
     }
-
 }
 
-static void rm_fmt_foot(
-        _UNUSED RmSession *session,
-        RmFmtHandler *parent,
-        _UNUSED FILE *out) {
+static void rm_fmt_foot(_UNUSED RmSession *session,
+                        RmFmtHandler *parent,
+                        _UNUSED FILE *out) {
     RmFmtHandlerEqual *self = (RmFmtHandlerEqual *)parent;
     g_hash_table_unref(self->input_paths);
     g_free(self->last_checksum);
@@ -136,17 +129,18 @@ static void rm_fmt_foot(
 
 static RmFmtHandlerEqual EQUAL_HANDLE_IMPL = {
     /* Initialize parent */
-    .parent = {
-        .size = sizeof(EQUAL_HANDLE_IMPL),
-        .name = "_equal",
-        .head = rm_fmt_head,
-        .elem = rm_fmt_elem,
-        .prog = NULL,
-        .foot = rm_fmt_foot,
-        .valid_keys = {NULL},
-    },
+    .parent =
+        {
+            .size = sizeof(EQUAL_HANDLE_IMPL),
+            .name = "_equal",
+            .head = rm_fmt_head,
+            .elem = rm_fmt_elem,
+            .prog = NULL,
+            .foot = rm_fmt_foot,
+            .valid_keys = {NULL},
+        },
     .last_checksum = NULL,
     .mismatch_found = false,
 };
 
-RmFmtHandler *EQUAL_HANDLER = (RmFmtHandler *) &EQUAL_HANDLE_IMPL;
+RmFmtHandler *EQUAL_HANDLER = (RmFmtHandler *)&EQUAL_HANDLE_IMPL;

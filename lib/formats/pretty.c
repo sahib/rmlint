@@ -23,12 +23,13 @@
  *
  */
 
+#include <glib.h>
+#include <stdio.h>
+
 #include "../formats.h"
 #include "../logger.h"
 #include "../preprocess.h"
 
-#include <glib.h>
-#include <stdio.h>
 
 static const char *RM_LINT_TYPE_TO_DESCRIPTION[] =
     {[RM_LINT_TYPE_UNKNOWN] = "",

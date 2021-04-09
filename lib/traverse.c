@@ -334,13 +334,11 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
     return is_emptydir;
 }
 
-#define FLAG_NOT_EMPTY \
-	memset(is_emptydir, 0, p->fts_level + 1);
+#define FLAG_NOT_EMPTY memset(is_emptydir, 0, p->fts_level + 1);
 
-#define FLAG_NOT_TRAVERSED \
-	memset(is_emptydir, 0, p->fts_level + 1); \
-	memset(is_traversed, 0, p->fts_level + 1);
-
+#define FLAG_NOT_TRAVERSED                    \
+    memset(is_emptydir, 0, p->fts_level + 1); \
+    memset(is_traversed, 0, p->fts_level + 1);
 
 static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
     RmCfg *cfg = session->cfg;
@@ -387,7 +385,6 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
 
     bool next_is_symlink = false;
 
-
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
     memset(is_traversed, 0, sizeof(is_traversed) - 1);
@@ -410,13 +407,13 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
             case FTS_D: /* preorder directory */
                 if(cfg->depth != 0 && p->fts_level >= cfg->depth) {
                     /* continuing into folder would exceed maxdepth*/
-                    fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
+                    fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     FLAG_NOT_TRAVERSED;
                     rm_log_debug_line("Not descending into %s because max depth reached",
                                       p->fts_path);
                 } else if(!(cfg->crossdev) && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
-                    fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
+                    fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
                     FLAG_NOT_TRAVERSED;
                     rm_log_info(
                         "Not descending into %s because it is a different filesystem\n",
@@ -433,7 +430,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
             case FTS_DC: /* directory that causes cycles */
                 rm_log_warning_line(_("filesystem loop detected at %s (skipping)"),
                                     p->fts_path);
-                FLAG_NOT_TRAVERSED;  // TODO: review whether circular dirs can still be empty and/or traversed
+                FLAG_NOT_TRAVERSED;  // TODO: review whether circular dirs can still be
+                                     // empty and/or traversed
                 break;
             case FTS_DNR: /* unreadable directory */
                 rm_log_warning_line(_("cannot read directory %s: %s"), p->fts_path,
@@ -445,8 +443,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
             case FTS_DP: /* postorder directory */
                 if(is_emptydir[p->fts_level + 1] && cfg->find_emptydirs) {
                     ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);
-                }
-                else if (is_traversed[p->fts_level + 1]) {
+                } else if(is_traversed[p->fts_level + 1]) {
                     ADD_FILE(RM_LINT_TYPE_DUPE_DIR_CANDIDATE, false);
                 }
                 is_hidden[p->fts_level + 1] = 0;
@@ -462,15 +459,14 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                 if(cfg->find_badlinks) {
                     ADD_FILE(RM_LINT_TYPE_BADLINK, false);
                     FLAG_NOT_EMPTY;
-                }
-                else {
-                	FLAG_NOT_TRAVERSED;
+                } else {
+                    FLAG_NOT_TRAVERSED;
                 }
                 break;
-            case FTS_W:                      /* whiteout object */
-            	FLAG_NOT_TRAVERSED;
+            case FTS_W: /* whiteout object */
+                FLAG_NOT_TRAVERSED;
                 break;
-            case FTS_NS: {                   /* rm_sys_stat(2) failed */
+            case FTS_NS: { /* rm_sys_stat(2) failed */
                 RmStat stat_buf;
 
                 /* See if your stat can do better. */
@@ -488,10 +484,10 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                     FLAG_NOT_EMPTY;
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
-                	FLAG_NOT_TRAVERSED;
+                    FLAG_NOT_TRAVERSED;
                 }
             } break;
-            case FTS_SL:                     /* symbolic link */
+            case FTS_SL: /* symbolic link */
                 if(!cfg->follow_symlinks) {
                     FLAG_NOT_EMPTY;
                     bool is_badlink = false;
@@ -510,7 +506,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
-                	FLAG_NOT_TRAVERSED;
+                    FLAG_NOT_TRAVERSED;
                     next_is_symlink = true;
                     fts_set(ftsp, p, FTS_FOLLOW); /* do recurse */
                 }
@@ -525,7 +521,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
-            	FLAG_NOT_TRAVERSED;
+                FLAG_NOT_TRAVERSED;
                 rm_log_error_line(_("Unknown fts_info flag %d for file %s"), p->fts_info,
                                   p->fts_path);
                 break;
@@ -557,8 +553,8 @@ void rm_traverse_tree(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     RmMDS *mds = session->mds;
-    rm_mds_configure(
-        mds, (RmMDSFunc)rm_traverse_directory, session, 0, cfg->threads_per_disk, NULL);
+    rm_mds_configure(mds, (RmMDSFunc)rm_traverse_directory, session, 0,
+                     cfg->threads_per_disk, NULL);
 
     /* iterate through paths */
     for(GSList *iter = cfg->paths; iter && !rm_session_was_aborted(); iter = iter->next) {

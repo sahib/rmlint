@@ -79,8 +79,8 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
 }
 
 static void rm_fmt_json_sep(RmFmtHandlerJSON *self) {
-    g_output_stream_printf(
-        self->stream, NULL, NULL, NULL, ",%s", self->pretty ? " " : "\n");
+    g_output_stream_printf(self->stream, NULL, NULL, NULL, ",%s",
+                           self->pretty ? " " : "\n");
 }
 
 static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *out) {
@@ -193,15 +193,15 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
         return;
     }
 
-    if(file->lint_type==RM_LINT_TYPE_DUPE_DIR_CANDIDATE &&
-            !rm_fmt_get_config_value(session->formats, "json", "traversed")){
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE &&
+       !rm_fmt_get_config_value(session->formats, "json", "traversed")) {
         return;
     }
 
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
             if(!file->digest ||
-                !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
+               !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
                 return;
             }
         }
@@ -290,7 +290,8 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = rm_fmt_foot,
-        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", "traversed", NULL},
+        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique",
+                       "traversed", NULL},
     }};
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;

@@ -138,8 +138,8 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
         char dummy[1] = {0};
         rc = readlink(path, dummy, 1);
         if(rc < 0) {
-            rm_log_warning_line(
-                _("Can't open directory or file \"%s\": %s"), path, strerror(errno));
+            rm_log_warning_line(_("Can't open directory or file \"%s\": %s"), path,
+                                strerror(errno));
             return 0;
         }
     }

@@ -156,20 +156,21 @@ void rm_file_destroy(RmFile *file) {
 }
 
 // TODO: this is replicated in formats/pretty.c...
-static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = "",
-                                   [RM_LINT_TYPE_EMPTY_DIR] = "emptydir",
-                                   [RM_LINT_TYPE_NONSTRIPPED] = "nonstripped",
-                                   [RM_LINT_TYPE_BADLINK] = "badlink",
-                                   [RM_LINT_TYPE_BADUID] = "baduid",
-                                   [RM_LINT_TYPE_BADGID] = "badgid",
-                                   [RM_LINT_TYPE_BADUGID] = "badugid",
-                                   [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
-                                   [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file_candidate",
-                                   [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir_candidate",
-                                   [RM_LINT_TYPE_DUPE] = "duplicate_file",
-                                   [RM_LINT_TYPE_DUPE_DIR] = "duplicate_dir",
-                                   [RM_LINT_TYPE_PART_OF_DIRECTORY] = "part_of_directory",
-                                   [RM_LINT_TYPE_UNIQUE_FILE] = "unique_file"};
+static const char *LINT_TYPES[] = {
+    [RM_LINT_TYPE_UNKNOWN] = "",
+    [RM_LINT_TYPE_EMPTY_DIR] = "emptydir",
+    [RM_LINT_TYPE_NONSTRIPPED] = "nonstripped",
+    [RM_LINT_TYPE_BADLINK] = "badlink",
+    [RM_LINT_TYPE_BADUID] = "baduid",
+    [RM_LINT_TYPE_BADGID] = "badgid",
+    [RM_LINT_TYPE_BADUGID] = "badugid",
+    [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file_candidate",
+    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir_candidate",
+    [RM_LINT_TYPE_DUPE] = "duplicate_file",
+    [RM_LINT_TYPE_DUPE_DIR] = "duplicate_dir",
+    [RM_LINT_TYPE_PART_OF_DIRECTORY] = "part_of_directory",
+    [RM_LINT_TYPE_UNIQUE_FILE] = "unique_file"};
 
 const char *rm_file_lint_type_to_string(RmLintType type) {
     return LINT_TYPES[MIN(type, sizeof(LINT_TYPES) / sizeof(const char *))];

@@ -23,12 +23,12 @@
  *
  */
 
-#include "../formats.h"
-#include "../logger.h"
-
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "../formats.h"
+#include "../logger.h"
 
 typedef struct RmFmtHandlerFdupes {
     /* must be first */

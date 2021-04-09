@@ -23,15 +23,14 @@
  *
  */
 
-#include "../formats.h"
-#include "../logger.h"
-
 #include <glib.h>
 #include <search.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <sys/ioctl.h>
+
+#include "../formats.h"
+#include "../logger.h"
 
 typedef struct RmFmtHandlerSummary {
     /* must be first */
@@ -56,7 +55,7 @@ static void rm_fmt_prog(RmSession *session,
         return;
     }
 
-    if(rm_session_was_aborted() || session->equal_exit_code==EXIT_FAILURE) {
+    if(rm_session_was_aborted() || session->equal_exit_code == EXIT_FAILURE) {
         /* Clear the whole terminal line.
          * Progressbar might leave some junk.
          */
@@ -104,15 +103,15 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(session->cfg->replay) {
-        ARROW fprintf(out, _("This run was a replay from a previous run. No I/O done!\n"));
+        ARROW fprintf(out,
+                      _("This run was a replay from a previous run. No I/O done!\n"));
     }
 
     gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
     char *elapsed_time = rm_format_elapsed_time(elapsed, 3);
-    ARROW fprintf(out, _("Scanning took in total %s%s%s.\n"),
-                  MAYBE_RED(out, session), elapsed_time, MAYBE_RESET(out, session));
+    ARROW fprintf(out, _("Scanning took in total %s%s%s.\n"), MAYBE_RED(out, session),
+                  elapsed_time, MAYBE_RESET(out, session));
     g_free(elapsed_time);
-
 
     bool first_print_flag = true;
     GHashTableIter iter;

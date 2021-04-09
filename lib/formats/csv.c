@@ -23,13 +23,12 @@
  *
  */
 
-#include "../formats.h"
-#include "../utilities.h"
-
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "../formats.h"
+#include "../utilities.h"
 #define CSV_SEP ","
 #define CSV_QUOTE "\""
 #define CSV_FORMAT \
@@ -60,7 +59,8 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
                         FILE *out, RmFile *file) {
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "csv", "unique")) {
-            if(!file->digest || !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
+            if(!file->digest ||
+               !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
                 return;
             }
         }
@@ -87,14 +87,12 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     RM_DEFINE_PATH(file);
     char *clean_path = rm_util_strsub(file_path, CSV_QUOTE, CSV_QUOTE "" CSV_QUOTE);
 
-    fprintf(
-        out,
-        CSV_FORMAT,
-        rm_file_lint_type_to_string(file->lint_type),
-        clean_path,
-        file->actual_file_size,
-        checksum_str
-    );
+    fprintf(out,
+            CSV_FORMAT,
+            rm_file_lint_type_to_string(file->lint_type),
+            clean_path,
+            file->actual_file_size,
+            checksum_str);
 
     g_free(clean_path);
 
