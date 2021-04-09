@@ -50,7 +50,7 @@ to remove it. It is able to find:
    :width: 8%
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
+   :target: https://travis-ci.com/sahib/rmlint
    :width: 8%
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat

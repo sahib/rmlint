@@ -12,7 +12,7 @@ to remove it.
    :target: http://rmlint.rtfd.org
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
+   :target: https://travis-ci.com/sahib/rmlint
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues

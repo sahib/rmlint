@@ -137,7 +137,7 @@ if html_theme == 'bootstrap':
         # an arbitrary url.
         'navbar_links': [
             ("GitHub", "https://github.com/sahib/rmlint", True),
-            ("Travis", "https://travis-ci.org/sahib/rmlint", True)
+            ("Travis", "https://travis-ci.com/sahib/rmlint", True)
         ],
 
         # Render the next and previous page links in navbar. (Default: true)

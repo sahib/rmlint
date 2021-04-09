@@ -63,7 +63,7 @@ Here are some other things to check before submitting your contribution:
   examples how they should **not** look like.
 - Is ``rmlint`` running okay inside of ``valgrind`` (i.e. no leaks and no memory violations)?
 
-.. _`TravisCI`: https://travis-ci.org/sahib/rmlint
+.. _`TravisCI`: https://travis-ci.com/sahib/rmlint
 
 .. _`test documentation`: https://github.com/sahib/rmlint/blob/develop/tests/README.rst
 

@@ -17,7 +17,7 @@ To ensure required test dependencies are present:
 
 On every commit, those tests are additionally run on `TravisCI`_.
 
-.. _`TravisCI`: https://travis-ci.org/sahib/rmlint
+.. _`TravisCI`: https://travis-ci.com/sahib/rmlint
 
 Control Variables
 ~~~~~~~~~~~~~~~~~
