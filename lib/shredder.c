@@ -1277,6 +1277,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files,
         file->is_original = false;
 
         if(status == RM_SHRED_GROUP_FINISHING) {
+            file->lint_type = RM_LINT_TYPE_DUPE;
             /* identify "tagged" originals: */
             if(((file->is_prefd) && (session->cfg->keep_all_tagged)) ||
                ((!file->is_prefd) && (session->cfg->keep_all_untagged))) {

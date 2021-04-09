@@ -370,7 +370,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     file->session = merger->session;
     file->folder = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
 
-    file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
+    file->lint_type = RM_LINT_TYPE_DUPE_DIR;
     file->digest = self->digest;
 
     /* Set these to invalid for now */

@@ -367,6 +367,8 @@ static int rm_lint_type_order[] = {
     [RM_LINT_TYPE_PART_OF_DIRECTORY] = 1,
     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = 2,
     [RM_LINT_TYPE_DUPE_CANDIDATE] = 3,
+    [RM_LINT_TYPE_DUPE_DIR] = 4,
+    [RM_LINT_TYPE_DUPE] = 5,
 };
 
 static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {

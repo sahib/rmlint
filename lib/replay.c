@@ -140,6 +140,7 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
                 file_type = RM_LINT_TYPE_EMPTY_DIR;
                 break;
             case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+            case RM_LINT_TYPE_DUPE_DIR:
                 // ignore
                 return FALSE;
             default:

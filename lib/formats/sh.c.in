@@ -376,7 +376,7 @@ static char *rm_fmt_sh_escape_path(char *path) {
 }
 
 static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile *file) {
-    bool is_dir = (file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE);
+    bool is_dir = (file->lint_type == RM_LINT_TYPE_DUPE_DIR);
 
     RM_DEFINE_PATH(file);
 
@@ -461,9 +461,12 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     case RM_LINT_TYPE_BADUGID:
         fprintf(out, "handle_bad_user_and_group_id '%s' # bad gid\n", path);
         break;
-    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
-    case RM_LINT_TYPE_DUPE_CANDIDATE:
+    case RM_LINT_TYPE_DUPE_DIR:
+    case RM_LINT_TYPE_DUPE:
         rm_fmt_write_duplicate(self, out, file);
+        break;
+    case RM_LINT_TYPE_DUPE_CANDIDATE:
+        g_assert_not_reached();
         break;
     case RM_LINT_TYPE_PART_OF_DIRECTORY:
         count_as_line = false;

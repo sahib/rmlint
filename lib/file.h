@@ -57,9 +57,6 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
 
-    /* note: this needs to be after all non-duplicate lint type item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE,
-
     /* Directories are no "normal" RmFiles, they are actual
      * different structs that hide themselves as RmFile to
      * be compatible with the output system.
@@ -68,6 +65,13 @@ typedef enum RmLintType {
      * So it does not matter if this type is behind RM_LINT_TYPE_DUPE_CANDIDATE.
      */
     RM_LINT_TYPE_DUPE_DIR_CANDIDATE,
+
+	/* note: this needs to be after all non-duplicate lint type item in list */
+    RM_LINT_TYPE_DUPE_CANDIDATE,
+
+    /* confirmed duplicates */
+    RM_LINT_TYPE_DUPE_DIR,
+    RM_LINT_TYPE_DUPE,
 
     /* Special type for files that got sieved out during shreddering.
      * Depending on output settings, these may be included in the

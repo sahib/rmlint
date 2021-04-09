@@ -242,7 +242,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
     json_object_set_int_member(elem, "disk_id", file->dev);
     json_object_set_boolean_member(elem, "is_original", file->is_original);
 
-    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR) {
         json_object_set_int_member(elem, "n_children", file->n_children);
     }
 
