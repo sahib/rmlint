@@ -95,8 +95,8 @@ AUTHORS
 Here's a list of developers to blame:
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2017
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2017
+*Christopher Pahl*                   https://github.com/sahib      2010-2021
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2021
 ===================================  ============================= ===========================================
 
 There are some other people that helped us of course.
