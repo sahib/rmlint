@@ -273,22 +273,8 @@ static const RmDigestInterface metrocrc256_interface = {
 ///////////////////////////
 
 #define RM_DIGEST_CUMULATIVE_MAX_BYTES 64
-
-#if RM_PLATFORM_64
-
-#define RM_DIGEST_CUMULATIVE_T guint64
-#define RM_DIGEST_CUMULATIVE_DATA data64
-#define RM_DIGEST_CUMULATIVE_ALIGN 8
-
-#else
-
 #define RM_DIGEST_CUMULATIVE_T guint32
-#define RM_DIGEST_CUMULATIVE_DATA data32
-#define RM_DIGEST_CUMULATIVE_ALIGN 4
-
-#endif
-
-#define RM_DIGEST_CUMULATIVE_INTS (RM_DIGEST_CUMULATIVE_LEN / RM_DIGEST_CUMULATIVE_ALIGN)
+#define RM_DIGEST_CUMULATIVE_ALIGN sizeof(RM_DIGEST_CUMULATIVE_T)
 
 typedef struct RmDigestCumulative {
     union {
