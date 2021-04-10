@@ -69,13 +69,13 @@ def test_xattr_basic():
     for _ in range(2):
         for write_cache in True, False:
             if write_cache:
-                head, *data, footer = run_rmlint('--hash-uniques -D -S pa --xattr-write')
+                head, *data, footer = run_rmlint_once('--hash-uniques -D -S pa --xattr-write')
             else:
-                head, *data, footer = run_rmlint('-D -S pa --xattr-read')
+                head, *data, footer = run_rmlint_once('-D -S pa --xattr-read')
 
             check(data, write_cache)
 
-        head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
+        head, *data, footer = run_rmlint_once('-D -S pa --xattr-clear')
 
 
 @parameterized([("", ), ("-D", )])
@@ -101,7 +101,7 @@ def test_xattr_detail(extra_opts):
         create_file("def", path_3)
         create_file("longer", path_4)
 
-        head, *data, footer = run_rmlint(base_options + ' --xattr-write')
+        head, *data, footer = run_rmlint_once(base_options + ' --xattr-write')
         assert len(data) == 2
 
         xattr_1 = must_read_xattr(path_1)
@@ -120,7 +120,7 @@ def test_xattr_detail(extra_opts):
 
         # Run several times with --hash-unmatched.
         for _ in range(10):
-            head, *data, footer = run_rmlint(base_options + ' --xattr --hash-unmatched')
+            head, *data, footer = run_rmlint_once(base_options + ' --xattr --hash-unmatched')
             # one more due to the size twin
             assert len(data) == 3
 
@@ -141,7 +141,7 @@ def test_xattr_detail(extra_opts):
             assert xattr_4 == {}
 
         # Try clearing the attributes:
-        head, *data, footer = run_rmlint(base_options + '--xattr-clear')
+        head, *data, footer = run_rmlint_once(base_options + '--xattr-clear')
         assert len(data) == 2
         assert must_read_xattr(path_1) == {}
         assert must_read_xattr(path_2) == {}
@@ -150,7 +150,7 @@ def test_xattr_detail(extra_opts):
 
         # Run several times with --hash-uniques.
         for _ in range(10):
-            head, *data, footer = run_rmlint(base_options + ' --xattr --hash-uniques')
+            head, *data, footer = run_rmlint_once(base_options + ' --xattr --hash-uniques')
             # two more due to the 'longer' file and also the device image
             assert len(data) == 5
 
@@ -171,4 +171,3 @@ def test_xattr_detail(extra_opts):
             xattr_4 = must_read_xattr(path_4)
             assert xattr_4["user.rmlint.blake2b.cksum"] == \
                     b'b8c25c0482c3323cd3fc544cd9e0fb05eee191aedce56e307d1ea1af96f96fe63d2ac82b0a3ba5c42b7b58da92cd438065b25a51170f183889651419a242d24f\x00'
-
