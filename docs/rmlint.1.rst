@@ -1024,4 +1024,4 @@ Also see the  http://rmlint.rtfd.org for other people that helped us.
 
 If you consider a donation you can use *Flattr* or buy us a beer if we meet:
 
-https://flattr.com/thing/302682/libglyr
+https://flattr.com/@SeeSpotRun

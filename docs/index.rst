@@ -161,20 +161,21 @@ If you think rmlint saved [*]_ you some serious time and/or space, you might
 consider a donation. You can donate either via *Flattr* or via *PayPal*:
 
 .. image:: http://api.flattr.com/button/flattr-badge-large.png
-   :target: http://flattr.com/thing/302682/libglyr
-   :align: center 
+   :target: https://flattr.com/@SeeSpotRun
+   :align: center
    :width: 9%
 
 .. raw:: html
 
    <br />
    <center>
-       <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
-           <input type="hidden" name="cmd" value="_s-xclick">
-           <input type="hidden" name="hosted_button_id" value="JXCXKRMS8EDVC">
-           <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-           <img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
-       </form>
+        <form action="https://www.paypal.com/donate" method="post" target="_top">
+            <input type="hidden" name="business" value="ZZFE8WTYKT2KW" />
+            <input type="hidden" name="item_name" value="Save the world one duplicate at a time" />
+            <input type="hidden" name="currency_code" value="AUD" />
+            <input type="image" src="https://www.paypalobjects.com/en_AU/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+            <img alt="" border="0" src="https://www.paypal.com/en_AU/i/scr/pixel.gif" width="1" height="1" />
+        </form>
    </center>
    <br />
 
