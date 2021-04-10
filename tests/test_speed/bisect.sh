@@ -16,7 +16,7 @@
 # $ git bisect run /path/to/this/script
 
 ##### CONFIG ######
-#threshhold run time for good vs bad (in centiseconds, eg 7 seconds = 700):
+#threshold run time for good vs bad (in centiseconds, eg 7 seconds = 700):
 cutoff_time=700
 # the rmlint command to run...
 rmlint_cmd="./rmlint -o pretty:/dev/null /usr -V"

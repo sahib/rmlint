@@ -414,7 +414,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
         filename = self.get_filename()
         self.confirm.set_sensitive(bool(filename))
 
-        # Make sure the user-typed extension gets set in teh type chooser also.
+        # Make sure the user-typed extension gets set in the type chooser also.
         name = self.get_current_name()
         *_, extension = name.rsplit('.', 1)
         self.file_type.set_selected_choice(extension)

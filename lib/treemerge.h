@@ -34,7 +34,7 @@
  * I.e. find duplicate directories.
  *
  * All API here is defined on the opaque RmTreeMerger structure.
- * Files are feeded and the finished directories are wrapped
+ * Files are fed and the finished directories are wrapped
  * as RmFiles and written to the output module.
  */
 
@@ -68,7 +68,7 @@ void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback,
 void rm_tm_feed(RmTreeMerger *self, RmFile *file);
 
 /**
- * @brief Find duplicate directories through all feeded RmFiles.
+ * @brief Find duplicate directories through all fed RmFiles.
  */
 void rm_tm_finish(RmTreeMerger *self);
 

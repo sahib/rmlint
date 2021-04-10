@@ -30,7 +30,7 @@
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.
- * Otherwise, files are directly outputed and not stored in groups.
+ * Otherwise, files are directly outputted and not stored in groups.
  */
 typedef struct RmFmtGroup {
     GQueue files;

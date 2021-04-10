@@ -171,7 +171,7 @@ void rm_fmt_register(RmFmtTable *self, RmFmtHandler *handler);
 bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path);
 
 /**
- * @brief Make all handlers write a ouput line to their respective file.
+ * @brief Make all handlers write a output line to their respective file.
  *
  * The actual content of the line (or even lines) is subject to the
  * implementation of the handler - it might also do just nothing.
@@ -228,7 +228,7 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
 bool rm_fmt_is_a_output(RmFmtTable *self, const char *path);
 
 /**
- * @brief Initialize a GHashTableIter with the pairs of registerd
+ * @brief Initialize a GHashTableIter with the pairs of registered
  * paths/handlers.
  *
  * Call g_hash_table_iter_next() to retrieve the values.
@@ -250,7 +250,7 @@ void rm_fmt_lock_state(RmFmtTable *self);
 void rm_fmt_unlock_state(RmFmtTable *self);
 
 /**
- * @brief Check if a certain handler is writting to a stream.
+ * @brief Check if a certain handler is writing to a stream.
  */
 bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 

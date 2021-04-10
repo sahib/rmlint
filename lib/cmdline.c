@@ -752,7 +752,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 
         fclose(stamp_file);
     } else {
-        /* Cannot read a stamp file, assume we gonna creae it. */
+        /* Cannot read a stamp file, assume we have to create it. */
         plain = false;
         success = true;
         rm_log_info_line(_("No stamp file at `%s`, will create one after this run."),
@@ -1203,7 +1203,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("Specifiyng both -o and -O is not allowed"));
+                    _("Specifying both -o and -O is not allowed"));
         return false;
     } else if(session->output_cnt[0] < 0 && session->cfg->progress_enabled == false) {
         rm_cmd_set_default_outputs(session);

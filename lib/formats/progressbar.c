@@ -220,7 +220,7 @@ static void rm_fmt_progress_format_text(RmSession *session,
         break;
     }
 
-    /* Support unicode messages - tranlsated text might contain some. */
+    /* Support unicode messages - translated text might contain some. */
     self->text_len = g_utf8_strlen(self->text_buf, self->text_len);
 
     /* Get rid of colors to get the correct length of the text. This is
@@ -390,7 +390,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(state == RM_PROGRESS_STATE_INIT) {
-        /* Do initializiation here */
+        /* Do initialization here */
         const char *update_interval_str =
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 

@@ -35,7 +35,7 @@
  * @param session Session to validate cfg against.
  * @param file file to get data and write to.
  *
- * @return 0 on sucess, some errno on failure.
+ * @return 0 on success, some errno on failure.
  */
 int rm_xattr_write_hash(RmFile *file, RmSession *session);
 
@@ -52,7 +52,7 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session);
 gboolean rm_xattr_read_hash(RmFile *file, RmSession *session);
 
 /**
- * @brief Clear all data that may have been writen to file.
+ * @brief Clear all data that may have been written to file.
  *
  * @param session Session to validate cfg against.
  * @param file to read the path to clear from.
@@ -65,7 +65,7 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session);
  * @brief Check if `path` was already deduplicated.
  *
  * @param path Path to check.
- * @param follow_symlinks Wether to check if it is a symbolic link;
+ * @param follow_symlinks Whether to check if it is a symbolic link;
  * @param res Where to store the result.
  *
  * @return true if deduplicated

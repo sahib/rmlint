@@ -86,7 +86,7 @@ class Application(Gtk.Application):
     def do_startup(self, **kw):
         Gtk.Application.do_startup(self, **kw)
 
-        # Make tranlsating strings possible:
+        # Make translating strings possible:
         # (We use the same message catalouge as rmlint)
         gettext.install('rmlint')
 

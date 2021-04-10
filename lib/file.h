@@ -241,7 +241,7 @@ typedef struct RmFile {
         gint64 twin_count;
 
         /* Disk fiemap / physical offset at start of file (tests mapping subsequent
-         * file fragements did not deliver any significant additionl benefit) */
+         * file fragments did not deliver any significant additionl benefit) */
         RmOff disk_offset;
     };
 

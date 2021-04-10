@@ -83,7 +83,7 @@ def test_xattr_basic():
 def test_xattr_detail(extra_opts):
     if not runs_as_root():
         # This tests need a ext4 fs which is created during the test.
-        # The mount step sadly needs root priviliges.
+        # The mount step sadly needs root privileges.
         return
 
     with create_special_fs("this-is-not-tmpfs") as ext4_path:

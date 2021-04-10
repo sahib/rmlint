@@ -86,7 +86,7 @@ static void keccakf(uint64_t s[25]) {
     }
 }
 
-/* *************************** Public Inteface ************************ */
+/* *************************** Public Interface ************************ */
 
 /* For Init or Reset call these: */
 void sha3_Init256(sha3_context *ctx) {
