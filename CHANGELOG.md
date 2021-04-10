@@ -8,29 +8,38 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Fixed
 
-* Json encoding issues
+* Fix json UTF-encoding issues (see issues #463 and #464)
+* Fix ``rmlint --gui`` ignoring manual tagging of originals (see issue #385)
+* Fix various bugs in ``--replay`` mode (see issue #383)
+* Fix bug if ``--treemerge`` used in combination with ``--algorithm=SHA1``
+* Fix broken ``rmlint.py`` script after adding of part_of_directory types
+* Don't disable fiemap when gettext is disabled
+* Various fixes aimed at improving mac osx compatibility
 * Avoid generating ``rmlint.sh`` or other output files for ``rmlint --dedupe`` or ``rmlint --is-reflink`
-* Error message when trying to clone from original to its hardlink
-* Fix bug with ``--unmatched-basename`` option in ``--replay`` mode
-* Possible bug with ``--equal``
+* Fix possible compile problems scons' default CC flags are non-functional
 
 ### Added
 
 * Implement --hash-uniques option to generate full checksums of unique files too.
 * Implement --hash-unmatched option, similar to --hash-uniques but only for size twins.
 * Implement --rank-by f option to rank originals by directory full path
-* Can now atomically clone from original to its hardlink via ``rmlint --dedupe`` 
+* Can now atomically clone from original to its hardlink via ``rmlint --dedupe``
+* Option ``-c json:traversed`` to include list of fully-traversed dirs in json output
 
 ### Changed
 
-* Option ``--dedupe`` option parsing changed.
+* Option ``--dedupe`` option parsing changed.  See ``rmlint --dedupe -h`` for more.
   Previously:
   ``rmlint --dedupe [--dedupe-xattr] [--dedupe-readonly] [-v] [-V] <src> <dest>``
   Now:
   ``rmlint --dedupe [--xattr] [--readonly] [--followlinks] [--inline-extents] [-v] [-V] <src> <dest>``
 * Made json-glib a hard dependency
+* Improved progress reporting ETA algorithm when large number of small files remaining to scan
+* Small files (<4k) are now generally ignored for reflinking / cloning options since They
+  are typically stored as inline extents
+* docker: update to a more recent alpine and install full test dependencies
 
-### Deprecated
+### Removed
 * ``--write-unfinished``.  Use ``--hash-unmatched``.
 * ``--dedupe-xattr``.  Use ``--dedupe --xattr``
 * ``--dedupe-readonly``.  Use ``--dedupe --readonly``
