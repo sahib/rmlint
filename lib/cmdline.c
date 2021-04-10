@@ -1591,7 +1591,7 @@ int rm_cmd_main(RmSession *session) {
         g_assert(cfg->paths->next);
         RmPath *b = cfg->paths->next->data;
 
-        switch(rm_util_link_type(a->path, b->path)) {
+        switch(rm_util_link_type(a->path, b->path, TRUE)) {
         case RM_LINK_HARDLINK:
         case RM_LINK_REFLINK:
         case RM_LINK_PATH_DOUBLE:

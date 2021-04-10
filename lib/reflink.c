@@ -182,6 +182,8 @@ int rm_dedupe_main(int argc, const char **argv) {
     gboolean dedupe_readonly = FALSE;
     gboolean follow_symlinks = FALSE;
     gboolean skip_inline_extents = TRUE;
+    gboolean use_fiemap = HAVE_FIEMAP;
+
 
     const GOptionEntry options[] = {
         {"xattr"         , 'x' , 0                     , G_OPTION_ARG_NONE     , &check_xattr       , _("Check extended attributes to see if the file is already deduplicated") , NULL},
@@ -233,7 +235,7 @@ int rm_dedupe_main(int argc, const char **argv) {
         }
     }
 
-    RmLinkType link_type = rm_util_link_type(source_path, dest_path);
+    RmLinkType link_type = rm_util_link_type(source_path, dest_path, use_fiemap);
     if(link_type == RM_LINK_REFLINK) {
         rm_log_debug_line("Already an exact reflink!");
         return EXIT_SUCCESS;
@@ -498,11 +500,16 @@ int rm_is_reflink_main(int argc, const char **argv) {
     g_option_context_free(context);
     g_free(summary);
 
+    if(!HAVE_FIEMAP) {
+        rm_log_error_line(_("Cannot test for reflinks because rmlint was compiled without fiemap support"));
+        return EXIT_FAILURE;
+    }
+
     const char *a = argv[1];
     const char *b = argv[2];
     rm_log_debug_line("Testing if %s is clone of %s", a, b);
 
-    int result = rm_util_link_type(a, b);
+    int result = rm_util_link_type(a, b, TRUE);
     rm_log_info("Link type for '%s' and '%s', result:\n", a, b);
     rm_log_warning("%s\n", desc[result]);
     return result;

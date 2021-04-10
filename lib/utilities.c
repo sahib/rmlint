@@ -1179,7 +1179,7 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
     return result;
 }
 
-RmLinkType rm_util_link_type(const char *path1, const char *path2) {
+RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiemap) {
 #if _RM_OFFSET_DEBUG
     rm_log_debug_line("Checking link type for %s vs %s", path1, path2);
 #endif
@@ -1265,8 +1265,11 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2) {
         RM_RETURN(RM_LINK_SYMLINK);
     }
 
-    RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
-    RM_RETURN(reflink_type);
+    if(use_fiemap) {
+        RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
+        RM_RETURN(reflink_type);
+    }
+    RM_RETURN(RM_LINK_NONE);
 
 #undef RM_RETURN
 }
