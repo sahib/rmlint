@@ -278,6 +278,7 @@ void rm_trie_destroy(RmTrie *self) {
 
 #ifdef _RM_PATHTRICIA_BUILD_MAIN
 
+#include <stdio.h>
 
 static int rm_trie_print_callback(_UNUSED RmTrie *self,
                                   RmNode *node,
