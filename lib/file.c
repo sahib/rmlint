@@ -95,6 +95,8 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->path_index = path_index;
     self->outer_link_count = -1;
 
+    self->ref_count = 1;
+
     return self;
 }
 
@@ -125,11 +127,16 @@ RmFile *rm_file_copy(RmFile *file) {
     copy->signal = NULL;
     copy->parent_dir = NULL;
     copy->n_children = 0;
+    copy->ref_count = 1;
 
     return copy;
 }
 
-void rm_file_destroy(RmFile *file) {
+void rm_file_unref(RmFile *file) {
+    if(!g_atomic_int_dec_and_test(&file->ref_count)) {
+        // somebody still loves me!
+        return;
+    }
     if(file->hardlinks) {
         g_queue_remove(file->hardlinks, file);
         if(file->hardlinks->length == 0) {
@@ -141,8 +148,8 @@ void rm_file_destroy(RmFile *file) {
         g_free((char *)file->ext_cksum);
     }
 
-    if(file->free_digest) {
-        rm_digest_free(file->digest);
+    if(file->digest) {
+        rm_digest_unref(file->digest);
     }
 
     g_slice_free(RmFile, file);

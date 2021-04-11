@@ -269,6 +269,8 @@ typedef struct RmFile {
      * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
      * */
     size_t n_children;
+
+    guint ref_count;
 } RmFile;
 
 /* Defines a path variable containing the file's path */
@@ -314,10 +316,20 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
                     RmNode *node);
 
 /**
- * @brief Deallocate the memory allocated by rm_file_new.
- * @note does not deallocate file->digest since this is handled by shredder.c
+ * @brief Decrease reference count to file;
+ * free resources if this is the last reference.
+ * @note threadsafe
  */
-void rm_file_destroy(RmFile *file);
+void rm_file_unref(RmFile *file);
+
+/**
+ * @brief Increase reference count to file;
+ * @note threadsafe
+ */
+inline static void rm_file_ref(RmFile *file) {
+    g_atomic_int_inc (&file->ref_count);
+}
+
 
 /**
  * @brief add link to head's hardlinks (create hardlinks queue if necessary)

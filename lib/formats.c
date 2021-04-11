@@ -46,7 +46,7 @@ static RmFmtGroup *rm_fmt_group_new(void) {
 static void rm_fmt_group_destroy(_UNUSED RmFmtTable *self, RmFmtGroup *group) {
     for(GList *iter = group->files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        rm_file_destroy(file);
+        rm_file_unref(file);
     }
 
     g_queue_clear(&group->files);
@@ -417,10 +417,6 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
 
 void rm_fmt_flush(RmFmtTable *self) {
     RmCfg *cfg = self->session->cfg;
-    if(!cfg->cache_file_structs) {
-        return;
-    }
-
     if(*(cfg->rank_criteria) || cfg->replay) {
         g_queue_sort(&self->groups, (GCompareDataFunc)rm_fmt_rank, self);
     }
@@ -462,11 +458,10 @@ void rm_fmt_close(RmFmtTable *self) {
 }
 
 void rm_fmt_write(RmFile *result, RmFmtTable *self) {
-    bool direct = !(self->session->cfg->cache_file_structs);
-
-    if(direct) {
+    if(!self->session->cfg->delay_output) {
         rm_fmt_write_impl(result, self);
     } else {
+        rm_file_ref(result);
         if(result->is_original || self->groups.length == 0) {
             g_queue_push_tail(&self->groups, rm_fmt_group_new());
         }

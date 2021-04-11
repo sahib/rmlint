@@ -384,9 +384,6 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
 
     cfg->find_hardlinked_dupes = true;
 
-    /* Keep RmFiles after shredder. */
-    cfg->cache_file_structs = true;
-
     return true;
 }
 
@@ -902,7 +899,7 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
     strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria) - 1);
 
     /* ranking the files depends on caching them to the end of the program */
-    cfg->cache_file_structs = true;
+    cfg->delay_output = true;
 
     return true;
 }
@@ -1211,7 +1208,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"without-fiemap"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap           , "Do not use fiemap(2) in order to save memory"                , NULL}   ,
         {"shred-always-wait"      , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_always_wait      , "Always waits for file increment to finish hashing"           , NULL}   ,
         {"fake-pathindex-as-disk" , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_pathindex_as_disk , "Pretends each input path is a separate physical disk"        , NULL}   ,
-        {"fake-holdback"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->cache_file_structs     , "Hold back all files to the end before outputting."           , NULL}   ,
+        {"fake-holdback"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->delay_output           , "Hold back all files to the end before outputting."           , NULL}   ,
         {"fake-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_fiemap            , "Create faked fiemap data for all files"                      , NULL}   ,
         {"fake-abort"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_abort             , "Simulate interrupt after 10% shredder progress"              , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
@@ -1410,8 +1407,6 @@ int rm_cmd_main(RmSession *session) {
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
-        g_assert(cfg->cache_file_structs);
-
         /* Currently we cannot use -D and the cloning on btrfs, since this assumes the
          * same layout on two dupicate directories which is likely not a valid assumption.
          * Emit a warning if the raw -D is used in conjunction with that.

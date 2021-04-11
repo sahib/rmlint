@@ -81,7 +81,7 @@ static void rm_fmt_prog(RmSession *session,
     RmFmtHandlerFdupes *self = (RmFmtHandlerFdupes *)parent;
 
     if(state == RM_PROGRESS_STATE_INIT) {
-        session->cfg->cache_file_structs = true;
+        session->cfg->delay_output = true;
         self->omit_first_line =
             (rm_fmt_get_config_value(session->formats, "fdupes", "omitfirst") != NULL);
         self->use_same_line =

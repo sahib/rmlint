@@ -87,7 +87,7 @@ static int rm_hasher_callback(_UNUSED RmHasher *hasher,
                             session->completed_digests_buffer[session->path_index],
                             session->paths[session->path_index]);
                     }
-                    rm_digest_free(
+                    rm_digest_unref(
                         session->completed_digests_buffer[session->path_index]);
                 }
                 session->completed_digests_buffer[session->path_index] = NULL;

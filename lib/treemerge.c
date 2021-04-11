@@ -330,7 +330,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
 }
 
 static void rm_directory_free(RmDirectory *self) {
-    rm_digest_free(self->digest);
+    rm_digest_unref(self->digest);
     g_hash_table_unref(self->hash_set);
     g_queue_clear(&self->known_files);
     g_queue_clear(&self->children);
@@ -362,7 +362,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     file->node = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR;
-    file->digest = self->digest;
+    file->digest = rm_digest_ref(self->digest);
 
     /* Set these to invalid for now */
     file->mtime = self->metadata.dir_mtime;
@@ -376,6 +376,8 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     file->is_prefd = (self->prefd_files >= self->dupe_count);
     file->parent_dir = (RmDirectory *)self;
     file->n_children = self->dupe_count;
+
+    file->ref_count = 1;
 }
 
 static RmFile *rm_directory_as_new_file(RmTreeMerger *merger, const RmDirectory *self) {
@@ -564,6 +566,7 @@ static void rm_tm_insert_dir(RmTreeMerger *self, RmDirectory *directory) {
 void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     g_assert(self);
     g_assert(file);
+    rm_file_ref(file);
 
     RM_DEFINE_DIR_PATH(file);
 
@@ -1008,7 +1011,7 @@ void rm_tm_destroy(RmTreeMerger *self) {
      *  output module (where they would be freed)
      *  */
     GList *file_list = g_hash_table_get_values(self->free_map);
-    g_list_free_full(file_list, (GDestroyNotify)rm_file_destroy);
+    g_list_free_full(file_list, (GDestroyNotify)rm_file_unref);
     g_hash_table_unref(self->free_map);
 
     g_slice_free(RmTreeMerger, self);

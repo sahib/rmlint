@@ -462,7 +462,7 @@ void rm_file_tables_clear(const RmSession *session) {
     while(g_hash_table_iter_next(&iter, &key, NULL)) {
         RmFile *file = key;
         if(file) {
-            rm_file_destroy(file);
+            rm_file_unref(file);
         }
     }
 }
@@ -474,12 +474,15 @@ static gboolean rm_pp_handle_other_lint(RmFile *file, const RmSession *session) 
         return FALSE;
     }
 
-    if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
-        rm_file_destroy(file);
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        session->tables->other_lint[file->lint_type] =
+                    g_list_prepend(session->tables->other_lint[file->lint_type], file);
+    } else if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
+        rm_file_unref(file);
     } else if((session->cfg->keep_all_tagged && file->is_prefd) ||
               (session->cfg->keep_all_untagged && !file->is_prefd)) {
         /* "Other" lint protected by --keep-all-{un,}tagged */
-        rm_file_destroy(file);
+        rm_file_unref(file);
     } else {
         session->tables->other_lint[file->lint_type] =
             g_list_prepend(session->tables->other_lint[file->lint_type], file);
@@ -501,7 +504,7 @@ static gboolean rm_pp_check_path_double(RmFile *file, GHashTable *unique_paths_t
     g_assert(match_double_key->file != file);
 
     rm_path_double_free(key);
-    rm_file_destroy(file);
+    rm_file_unref(file);
     return TRUE;
 }
 
@@ -614,11 +617,7 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
             rm_fmt_write(file, session->formats);
         }
 
-        if(!session->cfg->cache_file_structs) {
-            g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
-        } else {
-            g_list_free(list);
-        }
+        g_list_free(list);
     }
 
     return num_handled;
