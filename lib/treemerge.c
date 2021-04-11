@@ -298,7 +298,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
     self->was_dupe_extracted = false;
     self->mergeups = 0;
 
-    self->dirname = dirname;
+    self->dirname = g_strdup(dirname);
     self->finished = false;
 
     self->depth = 0;
@@ -567,30 +567,27 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     g_assert(self);
     g_assert(file);
 
-    RM_DEFINE_PATH(file);
-    char *dirname = g_path_get_dirname(file_path);
+    RM_DEFINE_DIR_PATH(file);
 
     /* See if we know that directory already */
-    RmDirectory *directory = rm_trie_search(&self->dir_tree, dirname);
+    RmDirectory *directory = rm_trie_search(&self->dir_tree, file_dir_path);
 
     if(directory == NULL) {
         /* Get the actual file count */
-        int file_count = GPOINTER_TO_INT(rm_trie_search(&self->count_tree, dirname));
+        int file_count = GPOINTER_TO_INT(rm_trie_search(&self->count_tree, file_dir_path));
         if(file_count == 0) {
             rm_log_error(
                 RED "Empty directory or weird RmFile encountered; rejecting.\n" RESET);
             file_count = -1;
         }
 
-        directory = rm_directory_new(dirname);
+        directory = rm_directory_new(file_dir_path);
         directory->file_count = file_count;
 
         /* Make the new directory known */
-        rm_trie_insert(&self->dir_tree, dirname, directory);
+        rm_trie_insert(&self->dir_tree, file_dir_path, directory);
 
         g_queue_push_head(&self->valid_dirs, directory);
-    } else {
-        g_free(dirname);
     }
 
     g_hash_table_insert(self->free_map, file, file);
