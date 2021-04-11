@@ -24,19 +24,26 @@ def test_simple():
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_deep():
     create_dirs('1/2/3/4/5')
+    create_dirs('1/2/C/D/E')
     head, *data, footer = run_rmlint('-T "none +ed"')
 
-    assert data[0]['path'].endswith('5')
-    assert data[1]['path'].endswith('4')
-    assert data[2]['path'].endswith('3')
-    assert data[3]['path'].endswith('2')
-    assert data[4]['path'].endswith('1')
+    assert data[0]['path'].endswith('E')
+    assert data[1]['path'].endswith('D')
+    assert data[2]['path'].endswith('C')
+    assert data[3]['path'].endswith('5')
+    assert data[4]['path'].endswith('4')
+    assert data[5]['path'].endswith('3')
+    assert data[6]['path'].endswith('2')
+    assert data[7]['path'].endswith('1')
 
     create_file('', '1/2/3/showstopper')
     head, *data, footer = run_rmlint('-T "none +ed"')
 
-    assert data[0]['path'].endswith('5')
-    assert data[1]['path'].endswith('4')
+    assert data[0]['path'].endswith('E')
+    assert data[1]['path'].endswith('D')
+    assert data[2]['path'].endswith('C')
+    assert data[3]['path'].endswith('5')
+    assert data[4]['path'].endswith('4')
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
