@@ -387,7 +387,7 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
             r = rm_fmt_rank_size(ga, gb);
             break;
         case 'a':
-            r = strcasecmp(fa->folder->basename, fb->folder->basename);
+            r = strcasecmp(fa->node->basename, fb->node->basename);
             break;
         case 'm':
             r = FLOAT_SIGN_DIFF(fa->mtime, fb->mtime, MTIME_TOL);

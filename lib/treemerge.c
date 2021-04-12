@@ -360,7 +360,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     memset(file, 0, sizeof(RmFile));
 
     file->session = merger->session;
-    file->folder = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
+    file->node = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR;
     file->digest = self->digest;
@@ -441,7 +441,7 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
 
     /* Add the path to the checksum if we require the same layout too */
     if(self->session->cfg->honour_dir_layout) {
-        const char *basename = file->folder->basename;
+        const char *basename = file->node->basename;
         gsize basename_cksum_len = 0;
         guint8 *basename_cksum =
             rm_digest_sum(RM_DIGEST_BLAKE2B,

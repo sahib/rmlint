@@ -111,9 +111,9 @@ typedef struct RmFile {
      * */
     RmOff path_id;
 
-    /* file folder as node of folder n-ary tree
+    /* file path as node of folder n-ary tree
      * */
-    RmNode *folder;
+    RmNode *node;
 
     /* File modification date/time
      * */
@@ -315,7 +315,7 @@ typedef struct RmFile {
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
                     RmLintType type, bool is_ppath, unsigned pnum, short depth,
-                    RmNode *folder);
+                    RmNode *node);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.
