@@ -615,6 +615,7 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
 
             file->twin_count = -1;
             rm_fmt_write(file, session->formats);
+            rm_file_unref(file);
         }
 
         g_list_free(list);
