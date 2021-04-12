@@ -424,9 +424,6 @@ static void rm_fmt_write_duplicate(RmFmtHandlerShScript *self, FILE *out, RmFile
 
 static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent, FILE *out, RmFile *file) {
     RmFmtHandlerShScript *self = (RmFmtHandlerShScript *)parent;
-    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
-        return;
-    }
 
     RM_DEFINE_PATH(file);
     char *path = rm_fmt_sh_escape_path(file_path);
@@ -462,7 +459,9 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         g_assert_not_reached();
         break;
+    case RM_LINT_TYPE_UNIQUE_FILE:
     case RM_LINT_TYPE_PART_OF_DIRECTORY:
+    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         count_as_line = false;
         break;
     default:
