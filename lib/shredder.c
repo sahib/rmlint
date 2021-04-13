@@ -1316,6 +1316,7 @@ static gboolean rm_shred_has_duplicates(GQueue *group) {
     return FALSE;
 }
 
+/* only called by rm_shred_group_postprocess which runs single-threaded */
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     g_assert(session);
     g_assert(group);
@@ -1465,6 +1466,8 @@ static void rm_shred_tag_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTa
  * decide which file(s) are originals
  * maybe split out mtime rejects (--mtime-window option)
  * maybe split out basename twins (--unmatched-basename option)
+ * note: only called by rm_shred_result_factory and self, so
+ * is single-threaded
  */
 static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     if(!group) {
@@ -1534,6 +1537,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     rm_shred_group_free(group, false);
 }
 
+/* runs as single-threaded threadpool */
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     /* maybe create group's digest from external checksums */
     RmFile *headfile = group->held_files->head->data;
