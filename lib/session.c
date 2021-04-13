@@ -98,8 +98,9 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 }
 
 void rm_session_clear(RmSession *session) {
-    RmCfg *cfg = session->cfg;
+    rm_fmt_close(session->formats);
 
+    RmCfg *cfg = session->cfg;
     rm_cfg_free_paths(cfg);
 
     g_timer_destroy(session->timer_since_proc_start);
@@ -110,7 +111,6 @@ void rm_session_clear(RmSession *session) {
     }
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
-    rm_fmt_close(session->formats);
     g_ptr_array_free(session->pattern_cache, TRUE);
     rm_userlist_destroy(session->userlist);
 
