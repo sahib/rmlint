@@ -56,7 +56,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->session = session;
 
     if(!node) {
-        node = rm_trie_insert(&cfg->file_trie, path, self);
+        node = rm_trie_insert(&cfg->file_trie, path, NULL);
     }
     self->node = node;
 
