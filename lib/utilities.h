@@ -168,6 +168,11 @@ char *rm_util_get_groupname(void);
 #define RM_LIST_NEXT(node) ((node) ? node->next : NULL)
 
 /**
+ * @brief parse a string eg '64k' into a guint64
+ */
+guint64 rm_util_size_string_to_bytes(const char *size_spec, GError **error);
+
+/**
  * @brief Replace {subs} with {with} in {string}
  *
  * @return a newly allocated string, g_free it.
