@@ -61,7 +61,6 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->node = node;
 
     self->depth = depth;
-    self->path_depth = rm_util_path_depth(path);
     self->file_size = 0;
     self->actual_file_size = 0;
     self->n_children = 0;

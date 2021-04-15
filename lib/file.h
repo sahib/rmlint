@@ -119,7 +119,7 @@ typedef struct RmFile {
      * */
     gdouble mtime;
 
-    /* Depth of the file, relative to the path it was found in.
+    /* Depth of the file, relative to the command-line path it was found under.
      */
     gint16 depth;
 
@@ -132,10 +132,6 @@ typedef struct RmFile {
      * This is used for the 'oO'-sortcriteria.
      * */
     gint16 outer_link_count;
-
-    /* Depth of the path of this file.
-     */
-    guint8 path_depth;
 
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
