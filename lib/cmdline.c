@@ -231,55 +231,70 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
     return true;
 }
 
-static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair,
-                                     GError **error) {
-    char *domain = strchr(pair, ':');
-    if(domain == NULL) {
-        g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("No format (format:key[=val]) specified in '%s'"), pair);
-        return false;
-    }
-
-    char *key = NULL, *value = NULL;
-    char **key_val = g_strsplit(&domain[1], "=", 2);
-    int len = g_strv_length(key_val);
-    bool result = true;
-
-    if(len < 1) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Missing key (format:key[=val]) in '%s'"),
-                    pair);
-        g_strfreev(key_val);
-        return false;
-    }
-
-    key = g_strdup(key_val[0]);
-    if(len == 2) {
-        value = g_strdup(key_val[1]);
-    } else {
-        value = g_strdup("1");
-    }
-
-    char *formatter = g_strndup(pair, domain - pair);
-    if(!rm_fmt_is_valid_key(session->formats, formatter, key)) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key `%s' for formatter `%s'"),
-                    key, formatter);
-        g_free(key);
-        g_free(value);
-        result = false;
-    } else {
-        rm_fmt_set_config_value(session->formats, formatter, key, value);
-    }
-
-    g_free(formatter);
-    g_strfreev(key_val);
-    return result;
-}
 
 static gboolean rm_cmd_parse_config(_UNUSED const char *option_name,
-                                    const char *pair,
+                                    const char *config,
                                     RmSession *session,
                                     _UNUSED GError **error) {
-    return rm_cmd_parse_config_pair(session, pair, error);
+    const char * const syntax = "<formatter>:<key>[=<val>][/<key>[=<val>]...]";
+    char *separator = strchr(config, ':');
+    if(separator == NULL) {
+        g_set_error(error, RM_ERROR_QUARK, 0,
+                    _("No formatter (expect %s) specified in '%s'"), syntax, config);
+        return false;
+    }
+    char *configs = separator + 1;
+
+    /* split on spaces unless they are quoted */
+    char *split_regex =
+            "(?x)   "
+            "/                "    // Split on '/'
+            "(?=              "    // Followed by
+            "  (?:            "    // Start a non-capture group
+            "    [^\\\"\\\']* "    // 0 or more non-quote characters
+            "    [\\\"\\\']   "    // 1 quote (single or double)
+            "    [^\\\"\\\']* "    // 0 or more non-quote characters
+            "    [\\\"\\\']   "    // 1 quote
+            "  )*             "    // 0 or more repetition of non-capture group (multiple of 2 quotes will be even)
+            "  [^\\\"\\\']*   "    // Finally 0 or more non-quotes
+            "  $              "    // Till the end  (This is necessary, else every comma will satisfy the condition)
+            ")                ";   // End look-ahead
+    char **pairs = g_regex_split_simple(split_regex, configs, 0, 0);
+
+    bool all_valid = true;
+    if(pairs==NULL || *pairs==NULL) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Missing key (expect %s) in '%s'"),
+                    syntax, config);
+        all_valid = false;
+        return false;
+    }
+    else {
+        char *formatter = g_strndup(config, separator - config);
+        if(!rm_fmt_is_valid_key(session->formats, formatter, NULL)) {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid formatter '%s'"),
+                        formatter);
+            all_valid = false;
+        }
+        else {
+            for(char **pair = pairs; *pair && all_valid; pair++) {
+                char **key_val = g_strsplit(*pair, "=", 2);
+                if(!rm_fmt_is_valid_key(session->formats, formatter, key_val[0])) {
+                    g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key '%s' for formatter '%s'"),
+                                key_val[0], formatter);
+                    all_valid = false;
+                } else {
+                    char *key = g_strdup(key_val[0]);
+                    char *value = g_strdup(key_val[1] != NULL ? key_val[1] : "1");
+                    rm_log_info_line("Setting config for %s: %s=%s", formatter, key, value);
+                    rm_fmt_set_config_value(session->formats, formatter, key, value);
+                }
+                g_strfreev(key_val);
+            }
+        }
+        g_free(formatter);
+    }
+    g_strfreev(pairs);
+    return all_valid;
 }
 
 static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
