@@ -432,19 +432,19 @@ void rm_fmt_flush(RmFmtTable *self) {
 }
 
 void rm_fmt_close(RmFmtTable *self) {
-    for(GList *iter = self->groups.head; iter; iter = iter->next) {
-        RmFmtGroup *group = iter->data;
-        rm_fmt_group_destroy(self, group);
-    }
-
-    g_queue_clear(&self->groups);
-
     RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
         g_mutex_clear(&handler->print_mtx);
     }
     RM_FMT_FOR_EACH_HANDLER_END
+
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        rm_fmt_group_destroy(self, group);
+    }
+
+    g_queue_clear(&self->groups);
 
     g_hash_table_unref(self->name_to_handler);
     g_hash_table_unref(self->handler_to_file);
