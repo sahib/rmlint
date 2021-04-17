@@ -106,8 +106,7 @@ void rm_file_build_path(RmFile *file, char *buf) {
 
 void rm_file_build_dir_path(RmFile *file, char *buf) {
     g_assert(file);
-    rm_trie_build_path(&file->session->cfg->file_trie, file->node->parent, buf,
-                       PATH_MAX);
+    rm_trie_build_path(&file->session->cfg->file_trie, file->node->parent, buf, PATH_MAX);
 }
 
 RmFile *rm_file_copy(RmFile *file) {

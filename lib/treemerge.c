@@ -572,7 +572,8 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
 
     if(directory == NULL) {
         /* Get the actual file count */
-        int file_count = GPOINTER_TO_INT(rm_trie_search(&self->count_tree, file_dir_path));
+        int file_count =
+            GPOINTER_TO_INT(rm_trie_search(&self->count_tree, file_dir_path));
         if(file_count == 0) {
             rm_log_error(
                 RED "Empty directory or weird RmFile encountered; rejecting.\n" RESET);
@@ -688,8 +689,8 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        GQueue *file_list = rm_hash_table_setdefault(
-            self->file_groups, file->digest, (RmNewFunc)g_queue_new);
+        GQueue *file_list = rm_hash_table_setdefault(self->file_groups, file->digest,
+                                                     (RmNewFunc)g_queue_new);
 
         g_queue_push_head(file_list, file);
     }

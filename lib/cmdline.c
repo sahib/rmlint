@@ -23,7 +23,6 @@
  *
  */
 
-
 #include <ctype.h>
 #include <search.h>
 
@@ -36,13 +35,16 @@
 
 #define EXIT_EQUAL_UNKNOWN 2
 
+
 /* define paranoia levels */
+/* clang-format off */
 static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
                                                   RM_DIGEST_METRO256,
                                                   RM_DIGEST_HIGHWAY256,
                                                   RM_DEFAULT_DIGEST,
                                                   RM_DIGEST_PARANOID,
                                                   RM_DIGEST_PARANOID};
+/* clang-format on */
 static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
 static const int RM_PARANOIA_MAX = 5;
 
@@ -108,9 +110,6 @@ static void rm_cmd_show_manpage(void) {
 
     exit(0);
 }
-
-
-
 
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
@@ -231,12 +230,11 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
     return true;
 }
 
-
 static gboolean rm_cmd_parse_config(_UNUSED const char *option_name,
                                     const char *config,
                                     RmSession *session,
                                     _UNUSED GError **error) {
-    const char * const syntax = "<formatter>:<key>[=<val>][/<key>[=<val>]...]";
+    const char *const syntax = "<formatter>:<key>[=<val>][/<key>[=<val>]...]";
     char *separator = strchr(config, ':');
     if(separator == NULL) {
         g_set_error(error, RM_ERROR_QUARK, 0,
@@ -247,45 +245,46 @@ static gboolean rm_cmd_parse_config(_UNUSED const char *option_name,
 
     /* split on spaces unless they are quoted */
     char *split_regex =
-            "(?x)   "
-            "/                "    // Split on '/'
-            "(?=              "    // Followed by
-            "  (?:            "    // Start a non-capture group
-            "    [^\\\"\\\']* "    // 0 or more non-quote characters
-            "    [\\\"\\\']   "    // 1 quote (single or double)
-            "    [^\\\"\\\']* "    // 0 or more non-quote characters
-            "    [\\\"\\\']   "    // 1 quote
-            "  )*             "    // 0 or more repetition of non-capture group (multiple of 2 quotes will be even)
-            "  [^\\\"\\\']*   "    // Finally 0 or more non-quotes
-            "  $              "    // Till the end  (This is necessary, else every comma will satisfy the condition)
-            ")                ";   // End look-ahead
+        "(?x)   "
+        "/                "   // Split on '/'
+        "(?=              "   // Followed by
+        "  (?:            "   // Start a non-capture group
+        "    [^\\\"\\\']* "   // 0 or more non-quote characters
+        "    [\\\"\\\']   "   // 1 quote (single or double)
+        "    [^\\\"\\\']* "   // 0 or more non-quote characters
+        "    [\\\"\\\']   "   // 1 quote
+        "  )*             "   // 0 or more repetition of non-capture group (multiple of 2
+                              // quotes will be even)
+        "  [^\\\"\\\']*   "   // Finally 0 or more non-quotes
+        "  $              "   // Till the end  (This is necessary, else every comma will
+                              // satisfy the condition)
+        ")                ";  // End look-ahead
     char **pairs = g_regex_split_simple(split_regex, configs, 0, 0);
 
     bool all_valid = true;
-    if(pairs==NULL || *pairs==NULL) {
+    if(pairs == NULL || *pairs == NULL) {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Missing key (expect %s) in '%s'"),
                     syntax, config);
         all_valid = false;
         return false;
-    }
-    else {
+    } else {
         char *formatter = g_strndup(config, separator - config);
         if(!rm_fmt_is_valid_key(session->formats, formatter, NULL)) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid formatter '%s'"),
-                        formatter);
+            g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid formatter '%s'"), formatter);
             all_valid = false;
-        }
-        else {
+        } else {
             for(char **pair = pairs; *pair && all_valid; pair++) {
                 char **key_val = g_strsplit(*pair, "=", 2);
                 if(!rm_fmt_is_valid_key(session->formats, formatter, key_val[0])) {
-                    g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key '%s' for formatter '%s'"),
-                                key_val[0], formatter);
+                    g_set_error(error, RM_ERROR_QUARK, 0,
+                                _("Invalid key '%s' for formatter '%s'"), key_val[0],
+                                formatter);
                     all_valid = false;
                 } else {
                     char *key = g_strdup(key_val[0]);
                     char *value = g_strdup(key_val[1] != NULL ? key_val[1] : "1");
-                    rm_log_info_line("Setting config for %s: %s=%s", formatter, key, value);
+                    rm_log_info_line("Setting config for %s: %s=%s", formatter, key,
+                                     value);
                     rm_fmt_set_config_value(session->formats, formatter, key, value);
                 }
                 g_strfreev(key_val);
@@ -600,8 +599,8 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         memset(stamp_buf, 0, sizeof(stamp_buf));
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            success = rm_cmd_parse_timestamp(
-                option_name, g_strstrip(stamp_buf), session, error);
+            success = rm_cmd_parse_timestamp(option_name, g_strstrip(stamp_buf), session,
+                                             error);
 
             if(!success) {
                 return false;
@@ -1467,7 +1466,6 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->total_files >= 1) {
-
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
@@ -1492,7 +1490,6 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
-
 
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line("BUG: Number of remaining bytes is %" LLU
