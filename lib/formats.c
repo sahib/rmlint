@@ -137,6 +137,10 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
         return false;
     }
 
+    if(key == NULL) {
+        return true;
+    }
+
     for(int i = 0; handler->valid_keys[i]; ++i) {
         if(g_strcmp0(handler->valid_keys[i], key) == 0) {
             return true;

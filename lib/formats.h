@@ -216,6 +216,8 @@ const char *rm_fmt_get_config_value(RmFmtTable *self, const char *formatter,
 /**
  * @brief Check if the formatter "formatter" has a config value called key.
  *
+ * @param key the key to check for, or NULL to just check if formatter is valid
+ *
  * @return true if yes, false otherwise.
  */
 bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *key);
