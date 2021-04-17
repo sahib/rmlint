@@ -142,7 +142,7 @@ def run_rmlint_once(*args,
     else:
         env, cmd = {}, []
 
-    cmd = [os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity]
+    cmd.extend( [os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity] )
     if target_dir:
         cmd.append(target_dir)
 
