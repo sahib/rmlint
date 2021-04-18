@@ -113,14 +113,20 @@ def which(program):
 RMLINT_BINARY_DIR = os.getcwd()
 
 def has_known_leak(*args):
-    KNOWN_LEAK_OPTIONS = {"-D", "--treemerge"}
-    KNOWN_LEAK_LINT_TYPES = ["duplicatedirs", "dd", "dupedirs"]
+    KNOWN_LEAK_OPTIONS = {}
+    KNOWN_LEAK_SWITCHES = {}
+    KNOWN_LEAK_LINT_TYPES = []
     LINT_TYPE_SWITCHES = {"-T", "--types"}
     split_args = shlex.split(' '.join(args))
     i = 0
     while i < len(split_args):
-        if split_args[i] in KNOWN_LEAK_OPTIONS:
+        arg = split_args[i]
+        if arg in KNOWN_LEAK_OPTIONS:
             return True
+        if arg[0] == "-" and arg [1] != "-":
+            for switch in KNOWN_LEAK_SWITCHES:
+                if switch in arg:
+                    return True
         if split_args[i] in LINT_TYPE_SWITCHES:
             i += 1
             for type in KNOWN_LEAK_LINT_TYPES:
