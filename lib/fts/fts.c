@@ -40,6 +40,8 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 #include <sys/stat.h>
 
 #include <fcntl.h>
+#include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 #include <glib.h>       // g_assert
 

@@ -24,6 +24,7 @@
 **/
 
 #include<assert.h>
+#include <stdlib.h>
 
 #include "../lib/api.h"
 #include "../lib/gui.h"

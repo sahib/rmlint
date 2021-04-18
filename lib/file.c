@@ -22,7 +22,9 @@
 * Hosted on http://github.com/sahib/rmlint
 */
 
+#include "file.h"
 
+#include <string.h>
 
 #include "session.h"
 

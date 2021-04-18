@@ -24,7 +24,7 @@
  */
 
 #include "../formats.h"
-
+#include <string.h>
 
 
 typedef struct RmFmtHandlerShScript {

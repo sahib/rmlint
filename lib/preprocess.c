@@ -22,10 +22,11 @@
  * Hosted on http://github.com/sahib/rmlint
  */
 
-#include "session.h"
 #include "preprocess.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <string.h>
 
 #include "formats.h"
 

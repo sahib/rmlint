@@ -23,49 +23,52 @@
  *
  */
 
+#include "utilities.h"
+
+/* External libraries */
+
+#include <errno.h>
 #include <math.h>
 #include <sys/uio.h>
 #include <stdio.h>
-
-#include "utilities.h"
-#include "reflink.h"
-
-/* Be safe: This header is not essential and might be missing on some systems.
- * We only include it here, because it fixes some recent warning...
- * */
-#if HAVE_SYSMACROS_H
-#include <sys/sysmacros.h>
-#endif
+#include <string.h>
 
 #include <grp.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
 
+/* Be safe: This header is not essential and might be missing on some systems.
+ * We only include it here, because it fixes some recent warning...
+ * */
+#if HAVE_SYSMACROS_H
+# include <sys/sysmacros.h>
+#endif
+
 /* Not available there,
  * but might be on other non-linux systems
  * */
 #if HAVE_GIO_UNIX
-#include <gio/gunixmounts.h>
+# include <gio/gunixmounts.h>
 #endif
 
 #if HAVE_FIEMAP
-#include <linux/fiemap.h>
-#include <linux/fs.h>
+# include <linux/fiemap.h>
+# include <linux/fs.h>
+#endif
+
+#if HAVE_LIBELF
+# include <gelf.h>
+# include <libelf.h>
+#endif
+
+#if HAVE_BLKID
+# include <blkid/blkid.h>
 #endif
 
 /* Internal headers */
 #include "file.h"
+#include "reflink.h"
 
-/* External libraries */
-
-#if HAVE_LIBELF
-#include <gelf.h>
-#include <libelf.h>
-#endif
-
-#if HAVE_BLKID
-#include <blkid/blkid.h>
-#endif
 
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 

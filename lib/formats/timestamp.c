@@ -23,8 +23,9 @@
  *
  */
 
-#include "../formats.h"
+#include <string.h>
 
+#include "../formats.h"
 
 typedef struct RmFmtHandlerTimestamp {
     /* must be first */

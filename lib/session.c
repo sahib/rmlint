@@ -23,16 +23,20 @@
 *
 **/
 
+#include "session.h"
 
+#include <stdlib.h>
+#include <string.h>
+
+#if HAVE_UNAME
+# include "sys/utsname.h"
+#endif
 
 #include "formats.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
 
 
-#if HAVE_UNAME
-#include "sys/utsname.h"
-#endif
 
 static gpointer rm_session_read_kernel_version(_UNUSED gpointer arg) {
     static int version[2] = {-1, -1};

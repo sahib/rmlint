@@ -25,6 +25,9 @@
 
 #include "metrohash.h"
 
+#include <glib.h>
+#include <string.h>
+
 struct _Metro128_state {
     uint8_t xs[32]; /* unhashed data from last increment */
     uint8_t xs_len;
