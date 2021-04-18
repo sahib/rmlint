@@ -697,9 +697,12 @@ static RmParanoid *rm_digest_paranoid_copy(RmParanoid *paranoid) {
 
 static void rm_digest_paranoid_free(RmParanoid *paranoid) {
     rm_digest_unref(paranoid->shadow_hash);
-    rm_digest_paranoid_release_buffers(paranoid);
-    g_async_queue_unref(paranoid->incoming_twin_candidates);
-    g_slist_free(paranoid->rejects);
+    // check whether we are real or just a rm_digest_paranoid_copy():
+    if(paranoid->incoming_twin_candidates) {
+        rm_digest_paranoid_release_buffers(paranoid);
+        g_async_queue_unref(paranoid->incoming_twin_candidates);
+        g_slist_free(paranoid->rejects);
+    }
     g_slice_free(RmParanoid, paranoid);
 }
 
