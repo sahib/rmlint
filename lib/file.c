@@ -52,6 +52,20 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
         }
     }
 
+    RmOff file_size;
+    if(cfg->use_absolute_end_offset) {
+        file_size = CLAMP(actual_file_size, 1, cfg->skip_end_offset);
+    } else {
+        file_size = actual_file_size * cfg->skip_end_factor;
+    }
+    if(type == RM_LINT_TYPE_DUPE_CANDIDATE || type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+        /* Check if the actual slice the file will be > 0; we don't want empty files in
+         * shredder */
+        if((file_size - start_seek) == 0 && actual_file_size != 0) {
+            return NULL;
+        }
+    }
+
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
@@ -61,30 +75,14 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->node = node;
 
     self->depth = depth;
-    self->file_size = 0;
-    self->actual_file_size = 0;
+    self->file_size = file_size;
+    self->actual_file_size = actual_file_size;
     self->n_children = 0;
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
     self->mtime = rm_sys_stat_mtime_float(statp);
     self->is_new = (self->mtime >= cfg->min_mtime);
-
-    if(type == RM_LINT_TYPE_DUPE_CANDIDATE || type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
-        if(cfg->use_absolute_end_offset) {
-            self->file_size = CLAMP(actual_file_size, 1, cfg->skip_end_offset);
-        } else {
-            self->file_size = actual_file_size * cfg->skip_end_factor;
-        }
-
-        /* Check if the actual slice the file will be > 0; we don't want empty files in
-         * shredder */
-        if((self->file_size - start_seek) == 0 && actual_file_size != 0) {
-            return NULL;
-        }
-
-        self->actual_file_size = actual_file_size;
-    }
 
     self->hash_offset = start_seek;
 
