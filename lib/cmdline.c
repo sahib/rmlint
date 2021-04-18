@@ -1392,7 +1392,8 @@ int rm_cmd_main(RmSession *session) {
         rm_log_debug_line("No mount table created.");
     }
 
-    session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
+    bool no_mds_mount_table = cfg->fake_pathindex_as_disk || session->mounts == NULL;
+    session->mds = rm_mds_new(cfg->threads, session->mounts, no_mds_mount_table);
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
