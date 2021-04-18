@@ -133,6 +133,9 @@ RmFile *rm_file_copy(RmFile *file) {
 }
 
 void rm_file_unref(RmFile *file) {
+    if(!file) {
+        return;
+    }
     if(!g_atomic_int_dec_and_test(&file->ref_count)) {
         // somebody still loves me!
         return;

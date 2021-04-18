@@ -319,6 +319,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
  * @brief Decrease reference count to file;
  * free resources if this is the last reference.
  * @note threadsafe
+ * @note nullable
  */
 void rm_file_unref(RmFile *file);
 
@@ -326,8 +327,9 @@ void rm_file_unref(RmFile *file);
  * @brief Increase reference count to file;
  * @note threadsafe
  */
-inline static void rm_file_ref(RmFile *file) {
+inline static RmFile *rm_file_ref(RmFile *file) {
     g_atomic_int_inc (&file->ref_count);
+    return file;
 }
 
 
