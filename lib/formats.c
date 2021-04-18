@@ -26,7 +26,7 @@
 #include "formats.h"
 
 #include <ctype.h>
-
+#include <string.h>
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.

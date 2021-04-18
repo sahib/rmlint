@@ -13,6 +13,7 @@
 
 #include "murmur3.h"
 #include <glib.h>
+#include <string.h>
 
 //-----------------------------------------------------------------------------
 // Platform-specific functions and macros

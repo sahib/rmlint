@@ -24,6 +24,7 @@
  */
 
 #include <gio/gunixoutputstream.h>
+#include <string.h>
 
 #include "../checksums/murmur3.h"
 #include "../formats.h"

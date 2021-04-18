@@ -13,6 +13,7 @@
    https://blake2.net.
 */
 
+#include <stdio.h>
 
 #include "blake2-impl.h"
 #include "blake2.h"

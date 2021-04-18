@@ -24,6 +24,7 @@
 **/
 #include "pathtricia.h"
 
+#include <string.h>
 
 #include "config.h"
 

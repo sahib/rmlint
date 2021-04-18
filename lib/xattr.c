@@ -25,7 +25,8 @@
 
 #include "xattr.h"
 
-
+#include <stdlib.h>
+#include <string.h>
 
 #if HAVE_XATTR
 #include <sys/xattr.h>

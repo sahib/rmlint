@@ -13,6 +13,8 @@
    https://blake2.net.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
 
 #if defined(_OPENMP)
 #include <omp.h>

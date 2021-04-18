@@ -26,6 +26,7 @@
 #ifndef RM_PREPROCESS_H
 #define RM_PREPROCESS_H
 
+#include "session.h"
 
 /**
  * @brief Do some pre-processing (eg remove path doubles) and process "other lint".

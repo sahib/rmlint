@@ -26,7 +26,7 @@
 #include "../formats.h"
 
 #include <math.h>
-
+#include <string.h>
 #include <sys/ioctl.h>
 
 /* Add 4096 bytes to each file size to give better ETA estimate*/

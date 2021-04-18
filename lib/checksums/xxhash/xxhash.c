@@ -83,6 +83,8 @@ You can contact the author at :
  ***************************************/
 #include "xxhash.h"
 
+#include <string.h>
+
 /* Modify the local functions below should you wish to use some other memory routines */
 /* for malloc(), free() */
 

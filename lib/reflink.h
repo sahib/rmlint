@@ -26,6 +26,7 @@
 #ifndef RM_REFLINK_H
 #define RM_REFLINK_H
 
+#include "file.h"
 
 /**
  * @file reflink.h
