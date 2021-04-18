@@ -517,6 +517,9 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
         /* bundle hardlink */
         rm_file_hardlink_add(head, file);
     }
+    else {
+        rm_file_unref(file);
+    }
 
     /* remove file from inode_cluster queue */
     return TRUE;
