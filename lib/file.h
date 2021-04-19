@@ -320,17 +320,25 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
  * free resources if this is the last reference.
  * @note threadsafe
  * @note nullable
+ * @retval 1 if the file freed else 0
  */
-void rm_file_unref(RmFile *file);
+int rm_file_unref(RmFile *file);
+
+/**
+ * @brief unref file and all the files in its hardlink bundle;
+ * @note not threadsafe
+ * @note nullable
+ * @retval the number of files freed
+ */
+int rm_file_unref_full(RmFile *file);
+
 
 /**
  * @brief Increase reference count to file;
  * @note threadsafe
  */
-inline static RmFile *rm_file_ref(RmFile *file) {
-    g_atomic_int_inc (&file->ref_count);
-    return file;
-}
+RmFile *rm_file_ref(RmFile *file);
+
 
 
 /**

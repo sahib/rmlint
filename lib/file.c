@@ -132,17 +132,23 @@ RmFile *rm_file_copy(RmFile *file) {
     return copy;
 }
 
-void rm_file_unref(RmFile *file) {
+static gint rm_file_unref_impl(RmFile *file, gboolean unref_hardlinks) {
     if(!file) {
-        return;
+        return 0;
     }
     if(!g_atomic_int_dec_and_test(&file->ref_count)) {
         // somebody still loves me!
-        return;
+        return 0;
     }
+
+    gint freed = 0;
     if(file->hardlinks) {
         g_queue_remove(file->hardlinks, file);
-        if(file->hardlinks->length == 0) {
+        if(unref_hardlinks) {
+            freed += rm_util_queue_foreach_remove(file->hardlinks,
+                        (RmRFunc)rm_file_unref_impl, GINT_TO_POINTER(FALSE));
+        }
+        else if(file->hardlinks->length==0) {
             g_queue_free(file->hardlinks);
         }
     }
@@ -154,9 +160,23 @@ void rm_file_unref(RmFile *file) {
     if(file->digest) {
         rm_digest_unref(file->digest);
     }
-
     g_slice_free(RmFile, file);
+    return 1 + freed;
 }
+
+gint rm_file_unref(RmFile *file) {
+    return rm_file_unref_impl(file, FALSE);
+}
+
+gint rm_file_unref_full(RmFile *file) {
+    return rm_file_unref_impl(file, TRUE);
+}
+
+RmFile *rm_file_ref(RmFile *file) {
+    g_atomic_int_inc (&file->ref_count);
+    return file;
+}
+
 
 // TODO: this is replicated in formats/pretty.c...
 static const char *LINT_TYPES[] = {
