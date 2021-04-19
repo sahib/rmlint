@@ -561,20 +561,7 @@ void rm_traverse_tree(RmSession *session) {
             is_hidden = rm_util_path_is_hidden(rmpath->path);
         }
 
-        if(S_ISLNK(buffer->stat_buf.st_mode) && !rmpath->realpath_worked) {
-            /* A symlink where we could not get the actual path from
-             * (and it was given directly, e.g. by a find call)
-             */
-            rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
-                             rmpath->idx, RM_LINT_TYPE_BADLINK, false, is_hidden, FALSE,
-                             0, FALSE, NULL);
-        } else if(S_ISREG(buffer->stat_buf.st_mode)) {
-            rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
-                             rmpath->idx, RM_LINT_TYPE_UNKNOWN, false, is_hidden, FALSE,
-                             0, FALSE, NULL);
-
-            rm_trav_buffer_free(buffer);
-        } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
+        if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
             buffer->disk = rm_mds_device_get(mds, rmpath->path,
                                              (cfg->fake_pathindex_as_disk)
@@ -583,9 +570,23 @@ void rm_traverse_tree(RmSession *session) {
             rm_mds_device_ref(buffer->disk, 1);
             rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, rmpath->path,
                              buffer);
-
-        } else {
-            /* Probably a block device, fifo or something weird. */
+        }
+        else {
+            if(S_ISLNK(buffer->stat_buf.st_mode) && !rmpath->realpath_worked) {
+                /* A symlink where we could not get the actual path from
+                 * (and it was given directly, e.g. by a find call)
+                 */
+                rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
+                                 rmpath->idx, RM_LINT_TYPE_BADLINK, false, is_hidden, FALSE,
+                                 0, FALSE, NULL);
+            } else if(S_ISREG(buffer->stat_buf.st_mode)) {
+                rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
+                                 rmpath->idx, RM_LINT_TYPE_UNKNOWN, false, is_hidden, FALSE,
+                                 0, FALSE, NULL);
+            } else {
+                /* Probably a block device, fifo or something weird. */
+                rm_log_warning_line(_("Unable to process path %s"), rmpath->path);
+            }
             rm_trav_buffer_free(buffer);
         }
     }
