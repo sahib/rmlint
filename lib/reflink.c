@@ -432,7 +432,6 @@ int rm_dedupe_main(int argc, const char **argv) {
     return result;
 
 #else
-    (void)cfg;
     rm_log_error_line(_("rmlint was not compiled with file cloning support."))
 #endif
 

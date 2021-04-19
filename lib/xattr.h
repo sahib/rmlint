@@ -26,7 +26,6 @@
 #define RM_XATTR_H
 
 #include <errno.h>
-#include <error.h>
 
 #include "session.h"
 
