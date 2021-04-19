@@ -109,7 +109,7 @@ Here's a list of readily prepared commands for known operating systems:
 
 * **macOS**
 
-  ``rmlint`` can be installed via `homebrew`_:
+  ``rmlint`` can be installed via `homebrew`_. Note that the ``shredder`` graphical interface is *not* included in this. Please see `Issue #253`_ for details and updates.
 
   Prerequisite: If homebrew has not already been installed on the system, execute:
 
@@ -126,6 +126,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   See also this `issue`_ for more information on the homebrew formula.
 
+.. _`Issue #253`: https://github.com/sahib/rmlint/issues/253
 .. _homebrew: http://brew.sh
 .. _issue: https://github.com/sahib/rmlint/issues/175#issuecomment-253186769
 
