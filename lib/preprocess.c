@@ -214,12 +214,16 @@ RmFileTables *rm_file_tables_new(_UNUSED const RmSession *session) {
     return tables;
 }
 
+
 void rm_file_tables_destroy(RmFileTables *tables) {
     g_queue_free(tables->all_files);
 
-    if(tables->size_groups) {
-        g_slist_free(tables->size_groups);
-        tables->size_groups = NULL;
+    // walk along tables->size_groups, cleaning up as we go:
+    while(tables->size_groups) {
+        GSList *list = tables->size_groups->data;
+        g_slist_free_full(list, (GDestroyNotify)rm_file_unref);
+        tables->size_groups =
+                g_slist_delete_link(tables->size_groups, tables->size_groups);
     }
 
     if(tables->node_table) {
