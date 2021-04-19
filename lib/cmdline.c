@@ -1138,6 +1138,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-followlinks"           , 'F'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(no_follow_symlinks)       , _("Ignore symlinks")                                                      , NULL}     ,
         {"paranoid"                 , 'p'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(paranoid)                 , _("Use more paranoid hashing")                                            , NULL}     ,
         {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mountpoints")                                             , NULL}     ,
+        {"ignore-bad-paths"         , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->ignore_bad_paths         , _("Don't abort run if bad path passed to rmlint")                         , NULL}     ,
         {"keep-all-tagged"          , 'k'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_tagged          , _("Keep all tagged files")                                                , NULL}     ,
         {"keep-all-untagged"        , 'K'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_untagged        , _("Keep all untagged files")                                              , NULL}     ,
         {"must-match-tagged"        , 'm'  , 0         , G_OPTION_ARG_NONE      , &cfg->must_match_tagged        , _("Must have twin in tagged dir")                                         , NULL}     ,
@@ -1292,7 +1293,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto cleanup;
     }
 
-    if(!rm_cmd_set_paths(session, paths)) {
+    if(!rm_cmd_set_paths(session, paths) && !cfg->ignore_bad_paths) {
         error =
             g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
         goto cleanup;
