@@ -37,11 +37,15 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
 
-#include <sys/stat.h>
 
+#include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <fcntl.h>
 #include <glib.h>       // g_assert
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "fts.h"
 

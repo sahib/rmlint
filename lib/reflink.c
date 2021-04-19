@@ -22,11 +22,13 @@
  * Hosted on http://github.com/sahib/rmlint
  *
  */
+#include "reflink.h"
 
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <utime.h>
-
-#include "utilities.h"
 
 #if HAVE_BTRFS_H
 #include <linux/btrfs.h>
@@ -36,13 +38,15 @@
 #include <linux/fs.h>
 #endif
 
+#include "utilities.h"
+#include "xattr.h"
+
+
 #ifdef FIDEDUPERANGE
 #define HAVE_FIDEDUPERANGE 1
 #else
 #define HAVE_FIDEDUPERANGE 0
 #endif
-
-#include "xattr.h"
 
 /* FIDEDUPERANGE supercedes the btrfs-only BTRFS_IOC_FILE_EXTENT_SAME as of Linux 4.5 and
  * should work for ocfs2 and xfs as well as btrfs.  We should still support the older
@@ -329,8 +333,7 @@ int rm_dedupe_main(int argc, const char **argv) {
         }
 #else
         rm_log_error_line(_("dedupe: Can't create clone of hardlink because FICLONE not "
-                            "defined on your system"),
-                          g_strerror(errno));
+                            "defined on your system"));
         result = EXIT_FAILURE;
 #endif
     } else {
@@ -429,7 +432,6 @@ int rm_dedupe_main(int argc, const char **argv) {
     return result;
 
 #else
-    (void)cfg;
     rm_log_error_line(_("rmlint was not compiled with file cloning support."))
 #endif
 

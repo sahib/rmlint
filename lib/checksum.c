@@ -29,16 +29,18 @@
  * optimisations which are pretty insane.
  **/
 
-#include "checksums/highwayhash.h"
 #include "checksum.h"
 
+#include <string.h>
 
+#include "utilities.h"
+
+#include "checksums/highwayhash.h"
 #include "checksums/blake2/blake2.h"
 #include "checksums/metrohash.h"
 #include "checksums/murmur3.h"
 #include "checksums/sha3/sha3.h"
 #include "checksums/xxhash/xxhash.h"
-#include "utilities.h"
 
 #define _RM_CHECKSUM_DEBUG 0
 

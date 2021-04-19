@@ -133,7 +133,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ pkg install git scons py27-sphinx pkgconf
+    $ pkg install git scons-py37 py37-sphinx pkgconf
     $ pkg install glib gettext libelf json-glib
 
 -----

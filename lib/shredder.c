@@ -23,10 +23,12 @@
  *
  */
 
-#include "session.h"
 #include "shredder.h"
 
+#include <stdlib.h>
+#include <string.h>
 
+#include "session.h"
 #include "formats.h"
 #include "hasher.h"
 #include "md-scheduler.h"

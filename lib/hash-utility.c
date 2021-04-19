@@ -23,10 +23,15 @@
 *
 **/
 
-#include <stdio.h>
+#include "hash-utility.h"
 
-#include "../lib/hasher.h"
-#include "../lib/utilities.h"
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "hasher.h"
+#include "utilities.h"
 
 typedef struct RmHasherSession {
     /* Internal */

@@ -22,7 +22,10 @@
  * Hosted on http://github.com/sahib/rmlint
  *
  */
+#include "traverse.h"
 
+#include <errno.h>
+#include <string.h>
 
 #include "formats.h"
 #include "fts/fts.h"

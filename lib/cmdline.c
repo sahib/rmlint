@@ -24,6 +24,8 @@
  */
 
 #include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 #include <search.h>
 
 #include "formats.h"

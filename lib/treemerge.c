@@ -71,7 +71,10 @@
  */
 // #define _RM_TREEMERGE_DEBUG
 
+#include "treemerge.h"
 
+#include <errno.h>
+#include <string.h>
 
 #include "formats.h"
 #include "fts/fts.h"

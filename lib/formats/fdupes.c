@@ -23,6 +23,8 @@
  *
  */
 
+#include <string.h>
+
 #include "../formats.h"
 
 

@@ -29,6 +29,7 @@
 
 /* External libraries */
 #include <math.h>
+#include <stdlib.h>
 
 static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *object,
                                             bool json_is_prefd) {

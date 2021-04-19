@@ -23,6 +23,8 @@
 **/
 #include "cfg.h"
 
+#include <errno.h>
+#include <string.h>
 
 
 static void rm_path_free(RmPath *rmpath) {

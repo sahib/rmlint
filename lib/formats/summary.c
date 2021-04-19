@@ -25,7 +25,7 @@
 
 #include "../formats.h"
 
-
+#include <stdlib.h>
 #include <sys/ioctl.h>
 
 typedef struct RmFmtHandlerSummary {

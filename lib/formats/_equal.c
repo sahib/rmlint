@@ -23,8 +23,10 @@
  *
  */
 
-#include "../formats.h"
+#include <stdlib.h>
+#include <string.h>
 
+#include "../formats.h"
 
 typedef struct RmFmtHandlerEqual {
     /* must be first */

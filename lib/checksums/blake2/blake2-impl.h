@@ -16,6 +16,7 @@
 #define BLAKE2_IMPL_H
 
 #include <stdint.h>
+#include <string.h>
 
 #include "../../config.h" // INLINE
 
