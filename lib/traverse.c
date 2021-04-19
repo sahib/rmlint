@@ -433,7 +433,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                 if(is_emptydir[p->fts_level + 1] && cfg->find_emptydirs) {
                     ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);
                 } else if(is_traversed[p->fts_level + 1]) {
-                    // ADD_FILE(RM_LINT_TYPE_DUPE_DIR_CANDIDATE, false);
+                    ADD_FILE(RM_LINT_TYPE_DUPE_DIR_CANDIDATE, false);
                 }
                 is_hidden[p->fts_level + 1] = 0;
                 break;
