@@ -84,6 +84,7 @@ typedef struct RmSession {
 
     /* Counters for printing useful statistics */
     volatile gint total_files;
+    volatile gint traversed_folders;
     volatile gint ignored_files;
     volatile gint ignored_folders;
 

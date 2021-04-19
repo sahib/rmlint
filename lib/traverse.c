@@ -171,7 +171,10 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path, bool 
 
         rm_file_list_insert_file(file, session);
 
-        if(file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            g_atomic_int_add(&session->traversed_folders, 1);
+        }
+        else {
             g_atomic_int_add(&session->total_files, 1);
         }
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);

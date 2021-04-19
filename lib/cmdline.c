@@ -1463,7 +1463,7 @@ int rm_cmd_main(RmSession *session) {
         }
     }
 
-    if(session->total_files >= 1) {
+    if(session->total_files + session->traversed_folders > 0) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
