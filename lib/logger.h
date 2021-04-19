@@ -26,8 +26,7 @@
 #ifndef RM_LOGGER_H
 #define RM_LOGGER_H
 
-#include <glib.h>
-
+#include <errno.h>
 #include "config.h"
 
 /**

@@ -24,9 +24,6 @@
 **/
 #include "pathtricia.h"
 
-#include <glib.h>
-#include <stdbool.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
@@ -35,9 +32,9 @@
 //  RmPathNode Methods  //
 //////////////////////////
 
-static RmNode *rm_node_new(RmTrie *trie, const char *elem) {
+static RmNode *rm_node_new(RmTrie *trie, const char *elem, guint8 depth) {
     RmNode *self = g_slice_alloc0(sizeof(RmNode));
-
+    self->depth = depth;
     if(elem != NULL) {
         /* Note: We could use g_string_chunk_insert_const here.
          * That would keep a hash table with all strings internally though,
@@ -64,7 +61,7 @@ static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
 
     RmNode *exists = g_hash_table_lookup(parent->children, elem);
     if(exists == NULL) {
-        RmNode *node = rm_node_new(trie, elem);
+        RmNode *node = rm_node_new(trie, elem, parent->depth + 1);
         node->parent = parent;
         g_hash_table_insert(parent->children, node->basename, node);
         return node;
@@ -79,7 +76,7 @@ static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
 
 void rm_trie_init(RmTrie *self) {
     g_assert(self);
-    self->root = rm_node_new(self, NULL);
+    self->root = rm_node_new(self, NULL, 0);
 
     /* Average path len is 93.633236.
      * I did ze science! :-)
@@ -230,7 +227,7 @@ size_t rm_trie_size(RmTrie *self) {
 }
 
 static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
-                          RmTrieIterCallback callback, void *user_data, int level) {
+                          RmTrieIterCallback callback, void *user_data) {
     GHashTableIter iter;
     gpointer key, value;
 
@@ -239,7 +236,7 @@ static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_n
     }
 
     if(pre_order && (all_nodes || root->has_value)) {
-        if(callback(self, root, level, user_data) != 0) {
+        if(callback(root, user_data) != 0) {
             return;
         }
     }
@@ -247,13 +244,12 @@ static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_n
     if(root->children != NULL) {
         g_hash_table_iter_init(&iter, root->children);
         while(g_hash_table_iter_next(&iter, &key, &value)) {
-            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data,
-                          level + 1);
+            _rm_trie_iter(self, value, pre_order, all_nodes, callback, user_data);
         }
     }
 
     if(!pre_order && (all_nodes || root->has_value)) {
-        if(callback(self, root, level, user_data) != 0) {
+        if(callback(root, user_data) != 0) {
             return;
         }
     }
@@ -262,14 +258,11 @@ static void _rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_n
 void rm_trie_iter(RmTrie *self, RmNode *root, bool pre_order, bool all_nodes,
                   RmTrieIterCallback callback, void *user_data) {
     g_mutex_lock(&self->lock);
-    _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data, 0);
+    _rm_trie_iter(self, root, pre_order, all_nodes, callback, user_data);
     g_mutex_unlock(&self->lock);
 }
 
-static int rm_trie_destroy_callback(_UNUSED RmTrie *self,
-                                    RmNode *node,
-                                    _UNUSED int level,
-                                    _UNUSED void *user_data) {
+static int rm_trie_destroy_callback(RmNode *node, _UNUSED void *user_data) {
     rm_node_free(node);
     return 0;
 }
@@ -284,11 +277,8 @@ void rm_trie_destroy(RmTrie *self) {
 
 #include <stdio.h>
 
-static int rm_trie_print_callback(_UNUSED RmTrie *self,
-                                  RmNode *node,
-                                  int level,
-                                  _UNUSED void *user_data) {
-    for(int i = 0; i < level; ++i) {
+static int rm_trie_print_callback(RmNode *node, _UNUSED void *data) {
+    for(int i = 0; i < node->depth; ++i) {
         g_printerr("    ");
     }
 

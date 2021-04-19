@@ -37,20 +37,18 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
 
-#include <sys/param.h>
-#include <sys/stat.h>
 
-#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fcntl.h>
+#include <glib.h>       // g_assert
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <glib.h>       // g_assert
+#include <sys/stat.h>
 
 #include "fts.h"
 
-#include "../config.h"
 
 #ifndef FTS_PATH_MAX
 #define FTS_PATH_MAX PATH_MAX
@@ -811,10 +809,9 @@ static FTSENT *fts_build(FTS *sp, int type) {
             p->fts_accpath = cur->fts_accpath;
         } else if(nlinks == 0
 #ifdef DT_DIR
-                  ||
-                  (nostat && dp->d_type != DT_DIR && dp->d_type != DT_UNKNOWN)
+                  || (nostat && dp->d_type != DT_DIR && dp->d_type != DT_UNKNOWN)
 #endif
-                      ) {
+        ) {
             p->fts_accpath = ISSET(FTS_NOCHDIR) ? p->fts_path : p->fts_name;
             p->fts_info = FTS_NSOK;
         } else {

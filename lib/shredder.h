@@ -26,8 +26,6 @@
 #ifndef RM_SHREDDER_H
 #define RM_SHREDDER_H
 
-#include <glib.h>
-
 #include "session.h"
 
 typedef enum RmShredGroupStatus {
@@ -47,7 +45,7 @@ typedef enum RmShredGroupStatus {
 void rm_shred_run(RmSession *session);
 
 /**
- * @brief Forward a group of files to the outout module.
+ * @brief Forward a group of files to the output module.
  *
  * @param session the output module's session.
  * @param group a group of dupes that should be reported.

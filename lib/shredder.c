@@ -25,19 +25,14 @@
 
 #include "shredder.h"
 
-#include <glib.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/uio.h>
-#include <unistd.h>
 
-#include "checksum.h"
+#include "session.h"
 #include "formats.h"
 #include "hasher.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
-#include "utilities.h"
 #include "xattr.h"
 
 /* Enable extra debug messages? */
@@ -574,7 +569,7 @@ static gulong rm_shred_group_potential_file_count(RmShredGroup *group) {
     }
 }
 
-/* Governer to limit memory usage by limiting how many RmShredGroups can be
+/* Governor to limit memory usage by limiting how many RmShredGroups can be
  * active at any one time
  * NOTE: group_lock must be held before calling rm_shred_check_paranoid_mem_alloc
  */
@@ -1255,13 +1250,12 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         /* -[kKmM] options take priority */
         return (a->is_prefd - b->is_prefd);
     } else {
-        int comparasion = rm_pp_cmp_orig_criteria(a, b, session);
-        if(comparasion == 0) {
-            /* if already tagged original elsewhere then respect that */
+        int comparison = rm_pp_cmp_orig_criteria(a, b, session);
+        if(comparison == 0) {
             return b->is_original - a->is_original;
         }
-        /* fall back to -S criteria */
-        return comparasion;
+
+        return comparison;
     }
 }
 
@@ -1277,6 +1271,7 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files,
         file->is_original = false;
 
         if(status == RM_SHRED_GROUP_FINISHING) {
+            file->lint_type = RM_LINT_TYPE_DUPE;
             /* identify "tagged" originals: */
             if(((file->is_prefd) && (session->cfg->keep_all_tagged)) ||
                ((!file->is_prefd) && (session->cfg->keep_all_untagged))) {
@@ -1323,6 +1318,7 @@ static gboolean rm_shred_has_duplicates(GQueue *group) {
     return FALSE;
 }
 
+/* only called by rm_shred_group_postprocess which runs single-threaded */
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     g_assert(session);
     g_assert(group);
@@ -1472,6 +1468,8 @@ static void rm_shred_tag_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTa
  * decide which file(s) are originals
  * maybe split out mtime rejects (--mtime-window option)
  * maybe split out basename twins (--unmatched-basename option)
+ * note: only called by rm_shred_result_factory and self, so
+ * is single-threaded
  */
 static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     if(!group) {
@@ -1541,6 +1539,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     rm_shred_group_free(group, false);
 }
 
+/* runs as single-threaded threadpool */
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
     /* maybe create group's digest from external checksums */
     RmFile *headfile = group->held_files->head->data;

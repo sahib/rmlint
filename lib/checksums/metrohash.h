@@ -27,8 +27,8 @@
 #define METROHASH_METROHASH_H
 
 #include <stdint.h>
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 #include "../config.h"
 
 typedef struct _Metro64_state Metro64State;

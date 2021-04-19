@@ -12,7 +12,7 @@ to remove it.
    :target: http://rmlint.rtfd.org
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
+   :target: https://travis-ci.com/sahib/rmlint
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
@@ -95,8 +95,8 @@ AUTHORS
 Here's a list of developers to blame:
 
 ===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2017
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2017
+*Christopher Pahl*                   https://github.com/sahib      2010-2021
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2021
 ===================================  ============================= ===========================================
 
 There are some other people that helped us of course.
@@ -110,3 +110,17 @@ LICENSE
 See the
 `COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`_ 
 file distributed along the source for details.
+
+DONATIONS
+---------
+
+If you think `rmlint` saved you some serious time [*]_ and/or space, you might
+consider a donation. 
+You can donate either via Flattr, PayPal or you buy us a
+beer if we ever meet. `See here for details <http://rmlint.readthedocs.org/en/latest/index.html#donations>`_. 
+
+.. [*] If it freed you from your beloved data: *Sorry.* [*]_
+.. [*] Please file a bug or read the source and provide a patch. [*]_
+.. [*] For more than 100GB of data loss we owe you one beer. [*]_
+.. [*] If you don't like beer or there's only Budweiser available, you can order
+   a Club Mate.

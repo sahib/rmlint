@@ -122,7 +122,7 @@ General Options
     Examples::
 
     $ rmlint -o json                 # Stream the json output to stdout
-    $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv fle to /tmp
+    $ rmlint -O csv:/tmp/rmlint.csv  # Output an extra csv file to /tmp
 
 :``-c --config=spec[=value]`` (**default\:** *none*):
 
@@ -1017,7 +1017,11 @@ PROGRAM AUTHORS
 
 ``rmlint`` was written by:
 
-* Christopher <sahib> Pahl 2010-2017 (https://github.com/sahib)
-* Daniel <SeeSpotRun> T.   2014-2017 (https://github.com/SeeSpotRun)
+* Christopher <sahib> Pahl 2010-2021 (https://github.com/sahib)
+* Daniel <SeeSpotRun> T.   2014-2021 (https://github.com/SeeSpotRun)
 
 Also see the  http://rmlint.rtfd.org for other people that helped us.
+
+If you consider a donation you can use *Flattr* or buy us a beer if we meet:
+
+https://flattr.com/@SeeSpotRun

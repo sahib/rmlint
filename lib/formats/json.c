@@ -23,19 +23,11 @@
  *
  */
 
-#include <assert.h>
 #include <gio/gunixoutputstream.h>
-#include <glib.h>
-#include <json-glib/json-glib.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "../checksums/murmur3.h"
 #include "../formats.h"
-#include "../logger.h"
-#include "../preprocess.h"
-#include "../treemerge.h"
-#include "../utilities.h"
 
 typedef struct RmFmtHandlerJSON {
     /* must be first */
@@ -79,8 +71,8 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
 }
 
 static void rm_fmt_json_sep(RmFmtHandlerJSON *self) {
-    g_output_stream_printf(
-        self->stream, NULL, NULL, NULL, ",%s", self->pretty ? " " : "\n");
+    g_output_stream_printf(self->stream, NULL, NULL, NULL, ",%s",
+                           self->pretty ? " " : "\n");
 }
 
 static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *out) {
@@ -193,10 +185,15 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
         return;
     }
 
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE &&
+       !rm_fmt_get_config_value(session->formats, "json", "traversed")) {
+        return;
+    }
+
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "json", "unique")) {
             if(!file->digest ||
-                !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
+               !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
                 return;
             }
         }
@@ -242,7 +239,7 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
     json_object_set_int_member(elem, "disk_id", file->dev);
     json_object_set_boolean_member(elem, "is_original", file->is_original);
 
-    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR) {
         json_object_set_int_member(elem, "n_children", file->n_children);
     }
 
@@ -285,7 +282,8 @@ static RmFmtHandlerJSON JSON_HANDLER_IMPL = {
         .elem = rm_fmt_elem,
         .prog = NULL,
         .foot = rm_fmt_foot,
-        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique", NULL},
+        .valid_keys = {"no_header", "no_footer", "no_body", "oneline", "unique",
+                       "traversed", NULL},
     }};
 
 RmFmtHandler *JSON_HANDLER = (RmFmtHandler *)&JSON_HANDLER_IMPL;

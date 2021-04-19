@@ -25,10 +25,8 @@
 #ifndef RM_SETTINGS_H
 #define RM_SETTINGS_H
 
-#include <stdio.h>
 
 #include "checksum.h"
-#include "pathtricia.h"
 #include "utilities.h"
 
 /* Struct for paths passed to rmlint from command line (or stdin) */
@@ -133,7 +131,7 @@ typedef struct RmCfg {
      *     supplied by  the user, i.e.,  the sums of the  lengths of
      *     the associated lists  RmCfg::{paths,json_paths}, which is
      *     not meant to be a useful  number to know, and is simply a
-     *     byproduct of calculating path indicies.
+     *     byproduct of calculating path indices.
      */
     guint path_count;
 

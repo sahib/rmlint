@@ -83,16 +83,16 @@ You can contact the author at :
  ***************************************/
 #include "xxhash.h"
 
+#include <string.h>
+
 /* Modify the local functions below should you wish to use some other memory routines */
 /* for malloc(), free() */
 
-#include <glib.h>   // g_slice_alloc, g_slice_free1
 #define XXH_new(type) g_slice_alloc(sizeof(type));
 /* Note that "*pointer" must provide the type of the full object */
 #define XXH_delete(pointer) g_slice_free1(sizeof(*pointer), pointer)
 
 /* for memcpy() */
-#include <string.h>
 static void* XXH_memcpy(void* dest, const void* src, size_t size) {
     return memcpy(dest, src, size);
 }

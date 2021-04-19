@@ -24,12 +24,7 @@
  */
 
 #include "../formats.h"
-#include "../logger.h"
 
-#include <glib.h>
-#include <search.h>
-#include <stdio.h>
-#include <string.h>
 
 #include <sys/ioctl.h>
 
@@ -100,22 +95,17 @@ static void rm_fmt_prog(RmSession *session,
     gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
 
     char *elapsed_time = rm_format_elapsed_time(elapsed, 5);
-    fprintf(
-            out,
-            _("%s%15s%s of time spent scanning\n"),
-            MAYBE_RED(out, session), elapsed_time, MAYBE_RESET(out, session)
-    );
+    fprintf(out, _("%s%15s%s of time spent scanning\n"), MAYBE_RED(out, session),
+            elapsed_time, MAYBE_RESET(out, session));
     g_free(elapsed_time);
 
     char eff_total[64] = "NaN";
     char eff_dupes[64] = "NaN";
     if(session->shred_bytes_read != 0) {
-        gfloat efficiency = 100 * (
-                session->duplicate_bytes +
-                session->original_bytes +
-                session->unique_bytes
-            ) /	session->shred_bytes_read;
-
+        gfloat efficiency =
+            100 *
+            (session->duplicate_bytes + session->original_bytes + session->unique_bytes) /
+            session->shred_bytes_read;
 
         snprintf(eff_total, sizeof(eff_total), "%.0f%%", efficiency);
         efficiency = 100 * (0 + session->duplicate_bytes + session->original_bytes) /

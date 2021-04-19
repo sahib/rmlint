@@ -24,23 +24,12 @@
  */
 
 /* Internal headers */
-#include "replay.h"
-#include "config.h"
-#include "file.h"
-#include "formats.h"
-#include "logger.h"
-#include "preprocess.h"
 #include "session.h"
-#include "shredder.h"
 #include "traverse.h"
 
 /* External libraries */
-#include <assert.h>
-#include <glib.h>
-#include <glib/gstdio.h>
-#include <json-glib/json-glib.h>
 #include <math.h>
-#include <string.h>
+#include <stdlib.h>
 
 static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *object,
                                             bool json_is_prefd) {
@@ -140,6 +129,7 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
                 file_type = RM_LINT_TYPE_EMPTY_DIR;
                 break;
             case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+            case RM_LINT_TYPE_DUPE_DIR:
                 // ignore
                 return FALSE;
             default:

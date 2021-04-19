@@ -16,21 +16,15 @@
  *
  * Authors:
  *
- *  - Christopher <sahib> Pahl 2010-2017 (https://github.com/sahib)
- *  - Daniel <SeeSpotRun> T.   2014-2017 (https://github.com/SeeSpotRun)
+ *  - Christopher <sahib> Pahl 2010-2021 (https://github.com/sahib)
+ *  - Daniel <SeeSpotRun> T.   2014-2021 (https://github.com/SeeSpotRun)
  *
  * Hosted on http://github.com/sahib/rmlint
  *
  */
 
 #include "../formats.h"
-#include "../logger.h"
-#include "../utilities.h"
-#include "../preprocess.h"
 
-#include <glib.h>
-#include <stdio.h>
-#include <string.h>
 
 static const char PY_SOURCE[] = "<<PYTHON_SOURCE>>";
 

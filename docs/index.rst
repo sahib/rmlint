@@ -50,7 +50,7 @@ to remove it. It is able to find:
    :width: 8%
 
 .. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
+   :target: https://travis-ci.com/sahib/rmlint
    :width: 8%
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
@@ -153,3 +153,36 @@ License
 .. _GPLv3: http://www.gnu.org/copyleft/gpl.htm
 .. _sahib: https://github.com/sahib
 .. _SeeSpotRun: https://github.com/SeeSpotRun
+
+Donations
+---------
+
+If you think rmlint saved [*]_ you some serious time and/or space, you might
+consider a donation. You can donate either via *Flattr* or via *PayPal*:
+
+.. image:: http://api.flattr.com/button/flattr-badge-large.png
+   :target: https://flattr.com/@SeeSpotRun
+   :align: center
+   :width: 9%
+
+.. raw:: html
+
+   <br />
+   <center>
+        <form action="https://www.paypal.com/donate" method="post" target="_top">
+            <input type="hidden" name="business" value="ZZFE8WTYKT2KW" />
+            <input type="hidden" name="item_name" value="Save the world one duplicate at a time" />
+            <input type="hidden" name="currency_code" value="AUD" />
+            <input type="image" src="https://www.paypalobjects.com/en_AU/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+            <img alt="" border="0" src="https://www.paypal.com/en_AU/i/scr/pixel.gif" width="1" height="1" />
+        </form>
+   </center>
+   <br />
+
+Or just buy us a beer if we ever meet. Nice emails are okay too.
+
+.. [*] If it freed you from your beloved data: *Sorry.* [*]_
+.. [*] Please file a bug or read the source and provide a patch. [*]_
+.. [*] For more than 100GB of data loss we owe you one beer. [*]_
+.. [*] If you don't like beer or there's only Budweiser available, you can order
+   a Club Mate.

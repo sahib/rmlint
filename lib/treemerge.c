@@ -73,17 +73,12 @@
 
 #include "treemerge.h"
 
-#include <glib.h>
+#include <errno.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include "formats.h"
 #include "fts/fts.h"
-#include "logger.h"
-#include "pathtricia.h"
 #include "preprocess.h"
-#include "session.h"
 #include "shredder.h"
 
 typedef struct RmDirectory {
@@ -133,8 +128,7 @@ struct RmTreeMerger {
 // ACTUAL FILE COUNTING //
 //////////////////////////
 
-int rm_tm_count_art_callback(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level,
-                             void *user_data) {
+int rm_tm_count_art_callback(RmNode *node, void *user_data) {
     /* Note: this method has a time complexity of O(log(n) * m) which may
        result in a few seconds buildup time for large sets of directories.  Since this
        will only happen when rmlint ran for long anyways and since we can keep the
@@ -278,7 +272,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
         RmNode *node = rm_trie_search_node(&file_tree, *path);
         if(node != NULL) {
             node->data = GINT_TO_POINTER(true);
-            rm_tm_count_art_callback(&file_tree, node, 0, count_tree);
+            rm_tm_count_art_callback(node, count_tree);
         }
     }
 
@@ -306,7 +300,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
     self->was_dupe_extracted = false;
     self->mergeups = 0;
 
-    self->dirname = dirname;
+    self->dirname = g_strdup(dirname);
     self->finished = false;
 
     self->depth = 0;
@@ -368,9 +362,9 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     memset(file, 0, sizeof(RmFile));
 
     file->session = merger->session;
-    file->folder = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
+    file->node = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
 
-    file->lint_type = RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
+    file->lint_type = RM_LINT_TYPE_DUPE_DIR;
     file->digest = self->digest;
 
     /* Set these to invalid for now */
@@ -449,7 +443,7 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
 
     /* Add the path to the checksum if we require the same layout too */
     if(self->session->cfg->honour_dir_layout) {
-        const char *basename = file->folder->basename;
+        const char *basename = file->node->basename;
         gsize basename_cksum_len = 0;
         guint8 *basename_cksum =
             rm_digest_sum(RM_DIGEST_BLAKE2B,
@@ -553,8 +547,7 @@ void rm_tm_set_callback(RmTreeMerger *self, RmTreeMergeOutputFunc callback,
     self->callback_data = data;
 }
 
-int rm_tm_destroy_iter(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level,
-                       _UNUSED RmTreeMerger *tm) {
+int rm_tm_destroy_iter(RmNode *node, _UNUSED RmTreeMerger *tm) {
     RmDirectory *directory = node->data;
     rm_directory_free(directory);
     return 0;
@@ -575,30 +568,28 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
     g_assert(self);
     g_assert(file);
 
-    RM_DEFINE_PATH(file);
-    char *dirname = g_path_get_dirname(file_path);
+    RM_DEFINE_DIR_PATH(file);
 
     /* See if we know that directory already */
-    RmDirectory *directory = rm_trie_search(&self->dir_tree, dirname);
+    RmDirectory *directory = rm_trie_search(&self->dir_tree, file_dir_path);
 
     if(directory == NULL) {
         /* Get the actual file count */
-        int file_count = GPOINTER_TO_INT(rm_trie_search(&self->count_tree, dirname));
+        int file_count =
+            GPOINTER_TO_INT(rm_trie_search(&self->count_tree, file_dir_path));
         if(file_count == 0) {
             rm_log_error(
                 RED "Empty directory or weird RmFile encountered; rejecting.\n" RESET);
             file_count = -1;
         }
 
-        directory = rm_directory_new(dirname);
+        directory = rm_directory_new(file_dir_path);
         directory->file_count = file_count;
 
         /* Make the new directory known */
-        rm_trie_insert(&self->dir_tree, dirname, directory);
+        rm_trie_insert(&self->dir_tree, file_dir_path, directory);
 
         g_queue_push_head(&self->valid_dirs, directory);
-    } else {
-        g_free(dirname);
     }
 
     g_hash_table_insert(self->free_map, file, file);
@@ -701,8 +692,8 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 
-        GQueue *file_list = rm_hash_table_setdefault(
-            self->file_groups, file->digest, (RmNewFunc)g_queue_new);
+        GQueue *file_list = rm_hash_table_setdefault(self->file_groups, file->digest,
+                                                     (RmNewFunc)g_queue_new);
 
         g_queue_push_head(file_list, file);
     }
@@ -713,8 +704,7 @@ static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory)
     }
 }
 
-static int rm_tm_iter_unfinished_files(_UNUSED RmTrie *trie, RmNode *node,
-                                       _UNUSED int level, _UNUSED void *user_data) {
+static int rm_tm_iter_unfinished_files(RmNode *node, _UNUSED void *user_data) {
     RmTreeMerger *self = user_data;
     rm_tm_forward_unresolved(self, node->data);
     return 0;

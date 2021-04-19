@@ -1,8 +1,5 @@
 #include "highwayhash.h"
-
-#include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 /*
 This code is compatible with C90 with the additional requirement of

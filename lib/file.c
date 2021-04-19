@@ -25,15 +25,12 @@
 #include "file.h"
 
 #include <string.h>
-#include <sys/file.h>
-#include <unistd.h>
 
 #include "session.h"
-#include "utilities.h"
 
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
                     RmLintType type, bool is_ppath, unsigned path_index, short depth,
-                    RmNode *folder) {
+                    RmNode *node) {
     RmCfg *cfg = session->cfg;
     RmOff actual_file_size = statp->st_size;
     RmOff start_seek = 0;
@@ -60,13 +57,12 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
-    if(!folder) {
-        folder = rm_trie_insert(&cfg->file_trie, path, self);
+    if(!node) {
+        node = rm_trie_insert(&cfg->file_trie, path, NULL);
     }
-    self->folder = folder;
+    self->node = node;
 
     self->depth = depth;
-    self->path_depth = rm_util_path_depth(path);
     self->file_size = 0;
     self->actual_file_size = 0;
     self->n_children = 0;
@@ -107,13 +103,12 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
 void rm_file_build_path(RmFile *file, char *buf) {
     g_assert(file);
 
-    rm_trie_build_path(&file->session->cfg->file_trie, file->folder, buf, PATH_MAX);
+    rm_trie_build_path(&file->session->cfg->file_trie, file->node, buf, PATH_MAX);
 }
 
 void rm_file_build_dir_path(RmFile *file, char *buf) {
     g_assert(file);
-    rm_trie_build_path(&file->session->cfg->file_trie, file->folder->parent, buf,
-                       PATH_MAX);
+    rm_trie_build_path(&file->session->cfg->file_trie, file->node->parent, buf, PATH_MAX);
 }
 
 RmFile *rm_file_copy(RmFile *file) {
@@ -155,18 +150,22 @@ void rm_file_destroy(RmFile *file) {
     g_slice_free(RmFile, file);
 }
 
-static const char *LINT_TYPES[] = {[RM_LINT_TYPE_UNKNOWN] = "",
-                                   [RM_LINT_TYPE_EMPTY_DIR] = "emptydir",
-                                   [RM_LINT_TYPE_NONSTRIPPED] = "nonstripped",
-                                   [RM_LINT_TYPE_BADLINK] = "badlink",
-                                   [RM_LINT_TYPE_BADUID] = "baduid",
-                                   [RM_LINT_TYPE_BADGID] = "badgid",
-                                   [RM_LINT_TYPE_BADUGID] = "badugid",
-                                   [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
-                                   [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file",
-                                   [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir",
-                                   [RM_LINT_TYPE_PART_OF_DIRECTORY] = "part_of_directory",
-                                   [RM_LINT_TYPE_UNIQUE_FILE] = "unique_file"};
+// TODO: this is replicated in formats/pretty.c...
+static const char *LINT_TYPES[] = {
+    [RM_LINT_TYPE_UNKNOWN] = "",
+    [RM_LINT_TYPE_EMPTY_DIR] = "emptydir",
+    [RM_LINT_TYPE_NONSTRIPPED] = "nonstripped",
+    [RM_LINT_TYPE_BADLINK] = "badlink",
+    [RM_LINT_TYPE_BADUID] = "baduid",
+    [RM_LINT_TYPE_BADGID] = "badgid",
+    [RM_LINT_TYPE_BADUGID] = "badugid",
+    [RM_LINT_TYPE_EMPTY_FILE] = "emptyfile",
+    [RM_LINT_TYPE_DUPE_CANDIDATE] = "duplicate_file_candidate",
+    [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "duplicate_dir_candidate",
+    [RM_LINT_TYPE_DUPE] = "duplicate_file",
+    [RM_LINT_TYPE_DUPE_DIR] = "duplicate_dir",
+    [RM_LINT_TYPE_PART_OF_DIRECTORY] = "part_of_directory",
+    [RM_LINT_TYPE_UNIQUE_FILE] = "unique_file"};
 
 const char *rm_file_lint_type_to_string(RmLintType type) {
     return LINT_TYPES[MIN(type, sizeof(LINT_TYPES) / sizeof(const char *))];
@@ -184,7 +183,7 @@ RmLintType rm_file_string_to_lint_type(const char *type) {
 }
 
 gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
-    return g_ascii_strcasecmp(file_a->folder->basename, file_b->folder->basename);
+    return g_ascii_strcasecmp(file_a->node->basename, file_b->node->basename);
 }
 
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {

@@ -25,22 +25,18 @@
 
 #include "session.h"
 
-#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
-#include "config.h"
-#include "formats.h"
-#include "logger.h"
-#include "md-scheduler.h"
-#include "preprocess.h"
-#include "traverse.h"
-#include "xattr.h"
-
 
 #if HAVE_UNAME
-#include "sys/utsname.h"
+# include "sys/utsname.h"
 #endif
+
+#include "formats.h"
+#include "md-scheduler.h"
+#include "preprocess.h"
+
+
 
 static gpointer rm_session_read_kernel_version(_UNUSED gpointer arg) {
     static int version[2] = {-1, -1};
@@ -106,8 +102,9 @@ void rm_session_init(RmSession *session, RmCfg *cfg) {
 }
 
 void rm_session_clear(RmSession *session) {
-    RmCfg *cfg = session->cfg;
+    rm_fmt_close(session->formats);
 
+    RmCfg *cfg = session->cfg;
     rm_cfg_free_paths(cfg);
 
     g_timer_destroy(session->timer_since_proc_start);
@@ -118,7 +115,6 @@ void rm_session_clear(RmSession *session) {
     }
     g_timer_destroy(session->timer);
     rm_file_tables_destroy(session->tables);
-    rm_fmt_close(session->formats);
     g_ptr_array_free(session->pattern_cache, TRUE);
     rm_userlist_destroy(session->userlist);
 

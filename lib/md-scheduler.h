@@ -26,11 +26,7 @@
 #ifndef RM_MD_SCHEDULER_H
 #define RM_MD_SCHEDULER_H
 
-#include <glib.h>
 
-#include "config.h"
-#include "session.h"
-#include "utilities.h"
 
 /**
  * @file md-scheduler.h

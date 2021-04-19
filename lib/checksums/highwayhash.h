@@ -65,8 +65,6 @@ void HighwayHashCatFinish256(const HighwayHashCat* state, uint64_t hash[4]);
 
 /*
 Usage examples:
-#include <inttypes.h>
-#include <stdio.h>
 void Example64() {
   uint64_t key[4] = {1, 2, 3, 4};
   const char* text = "Hello world!";

@@ -25,12 +25,10 @@
 
 #include "hasher.h"
 
-#include <fcntl.h>
-#include <glib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "logger.h"
 #include "utilities.h"
 
 /* Flags for the fadvise() call that tells the kernel
@@ -41,7 +39,7 @@ const int HASHER_FADVISE_FLAGS = 0
                                  | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */
 #endif
 #ifdef POSIX_FADV_WILLNEED
-                                 | POSIX_FADV_WILLNEED /* Tell the kernel to readhead */
+                                 | POSIX_FADV_WILLNEED /* Tell the kernel to readahead */
 #endif
 #ifdef POSIX_FADV_NOREUSE
                                  | POSIX_FADV_NOREUSE /* We will not reuse old data  */

@@ -192,7 +192,7 @@ ATTR_PATTERN = re.compile(
 
 def parse(query):
     """Actual lowlevel parsing function.
-    Extracts arbitary text and attr-value pairs.
+    Extracts arbitrary text and attr-value pairs.
     """
     attrs = ATTR_PATTERN.finditer(query)
     results = defaultdict(list)

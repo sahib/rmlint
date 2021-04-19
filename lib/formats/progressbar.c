@@ -24,14 +24,9 @@
  */
 
 #include "../formats.h"
-#include "../logger.h"
-#include "../utilities.h"
 
-#include <glib.h>
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
-
 #include <sys/ioctl.h>
 
 /* Add 4096 bytes to each file size to give better ETA estimate*/
@@ -93,10 +88,9 @@ static void rm_fmt_progress_format_preprocess(RmSession *session, char *buf,
     }
 }
 
-static gdouble rm_fmt_progress_calculate_eta(
-        RmSession *session,
-        RmFmtHandlerProgress *self,
-        RmFmtProgressState state) {
+static gdouble rm_fmt_progress_calculate_eta(RmSession *session,
+                                             RmFmtHandlerProgress *self,
+                                             RmFmtProgressState state) {
     if(state != RM_PROGRESS_STATE_SHREDDER) {
         return -1.0;
     }
@@ -114,36 +108,31 @@ static gdouble rm_fmt_progress_calculate_eta(
     self->last_shred_files_remaining = session->shred_files_remaining;
 
 
-	// Average the mean, to make sure that we do not directly give in to "speed bumps"
-	rm_running_mean_add(&self->diff_mean, diff);
-	rm_running_mean_add(&self->took_mean, took);
+    // Average the mean, to make sure that we do not directly give in to "speed bumps"
+    rm_running_mean_add(&self->diff_mean, diff);
+    rm_running_mean_add(&self->took_mean, took);
 
-	gdouble diff_mean = rm_running_mean_get(&self->diff_mean);
-	gdouble took_mean = rm_running_mean_get(&self->took_mean);
+    gdouble diff_mean = rm_running_mean_get(&self->diff_mean);
+    gdouble took_mean = rm_running_mean_get(&self->took_mean);
 
-	if(diff_mean > 0 && took_mean > 0) {
-		// speed is the average time a single file took to process or filter in files/sec.
-		gdouble mean_speed = diff_mean / took_mean;
-	    gdouble eta_sec = (session->shred_bytes_remaining + FILE_OVERHEAD * session->shred_files_remaining) / mean_speed;
-	    return eta_sec;
-	}
-	return -1;
-
+    if(diff_mean > 0 && took_mean > 0) {
+        // speed is the average time a single file took to process or filter in files/sec.
+        gdouble mean_speed = diff_mean / took_mean;
+        gdouble eta_sec = (session->shred_bytes_remaining +
+                           FILE_OVERHEAD * session->shred_files_remaining) /
+                          mean_speed;
+        return eta_sec;
+    }
+    return -1;
 }
 
-static char *rm_fmt_progress_get_cached_eta(
-        RmSession *session,
-        RmFmtHandlerProgress *self
-    ) {
+static char *rm_fmt_progress_get_cached_eta(RmSession *session,
+                                            RmFmtHandlerProgress *self) {
     /* If there was already an ETA calculation in the last 500ms,
      * use that one to avoid flickering (see issue #292)
      */
 
-    gdouble eta_sec = rm_fmt_progress_calculate_eta(
-            session,
-            self,
-            self->last_state
-    );
+    gdouble eta_sec = rm_fmt_progress_calculate_eta(session, self, self->last_state);
 
     gint64 now = g_get_real_time();
     if(self->last_eta[0] != 0) {
@@ -164,12 +153,10 @@ static char *rm_fmt_progress_get_cached_eta(
     return self->last_eta;
 }
 
-static void rm_fmt_progress_format_text(
-        RmSession *session,
-        RmFmtHandlerProgress *self,
-        int max_len,
-        FILE *out
-    ) {
+static void rm_fmt_progress_format_text(RmSession *session,
+                                        RmFmtHandlerProgress *self,
+                                        int max_len,
+                                        FILE *out) {
     /* This is very ugly, but more or less required since we need to translate
      * the text to different languages and still determine the right textlength.
      */
@@ -203,10 +190,8 @@ static void rm_fmt_progress_format_text(
                                (gdouble)session->shred_bytes_after_preprocess);
 
         char *eta_info = rm_fmt_progress_get_cached_eta(session, self);
-        rm_util_size_to_human_readable(
-                session->shred_bytes_remaining, num_buf,
-                sizeof(num_buf)
-        );
+        rm_util_size_to_human_readable(session->shred_bytes_remaining, num_buf,
+                                       sizeof(num_buf));
 
         self->text_len = g_snprintf(
             self->text_buf, sizeof(self->text_buf),
@@ -235,7 +220,7 @@ static void rm_fmt_progress_format_text(
         break;
     }
 
-    /* Support unicode messages - tranlsated text might contain some. */
+    /* Support unicode messages - translated text might contain some. */
     self->text_len = g_utf8_strlen(self->text_buf, self->text_len);
 
     /* Get rid of colors to get the correct length of the text. This is
@@ -405,7 +390,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(state == RM_PROGRESS_STATE_INIT) {
-        /* Do initializiation here */
+        /* Do initialization here */
         const char *update_interval_str =
             rm_fmt_get_config_value(session->formats, "progressbar", "update_interval");
 
@@ -458,23 +443,20 @@ static void rm_fmt_prog(RmSession *session,
     float text_width_percentage = 0.7;
     if(self->terminal.ws_col <= 120) {
         // This function will give 100% to text with <= 60 chars width.
-        text_width_percentage = 1.0 - CLAMP(0.005 * self->terminal.ws_col - 0.3, 0.0, 0.3);
+        text_width_percentage =
+            1.0 - CLAMP(0.005 * self->terminal.ws_col - 0.3, 0.0, 0.3);
     }
 
     float progress_bar_percentage = 1.0 - text_width_percentage;
-    int progress_bar_width = MAX(0, floor(self->terminal.ws_col * progress_bar_percentage) - 1.0);
+    int progress_bar_width =
+        MAX(0, floor(self->terminal.ws_col * progress_bar_percentage) - 1.0);
     int text_width = MAX(0, ceil(self->terminal.ws_col * text_width_percentage) - 1.0);
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
         self->percent = 1.05;
         if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             if(progress_bar_width > 0) {
-                rm_fmt_progress_print_bar(
-                    session,
-                    self,
-                    progress_bar_width,
-                    out
-                );
+                rm_fmt_progress_print_bar(session, self, progress_bar_width, out);
             }
             fprintf(out, "\n");
         }
@@ -501,12 +483,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(progress_bar_width > 0) {
-            rm_fmt_progress_print_bar(
-                    session,
-                    self,
-                    progress_bar_width,
-                    out
-            );
+            rm_fmt_progress_print_bar(session, self, progress_bar_width, out);
         }
 
         rm_fmt_progress_print_text(self, text_width, out);

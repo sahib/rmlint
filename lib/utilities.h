@@ -27,16 +27,14 @@
 #define RM_UTILITIES_H_INCLUDE
 
 #include <fcntl.h>
-#include <glib.h>
-#include <stdbool.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
-#include <time.h>
-#include <unistd.h>
 
 /* Pat(h)tricia Trie implementation */
 #include "pathtricia.h"
+#include "logger.h"
 
 /* return values for rm_util_link_type */
 typedef enum RmLinkType {
@@ -166,10 +164,15 @@ char *rm_util_get_username(void);
 char *rm_util_get_groupname(void);
 
 ////////////////////////////////////
-//       GENERAL UTILITES         //
+//       GENERAL UTILITIES         //
 ////////////////////////////////////
 
 #define RM_LIST_NEXT(node) ((node) ? node->next : NULL)
+
+/**
+ * @brief parse a string eg '64k' into a guint64
+ */
+guint64 rm_util_size_string_to_bytes(const char *size_spec, GError **error);
 
 /**
  * @brief Replace {subs} with {with} in {string}
@@ -181,7 +184,7 @@ char *rm_util_strsub(const char *string, const char *subs, const char *with);
 /**
  * @brief Check if a file has an invalid gid/uid or both.
  *
- * @return the appropiate RmLintType for the file
+ * @return the appropriate RmLintType for the file
  */
 int rm_util_uid_gid_check(RmStat *statp, RmUserList *userlist);
 
@@ -386,7 +389,7 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check);
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
 
 /////////////////////////////////
-//    FIEMAP IMPLEMENATION     //
+//    FIEMAP IMPLEMENTATION     //
 /////////////////////////////////
 
 /**
@@ -409,7 +412,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
  * @brief Test if two files have identical fiemaps.
  * @retval see RmLinkType enum definition.
  */
-RmLinkType rm_util_link_type(const char *path1, const char *path2);
+RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiemap);
 
 /**
  * @brief Map RmLinkType to description.

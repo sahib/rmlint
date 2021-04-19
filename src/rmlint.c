@@ -23,15 +23,11 @@
 *
 **/
 
-#include <locale.h>
-#include <stdlib.h>
-#include <string.h>
 #include<assert.h>
+#include <stdlib.h>
 
 #include "../lib/api.h"
-#include "../lib/config.h"
 #include "../lib/gui.h"
-#include "../lib/logger.h"
 #include "../lib/hash-utility.h"
 #include "../lib/reflink.h"
 
@@ -110,7 +106,8 @@ int main(int argc, const char **argv) {
 
     maybe_run_alt_main(argc, argv, "--hash", "rmlint --hash", &rm_hasher_main);
 
-    maybe_run_alt_main(argc, argv, "--is-reflink", "rmlint --is-reflink", &rm_is_reflink_main);
+    maybe_run_alt_main(argc, argv, "--is-reflink", "rmlint --is-reflink",
+                       &rm_is_reflink_main);
 
     maybe_run_alt_main(argc, argv, "--dedupe", "rmlint --dedupe", &rm_dedupe_main);
 
@@ -126,12 +123,10 @@ int main(int argc, const char **argv) {
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
 
-
     RmCfg cfg;
     rm_cfg_set_default(&cfg);
     RmSession session;
     rm_session_init(&session, &cfg);
-
 
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {

@@ -43,7 +43,6 @@
     || Z <= RM_VERSION_MICRO        \
 )
 
-#include <errno.h>
 
 #if HAVE_LINUX_LIMITS
 #include <linux/limits.h>
@@ -74,7 +73,6 @@
 #include <glib.h>
 
 /* Printf formatting for large integers */
-#include <inttypes.h>
 
 #define RM_GETTEXT_PACKAGE "rmlint"
 

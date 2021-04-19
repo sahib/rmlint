@@ -26,16 +26,11 @@
 #include "formats.h"
 
 #include <ctype.h>
-#include <math.h>
-#include <stdlib.h>
 #include <string.h>
-
-#include "file.h"
-#include "logger.h"
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.
- * Otherwise, files are directly outputed and not stored in groups.
+ * Otherwise, files are directly outputted and not stored in groups.
  */
 typedef struct RmFmtGroup {
     GQueue files;
@@ -140,6 +135,10 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
     RmFmtHandler *handler = g_hash_table_lookup(self->name_to_handler, formatter);
     if(handler == NULL) {
         return false;
+    }
+
+    if(key == NULL) {
+        return true;
     }
 
     for(int i = 0; handler->valid_keys[i]; ++i) {
@@ -367,6 +366,8 @@ static int rm_lint_type_order[] = {
     [RM_LINT_TYPE_PART_OF_DIRECTORY] = 1,
     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = 2,
     [RM_LINT_TYPE_DUPE_CANDIDATE] = 3,
+    [RM_LINT_TYPE_DUPE_DIR] = 4,
+    [RM_LINT_TYPE_DUPE] = 5,
 };
 
 static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *self) {
@@ -390,7 +391,7 @@ static gint rm_fmt_rank(const RmFmtGroup *ga, const RmFmtGroup *gb, RmFmtTable *
             r = rm_fmt_rank_size(ga, gb);
             break;
         case 'a':
-            r = strcasecmp(fa->folder->basename, fb->folder->basename);
+            r = strcasecmp(fa->node->basename, fb->node->basename);
             break;
         case 'm':
             r = FLOAT_SIGN_DIFF(fa->mtime, fb->mtime, MTIME_TOL);
@@ -431,19 +432,19 @@ void rm_fmt_flush(RmFmtTable *self) {
 }
 
 void rm_fmt_close(RmFmtTable *self) {
-    for(GList *iter = self->groups.head; iter; iter = iter->next) {
-        RmFmtGroup *group = iter->data;
-        rm_fmt_group_destroy(self, group);
-    }
-
-    g_queue_clear(&self->groups);
-
     RM_FMT_FOR_EACH_HANDLER_BEGIN(self) {
         RM_FMT_CALLBACK(handler->foot);
         fclose(file);
         g_mutex_clear(&handler->print_mtx);
     }
     RM_FMT_FOR_EACH_HANDLER_END
+
+    for(GList *iter = self->groups.head; iter; iter = iter->next) {
+        RmFmtGroup *group = iter->data;
+        rm_fmt_group_destroy(self, group);
+    }
+
+    g_queue_clear(&self->groups);
 
     g_hash_table_unref(self->name_to_handler);
     g_hash_table_unref(self->handler_to_file);

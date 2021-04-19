@@ -23,42 +23,30 @@
  *
  */
 
-#include "cmdline.h"
-
 #include <ctype.h>
-#include <errno.h>
-#include <glib.h>
-#include <glib/gstdio.h>
-#include <math.h>
-#include <search.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <time.h>
-#include <unistd.h>
+#include <search.h>
 
-#include "config.h"
 #include "formats.h"
-#include "hash-utility.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
 #include "replay.h"
 #include "shredder.h"
 #include "traverse.h"
-#include "treemerge.h"
-#include "utilities.h"
 
 #define EXIT_EQUAL_UNKNOWN 2
 
+
 /* define paranoia levels */
+/* clang-format off */
 static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
                                                   RM_DIGEST_METRO256,
                                                   RM_DIGEST_HIGHWAY256,
                                                   RM_DEFAULT_DIGEST,
                                                   RM_DIGEST_PARANOID,
                                                   RM_DIGEST_PARANOID};
+/* clang-format on */
 static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
 static const int RM_PARANOIA_MAX = 5;
 
@@ -125,163 +113,6 @@ static void rm_cmd_show_manpage(void) {
     exit(0);
 }
 
-
-/* clang-format off */
-static const struct FormatSpec {
-    const char *id;
-    unsigned base;
-    unsigned exponent;
-} SIZE_FORMAT_TABLE[] = {
-    /* This list is sorted, so bsearch() can be used */
-    {.id = "b",  .base = 512,  .exponent = 1},
-    {.id = "c",  .base = 1,    .exponent = 1},
-    {.id = "e",  .base = 1000, .exponent = 6},
-    {.id = "eb", .base = 1024, .exponent = 6},
-    {.id = "g",  .base = 1000, .exponent = 3},
-    {.id = "gb", .base = 1024, .exponent = 3},
-    {.id = "k",  .base = 1000, .exponent = 1},
-    {.id = "kb", .base = 1024, .exponent = 1},
-    {.id = "m",  .base = 1000, .exponent = 2},
-    {.id = "mb", .base = 1024, .exponent = 2},
-    {.id = "p",  .base = 1000, .exponent = 5},
-    {.id = "pb", .base = 1024, .exponent = 5},
-    {.id = "t",  .base = 1000, .exponent = 4},
-    {.id = "tb", .base = 1024, .exponent = 4},
-    {.id = "w",  .base = 2,    .exponent = 1}
-};
-/* clang-format on */
-
-typedef struct FormatSpec FormatSpec;
-
-static const int SIZE_FORMAT_TABLE_N = sizeof(SIZE_FORMAT_TABLE) / sizeof(FormatSpec);
-
-static int rm_cmd_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
-    return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
-}
-
-static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) {
-    if(size_spec == NULL) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Input size is empty"));
-        return 0;
-    }
-
-    // We have a small issue here:
-    // 1) strold can not parse all of a guin64.
-    // 2) strtoull can only parse integers.
-    //
-    // We "solve" this by parsing with strtoull until the dot,
-    // and continue with strtold after. If we hit an overflow
-    // during multiplication later we warn the user and abort.
-
-    // Copy and strip the string:
-    char size_spec_copy[512] = {0};
-    memset(size_spec_copy, 0, sizeof(size_spec_copy));
-    strncpy(size_spec_copy, size_spec, sizeof(size_spec_copy) - 1);
-    char *size_spec_stripped = g_strstrip(size_spec_copy);
-
-    if(*size_spec_stripped == 0) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Size is empty"));
-        return 0;
-    }
-
-    if(*size_spec_stripped == '-') {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Negative sizes are no good idea"));
-        return 0;
-    }
-
-    // Actual number before the dot.
-    RmOff base_size = 1;
-
-    // size_factor to multiply the result with (in case of a suffix like »mb«)
-    double size_factor = 1;
-
-    // possible fraction given for a size after a dot.
-    double fraction = 0;
-
-    char *size_format = size_spec_stripped;
-    for(; *size_format && (*size_format == '.' || g_ascii_isdigit(*size_format));
-        size_format++)
-        ;
-
-    // Set to true when either a format suffix or a fraction was encountered.
-    bool need_multiply = false;
-
-    if(*size_format != 0) {
-        need_multiply = true;
-        FormatSpec key = {.id = size_format};
-        FormatSpec *found = bsearch(&key,
-                                    SIZE_FORMAT_TABLE,
-                                    SIZE_FORMAT_TABLE_N,
-                                    sizeof(FormatSpec),
-                                    rm_cmd_compare_spec_elem);
-
-        if(found != NULL) {
-            size_factor *= pow(found->base, found->exponent);
-        } else {
-            g_set_error(error, RM_ERROR_QUARK, 0,
-                        _("Given size_format specifier not found"));
-            return 0;
-        }
-
-        // Set to zero to separate it from the after-dot part.
-        *size_format = 0;
-    }
-
-    char *dot = strchr(size_spec_stripped, '.');
-    if(dot != NULL) {
-        need_multiply = true;
-
-        // Parse with strtoull since we only accept numbers after the dot.
-        // (not 1e10 or negative number like strtod would support them)
-        char *first_error = NULL;
-        RmOff fraction_num = strtoull(&dot[1], &first_error, 10);
-        if(first_error != NULL && *first_error != 0) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Failed to parse size fraction"));
-            return 0;
-        }
-
-        if(fraction_num == ULONG_MAX && errno == ERANGE) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Fraction is too big for uint64"));
-            return 0;
-        }
-
-        // Make sure number parsing doesn't see the dot.
-        *dot = 0;
-
-        // Convert the integer (e.g. 523) to a fraction (e.g. 0.523).
-        fraction = ((double)fraction_num) / pow(10, 1 + ((int)log10(fraction_num)));
-    }
-
-    if(*size_spec_stripped != 0) {
-        char *first_error = NULL;
-        base_size = strtoull(size_spec_stripped, &first_error, 10);
-        if(first_error != NULL && *first_error != 0) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("This does not look like a number"));
-            return 0;
-        }
-
-        if(base_size == ULONG_MAX && errno == ERANGE) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Size is too big for uint64"));
-            return 0;
-        }
-    }
-
-    RmOff result = base_size;
-    if(need_multiply) {
-        // Only multiply if we really have to.
-        result = (result + fraction) * size_factor;
-
-        // Check if an overflow happened during multiplication.
-        if(result < base_size) {
-            g_set_error(error, RM_ERROR_QUARK, 0,
-                        _("Size factor would overflow size (max. 2**64 allowed)"));
-            return 0;
-        }
-    }
-
-    return result;
-}
-
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
  * Thanks and go blame him if this breaks!
  */
@@ -299,10 +130,10 @@ static gboolean rm_cmd_size_range_string_to_bytes(const char *range_spec, RmOff 
     }
 
     if(split[0] != NULL) {
-        *min = rm_cmd_size_string_to_bytes(split[0], error);
+        *min = rm_util_size_string_to_bytes(split[0], error);
 
         if(split[1] != NULL && *error == NULL) {
-            *max = rm_cmd_size_string_to_bytes(split[1], error);
+            *max = rm_util_size_string_to_bytes(split[1], error);
         }
     }
 
@@ -401,55 +232,70 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
     return true;
 }
 
-static bool rm_cmd_parse_config_pair(RmSession *session, const char *pair,
-                                     GError **error) {
-    char *domain = strchr(pair, ':');
-    if(domain == NULL) {
-        g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("No format (format:key[=val]) specified in '%s'"), pair);
-        return false;
-    }
-
-    char *key = NULL, *value = NULL;
-    char **key_val = g_strsplit(&domain[1], "=", 2);
-    int len = g_strv_length(key_val);
-    bool result = true;
-
-    if(len < 1) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Missing key (format:key[=val]) in '%s'"),
-                    pair);
-        g_strfreev(key_val);
-        return false;
-    }
-
-    key = g_strdup(key_val[0]);
-    if(len == 2) {
-        value = g_strdup(key_val[1]);
-    } else {
-        value = g_strdup("1");
-    }
-
-    char *formatter = g_strndup(pair, domain - pair);
-    if(!rm_fmt_is_valid_key(session->formats, formatter, key)) {
-        g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid key `%s' for formatter `%s'"),
-                    key, formatter);
-        g_free(key);
-        g_free(value);
-        result = false;
-    } else {
-        rm_fmt_set_config_value(session->formats, formatter, key, value);
-    }
-
-    g_free(formatter);
-    g_strfreev(key_val);
-    return result;
-}
-
 static gboolean rm_cmd_parse_config(_UNUSED const char *option_name,
-                                    const char *pair,
+                                    const char *config,
                                     RmSession *session,
                                     _UNUSED GError **error) {
-    return rm_cmd_parse_config_pair(session, pair, error);
+    const char *const syntax = "<formatter>:<key>[=<val>][/<key>[=<val>]...]";
+    char *separator = strchr(config, ':');
+    if(separator == NULL) {
+        g_set_error(error, RM_ERROR_QUARK, 0,
+                    _("No formatter (expect %s) specified in '%s'"), syntax, config);
+        return false;
+    }
+    char *configs = separator + 1;
+
+    /* split on spaces unless they are quoted */
+    char *split_regex =
+        "(?x)   "
+        "/                "   // Split on '/'
+        "(?=              "   // Followed by
+        "  (?:            "   // Start a non-capture group
+        "    [^\\\"\\\']* "   // 0 or more non-quote characters
+        "    [\\\"\\\']   "   // 1 quote (single or double)
+        "    [^\\\"\\\']* "   // 0 or more non-quote characters
+        "    [\\\"\\\']   "   // 1 quote
+        "  )*             "   // 0 or more repetition of non-capture group (multiple of 2
+                              // quotes will be even)
+        "  [^\\\"\\\']*   "   // Finally 0 or more non-quotes
+        "  $              "   // Till the end  (This is necessary, else every comma will
+                              // satisfy the condition)
+        ")                ";  // End look-ahead
+    char **pairs = g_regex_split_simple(split_regex, configs, 0, 0);
+
+    bool all_valid = true;
+    if(pairs == NULL || *pairs == NULL) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Missing key (expect %s) in '%s'"),
+                    syntax, config);
+        all_valid = false;
+        return false;
+    } else {
+        char *formatter = g_strndup(config, separator - config);
+        if(!rm_fmt_is_valid_key(session->formats, formatter, NULL)) {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("Invalid formatter '%s'"), formatter);
+            all_valid = false;
+        } else {
+            for(char **pair = pairs; *pair && all_valid; pair++) {
+                char **key_val = g_strsplit(*pair, "=", 2);
+                if(!rm_fmt_is_valid_key(session->formats, formatter, key_val[0])) {
+                    g_set_error(error, RM_ERROR_QUARK, 0,
+                                _("Invalid key '%s' for formatter '%s'"), key_val[0],
+                                formatter);
+                    all_valid = false;
+                } else {
+                    char *key = g_strdup(key_val[0]);
+                    char *value = g_strdup(key_val[1] != NULL ? key_val[1] : "1");
+                    rm_log_info_line("Setting config for %s: %s=%s", formatter, key,
+                                     value);
+                    rm_fmt_set_config_value(session->formats, formatter, key, value);
+                }
+                g_strfreev(key_val);
+            }
+        }
+        g_free(formatter);
+    }
+    g_strfreev(pairs);
+    return all_valid;
 }
 
 static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
@@ -477,7 +323,7 @@ static double rm_cmd_parse_clamp_factor(const char *string, GError **error) {
 }
 
 static RmOff rm_cmd_parse_clamp_offset(const char *string, GError **error) {
-    RmOff offset = rm_cmd_size_string_to_bytes(string, error);
+    RmOff offset = rm_util_size_string_to_bytes(string, error);
 
     if(*error != NULL) {
         g_prefix_error(error, _("Unable to parse offset \"%s\": "), string);
@@ -755,8 +601,8 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
         memset(stamp_buf, 0, sizeof(stamp_buf));
 
         if(fgets(stamp_buf, sizeof(stamp_buf), stamp_file) != NULL) {
-            success = rm_cmd_parse_timestamp(
-                option_name, g_strstrip(stamp_buf), session, error);
+            success = rm_cmd_parse_timestamp(option_name, g_strstrip(stamp_buf), session,
+                                             error);
 
             if(!success) {
                 return false;
@@ -767,7 +613,7 @@ static gboolean rm_cmd_parse_timestamp_file(const char *option_name,
 
         fclose(stamp_file);
     } else {
-        /* Cannot read a stamp file, assume we gonna creae it. */
+        /* Cannot read a stamp file, assume we have to create it. */
         plain = false;
         success = true;
         rm_log_info_line(_("No stamp file at `%s`, will create one after this run."),
@@ -841,7 +687,7 @@ static gboolean rm_cmd_parse_large_output(_UNUSED const char *option_name,
 }
 
 static gboolean rm_cmd_parse_mem(const gchar *size_spec, GError **error, RmOff *target) {
-    RmOff size = rm_cmd_size_string_to_bytes(size_spec, error);
+    RmOff size = rm_util_size_string_to_bytes(size_spec, error);
 
     if(*error != NULL) {
         g_prefix_error(error, _("Invalid size description \"%s\": "), size_spec);
@@ -1218,7 +1064,7 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
-                    _("Specifiyng both -o and -O is not allowed"));
+                    _("Specifying both -o and -O is not allowed"));
         return false;
     } else if(session->output_cnt[0] < 0 && session->cfg->progress_enabled == false) {
         rm_cmd_set_default_outputs(session);
@@ -1606,7 +1452,7 @@ int rm_cmd_main(RmSession *session) {
         g_assert(cfg->paths->next);
         RmPath *b = cfg->paths->next->data;
 
-        switch(rm_util_link_type(a->path, b->path)) {
+        switch(rm_util_link_type(a->path, b->path, TRUE)) {
         case RM_LINK_HARDLINK:
         case RM_LINK_REFLINK:
         case RM_LINK_PATH_DOUBLE:
@@ -1622,7 +1468,6 @@ int rm_cmd_main(RmSession *session) {
     }
 
     if(session->total_files >= 1) {
-
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 
@@ -1647,7 +1492,6 @@ int rm_cmd_main(RmSession *session) {
     rm_fmt_flush(session->formats);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PRE_SHUTDOWN);
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_SUMMARY);
-
 
     if(session->shred_bytes_remaining != 0) {
         rm_log_error_line("BUG: Number of remaining bytes is %" LLU

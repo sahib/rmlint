@@ -48,6 +48,20 @@ CKSUM_TYPES = [
     'paranoid',
 ]
 
+def has_feature(feature):
+    return ('+' + feature) in subprocess.check_output(
+        ['./rmlint', '--version'], stderr=subprocess.STDOUT
+    ).decode('utf-8')
+
+# Note: sha512 is supported on all system which have
+#       no recent enough glib with. God forsaken debian people.
+if has_feature('sha512'):
+    CKSUM_TYPES.append('sha512')
+
+if has_feature('sse4'):
+    CKSUM_TYPES.append('metrocrc')
+    CKSUM_TYPES.append('metrocrc256')
+
 def runs_as_root():
     return os.geteuid() == 0
 
@@ -94,10 +108,6 @@ def which(program):
     return None
 
 
-def has_feature(feature):
-    return ('+' + feature) in subprocess.check_output(
-        ['./rmlint', '--version'], stderr=subprocess.STDOUT
-    ).decode('utf-8')
 
 
 RMLINT_BINARY_DIR = os.getcwd()
@@ -132,7 +142,7 @@ def run_rmlint_once(*args,
     else:
         env, cmd = {}, []
 
-    cmd = [os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity]
+    cmd.extend( [os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity] )
     if target_dir:
         cmd.append(target_dir)
 
@@ -252,15 +262,6 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--no-mount-table'
     ]
 
-
-    # Note: sha512 is supported on all system which have
-    #       no recent enough glib with. God forsaken debian people.
-    if has_feature('sha512'):
-        CKSUM_TYPES.append('sha512')
-
-    if has_feature('sse4'):
-        CKSUM_TYPES.append('metrocrc')
-        CKSUM_TYPES.append('metrocrc256')
 
     for cksum_type in CKSUM_TYPES:
         options.append('--algorithm=' + cksum_type)

@@ -7,7 +7,7 @@ This code here is supposed to be drop-in able
 into other projects if necessary.
 
 Also included: Various specialised GtkCellRenderer implementation.
-Reason for special derivates are given in the respective class.
+Reason for special derivatives are given in the respective class.
 """
 
 # Stdlib:
@@ -888,7 +888,7 @@ class FileSizeRange(Gtk.Grid):
 
     @min_value.setter
     def min_value(self, val):
-        """Set the minum value."""
+        """Set the minimum value."""
         self._min_wdgt.set_bytes(val)
 
     @property

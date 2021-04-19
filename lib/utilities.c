@@ -23,60 +23,52 @@
  *
  */
 
-#include <ctype.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include "utilities.h"
 
-#include "config.h"
-#include "logger.h"
-#include "reflink.h"
-#include "session.h"
+/* External libraries */
+
+#include <errno.h>
+#include <math.h>
+#include <sys/uio.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <grp.h>
+#include <pwd.h>
+#include <sys/ioctl.h>
 
 /* Be safe: This header is not essential and might be missing on some systems.
  * We only include it here, because it fixes some recent warning...
  * */
 #if HAVE_SYSMACROS_H
-#include <sys/sysmacros.h>
+# include <sys/sysmacros.h>
 #endif
-
-#include <grp.h>
-#include <libgen.h>
-#include <pwd.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 /* Not available there,
  * but might be on other non-linux systems
  * */
 #if HAVE_GIO_UNIX
-#include <gio/gunixmounts.h>
+# include <gio/gunixmounts.h>
 #endif
 
 #if HAVE_FIEMAP
-#include <linux/fiemap.h>
-#include <linux/fs.h>
+# include <linux/fiemap.h>
+# include <linux/fs.h>
 #endif
 
-/* Internal headers */
-#include "config.h"
-#include "file.h"
-#include "utilities.h"
-
-/* External libraries */
-#include <glib.h>
-
 #if HAVE_LIBELF
-#include <gelf.h>
-#include <libelf.h>
+# include <gelf.h>
+# include <libelf.h>
 #endif
 
 #if HAVE_BLKID
-#include <blkid/blkid.h>
+# include <blkid/blkid.h>
 #endif
+
+/* Internal headers */
+#include "file.h"
+#include "reflink.h"
+
 
 #define RM_MOUNTTABLE_IS_USABLE (HAVE_BLKID && HAVE_GIO_UNIX)
 
@@ -111,6 +103,162 @@ gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, RmOff offset) 
 ////////////////////////////////////
 //       GENERAL UTILITES         //
 ////////////////////////////////////
+
+/* clang-format off */
+static const struct FormatSpec {
+    const char *id;
+    unsigned base;
+    unsigned exponent;
+} SIZE_FORMAT_TABLE[] = {
+    /* This list is sorted, so bsearch() can be used */
+    {.id = "b",  .base = 512,  .exponent = 1},
+    {.id = "c",  .base = 1,    .exponent = 1},
+    {.id = "e",  .base = 1000, .exponent = 6},
+    {.id = "eb", .base = 1024, .exponent = 6},
+    {.id = "g",  .base = 1000, .exponent = 3},
+    {.id = "gb", .base = 1024, .exponent = 3},
+    {.id = "k",  .base = 1000, .exponent = 1},
+    {.id = "kb", .base = 1024, .exponent = 1},
+    {.id = "m",  .base = 1000, .exponent = 2},
+    {.id = "mb", .base = 1024, .exponent = 2},
+    {.id = "p",  .base = 1000, .exponent = 5},
+    {.id = "pb", .base = 1024, .exponent = 5},
+    {.id = "t",  .base = 1000, .exponent = 4},
+    {.id = "tb", .base = 1024, .exponent = 4},
+    {.id = "w",  .base = 2,    .exponent = 1}
+};
+/* clang-format on */
+
+typedef struct FormatSpec FormatSpec;
+
+static const int SIZE_FORMAT_TABLE_N = sizeof(SIZE_FORMAT_TABLE) / sizeof(FormatSpec);
+
+static int rm_util_compare_spec_elem(const void *fmt_a, const void *fmt_b) {
+    return strcasecmp(((FormatSpec *)fmt_a)->id, ((FormatSpec *)fmt_b)->id);
+}
+
+guint64 rm_util_size_string_to_bytes(const char *size_spec, GError **error) {
+    if(size_spec == NULL) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Input size is empty"));
+        return 0;
+    }
+
+    // We have a small issue here:
+    // 1) strold can not parse all of a guin64.
+    // 2) strtoull can only parse integers.
+    //
+    // We "solve" this by parsing with strtoull until the dot,
+    // and continue with strtold after. If we hit an overflow
+    // during multiplication later we warn the user and abort.
+
+    // Copy and strip the string:
+    char size_spec_copy[512] = {0};
+    memset(size_spec_copy, 0, sizeof(size_spec_copy));
+    strncpy(size_spec_copy, size_spec, sizeof(size_spec_copy) - 1);
+    char *size_spec_stripped = g_strstrip(size_spec_copy);
+
+    if(*size_spec_stripped == 0) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Size is empty"));
+        return 0;
+    }
+
+    if(*size_spec_stripped == '-') {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("Negative sizes are no good idea"));
+        return 0;
+    }
+
+    // Actual number before the dot.
+    RmOff base_size = 1;
+
+    // size_factor to multiply the result with (in case of a suffix like »mb«)
+    double size_factor = 1;
+
+    // possible fraction given for a size after a dot.
+    double fraction = 0;
+
+    char *size_format = size_spec_stripped;
+    for(; *size_format && (*size_format == '.' || g_ascii_isdigit(*size_format));
+        size_format++)
+        ;
+
+    // Set to true when either a format suffix or a fraction was encountered.
+    bool need_multiply = false;
+
+    if(*size_format != 0) {
+        need_multiply = true;
+        FormatSpec key = {.id = size_format};
+        FormatSpec *found = bsearch(&key,
+                                    SIZE_FORMAT_TABLE,
+                                    SIZE_FORMAT_TABLE_N,
+                                    sizeof(FormatSpec),
+                                    rm_util_compare_spec_elem);
+
+        if(found != NULL) {
+            size_factor *= pow(found->base, found->exponent);
+        } else {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Given size_format specifier not found"));
+            return 0;
+        }
+
+        // Set to zero to separate it from the after-dot part.
+        *size_format = 0;
+    }
+
+    char *dot = strchr(size_spec_stripped, '.');
+    if(dot != NULL) {
+        need_multiply = true;
+
+        // Parse with strtoull since we only accept numbers after the dot.
+        // (not 1e10 or negative number like strtod would support them)
+        char *first_error = NULL;
+        RmOff fraction_num = strtoull(&dot[1], &first_error, 10);
+        if(first_error != NULL && *first_error != 0) {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("Failed to parse size fraction"));
+            return 0;
+        }
+
+        if(fraction_num == ULONG_MAX && errno == ERANGE) {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("Fraction is too big for uint64"));
+            return 0;
+        }
+
+        // Make sure number parsing doesn't see the dot.
+        *dot = 0;
+
+        // Convert the integer (e.g. 523) to a fraction (e.g. 0.523).
+        fraction = ((double)fraction_num) / pow(10, 1 + ((int)log10(fraction_num)));
+    }
+
+    if(*size_spec_stripped != 0) {
+        char *first_error = NULL;
+        base_size = strtoull(size_spec_stripped, &first_error, 10);
+        if(first_error != NULL && *first_error != 0) {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("This does not look like a number"));
+            return 0;
+        }
+
+        if(base_size == ULONG_MAX && errno == ERANGE) {
+            g_set_error(error, RM_ERROR_QUARK, 0, _("Size is too big for uint64"));
+            return 0;
+        }
+    }
+
+    RmOff result = base_size;
+    if(need_multiply) {
+        // Only multiply if we really have to.
+        result = (result + fraction) * size_factor;
+
+        // Check if an overflow happened during multiplication.
+        if(result < base_size) {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Size factor would overflow size (max. 2**64 allowed)"));
+            return 0;
+        }
+    }
+
+    return result;
+}
 
 char *rm_util_strsub(const char *string, const char *subs, const char *with) {
     gchar *result = NULL;
@@ -652,7 +800,7 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
             /* fsname as show by `mount` */
             const char *name;
 
-            /* Wether to warn about the exclusion on this */
+            /* Whether to warn about the exclusion on this */
             bool unusual;
         } evilfs_types[] = {{"bindfs", 1},
                             {"nullfs", 1},
@@ -911,7 +1059,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev,
     }
 
     /* probably a btrfs subvolume which is not a mountpoint;
-     * walk up tree until we get to a recognisable partition
+     * walk up tree until we get to a recognizable partition
      * */
     char *prev = g_strdup(path);
     while(TRUE) {
@@ -1000,7 +1148,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 }
 
 /////////////////////////////////
-//    FIEMAP IMPLEMENATION     //
+//    FIEMAP IMPLEMENTATION     //
 /////////////////////////////////
 
 #if HAVE_FIEMAP
@@ -1191,7 +1339,7 @@ static gboolean rm_util_same_device(const char *path1, const char *path2) {
     return result;
 }
 
-RmLinkType rm_util_link_type(const char *path1, const char *path2) {
+RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiemap) {
 #if _RM_OFFSET_DEBUG
     rm_log_debug_line("Checking link type for %s vs %s", path1, path2);
 #endif
@@ -1277,8 +1425,11 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2) {
         RM_RETURN(RM_LINK_SYMLINK);
     }
 
-    RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
-    RM_RETURN(reflink_type);
+    if(use_fiemap) {
+        RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
+        RM_RETURN(reflink_type);
+    }
+    RM_RETURN(RM_LINK_NONE);
 
 #undef RM_RETURN
 }

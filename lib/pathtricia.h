@@ -39,6 +39,9 @@ typedef struct _RmNode {
     /* Array of children nodes */
     GHashTable *children;
 
+    /* Levels below root (root==0) */
+    guint16 depth;
+
     /* data was set explicitly */
     char has_value : 1;
 
@@ -61,7 +64,7 @@ typedef struct _RmTrie {
 } RmTrie;
 
 /* Callback to rm_trie_iter */
-typedef int (*RmTrieIterCallback)(RmTrie *self, RmNode *node, int level, void *user_data);
+typedef int (*RmTrieIterCallback)(RmNode *node, void *user_data);
 
 /**
  * rm_trie_init:

@@ -16,9 +16,7 @@
    https://blake2.net.
 */
 
-#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "blake2-impl.h"
 #include "blake2.h"

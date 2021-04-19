@@ -26,13 +26,8 @@
 #ifndef RM_FILE_H
 #define RM_FILE_H
 
-#include <glib.h>
-#include <stdbool.h>
-#include <sys/stat.h>
 
 #include "cfg.h"
-#include "pathtricia.h"
-#include "utilities.h"
 
 typedef enum RmFileState {
     /* File still processing
@@ -57,9 +52,6 @@ typedef enum RmLintType {
     RM_LINT_TYPE_BADGID,
     RM_LINT_TYPE_BADUGID,
 
-    /* note: this needs to be after all non-duplicate lint type item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE,
-
     /* Directories are no "normal" RmFiles, they are actual
      * different structs that hide themselves as RmFile to
      * be compatible with the output system.
@@ -68,6 +60,13 @@ typedef enum RmLintType {
      * So it does not matter if this type is behind RM_LINT_TYPE_DUPE_CANDIDATE.
      */
     RM_LINT_TYPE_DUPE_DIR_CANDIDATE,
+
+    /* note: this needs to be after all non-duplicate lint type item in list */
+    RM_LINT_TYPE_DUPE_CANDIDATE,
+
+    /* confirmed duplicates */
+    RM_LINT_TYPE_DUPE_DIR,
+    RM_LINT_TYPE_DUPE,
 
     /* Special type for files that got sieved out during shreddering.
      * Depending on output settings, these may be included in the
@@ -112,15 +111,15 @@ typedef struct RmFile {
      * */
     RmOff path_id;
 
-    /* file folder as node of folder n-ary tree
+    /* file path as node of folder n-ary tree
      * */
-    RmNode *folder;
+    RmNode *node;
 
     /* File modification date/time
      * */
     gdouble mtime;
 
-    /* Depth of the file, relative to the path it was found in.
+    /* Depth of the file, relative to the command-line path it was found under.
      */
     gint16 depth;
 
@@ -133,10 +132,6 @@ typedef struct RmFile {
      * This is used for the 'oO'-sortcriteria.
      * */
     gint16 outer_link_count;
-
-    /* Depth of the path of this file.
-     */
-    guint8 path_depth;
 
     /* The inode and device of this file.
      * Used to filter double paths and hardlinks.
@@ -242,7 +237,7 @@ typedef struct RmFile {
         gint64 twin_count;
 
         /* Disk fiemap / physical offset at start of file (tests mapping subsequent
-         * file fragements did not deliver any significant additionl benefit) */
+         * file fragments did not deliver any significant additionl benefit) */
         RmOff disk_offset;
     };
 
@@ -316,7 +311,7 @@ typedef struct RmFile {
  */
 RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
                     RmLintType type, bool is_ppath, unsigned pnum, short depth,
-                    RmNode *folder);
+                    RmNode *node);
 
 /**
  * @brief Deallocate the memory allocated by rm_file_new.

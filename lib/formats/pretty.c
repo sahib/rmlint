@@ -23,12 +23,9 @@
  *
  */
 
-#include "../formats.h"
-#include "../logger.h"
-#include "../preprocess.h"
 
-#include <glib.h>
-#include <stdio.h>
+#include "../formats.h"
+
 
 static const char *RM_LINT_TYPE_TO_DESCRIPTION[] =
     {[RM_LINT_TYPE_UNKNOWN] = "",
@@ -39,8 +36,10 @@ static const char *RM_LINT_TYPE_TO_DESCRIPTION[] =
      [RM_LINT_TYPE_BADGID] = N_("Bad GID(s)"),
      [RM_LINT_TYPE_BADUGID] = N_("Bad UID and GID(s)"),
      [RM_LINT_TYPE_EMPTY_FILE] = N_("Empty file(s)"),
-     [RM_LINT_TYPE_DUPE_CANDIDATE] = N_("Duplicate(s)"),
-     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate Directorie(s)")};
+     [RM_LINT_TYPE_DUPE_CANDIDATE] = N_("Duplicate candidates(s)"),
+     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = N_("Duplicate dir candidate(s)"),
+     [RM_LINT_TYPE_DUPE] = N_("Duplicate(s)"),
+     [RM_LINT_TYPE_DUPE_DIR] = N_("Duplicate Directorie(s)")};
 
 static const char *RM_LINT_TYPE_TO_COMMAND[] =
     {[RM_LINT_TYPE_UNKNOWN] = "",
@@ -51,8 +50,10 @@ static const char *RM_LINT_TYPE_TO_COMMAND[] =
      [RM_LINT_TYPE_BADGID] = "chgrp %s",
      [RM_LINT_TYPE_BADUGID] = "chown %s:%s",
      [RM_LINT_TYPE_EMPTY_FILE] = "rm",
-     [RM_LINT_TYPE_DUPE_CANDIDATE] = "rm",
-     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "rm -rf"};
+     [RM_LINT_TYPE_DUPE_CANDIDATE] = "ls",
+     [RM_LINT_TYPE_DUPE_DIR_CANDIDATE] = "ls",
+     [RM_LINT_TYPE_DUPE] = "rm",
+     [RM_LINT_TYPE_DUPE_DIR] = "rm -rf"};
 
 static const char *rm_fmt_command_color(RmSession *session, RmFile *file, FILE *out) {
     switch(file->lint_type) {
@@ -63,6 +64,8 @@ static const char *rm_fmt_command_color(RmSession *session, RmFile *file, FILE *
         return MAYBE_BLUE(out, session);
     case RM_LINT_TYPE_DUPE_CANDIDATE:
     case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+    case RM_LINT_TYPE_DUPE:
+    case RM_LINT_TYPE_DUPE_DIR:
         if(file->is_original) {
             return MAYBE_GREEN(out, session);
         } else {
@@ -97,13 +100,17 @@ static void rm_fmt_elem(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
                         RmFile *file) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
-    if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
+    switch(file->lint_type) {
+    case RM_LINT_TYPE_UNIQUE_FILE:
+    case RM_LINT_TYPE_PART_OF_DIRECTORY:
+    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
         /* pretty output should not contain this */
         return;
-    }
-
-    if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
-        return;
+    case RM_LINT_TYPE_DUPE_CANDIDATE:
+        g_assert_not_reached();
+        break;
+    default:
+        break;
     }
 
     self->elems_written++;
@@ -128,14 +135,14 @@ static void rm_fmt_elem(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
     case RM_LINT_TYPE_BADUGID:
         fprintf(out, format, self->user, self->group);
         break;
-    case RM_LINT_TYPE_DUPE_CANDIDATE:
+    case RM_LINT_TYPE_DUPE:
         if(file->is_original) {
             fprintf(out, "ls");
         } else {
             fprintf(out, "%s", format);
         }
         break;
-    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
+    case RM_LINT_TYPE_DUPE_DIR:
         if(file->is_original) {
             fprintf(out, "ls -la");
         } else {

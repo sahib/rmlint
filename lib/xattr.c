@@ -25,12 +25,8 @@
 
 #include "xattr.h"
 
-#include <errno.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-
-#include "config.h"
-#include "logger.h"
 
 #if HAVE_XATTR
 #include <sys/xattr.h>
@@ -190,8 +186,8 @@ static int rm_xattr_set(RmFile *file,
         rm_sys_setxattr(file_path, key, value, value_size, 0, follow_link));
 }
 
-static int rm_xattr_get(
-    RmFile *file, const char *key, char *out_value, size_t value_size, bool follow_link) {
+static int rm_xattr_get(RmFile *file, const char *key, char *out_value, size_t value_size,
+                        bool follow_link) {
     RM_DEFINE_PATH(file);
 
     return rm_xattr_is_fail(

@@ -26,13 +26,9 @@
 #ifndef RM_SESSION_H
 #define RM_SESSION_H
 
-#include <glib.h>
 #include <json-glib/json-glib.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-#include "config.h"     // INLINE
 #include "treemerge.h"  // RmTreeMerger
 
 typedef struct RmFileTables {
@@ -60,7 +56,7 @@ struct RmFmtTable;
 typedef struct RmSession {
     RmCfg *cfg;
 
-    /* Stores for RmFile during traversal, preproces and shredder */
+    /* Stores for RmFile during traversal, preprocess and shredder */
     struct RmFileTables *tables;
 
     /* Table of mountpoints used in the system */

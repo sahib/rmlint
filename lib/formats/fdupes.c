@@ -23,12 +23,10 @@
  *
  */
 
-#include "../formats.h"
-#include "../logger.h"
-
-#include <glib.h>
-#include <stdio.h>
 #include <string.h>
+
+#include "../formats.h"
+
 
 typedef struct RmFmtHandlerFdupes {
     /* must be first */
@@ -56,8 +54,8 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     RM_DEFINE_PATH(file);
 
     switch(file->lint_type) {
-    case RM_LINT_TYPE_DUPE_DIR_CANDIDATE:
-    case RM_LINT_TYPE_DUPE_CANDIDATE:
+    case RM_LINT_TYPE_DUPE_DIR:
+    case RM_LINT_TYPE_DUPE:
         if(self->omit_first_line && file->is_original) {
             strcpy(line, "\n");
         } else {
@@ -67,6 +65,8 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
                        (self->use_same_line) ? ' ' : '\n');
         }
         break;
+    case RM_LINT_TYPE_DUPE_CANDIDATE:
+        g_assert_not_reached();
     default:
         g_snprintf(line, sizeof(line), "%s%s%s%c", MAYBE_BLUE(out, session), file_path,
                    MAYBE_RESET(out, session), (self->use_same_line) ? ' ' : '\n');

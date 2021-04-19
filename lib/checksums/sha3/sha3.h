@@ -1,7 +1,6 @@
 #ifndef _RM_CHECKSUM_SHA3
 #define _RM_CHECKSUM_SHA3
 
-#include <stdlib.h>
 
 #define SHA3_ASSERT(x)
 #if defined(_MSC_VER)

@@ -26,7 +26,6 @@
 #ifndef RM_PREPROCESS_H
 #define RM_PREPROCESS_H
 
-#include "file.h"
 #include "session.h"
 
 /**

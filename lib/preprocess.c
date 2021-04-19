@@ -25,20 +25,14 @@
 #include "preprocess.h"
 
 #include <ctype.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 
-#include "cmdline.h"
 #include "formats.h"
-#include "logger.h"
-#include "shredder.h"
-#include "utilities.h"
 
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
-    char *ext_a = rm_util_path_extension(file_a->folder->basename);
-    char *ext_b = rm_util_path_extension(file_b->folder->basename);
+    char *ext_a = rm_util_path_extension(file_a->node->basename);
+    char *ext_b = rm_util_path_extension(file_b->node->basename);
 
     if(ext_a && ext_b) {
         return g_ascii_strcasecmp(ext_a, ext_b);
@@ -49,8 +43,8 @@ static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_
 }
 
 static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *file_b) {
-    const char *basename_a = file_a->folder->basename;
-    const char *basename_b = file_b->folder->basename;
+    const char *basename_a = file_a->node->basename;
+    const char *basename_b = file_b->node->basename;
 
     char *ext_a = rm_util_path_extension(basename_a);
     char *ext_b = rm_util_path_extension(basename_b);
@@ -151,7 +145,7 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
 static ino_t rm_path_parent_inode(RmFile *file) {
     char parent_path[PATH_MAX];
     rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie,
-                       file->folder->parent,
+                       file->node->parent,
                        parent_path,
                        PATH_MAX);
 
@@ -170,7 +164,7 @@ static ino_t rm_path_parent_inode(RmFile *file) {
 
 static bool rm_path_have_same_parent(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
-    return (file_a->folder->parent == file_b->folder->parent ||
+    return (file_a->node->parent == file_b->node->parent ||
             rm_path_parent_inode(file_a) == rm_path_parent_inode(file_b));
 }
 
@@ -190,7 +184,7 @@ static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
         return FALSE;
     }
 
-    return g_strcmp0(file_a->folder->basename, file_b->folder->basename) == 0;
+    return g_strcmp0(file_a->node->basename, file_b->node->basename) == 0;
 }
 
 static RmPathDoubleKey *rm_path_double_new(RmFile *file) {
@@ -354,36 +348,28 @@ char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **
 static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
                               const char *path_a, RmPatternBitmask *mask_b,
                               const char *path_b) {
-    int result = 0;
+    int result_a = 0;
+    int result_b = 0;
 
     if(RM_PATTERN_IS_CACHED(mask_a, idx)) {
         /* Get the previous match result */
-        result = RM_PATTERN_GET_CACHED(mask_a, idx);
+        result_a = RM_PATTERN_GET_CACHED(mask_a, idx);
     } else {
         /* Match for the first time */
-        result = g_regex_match(regex, path_a, 0, NULL);
-        RM_PATTERN_SET_CACHED(mask_a, idx, result);
-    }
-
-    if(result) {
-        return -1;
+        result_a = g_regex_match(regex, path_a, 0, NULL);
+        RM_PATTERN_SET_CACHED(mask_a, idx, result_a);
     }
 
     if(RM_PATTERN_IS_CACHED(mask_b, idx)) {
         /* Get the previous match result */
-        result = RM_PATTERN_GET_CACHED(mask_b, idx);
+        result_b = RM_PATTERN_GET_CACHED(mask_b, idx);
     } else {
         /* Match for the first time */
-        result = g_regex_match(regex, path_b, 0, NULL);
-        RM_PATTERN_SET_CACHED(mask_b, idx, result);
+        result_b = g_regex_match(regex, path_b, 0, NULL);
+        RM_PATTERN_SET_CACHED(mask_b, idx, result_b);
     }
 
-    if(result) {
-        return +1;
-    }
-
-    /* Both match or none of the both match */
-    return 0;
+    return SIGN_DIFF(result_b, result_a);
 }
 
 /*
@@ -397,14 +383,14 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
     case 'm':
         return sign * FLOAT_SIGN_DIFF(a->mtime, b->mtime, MTIME_TOL);
     case 'a':
-        return sign * g_ascii_strcasecmp(a->folder->basename, b->folder->basename);
+        return sign * g_ascii_strcasecmp(a->node->basename, b->node->basename);
     case 'f': {
         RM_DEFINE_DIR_PATH(a);
         RM_DEFINE_DIR_PATH(b);
         return sign * strcmp(a_dir_path, b_dir_path);
     }
     case 'l':
-        return sign * SIGN_DIFF(strlen(a->folder->basename), strlen(b->folder->basename));
+        return sign * SIGN_DIFF(strlen(a->node->basename), strlen(b->node->basename));
     case 'd':
         return sign * SIGN_DIFF(a->depth, b->depth);
     case 'h':
@@ -416,8 +402,8 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
     case 'x': {
         int cmp = rm_pp_cmp_by_regex(
             g_ptr_array_index(session->pattern_cache, *regex_cursor), *regex_cursor,
-            (RmPatternBitmask *)&a->pattern_bitmask_basename, a->folder->basename,
-            (RmPatternBitmask *)&b->pattern_bitmask_basename, b->folder->basename);
+            (RmPatternBitmask *)&a->pattern_bitmask_basename, a->node->basename,
+            (RmPatternBitmask *)&b->pattern_bitmask_basename, b->node->basename);
         (*regex_cursor)++;
         return sign * cmp;
     }

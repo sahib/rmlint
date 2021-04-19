@@ -22,21 +22,15 @@
  * Hosted on http://github.com/sahib/rmlint
  *
  */
+#include "traverse.h"
 
 #include <errno.h>
-#include <glib.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
-#include "file.h"
 #include "formats.h"
 #include "fts/fts.h"
-#include "logger.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
-#include "utilities.h"
 #include "xattr.h"
 
 //////////////////////
@@ -182,7 +176,9 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path, bool 
 
         rm_file_list_insert_file(file, session);
 
-        g_atomic_int_add(&session->total_files, 1);
+        if(file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            g_atomic_int_add(&session->total_files, 1);
+        }
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
         if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
@@ -332,6 +328,12 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
     return is_emptydir;
 }
 
+#define FLAG_NOT_EMPTY memset(is_emptydir, 0, p->fts_level + 1);
+
+#define FLAG_NOT_TRAVERSED                    \
+    memset(is_emptydir, 0, p->fts_level + 1); \
+    memset(is_traversed, 0, p->fts_level + 1);
+
 static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
     RmCfg *cfg = session->cfg;
     RmPath *rmpath = buffer->rmpath;
@@ -360,16 +362,28 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
         goto done;
     }
 
-    /* start main processing */
-    char is_emptydir[PATH_MAX / 2 + 1];
+    /* is_hidden[d] indicates whether path element at depth d in the current
+     * search branch is hidden (starts with '.')
+     */
     char is_hidden[PATH_MAX / 2 + 1];
-    bool have_open_emptydirs = false;
-    bool clear_emptydir_flags = false;
+
+    /* is_emptydir[d] indicates whether path element at depth d in the current
+     * search branch is empty (contains only empty dirs and zero-size files)
+     */
+    char is_emptydir[PATH_MAX / 2 + 1];
+
+    /* is_traversed[d] indicates whether path element at depth d in the current
+     * search branch has been fully traversed (no files or dirs skipped)
+     */
+    char is_traversed[PATH_MAX / 2 + 1];
+
     bool next_is_symlink = false;
 
     memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
     memset(is_hidden, 0, sizeof(is_hidden) - 1);
+    memset(is_traversed, 0, sizeof(is_traversed) - 1);
 
+    /* start main processing */
     while(!rm_session_was_aborted() && (p = fts_read(ftsp)) != NULL) {
         /* check for hidden file or folder */
         if(cfg->ignore_hidden && p->fts_level > 0 && p->fts_name[0] == '.') {
@@ -381,22 +395,20 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
             } else {
                 g_atomic_int_inc(&session->ignored_files);
             }
-
-            clear_emptydir_flags = true; /* flag current dir as not empty */
-            is_emptydir[p->fts_level] = 0;
+            FLAG_NOT_TRAVERSED;
         } else {
             switch(p->fts_info) {
             case FTS_D: /* preorder directory */
                 if(cfg->depth != 0 && p->fts_level >= cfg->depth) {
                     /* continuing into folder would exceed maxdepth*/
-                    fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
-                    clear_emptydir_flags = true; /* flag current dir as not empty */
+                    fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
+                    FLAG_NOT_TRAVERSED;
                     rm_log_debug_line("Not descending into %s because max depth reached",
                                       p->fts_path);
                 } else if(!(cfg->crossdev) && p->fts_dev != chp->fts_dev) {
                     /* continuing into folder would cross file systems*/
-                    fts_set(ftsp, p, FTS_SKIP);  /* do not recurse */
-                    clear_emptydir_flags = true; /*flag current dir as not empty*/
+                    fts_set(ftsp, p, FTS_SKIP); /* do not recurse */
+                    FLAG_NOT_TRAVERSED;
                     rm_log_info(
                         "Not descending into %s because it is a different filesystem\n",
                         p->fts_path);
@@ -405,45 +417,50 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                     is_emptydir[p->fts_level + 1] = 1;
                     is_hidden[p->fts_level + 1] =
                         is_hidden[p->fts_level] | (p->fts_name[0] == '.');
-                    have_open_emptydirs = true;
+
+                    is_traversed[p->fts_level + 1] = 1;
                 }
                 break;
             case FTS_DC: /* directory that causes cycles */
                 rm_log_warning_line(_("filesystem loop detected at %s (skipping)"),
                                     p->fts_path);
-                clear_emptydir_flags = true; /* current dir not empty */
+                FLAG_NOT_TRAVERSED;  // TODO: review whether circular dirs can still be
+                                     // empty and/or traversed
                 break;
             case FTS_DNR: /* unreadable directory */
                 rm_log_warning_line(_("cannot read directory %s: %s"), p->fts_path,
                                     g_strerror(p->fts_errno));
-                clear_emptydir_flags = true; /* current dir not empty */
+                FLAG_NOT_TRAVERSED;
                 break;
             case FTS_DOT: /* dot or dot-dot */
                 break;
             case FTS_DP: /* postorder directory */
                 if(is_emptydir[p->fts_level + 1] && cfg->find_emptydirs) {
                     ADD_FILE(RM_LINT_TYPE_EMPTY_DIR, false);
+                } else if(is_traversed[p->fts_level + 1]) {
+                    ADD_FILE(RM_LINT_TYPE_DUPE_DIR_CANDIDATE, false);
                 }
                 is_hidden[p->fts_level + 1] = 0;
                 break;
             case FTS_ERR: /* error; errno is set */
                 rm_log_warning_line(_("error %d in fts_read for %s (skipping)"), errno,
                                     p->fts_path);
-                clear_emptydir_flags = true; /*current dir not empty*/
+                FLAG_NOT_TRAVERSED;
                 break;
             case FTS_INIT: /* initialized only */
                 break;
             case FTS_SLNONE: /* symbolic link without target */
                 if(cfg->find_badlinks) {
                     ADD_FILE(RM_LINT_TYPE_BADLINK, false);
+                    FLAG_NOT_EMPTY;
+                } else {
+                    FLAG_NOT_TRAVERSED;
                 }
-                clear_emptydir_flags = true; /*current dir not empty*/
                 break;
-            case FTS_W:                      /* whiteout object */
-                clear_emptydir_flags = true; /*current dir not empty*/
+            case FTS_W: /* whiteout object */
+                FLAG_NOT_TRAVERSED;
                 break;
-            case FTS_NS: {                   /* rm_sys_stat(2) failed */
-                clear_emptydir_flags = true; /*current dir not empty*/
+            case FTS_NS: { /* rm_sys_stat(2) failed */
                 RmStat stat_buf;
 
                 /* See if your stat can do better. */
@@ -458,13 +475,15 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                                      rmpath->treat_as_single_vol, p->fts_level, FALSE,
                                      NULL);
                     rm_log_info_line(_("Added big file %s"), p->fts_path);
+                    FLAG_NOT_EMPTY;
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
+                    FLAG_NOT_TRAVERSED;
                 }
             } break;
-            case FTS_SL:                     /* symbolic link */
-                clear_emptydir_flags = true; /* current dir not empty */
+            case FTS_SL: /* symbolic link */
                 if(!cfg->follow_symlinks) {
+                    FLAG_NOT_EMPTY;
                     bool is_badlink = false;
                     if(access(p->fts_path, R_OK) == -1 && errno == ENOENT) {
                         is_badlink = true;
@@ -481,6 +500,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
                         ADD_FILE(RM_LINT_TYPE_UNKNOWN, true);
                     }
                 } else {
+                    FLAG_NOT_TRAVERSED;
                     next_is_symlink = true;
                     fts_set(ftsp, p, FTS_FOLLOW); /* do recurse */
                 }
@@ -489,29 +509,17 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
             case FTS_F:       /* regular file */
             case FTS_DEFAULT: /* any file type not explicitly described by one of the
                                  above*/
-                clear_emptydir_flags = true; /* current dir not empty*/
+                FLAG_NOT_EMPTY;
                 ADD_FILE(RM_LINT_TYPE_UNKNOWN, next_is_symlink);
                 next_is_symlink = false;
                 break;
             default:
                 /* unknown case; assume current dir not empty but otherwise do nothing */
-                clear_emptydir_flags = true;
+                FLAG_NOT_TRAVERSED;
                 rm_log_error_line(_("Unknown fts_info flag %d for file %s"), p->fts_info,
                                   p->fts_path);
                 break;
             }
-
-            if(clear_emptydir_flags) {
-                /* non-empty dir found above; need to clear emptydir flags for all open
-                 * levels */
-                if(have_open_emptydirs) {
-                    memset(is_emptydir, 0, sizeof(is_emptydir) - 1);
-                    have_open_emptydirs = false;
-                }
-                clear_emptydir_flags = false;
-            }
-            /* current dir may not be empty; by association, all open dirs are non-empty
-             */
         }
     }
 
@@ -539,8 +547,8 @@ void rm_traverse_tree(RmSession *session) {
     RmCfg *cfg = session->cfg;
 
     RmMDS *mds = session->mds;
-    rm_mds_configure(
-        mds, (RmMDSFunc)rm_traverse_directory, session, 0, cfg->threads_per_disk, NULL);
+    rm_mds_configure(mds, (RmMDSFunc)rm_traverse_directory, session, 0,
+                     cfg->threads_per_disk, NULL);
 
     /* iterate through paths */
     for(GSList *iter = cfg->paths; iter && !rm_session_was_aborted(); iter = iter->next) {

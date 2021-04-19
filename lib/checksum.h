@@ -26,12 +26,7 @@
 #ifndef RM_CHECKSUM_H
 #define RM_CHECKSUM_H
 
-#include <glib.h>
-#include <stdbool.h>
 
-#include "checksums/blake2/blake2.h"
-#include "checksums/highwayhash.h"
-#include "checksums/sha3/sha3.h"
 #include "config.h"
 
 typedef enum RmDigestType {
@@ -198,7 +193,7 @@ const char *rm_digest_type_to_string(RmDigestType type);
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed);
 
 /**
- * @brief Deallocate memory assocated with a RmDigest.
+ * @brief Deallocate memory associated with a RmDigest.
  */
 void rm_digest_free(RmDigest *digest);
 

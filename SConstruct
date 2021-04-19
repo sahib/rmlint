@@ -175,7 +175,7 @@ def check_gettext(context):
 def check_fiemap(context):
     rc = 1
 
-    if GetOption('with_gettext') is False:
+    if GetOption('with_fiemap') is False:
         rc = 0
 
     if rc and tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
@@ -546,7 +546,7 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
-# Actually instance the Environement with all collected information:
+# Actually instance the Environment with all collected information:
 env = Environment(**options)
 Export('env')
 
@@ -581,6 +581,34 @@ conf = Configure(env, custom_tests={
     'check_sysmacro_h': check_sysmacro_h
 })
 
+#######################################################################
+#                      Compiler Checks and Flags                      #
+#######################################################################
+
+if 'CC' in os.environ:
+    conf.env.Replace(CC=os.environ['CC'])
+    print(">> Using compiler: " + os.environ['CC'])
+
+if 'CFLAGS' in os.environ:
+    conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
+    print(">> Appending custom build flags : " + os.environ['CFLAGS'])
+
+if 'LDFLAGS' in os.environ:
+    conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
+    print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
+
+if 'AR' in os.environ:
+    conf.env.Replace(AR=os.environ['AR'])
+    print(">> Using ar: " + os.environ['AR'])
+
+if 'NM' in os.environ:
+    conf.env.Replace(NM=os.environ['NM'])
+    print(">> Using nm: " + os.environ['NM'])
+
+if 'RANLIB' in os.environ:
+    conf.env.Replace(RANLIB=os.environ['RANLIB'])
+    print(">> Using ranlib: " + os.environ['RANLIB'])
+
 if not conf.CheckCC():
     print('Error: Your compiler and/or environment is not correctly configured.')
     Exit(1)
@@ -607,34 +635,6 @@ if conf.env['HAVE_BLKID']:
 
 if conf.env['HAVE_GIO_UNIX']:
     packages.append('gio-unix-2.0')
-
-###########################################################################
-#                           Compiler Flags                                #
-###########################################################################
-
-if 'CC' in os.environ:
-    conf.env.Replace(CC=os.environ['CC'])
-    print(">> Using compiler: " + os.environ['CC'])
-
-if 'CFLAGS' in os.environ:
-    conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
-    print(">> Appending custom build flags : " + os.environ['CFLAGS'])
-
-if 'LDFLAGS' in os.environ:
-    conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
-    print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
-
-if 'AR' in os.environ:
-    conf.env.Replace(AR=os.environ['AR'])
-    print(">> Using ar: " + os.environ['AR'])
-
-if 'NM' in os.environ:
-    conf.env.Replace(NM=os.environ['NM'])
-    print(">> Using nm: " + os.environ['NM'])
-
-if 'RANLIB' in os.environ:
-    conf.env.Replace(RANLIB=os.environ['RANLIB'])
-    print(">> Using ranlib: " + os.environ['RANLIB'])
 
 # Support museums or other debian flavours:
 conf.check_c11()
@@ -921,9 +921,9 @@ Type 'scons' to actually compile rmlint now. Good luck.
             compiler=env['CC'],
             prefix=GetOption('prefix'),
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
-            verbose=yesno(ARGUMENTS.get('VERBOSE')),
-            debug=yesno(ARGUMENTS.get('DEBUG')),
-            symbols=yesno(ARGUMENTS.get('SYMBOLS')),
+            verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
+            debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
+            symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
             version='{a}.{b}.{c} "{n}" (rev {r})'.format(
                 a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH,
                 n=VERSION_NAME, r=env.get('gitrev', 'unknown')
