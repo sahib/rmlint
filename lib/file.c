@@ -60,12 +60,17 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     } else {
         file_size = actual_file_size * cfg->skip_end_factor;
     }
+
     if(type == RM_LINT_TYPE_DUPE_CANDIDATE || type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
         /* Check if the actual slice the file will be > 0; we don't want empty files in
          * shredder */
         if((file_size - start_seek) == 0 && actual_file_size != 0) {
             return NULL;
         }
+    }
+    else {
+        // report other types as zero-size
+        actual_file_size = 0;
     }
 
     RmFile *self = g_slice_new0(RmFile);
@@ -96,7 +101,6 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->outer_link_count = -1;
 
     self->ref_count = 1;
-
     return self;
 }
 
