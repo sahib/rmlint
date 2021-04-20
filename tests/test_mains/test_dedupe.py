@@ -4,6 +4,7 @@
 from nose import with_setup
 from nose.tools import make_decorator
 from nose.plugins.skip import SkipTest
+from nose.plugins.attrib import attr
 from contextlib import contextmanager
 import psutil
 
@@ -88,7 +89,7 @@ def test_equal_files():
             with_json=False,
             verbosity="")
 
-
+@attr('valgrind_issue')
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_hardlinks():
