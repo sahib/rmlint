@@ -109,5 +109,6 @@ setup(
             os.path.join(PREFIX, 'share/applications'),
             ['shredder.desktop']
         ),
-    ]
+    ],
+    scripts=['bin/shredder'],
 )
