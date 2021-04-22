@@ -411,7 +411,7 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
         }
 
         gdouble mtime = g_ascii_strtod(value, NULL);
-        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, MTIME_TOL) != 0) {
+        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, 1.0) != 0) {
             continue;
         }
 
@@ -461,18 +461,24 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
         }
 
         gdouble mtime = g_ascii_strtod(value, NULL);
-        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, MTIME_TOL) != 0) {
+        /* cached mtime is in whole seconds so compare with accuracy
+         * of 1.0 seconds */
+        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, 1.0) != 0) {
+            rm_log_debug_line("xattr: mtimes differ for %s %s", path, key);
             continue;
         }
 
+        /* look up the checksum for corresponding key */
         rm_xattr_change_subkey(key, "cksum");
         char *cksum = g_hash_table_lookup(map, key);
         if(cksum == NULL) {
+            rm_log_debug_line("rm_xattr_mark_deduplicated: no cksum for %s", path);
             continue;
         }
 
         rm_xattr_change_subkey(key, "dedup");
         result = rm_sys_setxattr(path, key, cksum, strlen(cksum), 0, follow_symlinks);
+        break;
     }
 
     g_hash_table_destroy(map);
