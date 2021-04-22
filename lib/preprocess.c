@@ -632,6 +632,7 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
     return num_handled;
 }
 
+
 /* This does preprocessing including handling of "other lint" (non-dupes)
  * After rm_preprocess(), all remaining duplicate candidates are in
  * a jagged GSList of GSLists as follows:
@@ -648,7 +649,7 @@ void rm_preprocess(RmSession *session) {
 
     session->total_filtered_files = session->total_files;
 
-    /* initial sort by size */
+    /* initial sort by size and then by ranking criteria */
     g_queue_sort(all_files, (GCompareDataFunc)rm_file_cmp_full, session);
     rm_log_debug_line("initial size sort finished at time %.3f; sorted %d files",
                       g_timer_elapsed(session->timer, NULL),
