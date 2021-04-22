@@ -262,7 +262,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     }
 
     gdouble xattr_mtime = g_strtod(mtime_buf, NULL);
-    if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, MTIME_TOL) != 0) {
+    if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, 1.0) != 0) {
         /* Data is too old and not useful, autoclean it */
         RM_DEFINE_PATH(file);
         rm_log_debug_line(
