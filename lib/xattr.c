@@ -262,7 +262,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     }
 
     gdouble xattr_mtime = g_strtod(mtime_buf, NULL);
-    if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, 1.0) != 0) {
+    if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, MTIME_TOL) != 0) {
         /* Data is too old and not useful, autoclean it */
         RM_DEFINE_PATH(file);
         rm_log_debug_line(
@@ -410,8 +410,9 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
             continue;
         }
 
-        gdouble mtime = g_ascii_strtod(value, NULL);
-        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, 1.0) != 0) {
+        gdouble cached_mtime = g_ascii_strtod(value, NULL);
+        gdouble mtime = rm_sys_stat_mtime_float(&stat_buf);
+        if(FLOAT_SIGN_DIFF(mtime, cached_mtime, MTIME_TOL) != 0) {
             continue;
         }
 
@@ -460,10 +461,9 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
             continue;
         }
 
-        gdouble mtime = g_ascii_strtod(value, NULL);
-        /* cached mtime is in whole seconds so compare with accuracy
-         * of 1.0 seconds */
-        if(FLOAT_SIGN_DIFF(mtime, stat_buf.st_mtime, 1.0) != 0) {
+        gdouble cached_mtime = g_ascii_strtod(value, NULL);
+        gdouble mtime = rm_sys_stat_mtime_float(&stat_buf);
+        if(FLOAT_SIGN_DIFF(mtime, cached_mtime, MTIME_TOL) != 0) {
             rm_log_debug_line("xattr: mtimes differ for %s %s", path, key);
             continue;
         }
