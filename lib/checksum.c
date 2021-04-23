@@ -698,10 +698,13 @@ static RmParanoid *rm_digest_paranoid_copy(RmParanoid *paranoid) {
 }
 
 static void rm_digest_paranoid_free(RmParanoid *paranoid) {
-    rm_digest_free(paranoid->shadow_hash);
-    rm_digest_paranoid_release_buffers(paranoid);
-    g_async_queue_unref(paranoid->incoming_twin_candidates);
-    g_slist_free(paranoid->rejects);
+    rm_digest_unref(paranoid->shadow_hash);
+    // check whether we are real or just a rm_digest_paranoid_copy():
+    if(paranoid->incoming_twin_candidates) {
+        rm_digest_paranoid_release_buffers(paranoid);
+        g_async_queue_unref(paranoid->incoming_twin_candidates);
+        g_slist_free(paranoid->rejects);
+    }
     g_slice_free(RmParanoid, paranoid);
 }
 
@@ -896,6 +899,8 @@ RmDigest *rm_digest_new(RmDigestType type, RmOff seed) {
         interface->update(digest->state, (const unsigned char *)&seed, sizeof(seed));
     }
 
+    digest->ref_count = 1;
+
     return digest;
 }
 
@@ -904,7 +909,10 @@ void rm_digest_release_buffers(RmDigest *digest) {
     rm_digest_paranoid_release_buffers(digest->state);
 }
 
-void rm_digest_free(RmDigest *digest) {
+void rm_digest_unref(RmDigest *digest) {
+    if(!g_atomic_int_dec_and_test(&digest->ref_count)) {
+        return;
+    }
     const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     interface->free(digest->state);
     g_slice_free(RmDigest, digest);
@@ -934,6 +942,7 @@ RmDigest *rm_digest_copy(RmDigest *digest) {
     g_assert(digest);
 
     RmDigest *copy = g_slice_copy(sizeof(RmDigest), digest);
+    copy->ref_count = 1;
 
     const RmDigestInterface *interface = rm_digest_get_interface(digest->type);
     if(interface->copy == NULL) {
@@ -1066,7 +1075,7 @@ guint8 *rm_digest_sum(RmDigestType algo, const guint8 *data, gsize len, gsize *o
         *out_len = digest->bytes;
     }
 
-    rm_digest_free(digest);
+    rm_digest_unref(digest);
     return buf;
 }
 

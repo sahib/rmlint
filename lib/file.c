@@ -54,6 +54,25 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
         }
     }
 
+    RmOff file_size;
+    if(cfg->use_absolute_end_offset) {
+        file_size = CLAMP(actual_file_size, 1, cfg->skip_end_offset);
+    } else {
+        file_size = actual_file_size * cfg->skip_end_factor;
+    }
+
+    if(type == RM_LINT_TYPE_DUPE_CANDIDATE || type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+        /* Check if the actual slice the file will be > 0; we don't want empty files in
+         * shredder */
+        if((file_size - start_seek) == 0 && actual_file_size != 0) {
+            return NULL;
+        }
+    }
+    else {
+        // report other types as zero-size
+        actual_file_size = 0;
+    }
+
     RmFile *self = g_slice_new0(RmFile);
     self->session = session;
 
@@ -63,30 +82,14 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->node = node;
 
     self->depth = depth;
-    self->file_size = 0;
-    self->actual_file_size = 0;
+    self->file_size = file_size;
+    self->actual_file_size = actual_file_size;
     self->n_children = 0;
 
     self->inode = statp->st_ino;
     self->dev = statp->st_dev;
     self->mtime = rm_sys_stat_mtime_float(statp);
     self->is_new = (self->mtime >= cfg->min_mtime);
-
-    if(type == RM_LINT_TYPE_DUPE_CANDIDATE || type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
-        if(cfg->use_absolute_end_offset) {
-            self->file_size = CLAMP(actual_file_size, 1, cfg->skip_end_offset);
-        } else {
-            self->file_size = actual_file_size * cfg->skip_end_factor;
-        }
-
-        /* Check if the actual slice the file will be > 0; we don't want empty files in
-         * shredder */
-        if((self->file_size - start_seek) == 0 && actual_file_size != 0) {
-            return NULL;
-        }
-
-        self->actual_file_size = actual_file_size;
-    }
 
     self->hash_offset = start_seek;
 
@@ -97,6 +100,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->path_index = path_index;
     self->outer_link_count = -1;
 
+    self->ref_count = 1;
     return self;
 }
 
@@ -127,14 +131,28 @@ RmFile *rm_file_copy(RmFile *file) {
     copy->signal = NULL;
     copy->parent_dir = NULL;
     copy->n_children = 0;
+    copy->ref_count = 1;
 
     return copy;
 }
 
-void rm_file_destroy(RmFile *file) {
+static gint rm_file_unref_impl(RmFile *file, gboolean unref_hardlinks) {
+    if(!file) {
+        return 0;
+    }
+    if(!g_atomic_int_dec_and_test(&file->ref_count)) {
+        // somebody still loves me!
+        return 0;
+    }
+
+    gint freed = 0;
     if(file->hardlinks) {
         g_queue_remove(file->hardlinks, file);
-        if(file->hardlinks->length == 0) {
+        if(unref_hardlinks) {
+            freed += rm_util_queue_foreach_remove(file->hardlinks,
+                        (RmRFunc)rm_file_unref_impl, GINT_TO_POINTER(FALSE));
+        }
+        else if(file->hardlinks->length==0) {
             g_queue_free(file->hardlinks);
         }
     }
@@ -143,12 +161,26 @@ void rm_file_destroy(RmFile *file) {
         g_free((char *)file->ext_cksum);
     }
 
-    if(file->free_digest) {
-        rm_digest_free(file->digest);
+    if(file->digest) {
+        rm_digest_unref(file->digest);
     }
-
     g_slice_free(RmFile, file);
+    return 1 + freed;
 }
+
+gint rm_file_unref(RmFile *file) {
+    return rm_file_unref_impl(file, FALSE);
+}
+
+gint rm_file_unref_full(RmFile *file) {
+    return rm_file_unref_impl(file, TRUE);
+}
+
+RmFile *rm_file_ref(RmFile *file) {
+    g_atomic_int_inc (&file->ref_count);
+    return file;
+}
+
 
 // TODO: this is replicated in formats/pretty.c...
 static const char *LINT_TYPES[] = {

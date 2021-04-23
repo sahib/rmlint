@@ -25,6 +25,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Implement --rank-by f option to rank originals by directory full path
 * Can now atomically clone from original to its hardlink via ``rmlint --dedupe``
 * Option ``-c json:traversed`` to include list of fully-traversed dirs in json output
+* Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 
 ### Changed
 

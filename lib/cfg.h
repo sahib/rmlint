@@ -96,6 +96,7 @@ typedef struct RmCfg {
     gboolean hash_uniques;
     gboolean hash_unmatched;
     gboolean keep_cached_originals;
+    gboolean ignore_bad_paths;
 
     int permissions;
 
@@ -131,7 +132,7 @@ typedef struct RmCfg {
      *     supplied by  the user, i.e.,  the sums of the  lengths of
      *     the associated lists  RmCfg::{paths,json_paths}, which is
      *     not meant to be a useful  number to know, and is simply a
-     *     byproduct of calculating path indices.
+     *     byproduct of calculating path indicies.
      */
     guint path_count;
 
@@ -174,7 +175,7 @@ typedef struct RmCfg {
     /* If true, files are hold back to
      * the end of the program run and printed then.
      */
-    gboolean cache_file_structs;
+    gboolean delay_output;
 
     /* Instead of running in duplicate detection mode,
      * check if the passed arguments are equal files

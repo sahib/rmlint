@@ -112,6 +112,28 @@ def which(program):
 
 RMLINT_BINARY_DIR = os.getcwd()
 
+def has_known_leak(*args):
+    KNOWN_LEAK_OPTIONS = {}
+    KNOWN_LEAK_SWITCHES = {}
+    KNOWN_LEAK_LINT_TYPES = []
+    LINT_TYPE_SWITCHES = {"-T", "--types"}
+    split_args = shlex.split(' '.join(args))
+    i = 0
+    while i < len(split_args):
+        arg = split_args[i]
+        if arg in KNOWN_LEAK_OPTIONS:
+            return True
+        if arg[0] == "-" and arg [1] != "-":
+            for switch in KNOWN_LEAK_SWITCHES:
+                if switch in arg:
+                    return True
+        if split_args[i] in LINT_TYPE_SWITCHES:
+            i += 1
+            for type in KNOWN_LEAK_LINT_TYPES:
+                if type in split_args[i]:
+                    return True
+        i += 1
+
 
 def run_rmlint_once(*args,
                     dir_suffix=None,
@@ -135,7 +157,7 @@ def run_rmlint_once(*args,
             'G_SLICE': 'always-malloc'
         }
         cmd = [which('valgrind'), '--error-exitcode=1', '-q']
-        if get_env_flag('RM_TS_CHECK_LEAKS'):
+        if get_env_flag('RM_TS_CHECK_LEAKS') and not has_known_leak(*args):
             cmd.extend( ['--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite'] )
     elif get_env_flag('RM_TS_USE_GDB'):
         env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']

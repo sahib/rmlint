@@ -386,9 +386,6 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
 
     cfg->find_hardlinked_dupes = true;
 
-    /* Keep RmFiles after shredder. */
-    cfg->cache_file_structs = true;
-
     return true;
 }
 
@@ -904,7 +901,7 @@ static gboolean rm_cmd_parse_sortby(_UNUSED const char *option_name,
     strncpy(cfg->rank_criteria, criteria, sizeof(cfg->rank_criteria) - 1);
 
     /* ranking the files depends on caching them to the end of the program */
-    cfg->cache_file_structs = true;
+    cfg->delay_output = true;
 
     return true;
 }
@@ -1141,6 +1138,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-followlinks"           , 'F'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(no_follow_symlinks)       , _("Ignore symlinks")                                                      , NULL}     ,
         {"paranoid"                 , 'p'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(paranoid)                 , _("Use more paranoid hashing")                                            , NULL}     ,
         {"no-crossdev"              , 'x'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->crossdev                 , _("Do not cross mountpoints")                                             , NULL}     ,
+        {"ignore-bad-paths"         , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->ignore_bad_paths         , _("Don't abort run if bad path passed to rmlint")                         , NULL}     ,
         {"keep-all-tagged"          , 'k'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_tagged          , _("Keep all tagged files")                                                , NULL}     ,
         {"keep-all-untagged"        , 'K'  , 0         , G_OPTION_ARG_NONE      , &cfg->keep_all_untagged        , _("Keep all untagged files")                                              , NULL}     ,
         {"must-match-tagged"        , 'm'  , 0         , G_OPTION_ARG_NONE      , &cfg->must_match_tagged        , _("Must have twin in tagged dir")                                         , NULL}     ,
@@ -1213,7 +1211,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"without-fiemap"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->build_fiemap           , "Do not use fiemap(2) in order to save memory"                , NULL}   ,
         {"shred-always-wait"      , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_always_wait      , "Always waits for file increment to finish hashing"           , NULL}   ,
         {"fake-pathindex-as-disk" , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_pathindex_as_disk , "Pretends each input path is a separate physical disk"        , NULL}   ,
-        {"fake-holdback"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->cache_file_structs     , "Hold back all files to the end before outputting."           , NULL}   ,
+        {"fake-holdback"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->delay_output           , "Hold back all files to the end before outputting."           , NULL}   ,
         {"fake-fiemap"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_fiemap            , "Create faked fiemap data for all files"                      , NULL}   ,
         {"fake-abort"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_abort             , "Simulate interrupt after 10% shredder progress"              , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
@@ -1295,7 +1293,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         goto cleanup;
     }
 
-    if(!rm_cmd_set_paths(session, paths)) {
+    if(!rm_cmd_set_paths(session, paths) && !cfg->ignore_bad_paths) {
         error =
             g_error_new(RM_ERROR_QUARK, 0, _("Not all given paths are valid. Aborting"));
         goto cleanup;
@@ -1397,7 +1395,8 @@ int rm_cmd_main(RmSession *session) {
         rm_log_debug_line("No mount table created.");
     }
 
-    session->mds = rm_mds_new(cfg->threads, session->mounts, cfg->fake_pathindex_as_disk);
+    bool no_mds_mount_table = cfg->fake_pathindex_as_disk || session->mounts == NULL;
+    session->mds = rm_mds_new(cfg->threads, session->mounts, no_mds_mount_table);
 
     rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
 
@@ -1412,8 +1411,6 @@ int rm_cmd_main(RmSession *session) {
                       g_timer_elapsed(session->timer, NULL), session->total_files);
 
     if(cfg->merge_directories) {
-        g_assert(cfg->cache_file_structs);
-
         /* Currently we cannot use -D and the cloning on btrfs, since this assumes the
          * same layout on two dupicate directories which is likely not a valid assumption.
          * Emit a warning if the raw -D is used in conjunction with that.
@@ -1467,7 +1464,7 @@ int rm_cmd_main(RmSession *session) {
         }
     }
 
-    if(session->total_files >= 1) {
+    if(session->total_files + session->traversed_folders > 0) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_PREPROCESS);
         rm_preprocess(session);
 

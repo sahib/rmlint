@@ -210,6 +210,7 @@ int rm_dedupe_main(int argc, const char **argv) {
 
     if(!g_option_context_parse(context, &argc, (char ***)&argv, &error)) {
         rm_log_error_line(_("Error parsing command line:\n%s"), error->message);
+        g_option_context_free(context);
         return (EXIT_FAILURE);
     }
 
@@ -218,6 +219,7 @@ int rm_dedupe_main(int argc, const char **argv) {
         rm_log_error("Error: rmlint --dedupe %s\n\n",
                      _("must have exactly two files\n\n"));
         print_usage(context);
+        g_option_context_free(context);
         return EXIT_FAILURE;
     }
 

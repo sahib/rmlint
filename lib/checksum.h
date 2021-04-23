@@ -104,6 +104,9 @@ typedef struct RmDigest {
     /* digest output size in bytes */
     gsize bytes;
 
+    /* reference count */
+    guint ref_count;
+
 } RmDigest;
 
 typedef struct RmSemaphore {
@@ -193,9 +196,19 @@ const char *rm_digest_type_to_string(RmDigestType type);
 RmDigest *rm_digest_new(RmDigestType type, RmOff seed);
 
 /**
- * @brief Deallocate memory associated with a RmDigest.
+ * @brief Decrease reference count and free memory if zero.
  */
-void rm_digest_free(RmDigest *digest);
+void rm_digest_unref(RmDigest *digest);
+
+/**
+ * @brief Increase reference count.
+ */
+inline static RmDigest* rm_digest_ref(RmDigest *digest) {
+    if(digest) {
+        g_atomic_int_inc (&digest->ref_count);
+    }
+    return digest;
+}
 
 /**
  * @brief Hash a datablock and add it to the current checksum.

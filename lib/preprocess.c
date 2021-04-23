@@ -214,12 +214,16 @@ RmFileTables *rm_file_tables_new(_UNUSED const RmSession *session) {
     return tables;
 }
 
+
 void rm_file_tables_destroy(RmFileTables *tables) {
     g_queue_free(tables->all_files);
 
-    if(tables->size_groups) {
-        g_slist_free(tables->size_groups);
-        tables->size_groups = NULL;
+    // walk along tables->size_groups, cleaning up as we go:
+    while(tables->size_groups) {
+        GSList *list = tables->size_groups->data;
+        g_slist_free_full(list, (GDestroyNotify)rm_file_unref);
+        tables->size_groups =
+                g_slist_delete_link(tables->size_groups, tables->size_groups);
     }
 
     if(tables->node_table) {
@@ -463,7 +467,7 @@ void rm_file_tables_clear(const RmSession *session) {
     while(g_hash_table_iter_next(&iter, &key, NULL)) {
         RmFile *file = key;
         if(file) {
-            rm_file_destroy(file);
+            rm_file_unref(file);
         }
     }
 }
@@ -475,12 +479,15 @@ static gboolean rm_pp_handle_other_lint(RmFile *file, const RmSession *session) 
         return FALSE;
     }
 
-    if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
-        rm_file_destroy(file);
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        session->tables->other_lint[file->lint_type] =
+                    g_list_prepend(session->tables->other_lint[file->lint_type], file);
+    } else if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
+        rm_file_unref(file);
     } else if((session->cfg->keep_all_tagged && file->is_prefd) ||
               (session->cfg->keep_all_untagged && !file->is_prefd)) {
         /* "Other" lint protected by --keep-all-{un,}tagged */
-        rm_file_destroy(file);
+        rm_file_unref(file);
     } else {
         session->tables->other_lint[file->lint_type] =
             g_list_prepend(session->tables->other_lint[file->lint_type], file);
@@ -502,7 +509,7 @@ static gboolean rm_pp_check_path_double(RmFile *file, GHashTable *unique_paths_t
     g_assert(match_double_key->file != file);
 
     rm_path_double_free(key);
-    rm_file_destroy(file);
+    rm_file_unref(file);
     return TRUE;
 }
 
@@ -514,6 +521,9 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
     if(head->hardlinks) {
         /* bundle hardlink */
         rm_file_hardlink_add(head, file);
+    }
+    else {
+        rm_file_unref(file);
     }
 
     /* remove file from inode_cluster queue */
@@ -613,13 +623,10 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
 
             file->twin_count = -1;
             rm_fmt_write(file, session->formats);
+            rm_file_unref(file);
         }
 
-        if(!session->cfg->cache_file_structs) {
-            g_list_free_full(list, (GDestroyNotify)rm_file_destroy);
-        } else {
-            g_list_free(list);
-        }
+        g_list_free(list);
     }
 
     return num_handled;

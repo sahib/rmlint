@@ -79,18 +79,23 @@ static void rm_trav_buffer_free(RmTravBuffer *self) {
 // and constructs an absolute path out of it.
 //
 // See also: https://github.com/sahib/rmlint/issues/333
-static char *rm_traverse_rel_realpath(const char *link_path, char *pointing_to) {
-    if(pointing_to == NULL) {
+static char *rm_traverse_symlink_path(const char *path) {
+    char target[PATH_MAX + 1];
+    int len = readlink(path, target, PATH_MAX);
+    if(len == -1) {
+        rm_log_debug_line("failed to follow symbolic link of %s: %s", path,
+                          g_strerror(errno));
         return NULL;
     }
+    target[len] = '\0';
 
     // Most links will already be absolute.
-    if(g_path_is_absolute(pointing_to)) {
-        return realpath(pointing_to, NULL);
+    if(g_path_is_absolute(target)) {
+        return realpath(target, NULL);
     }
 
-    char *link_dir_path = g_path_get_dirname(link_path);
-    char *full_path = g_build_path(G_DIR_SEPARATOR_S, link_dir_path, pointing_to, NULL);
+    char *link_dir_path = g_path_get_dirname(path);
+    char *full_path = g_build_path(G_DIR_SEPARATOR_S, link_dir_path, target, NULL);
     char *clean_path = realpath(full_path, NULL);
 
     g_free(link_dir_path);
@@ -141,30 +146,20 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path, bool 
         }
     }
 
-    // bool path_needs_free = false;
+    char *resolved_path = NULL;
     if(is_symlink && cfg->follow_symlinks) {
-        char *new_path_buf = g_malloc0(PATH_MAX + 1);
-        if(readlink(path, new_path_buf, PATH_MAX) == -1) {
-            rm_log_debug_line("failed to follow symbolic link of %s: %s", path,
-                              g_strerror(errno));
-            g_free(new_path_buf);
+        resolved_path = rm_traverse_symlink_path(path);
+        if(resolved_path == NULL) {
             return FALSE;
         }
-
-        char *resolved_path = rm_traverse_rel_realpath(path, new_path_buf);
-        g_free(new_path_buf);
-
         path = resolved_path;
         is_symlink = false;
-        // path_needs_free = true;
     }
 
     RmFile *file =
         rm_file_new(session, path, statp, file_type, is_prefd, path_index, depth, NULL);
 
-    // if(path_needs_free) {
-    //    g_free(path);
-    //}
+    g_free(resolved_path);
 
     if(file != NULL) {
         file->is_symlink = is_symlink;
@@ -176,7 +171,10 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path, bool 
 
         rm_file_list_insert_file(file, session);
 
-        if(file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+            g_atomic_int_add(&session->traversed_folders, 1);
+        }
+        else {
             g_atomic_int_add(&session->total_files, 1);
         }
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_TRAVERSE);
@@ -563,20 +561,7 @@ void rm_traverse_tree(RmSession *session) {
             is_hidden = rm_util_path_is_hidden(rmpath->path);
         }
 
-        if(S_ISLNK(buffer->stat_buf.st_mode) && !rmpath->realpath_worked) {
-            /* A symlink where we could not get the actual path from
-             * (and it was given directly, e.g. by a find call)
-             */
-            rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
-                             rmpath->idx, RM_LINT_TYPE_BADLINK, false, is_hidden, FALSE,
-                             0, FALSE, NULL);
-        } else if(S_ISREG(buffer->stat_buf.st_mode)) {
-            rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
-                             rmpath->idx, RM_LINT_TYPE_UNKNOWN, false, is_hidden, FALSE,
-                             0, FALSE, NULL);
-
-            rm_trav_buffer_free(buffer);
-        } else if(S_ISDIR(buffer->stat_buf.st_mode)) {
+        if(S_ISDIR(buffer->stat_buf.st_mode)) {
             /* It's a directory, traverse it. */
             buffer->disk = rm_mds_device_get(mds, rmpath->path,
                                              (cfg->fake_pathindex_as_disk)
@@ -585,9 +570,23 @@ void rm_traverse_tree(RmSession *session) {
             rm_mds_device_ref(buffer->disk, 1);
             rm_mds_push_task(buffer->disk, buffer->stat_buf.st_dev, 0, rmpath->path,
                              buffer);
-
-        } else {
-            /* Probably a block device, fifo or something weird. */
+        }
+        else {
+            if(S_ISLNK(buffer->stat_buf.st_mode) && !rmpath->realpath_worked) {
+                /* A symlink where we could not get the actual path from
+                 * (and it was given directly, e.g. by a find call)
+                 */
+                rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
+                                 rmpath->idx, RM_LINT_TYPE_BADLINK, false, is_hidden, FALSE,
+                                 0, FALSE, NULL);
+            } else if(S_ISREG(buffer->stat_buf.st_mode)) {
+                rm_traverse_file(session, &buffer->stat_buf, rmpath->path, rmpath->is_prefd,
+                                 rmpath->idx, RM_LINT_TYPE_UNKNOWN, false, is_hidden, FALSE,
+                                 0, FALSE, NULL);
+            } else {
+                /* Probably a block device, fifo or something weird. */
+                rm_log_warning_line(_("Unable to process path %s"), rmpath->path);
+            }
             rm_trav_buffer_free(buffer);
         }
     }

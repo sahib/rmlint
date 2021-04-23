@@ -549,7 +549,7 @@ static void rm_shred_mem_return(RmShredGroup *group) {
             tag->mem_refusing = FALSE;
             if(group->digest) {
                 g_assert(group->digest->type == RM_DIGEST_PARANOID);
-                rm_digest_free(group->digest);
+                rm_digest_unref(group->digest);
                 group->digest = NULL;
             }
         }
@@ -708,7 +708,7 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
 
 /* Unlink RmFile from Shredder
  */
-static void rm_shred_discard_file(RmFile *file, bool free_file) {
+static void rm_shred_discard_file(RmFile *file, _UNUSED gpointer user_data) {
     const RmSession *session = file->session;
     RmShredTag *tag = session->shredder;
 
@@ -719,10 +719,8 @@ static void rm_shred_discard_file(RmFile *file, bool free_file) {
         rm_shred_adjust_counters(tag, -1, -(gint64)(file->file_size - file->hash_offset));
     }
 
-    if(free_file) {
-        /* toss the file (and any embedded hardlinks)*/
-        rm_file_destroy(file);
-    }
+    /* toss the file (and any embedded hardlinks)*/
+    rm_file_unref(file);
 }
 
 /* Push file to scheduler queue.
@@ -749,24 +747,20 @@ static void rm_shred_push_queue(RmFile *file) {
 
 /* Free RmShredGroup and any dormant files still in its queue
  */
-static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
+static void rm_shred_group_free(RmShredGroup *self) {
     g_assert(self);
     g_assert(self->parent == NULL); /* children should outlive their parents! */
     g_assert(self->num_pending == 0);
 
-    RmCfg *cfg = self->session->cfg;
-
-    bool needs_free = !(cfg->cache_file_structs) || force_free;
-
     if(self->held_files) {
         g_queue_foreach(self->held_files, (GFunc)rm_shred_discard_file,
-                        GUINT_TO_POINTER(needs_free));
+                        NULL);
         g_queue_free(self->held_files);
         self->held_files = NULL;
     }
 
-    if(self->digest && needs_free) {
-        rm_digest_free(self->digest);
+    if(self->digest) {
+        rm_digest_unref(self->digest);
         self->digest = NULL;
     }
 
@@ -814,8 +808,8 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
         break;
     case RM_SHRED_GROUP_START_HASHING:
     case RM_SHRED_GROUP_HASHING:
-        /* intermediate increment group no longer required; force free */
-        rm_shred_group_free(self, TRUE);
+        /* intermediate increment group no longer required */
+        rm_shred_group_free(self);
         break;
     case RM_SHRED_GROUP_FINISHING:
         /* free any paranoid buffers held in group->digest (should not be needed for
@@ -898,7 +892,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
     file->shred_group = shred_group;
 
     if(file->digest) {
-        rm_digest_free(file->digest);
+        rm_digest_unref(file->digest);
         file->digest = NULL;
     }
 
@@ -1002,10 +996,7 @@ static RmFile *rm_shred_sift(RmFile *file) {
 
         if(file->status == RM_FILE_STATE_IGNORE) {
             /* reading/hashing failed somewhere */
-            if(file->digest) {
-                rm_digest_free(file->digest);
-            }
-            rm_shred_discard_file(file, true);
+            rm_shred_discard_file(file, NULL);
 
         } else {
             g_assert(file->digest);
@@ -1057,7 +1048,7 @@ static void rm_shred_hash_callback(_UNUSED RmHasher *hasher,
                                    _UNUSED RmShredTag *tag,
                                    RmFile *file) {
     if(!file->digest) {
-        file->digest = digest;
+        file->digest = rm_digest_ref(digest);
     }
     g_assert(file->digest == digest);
     g_assert(file->hash_offset == file->shred_group->next_offset);
@@ -1252,9 +1243,10 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
     } else {
         int comparison = rm_pp_cmp_orig_criteria(a, b, session);
         if(comparison == 0) {
+            /* if already tagged original elsewhere then respect that */
             return b->is_original - a->is_original;
         }
-
+        /* fall back to -S criteria */
         return comparison;
     }
 }
@@ -1513,7 +1505,8 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     for(GList *iter = group->held_files->head; iter; iter = iter->next) {
         /* link file to its (shared) digest */
         RmFile *file = iter->data;
-        file->digest = group->digest;
+        g_assert(!file->digest);
+        file->digest = rm_digest_ref(group->digest);
 
         /* Cache the files for merging them into directories */
         if(treemerge) {
@@ -1535,8 +1528,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     rm_log_debug_line("Free from rm_shred_group_postprocess");
 #endif
 
-    /* Do not force free files here, output module might need do that itself. */
-    rm_shred_group_free(group, false);
+    rm_shred_group_free(group);
 }
 
 /* runs as single-threaded threadpool */
