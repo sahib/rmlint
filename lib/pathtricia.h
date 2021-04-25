@@ -29,6 +29,11 @@
 #include <glib.h>
 #include <stdbool.h>
 
+// used to identify RmNodes that haven't been stat'd yet
+#define RM_NO_INODE ((ino_t) 0)
+#define RM_NO_DEV  ((dev_t) 0)
+
+
 typedef struct _RmNode {
     /* Element of the path */
     char *basename;
@@ -41,6 +46,10 @@ typedef struct _RmNode {
 
     /* Levels below root (root==0) */
     guint16 depth;
+
+    /* The device and of this file / folder */
+    dev_t dev;
+    ino_t inode;
 
     /* data was set explicitly */
     char has_value : 1;
@@ -63,6 +72,19 @@ typedef struct _RmTrie {
     GMutex lock;
 } RmTrie;
 
+dev_t rm_node_get_dev(RmNode *node);
+ino_t rm_node_get_inode(RmNode *node);
+
+
+inline dev_t rm_node_dev(RmNode *node) {
+    return node->dev != RM_NO_DEV ? node->dev : rm_node_get_dev(node);
+}
+
+inline ino_t rm_node_inode(RmNode *node) {
+    return node->dev != RM_NO_DEV ? node->dev : rm_node_get_inode(node);
+}
+
+
 /* Callback to rm_trie_iter */
 typedef int (*RmTrieIterCallback)(RmNode *node, void *user_data);
 
@@ -80,11 +102,12 @@ void rm_trie_destroy(RmTrie *self);
 
 /**
  * rm_trie_insert:
- * Insert a path to the trie and associate a value with it.
- * The value can be later requested with rm_trie_search*.
+ * Insert a path to the trie.
  */
-RmNode *rm_trie_insert(RmTrie *self, const char *path);
-RmNode *rm_trie_insert_unlocked(RmTrie *self, const char *path);
+RmNode *rm_trie_insert(RmTrie *self, const char *path, dev_t dev, ino_t inode);
+
+RmNode *rm_trie_insert_unlocked(RmTrie *self, const char *path, dev_t dev,
+        ino_t inode);
 
 /**
  * rm_trie_search_node:

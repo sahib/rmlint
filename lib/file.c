@@ -77,7 +77,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->session = session;
 
     if(!node) {
-        node = rm_trie_insert(&cfg->file_trie, path);
+        node = rm_trie_insert(&cfg->file_trie, path, statp->st_dev, statp->st_ino);
     }
     self->node = node;
 
@@ -86,8 +86,6 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->actual_file_size = actual_file_size;
     self->n_children = 0;
 
-    self->inode = statp->st_ino;
-    self->dev = statp->st_dev;
     self->mtime = rm_sys_stat_mtime_float(statp);
     self->is_new = (self->mtime >= cfg->min_mtime);
 

@@ -27,14 +27,19 @@
 #include <string.h>
 
 #include "config.h"
+#include "utilities.h"
 
 //////////////////////////
 //  RmPathNode Methods  //
 //////////////////////////
 
+
 static RmNode *rm_node_new(RmTrie *trie, const char *elem, guint8 depth) {
     RmNode *self = g_slice_alloc0(sizeof(RmNode));
     self->depth = depth;
+    self->inode = RM_NO_INODE;
+    self->dev = RM_NO_DEV;
+
     if(elem != NULL) {
         /* Note: We could use g_string_chunk_insert_const here.
          * That would keep a hash table with all strings internally though,
@@ -68,6 +73,36 @@ static RmNode *rm_node_insert(RmTrie *trie, RmNode *parent, const char *elem) {
     }
 
     return exists;
+}
+
+static void rm_node_check_inode(RmNode *node) {
+    if(node->dev != RM_NO_DEV) {
+        g_assert(node->inode != RM_NO_INODE);
+        return;
+    }
+    char path[PATH_MAX];
+    rm_trie_build_path_unlocked(node, path, PATH_MAX - 1);
+    RmStat stat_buf;
+    if(rm_sys_stat(path, &stat_buf) == 0) {
+        node->dev = stat_buf.st_dev;
+        node->inode = stat_buf.st_ino;
+    }
+    if(node->dev == RM_NO_DEV) {
+        rm_log_error_line("Failed to get dev,inode for %s", path);
+    }
+    else if(node->inode == RM_NO_INODE) {
+        rm_log_error_line("Got unexpected inode == 0 for %s", path);
+    }
+}
+
+dev_t rm_node_get_dev(RmNode *node) {
+    rm_node_check_inode(node);
+    return node->dev;
+}
+
+ino_t rm_node_get_inode(RmNode *node) {
+    rm_node_check_inode(node);
+    return node->inode;
 }
 
 ///////////////////////////
@@ -116,7 +151,7 @@ char *rm_path_iter_next(RmPathIter *iter) {
     return elem_begin;
 }
 
-RmNode *rm_trie_insert(RmTrie *self, const char *path) {
+RmNode *rm_trie_insert(RmTrie *self, const char *path, dev_t dev, ino_t inode) {
     g_assert(self);
     g_assert(path);
 
@@ -134,6 +169,14 @@ RmNode *rm_trie_insert(RmTrie *self, const char *path) {
 
         g_assert(curr_node != NULL);
         curr_node->has_value = true;
+        if(curr_node->dev == RM_NO_DEV) {
+            curr_node->dev = dev;
+            curr_node->inode = inode;
+        }
+        else {
+            g_assert(curr_node->dev == dev || dev == RM_NO_DEV);
+            g_assert(curr_node->inode == inode || inode == RM_NO_INODE);
+        }
         self->size++;
     }
 

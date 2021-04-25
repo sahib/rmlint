@@ -52,7 +52,7 @@ typedef struct RmFmtHandlerJSON {
 static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
                                        const char *file_path, char *cksum) {
     guint32 hash = 0;
-    hash = file->inode ^ file->dev;
+    hash = rm_file_inode(file) ^ rm_file_dev(file);
     hash ^= file->actual_file_size;
 
     for(int i = 0; i < 8192; ++i) {
@@ -235,8 +235,8 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent,
     json_object_set_string_member(elem, "path", file_path);
     json_object_set_int_member(elem, "size", file->actual_file_size);
     json_object_set_int_member(elem, "depth", file->depth);
-    json_object_set_int_member(elem, "inode", file->inode);
-    json_object_set_int_member(elem, "disk_id", file->dev);
+    json_object_set_int_member(elem, "inode", rm_file_inode(file));
+    json_object_set_int_member(elem, "disk_id", rm_file_dev(file));
     json_object_set_boolean_member(elem, "is_original", file->is_original);
 
     if(file->lint_type == RM_LINT_TYPE_DUPE_DIR) {

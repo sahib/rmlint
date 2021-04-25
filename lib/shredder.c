@@ -729,15 +729,15 @@ static void rm_shred_push_queue(RmFile *file) {
     if(file->hash_offset == 0) {
         /* first-timer; lookup disk offset */
         if(file->session->cfg->build_fiemap &&
-           !rm_mounts_is_nonrotational(file->session->mounts, file->dev)) {
+           !rm_mounts_is_nonrotational(file->session->mounts, rm_file_dev(file))) {
             RM_DEFINE_PATH(file);
             file->disk_offset = rm_offset_get_from_path(file_path, 0, NULL);
         } else {
             /* use inode number instead of disk offset */
-            file->disk_offset = file->inode;
+            file->disk_offset = rm_file_inode(file);
         }
     }
-    rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
+    rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
 }
 
 //////////////////////////////////
@@ -1105,7 +1105,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
     file->disk = rm_mds_device_get(
         session->mds, file_path,
-        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : file->dev);
+        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : rm_file_dev(file));
     rm_mds_device_ref(file->disk, 1);
 
     rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
@@ -1722,7 +1722,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     }
     if(file) {
         /* file was not handled by rm_shred_sift so we need to add it back to the queue */
-        rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
+        rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
     }
     return result;
 }

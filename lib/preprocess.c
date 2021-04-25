@@ -116,11 +116,12 @@ static gint rm_file_cmp_split(const RmFile *file_a, const RmFile *file_b,
 }
 
 static guint rm_node_hash(const RmFile *file) {
-    return file->inode ^ file->dev;
+    return rm_file_inode(file) ^ rm_file_dev(file);
 }
 
 static gboolean rm_node_equal(const RmFile *file_a, const RmFile *file_b) {
-    return (file_a->inode == file_b->inode) && (file_a->dev == file_b->dev);
+    return (rm_file_inode(file_a) == rm_file_inode(file_b) &&
+            rm_file_dev(file_a) == rm_file_dev(file_b));
 }
 
 /* GHashTable key tuned to recognize duplicate paths.
@@ -169,11 +170,11 @@ static bool rm_path_have_same_parent(RmPathDoubleKey *key_a, RmPathDoubleKey *ke
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
-    if(key_a->file->inode != key_b->file->inode) {
+    if(rm_file_inode(key_a->file) != rm_file_inode(key_b->file)) {
         return FALSE;
     }
 
-    if(key_a->file->dev != key_b->file->dev) {
+    if(rm_file_dev(key_a->file) != rm_file_dev(key_b->file)) {
         return FALSE;
     }
 
