@@ -116,25 +116,24 @@ char *rm_path_iter_next(RmPathIter *iter) {
     return elem_begin;
 }
 
-RmNode *rm_trie_insert(RmTrie *self, const char *path, void *value) {
+RmNode *rm_trie_insert(RmTrie *self, const char *path) {
     g_assert(self);
     g_assert(path);
 
     RmPathIter iter;
     rm_path_iter_init(&iter, path);
-
-    g_mutex_lock(&self->lock);
-
-    char *path_elem = NULL;
     RmNode *curr_node = self->root;
 
-    while((path_elem = rm_path_iter_next(&iter))) {
-        curr_node = rm_node_insert(self, curr_node, path_elem);
-    }
+    g_mutex_lock(&self->lock);
+    {
+        char *path_elem = NULL;
 
-    if(curr_node != NULL) {
+        while((path_elem = rm_path_iter_next(&iter))) {
+            curr_node = rm_node_insert(self, curr_node, path_elem);
+        }
+
+        g_assert(curr_node != NULL);
         curr_node->has_value = true;
-        curr_node->data = value;
         self->size++;
     }
 
