@@ -63,7 +63,8 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
         }
     }
 
-    if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY) {
+    if(file->lint_type == RM_LINT_TYPE_PART_OF_DIRECTORY ||
+            file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         return;
     }
 
