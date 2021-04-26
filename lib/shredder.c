@@ -1151,7 +1151,6 @@ static gint rm_shred_cmp_ext_cksum(RmFile *a, RmFile *b) {
 }
 
 static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
-    g_assert(files);
     g_assert(files->data);
 
     /* cluster hardlinks and ext_cksum matches;

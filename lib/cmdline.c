@@ -1473,9 +1473,6 @@ int rm_cmd_main(RmSession *session) {
 
             rm_log_debug_line("Dupe search finished at time %.3f",
                               g_timer_elapsed(session->timer, NULL));
-        } else {
-            /* Clear leftovers */
-            rm_file_tables_clear(session);
         }
     }
 

@@ -38,12 +38,6 @@ typedef struct RmFileTables {
     /* GSList of GList's, one for each file size */
     GSList *size_groups;
 
-    /* Used for finding inode matches */
-    GHashTable *node_table;
-
-    /* Used for finding path doubles */
-    GHashTable *unique_paths_table;
-
     /*array of lists, one for each "other lint" type */
     GList *other_lint[RM_LINT_TYPE_DUPE_CANDIDATE];
 
@@ -87,6 +81,8 @@ typedef struct RmSession {
     volatile gint traversed_folders;
     volatile gint ignored_files;
     volatile gint ignored_folders;
+
+    volatile gpointer unique_id;
 
     RmOff total_filtered_files;
     RmOff total_lint_size;
