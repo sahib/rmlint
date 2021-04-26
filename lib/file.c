@@ -219,9 +219,12 @@ gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {
     if(!head->hardlinks) {
         head->hardlinks = g_queue_new();
+        g_queue_push_tail(head->hardlinks, head);
     }
-    link->hardlinks = head->hardlinks;
-    g_queue_push_tail(head->hardlinks, link);
+    if(link != head) {
+        link->hardlinks = head->hardlinks;
+        g_queue_push_tail(head->hardlinks, link);
+    }
 }
 
 static gint rm_file_foreach_hardlink(RmFile *f, RmRFunc func, gpointer user_data) {
