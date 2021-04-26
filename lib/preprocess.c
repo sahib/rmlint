@@ -143,30 +143,11 @@ static guint rm_path_double_hash(const RmPathDoubleKey *key) {
     return rm_node_hash(key->file);
 }
 
-static ino_t rm_path_parent_inode(RmFile *file) {
-    char parent_path[PATH_MAX];
-    rm_trie_build_path((RmTrie *)&file->session->cfg->file_trie,
-                       file->node->parent,
-                       parent_path,
-                       PATH_MAX);
-
-    RmStat stat_buf;
-    int retval = rm_sys_stat(parent_path, &stat_buf);
-    if(retval == -1) {
-        RM_DEFINE_PATH(file);
-        rm_log_error_line("Failed to get parent path of %s: stat failed: %s",
-                          file_path,
-                          g_strerror(errno));
-        return 0;
-    }
-
-    return stat_buf.st_ino;
-}
 
 static bool rm_path_have_same_parent(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
     RmFile *file_a = key_a->file, *file_b = key_b->file;
     return (file_a->node->parent == file_b->node->parent ||
-            rm_path_parent_inode(file_a) == rm_path_parent_inode(file_b));
+            rm_file_parent_inode(file_a) == rm_file_parent_inode(file_b));
 }
 
 static gboolean rm_path_double_equal(RmPathDoubleKey *key_a, RmPathDoubleKey *key_b) {
