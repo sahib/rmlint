@@ -70,7 +70,7 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
 /**
  * @brief: Check if two files are equal in terms of size, and match_* options.
  */
-gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b);
+gint rm_file_cmp_group(const RmFile *file_a, const RmFile *file_b);
 
 /**
  * @brief: Compile all r<PATTERN> constructs in `sortcrit` to a GRegex

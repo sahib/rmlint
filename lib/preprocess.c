@@ -30,6 +30,97 @@
 
 #include "formats.h"
 
+
+////////////////////////////////////////////////
+// Handling of "Other Lint" (not duplicates)  //
+////////////////////////////////////////////////
+
+
+/* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint and
+ * return 1; else return 0 */
+static gint rm_pp_sift_other_lint(RmFile *file, const RmSession *session) {
+    if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
+        return 0;
+    }
+
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        session->tables->other_lint[file->lint_type] =
+                    g_list_prepend(session->tables->other_lint[file->lint_type], file);
+    } else if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
+        rm_file_unref(file);
+    } else if((session->cfg->keep_all_tagged && file->is_prefd) ||
+              (session->cfg->keep_all_untagged && !file->is_prefd)) {
+        /* "Other" lint protected by --keep-all-{un,}tagged */
+        rm_file_unref(file);
+    } else {
+        session->tables->other_lint[file->lint_type] =
+            g_list_prepend(session->tables->other_lint[file->lint_type], file);
+    }
+    return 1;
+}
+
+/*  for sorting emptydirs into bottom-up order for bottom-up deletion */
+static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {
+    RM_DEFINE_PATH(a);
+    RM_DEFINE_PATH(b);
+    return g_strcmp0(b_path, a_path);
+}
+
+
+static RmOff rm_pp_handler_other_lint(const RmSession *session) {
+    RmOff num_handled = 0;
+    RmFileTables *tables = session->tables;
+
+    for(RmOff type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
+        if(type == RM_LINT_TYPE_EMPTY_DIR) {
+            tables->other_lint[type] = g_list_sort(
+                tables->other_lint[type], (GCompareFunc)rm_pp_cmp_reverse_alphabetical);
+        }
+
+        GList *list = tables->other_lint[type];
+        for(GList *iter = list; iter; iter = iter->next) {
+            RmFile *file = iter->data;
+
+            g_assert(file);
+            g_assert(type == file->lint_type);
+
+            num_handled++;
+
+            file->twin_count = -1;
+            rm_fmt_write(file, session->formats);
+            rm_file_unref(file);
+        }
+
+        g_list_free(list);
+    }
+
+    return num_handled;
+}
+
+
+///////////////////////////////
+//     Sort Functions        //
+///////////////////////////////
+
+/* Much of the preprocessing is done by sorting.  For example, hardlinks are
+ * detected by sorting files by dev/inode, which is guaranteed to bring
+ * hardlinks together, and then comparing adjacent members.  A more conventional
+ * approach would be to use a hashtable with <dev,inode> as key.  However, for
+ * a use-once-and-then-discard application like this we have found that the
+ * sort-based method is about 30% quicker and uses less RAM.
+ *
+ * This section defines the sort functions used for preprocessing.
+ *
+ */
+
+
+/*--------------------------------------------------------------------*/
+/*  --match-basename, --match-extension and --match-without-extension */
+
+/* Compare func to sort two RmFiles in order of filename extension
+ * eg comparing "/path1/foo.c" vs "/path2/bar.c" should return 0 (both .c)
+ * Used for --match-extension option.
+ */
 static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_b) {
     char *ext_a = rm_util_path_extension(file_a->node->basename);
     char *ext_b = rm_util_path_extension(file_b->node->basename);
@@ -42,6 +133,9 @@ static gint rm_file_cmp_with_extension(const RmFile *file_a, const RmFile *file_
     }
 }
 
+/* Compare func to sort two RmFiles in order of filename excluding extension,
+ * eg comparing "/path1/foo.c" vs "/path2/foo.h" should return 0 (both foo)
+ * Used for --match-without-extension option */
 static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *file_b) {
     const char *basename_a = file_a->node->basename;
     const char *basename_b = file_b->node->basename;
@@ -58,45 +152,36 @@ static gint rm_file_cmp_without_extension(const RmFile *file_a, const RmFile *fi
     return g_ascii_strncasecmp(basename_a, basename_b, a_len);
 }
 
-/* test if two files qualify for the same "group"; if not then rank them by
- * size and then other factors depending on settings */
-gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
-    gint result = SIGN_DIFF(file_a->file_size, file_b->file_size);
-    RETURN_IF_NONZERO(result);
 
-    RmCfg *cfg = file_a->session->cfg;
-
-    if(cfg->match_basename) {
-        result = rm_file_basenames_cmp(file_a, file_b);
-        RETURN_IF_NONZERO(result);
-    }
-
-    if(cfg->match_with_extension) {
-        result = rm_file_cmp_with_extension(file_a, file_b);
-        RETURN_IF_NONZERO(result);
-    }
-
-    if(cfg->match_without_extension) {
-        result = rm_file_cmp_without_extension(file_a, file_b);
-    }
-
-    return result;
-}
+/*--------------------------------------------------------------------*/
+/*  hardlink and samefile detection                                   */
 
 
-// returns 0 if hardlink or path double, else sorts
-static gint rm_file_cmp_hardlink(const RmFile *a, const RmFile *b) {
+/* Compare func to sort two RmFiles into "hardlink" order.  Sorting a list of
+ * files according to this func will guarantee that hardlinked files are
+ * adjacent to each other.  Hardlinks can then be found by finding
+ * adjacent files where rm_file_cmp_hardlink(a, b) == 0 */
+ static gint rm_file_cmp_hardlink(const RmFile *a, const RmFile *b) {
     RETURN_IF_NONZERO(SIGN_DIFF(a->actual_file_size, b->actual_file_size));
     RETURN_IF_NONZERO(SIGN_DIFF(rm_file_dev(a), rm_file_dev(b)));
     return SIGN_DIFF(rm_file_inode(a), rm_file_inode(b));
 }
 
+/* Compare func as per rm_file_cmp_hardlink except that, additionally, files
+ * within each group of hardlinks are sorted in accordance with --rank-by
+ * criteria.  This facilitates hardlink detection and identification of which
+ * is the "original" hardlink */
 static gint rm_file_cmp_hardlink_full(const RmFile *a, const RmFile *b, RmSession *session) {
     RETURN_IF_NONZERO(rm_file_cmp_hardlink(a, b));
     return rm_pp_cmp_orig_criteria(a, b, session);
 }
 
-// returns 0 if same file / path double, else sorts
+/* Compare func to sort two RmFiles into "samefile" order.  Sorting a list of
+ * files according to this func will guarantee that "samefiles" (two pointers
+ * to the same file, for example '/path/file'=='/path/file'
+ * or '/path/file' == '/bindmount/file') are adjacent to each other.
+ * 'Samefile's can then be found by finding adjacent files where
+ * rm_file_cmp_samefile(a, b) == 0 */
 static gint rm_file_cmp_samefile(const RmFile *a, const RmFile *b) {
     RETURN_IF_NONZERO(rm_file_cmp_hardlink(a, b));
     RETURN_IF_NONZERO(SIGN_DIFF(
@@ -104,38 +189,80 @@ static gint rm_file_cmp_samefile(const RmFile *a, const RmFile *b) {
     return g_strcmp0(a->node->basename, b->node->basename);
 }
 
+/* Compare func as per rm_file_cmp_samefile except that, additionally, files
+ * within each group of samefile's are sorted in accordance with --rank-by
+ * criteria.  This facilitates samefile detection and identification of which
+ * samefile to discard */
 static gint rm_file_cmp_samefile_full(const RmFile *a, const RmFile *b, RmSession *session) {
     RETURN_IF_NONZERO(rm_file_cmp_samefile(a, b));
     return rm_pp_cmp_orig_criteria(a, b, session);
 }
 
-RmFileTables *rm_file_tables_new(_UNUSED const RmSession *session) {
-    RmFileTables *tables = g_slice_new0(RmFileTables);
+/* remove path doubles / samefiles */
+static gint rm_pp_remove_path_doubles(RmSession *session, GQueue *files) {
+    guint removed = 0;
+    /* sort which will move path doubles together and then rank them
+     * in order of -S criteria
+     */
+    g_queue_sort(files, (GCompareDataFunc)rm_file_cmp_samefile_full, session);
 
-    tables->all_files = g_queue_new();
+    rm_log_debug_line("initial size sort finished at time %.3f; sorted %d files",
+                      g_timer_elapsed(session->timer, NULL),
+                      session->total_files);
 
-    g_mutex_init(&tables->lock);
-    return tables;
+    for(GList *i = files->head; i && i->next; ) {
+        RmFile *this = i->data;
+        RmFile *next = i->next->data;
+        if(rm_file_cmp_samefile(this, next) == 0) {
+            rm_file_unref(next);
+            g_queue_delete_link(files, i->next);
+            removed++;
+        }
+        else {
+            i = i->next;
+        }
+    }
+    return removed;
+}
+
+/* bundle or remove hardlinks */
+static gint rm_pp_bundle_hardlinks(RmSession *session, GQueue *files) {
+    guint removed = 0;
+    /* sort so that files are in size order, and hardlinks are adjacent and
+     * in -S criteria order, */
+    g_queue_sort(files, (GCompareDataFunc)rm_file_cmp_hardlink_full, session);
+
+    for(GList *i = files->head; i && i->next; ) {
+        RmFile *this = i->data;
+        RmFile *next = i->next->data;
+        if(rm_file_cmp_hardlink(this, next) == 0) {
+            // it's a hardlink of prev
+            if(session->cfg->find_hardlinked_dupes) {
+                /* bundle next file under previous->hardlinks */
+                rm_file_hardlink_add(this, next);
+            }
+            else {
+                rm_file_unref(next);
+            }
+            g_queue_delete_link(files, i->next);
+            removed++;
+        }
+        else {
+            i = i->next;
+        }
+    }
+    return removed;
 }
 
 
-void rm_file_tables_destroy(RmFileTables *tables) {
-    if(tables->all_files) {
-        g_queue_free(tables->all_files);
-    }
 
-    // walk along tables->size_groups, cleaning up as we go:
-    while(tables->size_groups) {
-        GSList *list = tables->size_groups->data;
-        g_slist_free_full(list, (GDestroyNotify)rm_file_unref);
-        tables->size_groups =
-                g_slist_delete_link(tables->size_groups, tables->size_groups);
-    }
+/*--------------------------------------------------------------------*/
+/*  --rank-by options                                                 */
 
-    g_mutex_clear(&tables->lock);
-    g_slice_free(RmFileTables, tables);
-}
 
+/* Parse pattern specified in `--rank-by x<pattern>` (rank by regex of basename)
+ * or `--rank-by r<pattern>` (rank by regex of full path)
+ */
 static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **error) {
     if(*pattern != '<') {
         g_set_error(error, RM_ERROR_QUARK, 0, _("Pattern has to start with `<`"));
@@ -190,65 +317,9 @@ static size_t rm_pp_parse_pattern(const char *pattern, GRegex **regex, GError **
     return src_len + 2;
 }
 
-/* Compile all regexes inside a sortcriteria string.
- * Every regex (enclosed in <>)  will be removed from the
- * sortcriteria spec, so that the returned string will
- * consist only of single letters.
- */
-char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
-    /* Total of encountered patterns */
-    int pattern_count = 0;
 
-    /* Copy of the sortcriteria without pattern specs in <> */
-    size_t minified_cursor = 0;
-    char *minified_sortcrit = g_strdup(sortcrit);
-
-    for(size_t i = 0; sortcrit[i]; i++) {
-        /* Copy everything that is not a regex pattern */
-        minified_sortcrit[minified_cursor++] = sortcrit[i];
-        char curr_crit = tolower((unsigned char)sortcrit[i]);
-
-        /* Check if it's a non-regex sortcriteria */
-        if(!(curr_crit == 'r' || curr_crit == 'x')) {
-            continue;
-        }
-
-        if(sortcrit[i + 1] != '<') {
-            g_set_error(error, RM_ERROR_QUARK, 0,
-                        _("no pattern given in <> after 'r' or 'x'"));
-            break;
-        }
-
-        GRegex *regex = NULL;
-
-        /* Jump over the regex pattern part */
-        i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
-
-        if(regex != NULL) {
-            if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
-                /* Append to already compiled patterns */
-                g_ptr_array_add(session->pattern_cache, regex);
-                pattern_count++;
-            } else if(pattern_count != -1) {
-                g_set_error(error, RM_ERROR_QUARK, 0,
-                            _("Cannot add more than %lu regex patterns."),
-                            (unsigned long)RM_PATTERN_N_MAX);
-
-                /* Make sure to set the warning only once */
-                pattern_count = -1;
-                g_regex_unref(regex);
-            } else {
-                g_regex_unref(regex);
-            }
-        }
-    }
-
-    g_prefix_error(error, _("Error while parsing sortcriteria patterns: "));
-
-    minified_sortcrit[minified_cursor] = 0;
-    return minified_sortcrit;
-}
-
+/* Compare path_a vs path_b according to regex; uses mask_a and mask_b
+ * as a cache for the individual regex results */
 static int rm_pp_cmp_by_regex(GRegex *regex, int idx, RmPatternBitmask *mask_a,
                               const char *path_a, RmPatternBitmask *mask_b,
                               const char *path_b) {
@@ -325,6 +396,10 @@ static int rm_pp_cmp_criterion(unsigned char criterion, const RmFile *a, const R
     }
 }
 
+///////////////////////////////
+//     API Implementatin     //
+///////////////////////////////
+
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 /* Return:
  *      a negative integer file 'a' outranks 'b',
@@ -353,131 +428,121 @@ int rm_pp_cmp_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *s
     return 0;
 }
 
+/* Compare func to sort two RmFiles into "group" order.  Sorting a list of
+ * files according to this func will guarantee that potential duplicate files
+ * (ie same size and conforming to optional --match-basename,
+ * --match-extension and --match-without-extension settings) are adjacent to
+ * each other.  The sorted list can then be split into groups of potential
+ * duplicates by splitting whereever rm_file_cmp_group(a, b) != 0 */
+gint rm_file_cmp_group(const RmFile *file_a, const RmFile *file_b) {
+
+    RETURN_IF_NONZERO(SIGN_DIFF(file_a->file_size, file_b->file_size));
+
+    RmCfg *cfg = file_a->session->cfg;
+
+    RETURN_IF_NONZERO(cfg->match_basename && rm_file_basenames_cmp(file_a, file_b));
+
+    RETURN_IF_NONZERO(cfg->match_with_extension && rm_file_cmp_with_extension(file_a, file_b));
+
+    return cfg->match_without_extension && rm_file_cmp_without_extension(file_a, file_b);
+
+}
+
+
+
+RmFileTables *rm_file_tables_new(_UNUSED const RmSession *session) {
+    RmFileTables *tables = g_slice_new0(RmFileTables);
+
+    tables->all_files = g_queue_new();
+
+    g_mutex_init(&tables->lock);
+    return tables;
+}
+
+
+void rm_file_tables_destroy(RmFileTables *tables) {
+    if(tables->all_files) {
+        g_queue_free(tables->all_files);
+    }
+
+    // walk along tables->size_groups, cleaning up as we go:
+    while(tables->size_groups) {
+        GSList *list = tables->size_groups->data;
+        g_slist_free_full(list, (GDestroyNotify)rm_file_unref);
+        tables->size_groups =
+                g_slist_delete_link(tables->size_groups, tables->size_groups);
+    }
+
+    g_mutex_clear(&tables->lock);
+    g_slice_free(RmFileTables, tables);
+}
+
+/* Compile all regexes inside a sortcriteria string.
+ * Every regex (enclosed in <>)  will be removed from the
+ * sortcriteria spec, so that the returned string will
+ * consist only of single letters.
+ */
+char *rm_pp_compile_patterns(RmSession *session, const char *sortcrit, GError **error) {
+    /* Total of encountered patterns */
+    int pattern_count = 0;
+
+    /* Copy of the sortcriteria without pattern specs in <> */
+    size_t minified_cursor = 0;
+    char *minified_sortcrit = g_strdup(sortcrit);
+
+    for(size_t i = 0; sortcrit[i]; i++) {
+        /* Copy everything that is not a regex pattern */
+        minified_sortcrit[minified_cursor++] = sortcrit[i];
+        char curr_crit = tolower((unsigned char)sortcrit[i]);
+
+        /* Check if it's a non-regex sortcriteria */
+        if(!(curr_crit == 'r' || curr_crit == 'x')) {
+            continue;
+        }
+
+        if(sortcrit[i + 1] != '<') {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("no pattern given in <> after 'r' or 'x'"));
+            break;
+        }
+
+        GRegex *regex = NULL;
+
+        /* Jump over the regex pattern part */
+        i += rm_pp_parse_pattern(&sortcrit[i + 1], &regex, error);
+
+        if(regex != NULL) {
+            if(pattern_count < (int)RM_PATTERN_N_MAX && pattern_count != -1) {
+                /* Append to already compiled patterns */
+                g_ptr_array_add(session->pattern_cache, regex);
+                pattern_count++;
+            } else if(pattern_count != -1) {
+                g_set_error(error, RM_ERROR_QUARK, 0,
+                            _("Cannot add more than %lu regex patterns."),
+                            (unsigned long)RM_PATTERN_N_MAX);
+
+                /* Make sure to set the warning only once */
+                pattern_count = -1;
+                g_regex_unref(regex);
+            } else {
+                g_regex_unref(regex);
+            }
+        }
+    }
+
+    g_prefix_error(error, _("Error while parsing sortcriteria patterns: "));
+
+    minified_sortcrit[minified_cursor] = 0;
+    return minified_sortcrit;
+}
+
+
+/* threadsafe addition of file to session->tables->all_files */
 void rm_file_list_insert_file(RmFile *file, const RmSession *session) {
     g_mutex_lock(&session->tables->lock);
     { g_queue_push_tail(session->tables->all_files, file); }
     g_mutex_unlock(&session->tables->lock);
 }
-
-
-/* if file is not DUPE_CANDIDATE then send it to session->tables->other_lint and
- * return 1; else return 0 */
-static gint rm_pp_sift_other_lint(RmFile *file, const RmSession *session) {
-    if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE) {
-        return 0;
-    }
-
-    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
-        session->tables->other_lint[file->lint_type] =
-                    g_list_prepend(session->tables->other_lint[file->lint_type], file);
-    } else if(session->cfg->filter_mtime && file->mtime < session->cfg->min_mtime) {
-        rm_file_unref(file);
-    } else if((session->cfg->keep_all_tagged && file->is_prefd) ||
-              (session->cfg->keep_all_untagged && !file->is_prefd)) {
-        /* "Other" lint protected by --keep-all-{un,}tagged */
-        rm_file_unref(file);
-    } else {
-        session->tables->other_lint[file->lint_type] =
-            g_list_prepend(session->tables->other_lint[file->lint_type], file);
-    }
-    return 1;
-}
-
-
-static int rm_pp_cmp_reverse_alphabetical(const RmFile *a, const RmFile *b) {
-    RM_DEFINE_PATH(a);
-    RM_DEFINE_PATH(b);
-    return g_strcmp0(b_path, a_path);
-}
-
-static RmOff rm_pp_handler_other_lint(const RmSession *session) {
-    RmOff num_handled = 0;
-    RmFileTables *tables = session->tables;
-
-    for(RmOff type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
-        if(type == RM_LINT_TYPE_EMPTY_DIR) {
-            tables->other_lint[type] = g_list_sort(
-                tables->other_lint[type], (GCompareFunc)rm_pp_cmp_reverse_alphabetical);
-        }
-
-        GList *list = tables->other_lint[type];
-        for(GList *iter = list; iter; iter = iter->next) {
-            RmFile *file = iter->data;
-
-            g_assert(file);
-            g_assert(type == file->lint_type);
-
-            num_handled++;
-
-            file->twin_count = -1;
-            rm_fmt_write(file, session->formats);
-            rm_file_unref(file);
-        }
-
-        g_list_free(list);
-    }
-
-    return num_handled;
-}
-
-
-
-/* remove path doubles / samefiles */
-static gint rm_pp_remove_path_doubles(RmSession *session, GQueue *files) {
-    guint removed = 0;
-    /* sort which will move path doubles together and then rank them
-     * in order of -S criteria
-     */
-    g_queue_sort(files, (GCompareDataFunc)rm_file_cmp_samefile_full, session);
-
-    rm_log_debug_line("initial size sort finished at time %.3f; sorted %d files",
-                      g_timer_elapsed(session->timer, NULL),
-                      session->total_files);
-
-    for(GList *i = files->head; i && i->next; ) {
-        RmFile *this = i->data;
-        RmFile *next = i->next->data;
-        if(rm_file_cmp_samefile(this, next) == 0) {
-            rm_file_unref(next);
-            g_queue_delete_link(files, i->next);
-            removed++;
-        }
-        else {
-            i = i->next;
-        }
-    }
-    return removed;
-}
-
-/* bundle or remove hardlinks */
-static gint rm_pp_bundle_hardlinks(RmSession *session, GQueue *files) {
-    guint removed = 0;
-    /* sort so that files are in size order, and hardlinks are adjacent and
-     * in -S criteria order, */
-    g_queue_sort(files, (GCompareDataFunc)rm_file_cmp_hardlink_full, session);
-
-    for(GList *i = files->head; i && i->next; ) {
-        RmFile *this = i->data;
-        RmFile *next = i->next->data;
-        if(rm_file_cmp_hardlink(this, next) == 0) {
-            // it's a hardlink of prev
-            if(session->cfg->find_hardlinked_dupes) {
-                /* bundle next file under previous->hardlinks */
-                rm_file_hardlink_add(this, next);
-            }
-            else {
-                rm_file_unref(next);
-            }
-            g_queue_delete_link(files, i->next);
-            removed++;
-        }
-        else {
-            i = i->next;
-        }
-    }
-    return removed;
-}
-
 
 
 /* This does preprocessing including handling of "other lint" (non-dupes)
@@ -491,6 +556,10 @@ static gint rm_pp_bundle_hardlinks(RmSession *session, GQueue *files) {
  *                                       etc
  */
 void rm_preprocess(RmSession *session) {
+
+    rm_log_debug_line(
+        "rm_preprocessstarting at %.3f;",
+        g_timer_elapsed(session->timer, NULL));
     RmFileTables *tables = session->tables;
     GQueue *all_files = tables->all_files;
 
@@ -508,13 +577,13 @@ void rm_preprocess(RmSession *session) {
     removed += rm_pp_bundle_hardlinks(session, all_files);
 
     /* sort into size groups, also sorting according to --match-basename etc */
-    g_queue_sort(all_files, (GCompareDataFunc)rm_file_cmp, session);
+    g_queue_sort(all_files, (GCompareDataFunc)rm_file_cmp_group, session);
 
     RmFile *prev = NULL, *curr = NULL;
     while((curr = g_queue_pop_head(all_files))) {
         // check if different size to prev (or needs to split on basename
         // criteria etc)
-        if(!prev || rm_file_cmp(prev, curr) != 0) {
+        if(!prev || rm_file_cmp_group(prev, curr) != 0) {
             // create a new (empty) size group
             tables->size_groups = g_slist_prepend(tables->size_groups, NULL);
         }
