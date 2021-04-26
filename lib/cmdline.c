@@ -31,6 +31,7 @@
 #include "formats.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
+#include "rank.h"
 #include "replay.h"
 #include "shredder.h"
 #include "traverse.h"
@@ -913,7 +914,7 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 
     g_free(cfg->sort_criteria);
 
-    cfg->sort_criteria = rm_pp_compile_patterns(session, criteria, error);
+    cfg->sort_criteria = rm_rank_compile_patterns(session, criteria, error);
 
     if(error && *error != NULL) {
         return false;

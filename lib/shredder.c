@@ -32,7 +32,7 @@
 #include "formats.h"
 #include "hasher.h"
 #include "md-scheduler.h"
-#include "preprocess.h"
+#include "rank.h"
 #include "xattr.h"
 
 /* Enable extra debug messages? */
@@ -903,12 +903,12 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             if(shred_group->num_files == 0) {
                 shred_group->unique_basename = file;
             } else if(shred_group->unique_basename &&
-                      rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
+                      rm_rank_basenames(file, shred_group->unique_basename) != 0) {
                 shred_group->unique_basename = NULL;
             }
             if(file->cluster) {
                 for(GList *iter = file->cluster->head; iter; iter = iter->next) {
-                    if(rm_file_basenames_cmp(iter->data, shred_group->unique_basename) !=
+                    if(rm_rank_basenames(iter->data, shred_group->unique_basename) !=
                        0) {
                         shred_group->unique_basename = NULL;
                         break;
@@ -1240,7 +1240,7 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         /* -[kKmM] options take priority */
         return (a->is_prefd - b->is_prefd);
     } else {
-        int comparison = rm_pp_cmp_orig_criteria(a, b, session);
+        int comparison = rm_rank_orig_criteria(a, b, session);
         if(comparison == 0) {
             /* if already tagged original elsewhere then respect that */
             return b->is_original - a->is_original;
@@ -1413,7 +1413,7 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
             iter = next) {
             next = iter->next;
             RmFile *curr = iter->data;
-            if(rm_file_basenames_cmp(curr, headfile) == 0) {
+            if(rm_rank_basenames(curr, headfile) == 0) {
                 if(!rejects) {
                     rejects = rm_shred_create_rejects(group, curr);
                 }

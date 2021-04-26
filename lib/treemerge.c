@@ -78,7 +78,7 @@
 
 #include "formats.h"
 #include "fts/fts.h"
-#include "preprocess.h"
+#include "rank.h"
 #include "shredder.h"
 
 typedef struct RmDirectory {
@@ -684,7 +684,7 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
     rm_directory_to_file(self, da, &file_a, FALSE);
     rm_directory_to_file(self, db, &file_b, FALSE);
 
-    return rm_pp_cmp_orig_criteria(&file_a, &file_b, self->session);
+    return rm_rank_orig_criteria(&file_a, &file_b, self->session);
 }
 
 static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {

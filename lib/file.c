@@ -212,10 +212,6 @@ RmLintType rm_file_string_to_lint_type(const char *type) {
     return RM_LINT_TYPE_UNKNOWN;
 }
 
-gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
-    return g_ascii_strcasecmp(file_a->node->basename, file_b->node->basename);
-}
-
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {
     if(!head->hardlinks) {
         head->hardlinks = g_queue_new();

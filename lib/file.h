@@ -393,11 +393,6 @@ void rm_file_build_dir_path(RmFile *file, char *buf);
  */
 RmFile *rm_file_copy(RmFile *file);
 
-/**
- * @brief Compare basenames of two files
- * @retval true if basenames match.
- */
-gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b);
 
 static inline ino_t rm_file_inode(const RmFile *file) {
     return file->node->inode;
