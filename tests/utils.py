@@ -18,6 +18,7 @@ import xattr
 
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
+TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
 
 CKSUM_TYPES = [
     'murmur',
