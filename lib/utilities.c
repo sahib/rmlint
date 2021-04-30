@@ -1363,7 +1363,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
     }
 
     if(!S_ISREG(stat1.st_mode)) {
-        RM_RETURN(RM_LINK_NOT_FILE);
+        RM_RETURN(S_ISLNK(stat1.st_mode) ? RM_LINK_SYMLINK : RM_LINK_NOT_FILE);
     }
 
     int fd2 = rm_sys_open(path2, O_RDONLY);
@@ -1388,7 +1388,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
     }
 
     if(!S_ISREG(stat2.st_mode)) {
-        RM_RETURN(RM_LINK_NOT_FILE);
+        RM_RETURN(S_ISLNK(stat2.st_mode) ? RM_LINK_SYMLINK : RM_LINK_NOT_FILE);
     }
 
     if(stat1.st_size != stat2.st_size) {
@@ -1418,11 +1418,6 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
         if(!rm_util_same_device(path1, path2)) {
             RM_RETURN(RM_LINK_XDEV);
         }
-    }
-
-    /* If both are symbolic links we do not follow them */
-    if(S_ISLNK(stat1.st_mode) || S_ISLNK(stat2.st_mode)) {
-        RM_RETURN(RM_LINK_SYMLINK);
     }
 
     if(use_fiemap) {
