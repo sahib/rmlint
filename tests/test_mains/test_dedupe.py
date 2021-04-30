@@ -6,6 +6,7 @@ from nose.tools import make_decorator
 from nose.plugins.skip import SkipTest
 from contextlib import contextmanager
 import psutil
+import re
 
 from tests.utils import *
 
@@ -177,7 +178,7 @@ def pattern_count(path, patterns):
     with open(path, 'r') as f:
         for line in f:
             for i, pattern in enumerate(patterns):
-                if line.startswith(pattern):
+                if re.match(pattern, line):
                     counts[i] += 1
     return counts
 
@@ -201,7 +202,7 @@ def test_clone_handler():
         )
 
     # parse output file for expected clone command
-    counts = pattern_count(sh_path, ["clone '", "skip_reflink '"])
+    counts = pattern_count(sh_path, ["^clone *'", "^skip_reflink *'"])
     assert counts[0] == 1
     assert counts[1] == 0
 
@@ -221,6 +222,6 @@ def test_clone_handler():
             with_json=False
         )
 
-    counts = pattern_count(sh_path, ["clone '", "skip_reflink '"])
+    counts = pattern_count(sh_path, ["^clone *'", "^skip_reflink *'"])
     assert counts[0] == 0
     assert counts[1] == 1
