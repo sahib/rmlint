@@ -200,14 +200,14 @@ General Options
 
     Increase or decrease the verbosity. You can pass these options several
     times. This only affects ``rmlint``'s logging on *stderr*, but not the
-    outputs defined with **-o**. Passing either option more than three times
-    has no further effect.
+    outputs defined with **-o**. Passing either option more than twice has no
+    further effect.
 
 :``-g --progress`` / ``-G --no-progress`` (**default**):
 
     Show a progressbar with sane defaults.
 
-    Convenience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh -o json:rmlint.json -VVV``.
+    Convenience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh -o json:rmlint.json -VV``.
 
     NOTE: This flag clears all previous outputs. If you want additional
     outputs, specify them after this flag using ``-O``.
@@ -816,8 +816,8 @@ OTHER STAND-ALONE COMMANDS
     * -r, --readonly           Even dedupe read-only [btrfs] snapshots (needs root)
     * -f, --followlinks        Follow symlinks
     * -i, --inline-extents     Try to dedupe files with inline extents
-    * -v, --loud               Be more verbose (-vvv for much more)
-    * -V, --quiet              Be less verbose (-VVV for much less)
+    * -v, --loud               Be more verbose (-vv for much more)
+    * -V, --quiet              Be less verbose (-VV for much less)
 
 
 :``rmlint --is-reflink [-v|-V] <file1> <file2>``:
@@ -995,8 +995,8 @@ Please make sure to describe your problem in detail. Always include the version
 of ``rmlint`` (``--version``). If you experienced a crash, please include
 at least one of the following information with a debug build of ``rmlint``:
 
-* ``gdb --ex run -ex bt --args rmlint -vvv [your_options]``
-* ``valgrind --leak-check=no rmlint -vvv [your_options]``
+* ``gdb --ex run -ex bt --args rmlint -vv [your_options]``
+* ``valgrind --leak-check=no rmlint -vv [your_options]``
 
 You can build a debug build of ``rmlint`` like this:
 
