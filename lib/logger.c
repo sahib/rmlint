@@ -31,10 +31,10 @@
 static gboolean with_stderr_color = TRUE;
 
 static GLogLevelFlags VERBOSITY_TO_LOG_LEVEL[] = {
-    [0] = G_LOG_LEVEL_CRITICAL,
-    [1] = G_LOG_LEVEL_ERROR,
+    [0] = G_LOG_LEVEL_ERROR,
+    [1] = G_LOG_LEVEL_CRITICAL,
     [2] = G_LOG_LEVEL_WARNING,
-    [3] = G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_INFO,
+    [3] = G_LOG_LEVEL_INFO,
     [4] = G_LOG_LEVEL_DEBUG};
 
 static gint verbosity = 2;
@@ -72,7 +72,7 @@ void rm_logger_set_verbosity(const gint new_verbosity) {
     verbosity = new_verbosity;
     min_log_level = VERBOSITY_TO_LOG_LEVEL[CLAMP(
         verbosity,
-        1,
+        0,
         (int)(sizeof(VERBOSITY_TO_LOG_LEVEL) / sizeof(GLogLevelFlags)) - 1)];
 }
 
