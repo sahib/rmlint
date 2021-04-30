@@ -821,18 +821,21 @@ OTHER STAND-ALONE COMMANDS
 
 
 :``rmlint --is-reflink [-v|-V] <file1> <file2>``:
-    Tests whether ``file1`` and ``file2`` are reflinks (reference same data).
-    This command makes ``rmlint`` exit with one of the following exit codes:
+    Tests whether ``file1`` and ``file2`` are reflinked (reference same data).
+    No attempt is made to resolve symlinks. You may want to preprocess
+    arguments with ``realpath(1)`` or equivalent to resolve symlinks and for
+    more reliable same-path detection.  This command makes ``rmlint`` exit with
+    one of the following exit codes:
 
-    * 0: Files are reflinks
+    * 0: Files are reflinked
     * 1: An error occurred during checking
     * 3: Not a regular file
     * 4: File sizes differ
     * 5: Files have inline extents
     * 6: Same file and path
     * 7: Same file but with different path
-    * 8: Hardlink
-    * 9: Symlink
+    * 8: Files are hardlinked
+    * 9: Encountered a symlink
     * 10: Files are on different devices
     * 11: Not linked
 
