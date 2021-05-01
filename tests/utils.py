@@ -18,6 +18,7 @@ import xattr
 
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
+TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
 
 # Some systems use a symbolic link for /tmp
 # For example macOS will have a /tmp -> /private/tmp link.

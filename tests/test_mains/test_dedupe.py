@@ -7,6 +7,7 @@ from nose.plugins.skip import SkipTest
 from nose.plugins.attrib import attr
 from contextlib import contextmanager
 import psutil
+import re
 
 from tests.utils import *
 
@@ -202,7 +203,7 @@ def pattern_count(path, patterns):
     with open(path, 'r') as f:
         for line in f:
             for i, pattern in enumerate(patterns):
-                if line.startswith(pattern):
+                if re.match(pattern, line):
                     counts[i] += 1
     return counts
 
@@ -227,8 +228,8 @@ def test_clone_handler():
 
     # parse output file for expected clone command
     patterns = [
-        "clone         '",
-        "skip_reflink  '"]
+        "^clone *'",
+        "^skip_reflink *'"]
     counts = pattern_count(sh_path, patterns)
     print(counts)
     assert counts[0] == 1
