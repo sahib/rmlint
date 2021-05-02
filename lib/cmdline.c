@@ -1125,11 +1125,11 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"xattr"            , 'C' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                        ,
 
         /* Non-trivial switches */
-        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress)    , _("Enable progressbar")                   , NULL} ,
-        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_louder  , _("Be more verbose (-vvv for much more)") , NULL} ,
-        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_quieter , _("Be less verbose (-VVV for much less)") , NULL} ,
-        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)      , _("Re-output a json file")                , "path/to/rmlint.json"} ,
-        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)       , _("Test for equality of PATHS")           , "PATHS"}           ,
+        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress)    , _("Enable progressbar")                  , NULL} ,
+        {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_louder  , _("Be more verbose (-vv for much more)") , NULL} ,
+        {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_quieter , _("Be less verbose (-VV for much less)") , NULL} ,
+        {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)      , _("Re-output a json file")               , "path/to/rmlint.json"} ,
+        {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)       , _("Test for equality of PATHS")          , "PATHS"}           ,
 
         /* Trivial boolean options */
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,

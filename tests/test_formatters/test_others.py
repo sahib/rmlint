@@ -25,7 +25,7 @@ def test_just_call_it():
 
     for silly_option in ['-ppp', '-PPPP']:
         try:
-            subprocess.check_output(['./rmlint', '-VVV', silly_option, TESTDIR_NAME])
+            subprocess.check_output(['./rmlint', '-VV', silly_option, TESTDIR_NAME])
         except subprocess.CalledProcessError:
             pass
         else:

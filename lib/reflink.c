@@ -195,8 +195,8 @@ int rm_dedupe_main(int argc, const char **argv) {
         {"followlinks"   , 'f' , 0                     , G_OPTION_ARG_NONE     , &follow_symlinks   , _("Follow symlinks")                                                      , NULL},
         {"inline-extents", 'i' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &follow_symlinks   , _("Try to dedupe files with inline extents")                              , NULL},
         {"without-fiemap", 'w' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &use_fiemap        , _("Don't use fiemap to check whether files are already reflinked")        , NULL},
-        {"loud"          , 'v' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_louder   , _("Be more verbose (-vvv for much more)")                                 , NULL},
-        {"quiet"         , 'V' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_quieter  , _("Be less verbose (-VVV for much less)")                                 , NULL},
+        {"loud"          , 'v' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_louder   , _("Be more verbose (-vv for much more)")                                  , NULL},
+        {"quiet"         , 'V' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_quieter  , _("Be less verbose (-VV for much less)")                                  , NULL},
         {NULL            , 0   , 0                     , 0                     , NULL               , NULL                                                                      , NULL}};
 
 
@@ -448,8 +448,8 @@ int rm_dedupe_main(int argc, const char **argv) {
 int rm_is_reflink_main(int argc, const char **argv) {
 
     const GOptionEntry options[] = {
-        {"loud"          , 'v' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_louder   , _("Be more verbose (-vvv for much more)")                                 , NULL},
-        {"quiet"         , 'V' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_quieter  , _("Be less verbose (-VVV for much less)")                                 , NULL},
+        {"loud"          , 'v' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_louder   , _("Be more verbose (-vv for much more)")                                  , NULL},
+        {"quiet"         , 'V' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_quieter  , _("Be less verbose (-VV for much less)")                                  , NULL},
         {NULL            , 0   , 0                     , 0                     , NULL               , NULL                                                                      , NULL}};
 
 
