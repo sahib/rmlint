@@ -13,6 +13,7 @@ import os
 import time
 import subprocess
 import glob
+import gzip
 from functools import partial
 
 
@@ -39,9 +40,8 @@ def gzip_file(**kwargs):
     source = str(kwargs['source'][0])
     target = str(kwargs['target'][0])
     try:
-        subprocess.check_call('gzip -c {s} > {t}'.format(
-            s=source, t=target
-        ), shell=True)
+        with open(source, 'rb') as f_in, gzip.open(target, 'wb') as f_out:
+            f_out.writelines(f_in)
     except Exception as err:
         print('Warning: could not gzip {s} to {t}: {e}'.format(
             s=source, t=target, e=err
