@@ -12,35 +12,39 @@ Import('find_sphinx_binary')
 import os
 import time
 import subprocess
-
+import glob
 from functools import partial
 
 
 def run_sphinx_binary(builder, **kwargs):
     sphinx_binary = find_sphinx_binary()
+
     if sphinx_binary is None:
         return
 
-    build_dir = os.path.join('docs/_build', builder)
+    # SCons passes list of source files but sphinx wants dir name
+    source_dir = os.path.dirname(str(kwargs['source'][0]))
+    build_dir = os.path.dirname(str(kwargs['target'][0]))
+
     try:
         os.makedirs(build_dir)
     except OSError:
         pass
 
     subprocess.check_call(
-        [sphinx_binary, '-Q', '-b', builder, 'docs', build_dir]
+        [sphinx_binary, '-Q', '-b', builder, source_dir, build_dir]
     )
 
-
-def gzip_file(target, source, env):
-    source, dest = source[0].get_abspath(), target[0].get_abspath()
+def gzip_file(**kwargs):
+    source = str(kwargs['source'][0])
+    target = str(kwargs['target'][0])
     try:
         subprocess.check_call('gzip -c {s} > {t}'.format(
-            s=source, t=dest
+            s=source, t=target
         ), shell=True)
     except Exception as err:
         print('Warning: could not gzip {s} to {t}: {e}'.format(
-            s=source, t=dest, e=err
+            s=source, t=target, e=err
         ))
 
 # Do not use partial(), but a real function.
@@ -50,14 +54,14 @@ def gzip_file(target, source, env):
 def run_sphinx_binary_man(**kwargs):
     run_sphinx_binary('man', **kwargs)
 
-
 sphinx = env.Command(
     '_build/man/rmlint.1', 'rmlint.1.rst',
     env.Action(run_sphinx_binary_man, "Building manpage from rst...")
 )
 
 manpage = env.Command(
-    'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
+    'rmlint.1.gz', '_build/man/rmlint.1',
+    env.Action(gzip_file, "Zipping manpage...")
 )
 
 env.Default(sphinx)
@@ -79,9 +83,12 @@ if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
 
 if 'docs' in COMMAND_LINE_TARGETS:
+    sources = glob.glob('*.rst')
+    sources.remove('rmlint.1.rst')
+    targets = ['_build/html/' + os.path.splitext(s)[0] + '.html' for s in sources]
     env.Alias('docs',
         env.Command(
-            'make_docs', None,
+            targets, sources,
             Action(partial(run_sphinx_binary, 'html'), "Building online docs...")
         ),
     )
