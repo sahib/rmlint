@@ -656,12 +656,12 @@ msgid "Enable progressbar"
 msgstr "Habilitar la barra de progreso"
 
 #: lib/cmdline.c
-msgid "Be more verbose (-vvv for much more)"
-msgstr "Sé más explicativo (-vvv para mucho más)"
+msgid "Be more verbose (-vv for much more)"
+msgstr "Sé más explicativo (-vv para mucho más)"
 
 #: lib/cmdline.c
-msgid "Be less verbose (-VVV for much less)"
-msgstr "Sé menos explicativo (-VVV para mucho menos)"
+msgid "Be less verbose (-VV for much less)"
+msgstr "Sé menos explicativo (-VV para mucho menos)"
 
 #: lib/cmdline.c
 msgid "Re-output a json file"

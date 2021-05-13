@@ -671,12 +671,12 @@ msgid "Enable progressbar"
 msgstr "Zeige Fortschrittsbalken"
 
 #: lib/cmdline.c
-msgid "Be more verbose (-vvv for much more)"
-msgstr "Sei gesprächiger (-vvv für Quasselstrippe)"
+msgid "Be more verbose (-vv for much more)"
+msgstr "Sei gesprächiger (-vv für Quasselstrippe)"
 
 #: lib/cmdline.c
-msgid "Be less verbose (-VVV for much less)"
-msgstr "Sei weniger gesprächig (-VVV für Totenstille)"
+msgid "Be less verbose (-VV for much less)"
+msgstr "Sei weniger gesprächig (-VV für Totenstille)"
 
 #: lib/cmdline.c
 msgid "Re-output a json file"

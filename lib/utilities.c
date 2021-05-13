@@ -1363,7 +1363,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
     }
 
     if(!S_ISREG(stat1.st_mode)) {
-        RM_RETURN(RM_LINK_NOT_FILE);
+        RM_RETURN(S_ISLNK(stat1.st_mode) ? RM_LINK_SYMLINK : RM_LINK_NOT_FILE);
     }
 
     int fd2 = rm_sys_open(path2, O_RDONLY);
@@ -1388,7 +1388,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
     }
 
     if(!S_ISREG(stat2.st_mode)) {
-        RM_RETURN(RM_LINK_NOT_FILE);
+        RM_RETURN(S_ISLNK(stat2.st_mode) ? RM_LINK_SYMLINK : RM_LINK_NOT_FILE);
     }
 
     if(stat1.st_size != stat2.st_size) {
@@ -1420,11 +1420,6 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
         }
     }
 
-    /* If both are symbolic links we do not follow them */
-    if(S_ISLNK(stat1.st_mode) || S_ISLNK(stat2.st_mode)) {
-        RM_RETURN(RM_LINK_SYMLINK);
-    }
-
     if(use_fiemap) {
         RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
         RM_RETURN(reflink_type);
@@ -1438,13 +1433,13 @@ const char **rm_link_type_to_desc() {
     static const char *RM_LINK_TYPE_TO_DESC[] = {N_("Reflink"),
                                                  N_("An error occurred during checking"),
                                                  "Undefined",
-                                                 N_("Not a file"),
+                                                 N_("Not a regular file"),
                                                  N_("File sizes differ"),
                                                  N_("Files have inline extents"),
                                                  N_("Same file and path"),
                                                  N_("Same file but with different path"),
                                                  N_("Hardlink"),
-                                                 N_("Symlink"),
+                                                 N_("Encountered a symlink"),
                                                  N_("Files are on different devices"),
                                                  N_("Not linked")};
     return RM_LINK_TYPE_TO_DESC;

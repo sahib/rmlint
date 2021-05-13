@@ -827,7 +827,7 @@ Here's just a list of options that are nice to know, but are not essential:
   But you would have checked the output anyways, wouldn't you?
 
 - If something ever goes wrong, it might help to increase the verbosity with
-  ``-v`` (up to ``-vvv``).
+  ``-v`` (up to ``-vv``).
 - Usually the commandline output is colored, but you can disable it explicitly
   with ``-w`` (``--with-color``). If *stdout* or *stderr* is not a terminal
   anyways, ``rmlint`` will disable colors itself.

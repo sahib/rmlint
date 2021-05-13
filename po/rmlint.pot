@@ -638,11 +638,11 @@ msgid "Enable progressbar"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Be more verbose (-vvv for much more)"
+msgid "Be more verbose (-vv for much more)"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Be less verbose (-VVV for much less)"
+msgid "Be less verbose (-VV for much less)"
 msgstr ""
 
 #: lib/cmdline.c
