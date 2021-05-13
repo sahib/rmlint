@@ -33,7 +33,7 @@ def run_sphinx_binary(builder, **kwargs):
         pass
 
     subprocess.check_call(
-        [sphinx_binary, '-Q', '-b', builder, source_dir, build_dir]
+        [sphinx_binary, '-Q', '-D', 'man_make_section_directory=0', '-b', builder, source_dir, build_dir]
     )
 
 def gzip_file(**kwargs):
