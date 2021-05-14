@@ -18,14 +18,16 @@ def test_1000_files():
 
     for c in string.ascii_lowercase:
         for d in string.ascii_lowercase:
-            create_file(c + d, f'{c}{d}1', sparse_bytes_before = MIDDLE,
+            create_file(c + d, '{c}{d}1'.format(c=c, d=d),
+                sparse_bytes_before = MIDDLE,
                 sparse_bytes_total = FILE_SIZE)
 
-    # make duplicates after all originals so that their inode numbers are
+    # make duplicates *after* all originals so that their inode numbers are
     # separated from originals
     for c in string.ascii_lowercase:
         for d in string.ascii_lowercase:
-            create_file(c + d, f'{c}{d}2', sparse_bytes_before = MIDDLE,
+            create_file(c + d, '{c}{d}2'.format(c=c, d=d),
+                sparse_bytes_before = MIDDLE,
                 sparse_bytes_total = FILE_SIZE)
 
     *_, footer = run_rmlint('-a paranoid')
