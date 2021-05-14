@@ -18,6 +18,7 @@ import xattr
 
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
+TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
 
 # Some systems use a symbolic link for /tmp
 # For example macOS will have a /tmp -> /private/tmp link.
@@ -343,7 +344,7 @@ def create_link(path, target, symlink=False):
     )
 
 
-def create_file(data, name, mtime=None, write_binary=False):
+def create_file(data, name, mtime=None, write_binary=False, sparse_bytes_before = 0, sparse_bytes_total = 0):
     full_path = os.path.join(TESTDIR_NAME, name)
     if '/' in name:
         try:
@@ -352,6 +353,8 @@ def create_file(data, name, mtime=None, write_binary=False):
             pass
 
     with open(full_path, 'wb' if write_binary else 'w') as handle:
+        if(sparse_bytes_before > 0):
+            handle.truncate(sparse_bytes_before)
         if write_binary:
             if isinstance(data, int):
                 handle.write(struct.pack('i', data))
@@ -359,6 +362,8 @@ def create_file(data, name, mtime=None, write_binary=False):
                 assert False, "Unhandled data type for binary write: " + data
         else:
             handle.write(data)
+        if(sparse_bytes_total > 0):
+            handle.truncate(sparse_bytes_total)
 
     if not mtime is None:
         subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
