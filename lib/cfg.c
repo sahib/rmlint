@@ -114,7 +114,7 @@ static RmPath *rm_path_new(char *real_path, bool is_prefd, guint idx,
     ret->treat_as_single_vol = treat_as_single_vol;
     ret->realpath_worked = realpath_worked;
     if(tree) {
-        ret->node = rm_trie_insert(tree, real_path, NULL);
+        ret->node = rm_trie_insert(tree, real_path, RM_NO_DEV, RM_NO_INODE);
     }
     return ret;
 }

@@ -32,7 +32,7 @@
 #include "formats.h"
 #include "hasher.h"
 #include "md-scheduler.h"
-#include "preprocess.h"
+#include "rank.h"
 #include "xattr.h"
 
 /* Enable extra debug messages? */
@@ -729,15 +729,15 @@ static void rm_shred_push_queue(RmFile *file) {
     if(file->hash_offset == 0) {
         /* first-timer; lookup disk offset */
         if(file->session->cfg->build_fiemap &&
-           !rm_mounts_is_nonrotational(file->session->mounts, file->dev)) {
+           !rm_mounts_is_nonrotational(file->session->mounts, rm_file_dev(file))) {
             RM_DEFINE_PATH(file);
             file->disk_offset = rm_offset_get_from_path(file_path, 0, NULL);
         } else {
             /* use inode number instead of disk offset */
-            file->disk_offset = file->inode;
+            file->disk_offset = rm_file_inode(file);
         }
     }
-    rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
+    rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
 }
 
 //////////////////////////////////
@@ -903,12 +903,12 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             if(shred_group->num_files == 0) {
                 shred_group->unique_basename = file;
             } else if(shred_group->unique_basename &&
-                      rm_file_basenames_cmp(file, shred_group->unique_basename) != 0) {
+                      rm_rank_basenames(file, shred_group->unique_basename) != 0) {
                 shred_group->unique_basename = NULL;
             }
             if(file->cluster) {
                 for(GList *iter = file->cluster->head; iter; iter = iter->next) {
-                    if(rm_file_basenames_cmp(iter->data, shred_group->unique_basename) !=
+                    if(rm_rank_basenames(iter->data, shred_group->unique_basename) !=
                        0) {
                         shred_group->unique_basename = NULL;
                         break;
@@ -1105,7 +1105,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
     file->disk = rm_mds_device_get(
         session->mds, file_path,
-        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : file->dev);
+        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : rm_file_dev(file));
     rm_mds_device_ref(file->disk, 1);
 
     rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
@@ -1151,7 +1151,6 @@ static gint rm_shred_cmp_ext_cksum(RmFile *a, RmFile *b) {
 }
 
 static void rm_shred_process_group(GSList *files, _UNUSED RmShredTag *main) {
-    g_assert(files);
     g_assert(files->data);
 
     /* cluster hardlinks and ext_cksum matches;
@@ -1241,7 +1240,7 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session) {
         /* -[kKmM] options take priority */
         return (a->is_prefd - b->is_prefd);
     } else {
-        int comparison = rm_pp_cmp_orig_criteria(a, b, session);
+        int comparison = rm_rank_orig_criteria(a, b, session);
         if(comparison == 0) {
             /* if already tagged original elsewhere then respect that */
             return b->is_original - a->is_original;
@@ -1414,7 +1413,7 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
             iter = next) {
             next = iter->next;
             RmFile *curr = iter->data;
-            if(rm_file_basenames_cmp(curr, headfile) == 0) {
+            if(rm_rank_basenames(curr, headfile) == 0) {
                 if(!rejects) {
                     rejects = rm_shred_create_rejects(group, curr);
                 }
@@ -1722,7 +1721,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     }
     if(file) {
         /* file was not handled by rm_shred_sift so we need to add it back to the queue */
-        rm_mds_push_task(file->disk, file->dev, file->disk_offset, NULL, file);
+        rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
     }
     return result;
 }

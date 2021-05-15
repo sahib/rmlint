@@ -23,41 +23,42 @@
 *
 **/
 
-#ifndef RM_PREPROCESS_H
-#define RM_PREPROCESS_H
+#ifndef RM_RANK_H
+#define RM_RANK_H
 
 #include "session.h"
 
 /**
- * @brief Do some pre-processing (eg remove path doubles) and process "other lint".
+ * @brief Compare basenames of two files
+ * @retval 0 if basenames match.
+ */
+gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b);
+
+gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b);
+
+gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b);
+
+/**
+ * @brief Compare two files in order to find out which file is the
+ * higher ranked (ie original).
  *
- * Returns: number of other lint items found.
+ * Returns: -1 if a > b, 0 if a == b and +1 else.
  */
-void rm_preprocess(RmSession *session);
+int rm_rank_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *session);
 
 /**
- * @brief Create a new RmFileTable object.
- *
- * @return A newly allocated RmFileTable.
+ * @brief: Check if two files are equal in terms of size, and match_* options.
  */
-RmFileTables *rm_file_tables_new(const RmSession *session);
+gint rm_rank_group(const RmFile *file_a, const RmFile *file_b);
 
 /**
-* @brief Free a previous RmFileTable
-*/
-void rm_file_tables_destroy(RmFileTables *list);
-
-/**
- * @brief Appends a file in RmFileTables->all_files.
- * @param file The file to insert; ownership is taken.
+ * @brief: Compile all r<PATTERN> constructs in `sortcrit` to a GRegex
+ *         and store them into session->pattern_cache.
  */
+char *rm_rank_compile_patterns(RmSession *session, const char *sortcrit, GError **error);
 
-void rm_file_list_insert_file(RmFile *file, const RmSession *session);
 
-/**
- * @brief Clear potential leftover files when shredder was not used.
- */
-void rm_file_tables_clear(const RmSession *session);
+
 
 
 #endif

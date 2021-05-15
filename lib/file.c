@@ -77,7 +77,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->session = session;
 
     if(!node) {
-        node = rm_trie_insert(&cfg->file_trie, path, NULL);
+        node = rm_trie_insert(&cfg->file_trie, path, statp->st_dev, statp->st_ino);
     }
     self->node = node;
 
@@ -86,8 +86,6 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
     self->actual_file_size = actual_file_size;
     self->n_children = 0;
 
-    self->inode = statp->st_ino;
-    self->dev = statp->st_dev;
     self->mtime = rm_sys_stat_mtime_float(statp);
     self->is_new = (self->mtime >= cfg->min_mtime);
 
@@ -214,16 +212,15 @@ RmLintType rm_file_string_to_lint_type(const char *type) {
     return RM_LINT_TYPE_UNKNOWN;
 }
 
-gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
-    return g_ascii_strcasecmp(file_a->node->basename, file_b->node->basename);
-}
-
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {
     if(!head->hardlinks) {
         head->hardlinks = g_queue_new();
+        g_queue_push_tail(head->hardlinks, head);
     }
-    link->hardlinks = head->hardlinks;
-    g_queue_push_tail(head->hardlinks, link);
+    if(link != head) {
+        link->hardlinks = head->hardlinks;
+        g_queue_push_tail(head->hardlinks, link);
+    }
 }
 
 static gint rm_file_foreach_hardlink(RmFile *f, RmRFunc func, gpointer user_data) {

@@ -81,7 +81,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         return false;
     }
 
-    if (!rm_mounts_can_reflink(self->session->mounts, file->dev, self->last_original->dev) ) {
+    if (!rm_mounts_can_reflink(self->session->mounts, rm_file_dev(file), rm_file_dev(self->last_original)) ) {
         return false;
     }
 
@@ -120,7 +120,7 @@ static bool rm_sh_emit_handler_reflink(RmFmtHandlerShScript *self, char **out, R
         return false;
     }
 
-    if(!rm_mounts_can_reflink(self->session->mounts, self->last_original->dev, file->dev)) {
+    if(!rm_mounts_can_reflink(self->session->mounts, rm_file_dev(self->last_original), rm_file_dev(file))) {
         return false;
     }
 
@@ -159,7 +159,7 @@ static bool rm_sh_emit_handler_symlink(RmFmtHandlerShScript *self, char **out, _
 }
 
 static bool rm_sh_emit_handler_hardlink(RmFmtHandlerShScript *self, char **out, _UNUSED RmFile *file, _UNUSED char *dupe_path, _UNUSED char *orig_path, char *dupe_escaped, char *orig_escaped) {
-    if(!self->allow_hardlink || self->last_original->dev != file->dev) {
+    if(!self->allow_hardlink || rm_file_dev(self->last_original) != rm_file_dev(file)) {
         return false;
     }
 

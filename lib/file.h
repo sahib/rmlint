@@ -133,11 +133,6 @@ typedef struct RmFile {
      * */
     gint16 outer_link_count;
 
-    /* The inode and device of this file.
-     * Used to filter double paths and hardlinks.
-     */
-    ino_t inode;
-    dev_t dev;
     struct _RmMDSDevice *disk;
 
     /* True if the file is a symlink
@@ -398,10 +393,21 @@ void rm_file_build_dir_path(RmFile *file, char *buf);
  */
 RmFile *rm_file_copy(RmFile *file);
 
-/**
- * @brief Compare basenames of two files
- * @retval true if basenames match.
- */
-gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b);
+
+static inline ino_t rm_file_inode(const RmFile *file) {
+    return file->node->inode;
+}
+
+static inline dev_t rm_file_dev(const RmFile *file) {
+    return file->node->dev;
+}
+
+static inline ino_t rm_file_parent_inode(const RmFile *file) {
+    return rm_node_get_inode(file->node->parent);
+}
+
+static inline dev_t rm_file_parent_dev(const RmFile *file) {
+    return rm_node_get_dev(file->node->parent);
+}
 
 #endif /* end of include guard */

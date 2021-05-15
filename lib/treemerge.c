@@ -78,7 +78,7 @@
 
 #include "formats.h"
 #include "fts/fts.h"
-#include "preprocess.h"
+#include "rank.h"
 #include "shredder.h"
 
 typedef struct RmDirectory {
@@ -154,7 +154,6 @@ int rm_tm_count_art_callback(RmNode *node, void *user_data) {
         if(path[i] == G_DIR_SEPARATOR) {
             /* Do not use an empty path, use a slash for root */
             if(i == 0) {
-                path[0] = G_DIR_SEPARATOR;
                 path[1] = 0;
             } else {
                 path[i] = 0;
@@ -163,16 +162,17 @@ int rm_tm_count_art_callback(RmNode *node, void *user_data) {
             /* Include the nulbyte */
             int new_count = -1;
 
+            RmNode *node = rm_trie_insert(count_tree, path, RM_NO_DEV, RM_NO_INODE);
             if(error_flag == false) {
                 /* Lookup the count on this level */
-                int old_count = GPOINTER_TO_INT(rm_trie_search(count_tree, path));
+                int old_count = GPOINTER_TO_INT(node->data);
 
                 /* Propagate old error up or just increment the count */
                 new_count = (old_count == -1) ? -1 : old_count + 1;
             }
 
             /* Accumulate the count ('n' above is the height of the trie)  */
-            rm_trie_insert(count_tree, path, GINT_TO_POINTER(new_count));
+            node->data = GINT_TO_POINTER(new_count);
         }
     }
 
@@ -229,9 +229,12 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
 
         switch(ent->fts_info) {
         case FTS_ERR:
-        case FTS_DC:
-            /* Save this path as an error */
-            rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(true));
+        case FTS_DC: {
+                /* Save this path as an error */
+                RmNode *node = rm_trie_insert(&file_tree, ent->fts_path,
+                        ent->fts_statp->st_dev, ent->fts_statp->st_ino);
+                node->data = GINT_TO_POINTER(true);
+            }
             break;
         case FTS_F:
         case FTS_SL:
@@ -241,7 +244,9 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
             /* Save this path as countable file, but only if we consider empty files */
             if(!(cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
                 if(!(cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
-                    rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
+                    RmNode *node = rm_trie_insert(&file_tree, ent->fts_path,
+                            ent->fts_statp->st_dev, ent->fts_statp->st_ino);
+                    node->data = GINT_TO_POINTER(false);
                 }
             }
         case FTS_D:
@@ -362,15 +367,14 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     memset(file, 0, sizeof(RmFile));
 
     file->session = merger->session;
-    file->node = rm_trie_insert(&merger->session->cfg->file_trie, self->dirname, file);
+    file->node = rm_trie_insert(&merger->session->cfg->file_trie,
+            self->dirname, self->metadata.dir_dev, self->metadata.dir_inode);
 
     file->lint_type = RM_LINT_TYPE_DUPE_DIR;
     file->digest = ref_digest ? rm_digest_ref(self->digest) : self->digest;
 
     /* Set these to invalid for now */
     file->mtime = self->metadata.dir_mtime;
-    file->inode = self->metadata.dir_inode;
-    file->dev = self->metadata.dir_dev;
     file->depth = rm_util_path_depth(self->dirname);
 
     /* Recursively calculate the file size */
@@ -589,7 +593,8 @@ void rm_tm_feed(RmTreeMerger *self, RmFile *file) {
         directory->file_count = file_count;
 
         /* Make the new directory known */
-        rm_trie_insert(&self->dir_tree, file_dir_path, directory);
+        RmNode *node = rm_trie_insert(&self->dir_tree, file_dir_path, RM_NO_DEV, RM_NO_INODE);
+        node->data = directory;
 
         g_queue_push_head(&self->valid_dirs, directory);
     }
@@ -679,7 +684,7 @@ static int rm_tm_sort_orig_criteria(const RmDirectory *da, const RmDirectory *db
     rm_directory_to_file(self, da, &file_a, FALSE);
     rm_directory_to_file(self, db, &file_b, FALSE);
 
-    return rm_pp_cmp_orig_criteria(&file_a, &file_b, self->session);
+    return rm_rank_orig_criteria(&file_a, &file_b, self->session);
 }
 
 static void rm_tm_forward_unresolved(RmTreeMerger *self, RmDirectory *directory) {
@@ -949,7 +954,7 @@ static void rm_tm_cluster_up(RmTreeMerger *self, RmDirectory *directory) {
     if(parent == NULL) {
         /* none yet, basically copy child */
         parent = rm_directory_new(parent_dir);
-        rm_trie_insert(&self->dir_tree, parent_dir, parent);
+        rm_trie_insert(&self->dir_tree, parent_dir, RM_NO_DEV, RM_NO_INODE)->data = parent;
 
         /* Get the actual file count */
         parent->file_count =

@@ -31,6 +31,7 @@
 #include "formats.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
+#include "rank.h"
 #include "replay.h"
 #include "shredder.h"
 #include "traverse.h"
@@ -913,7 +914,7 @@ static gboolean rm_cmd_parse_rankby(_UNUSED const char *option_name,
 
     g_free(cfg->sort_criteria);
 
-    cfg->sort_criteria = rm_pp_compile_patterns(session, criteria, error);
+    cfg->sort_criteria = rm_rank_compile_patterns(session, criteria, error);
 
     if(error && *error != NULL) {
         return false;
@@ -1473,9 +1474,6 @@ int rm_cmd_main(RmSession *session) {
 
             rm_log_debug_line("Dupe search finished at time %.3f",
                               g_timer_elapsed(session->timer, NULL));
-        } else {
-            /* Clear leftovers */
-            rm_file_tables_clear(session);
         }
     }
 

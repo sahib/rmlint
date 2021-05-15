@@ -44,6 +44,20 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
     }
     const char *path = json_node_get_string(path_node);
 
+    JsonNode *inode_node = json_object_get_member(object, "inode");
+    if(inode_node == NULL) {
+        rm_log_warning_line("inode_node is NULL");
+        return FALSE;
+    }
+    ino_t inode = json_node_get_int(inode_node);
+
+    JsonNode *dev_node = json_object_get_member(object, "disk_id");
+    if(dev_node == NULL) {
+        rm_log_warning_line("inode_node is NULL");
+        return FALSE;
+    }
+    dev_t dev = json_node_get_int(dev_node);
+
     /* Check for the lint type */
     JsonNode *type_node = json_object_get_member(object, "type");
     if(type_node == NULL) {
@@ -61,7 +75,7 @@ static bool rm_parrot_load_file_from_object(RmSession *session, JsonObject *obje
     bool tagged_original = FALSE;
     const char *ext_cksum = NULL;
 
-    RmNode *node = rm_trie_insert(&cfg->file_trie, path, NULL);
+    RmNode *node = rm_trie_insert(&cfg->file_trie, path, dev, inode);
     if(!rm_cfg_is_traversed(cfg, node, &is_prefd, &path_index, &is_hidden,
                             &is_on_subvol_fs, &depth)) {
         rm_log_info_line("Skipping cached file %s because not on search path", path);
