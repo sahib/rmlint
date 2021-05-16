@@ -967,7 +967,7 @@ PROBLEMS
 SEE ALSO
 ========
 
-Reading the manpages o these tools might help working with ``rmlint``:
+Reading the manpages of these tools might help working with ``rmlint``:
 
 * `find(1)`
 * `rm(1)`
