@@ -68,10 +68,10 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ pacman -S pkgconf git scons python-sphinx
+    $ pacman -S pkgconf git scons python-sphinx base-devel
     $ pacman -S glib2 libutil-linux elfutils json-glib
     # Optional dependencies for the GUI:
-    $ pacman -S gtk3 python-gobject librsvg
+    $ pacman -S gtk3 python-gobject librsvg python-cairo gtksourceview3
 
   There is also a `PKGBUILD`_ on the `ArchLinux AUR`_:
 
