@@ -8,7 +8,6 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Rsvg', '2.0')
 gi.require_version('PangoCairo', '1.0')
-gi.require_version('Polkit', '1.0')
 gi.require_version('GtkSource', '3.0')
 
 # Name of your application:
