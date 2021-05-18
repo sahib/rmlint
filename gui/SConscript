@@ -24,16 +24,19 @@ def which(program):
 
     return None
 
+PYTHON = ARGUMENTS.get('PYTHON', 'python3')
 
 if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
-    if not which('python3'):
-        print('!! Unable to find python3 executable.')
+    python_exe = which(PYTHON)
+    if not python_exe:
+        print('!! Unable to find {} executable.'.format(PYTHON))
         print('!! Will build no GUI.')
     else:
         py_install = env.Command(
             'always.install',
             ['setup.py'],
-            'cd gui && python3 setup.py install --prefix {} --record .files.txt'.format(
+            'cd gui && {} setup.py install --prefix {} --record .files.txt'.format(
+                python_exe,
                 GetOption('prefix')
             )
         )
