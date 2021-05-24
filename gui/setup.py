@@ -98,15 +98,13 @@ setup(
     ]},
     data_files=[
         (
-            os.path.join(PREFIX, 'share/icons/hicolor/scalable/apps'),
+            'share/icons/hicolor/scalable/apps',
             ['shredder/resources/shredder.svg']
-        ),
-        (
-            os.path.join(PREFIX, 'share/glib-2.0/schemas'),
+        ),(
+            'share/glib-2.0/schemas',
             ['shredder/resources/org.gnome.Shredder.gschema.xml']
-        ),
-        (
-            os.path.join(PREFIX, 'share/applications'),
+        ),(
+            'share/applications',
             ['shredder.desktop']
         ),
     ]
