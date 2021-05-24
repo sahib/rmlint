@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+try:
+    import shredder
+except ImportError:
+    # workaround for missing PYTHONPATH
+    import os, sys
+    lib_path = sys.executable.replace('/bin/', '/lib/', 1)
+    sys.path.append(os.path.join(lib_path, 'site-packages'))
+    try:
+        import shredder
+    except ImportError:
+        print('Unable to find shredder module; maybe check your PYTHONPATH')
+        print('Paths searched:\n  {}'.format('\n  '.join(sys.path)))
+        sys.exit(1)
+
+shredder.run_gui()
