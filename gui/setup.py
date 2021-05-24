@@ -3,12 +3,15 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-from distutils.command.install import install
+from distutils.command.install_data import install_data
 
 import os
 import sys
 import subprocess
 
+GRESOURCE_DIR = 'shredder/resources'
+GRESOURCE_FILE = 'shredder.gresource.xml'
+GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 
 def read_version():
     with open('../.version', 'r') as handle:
@@ -16,67 +19,44 @@ def read_version():
 
     return version_string.strip()
 
-
-def get_prefix():
-    # distutils apparently has no sane way to get the install prefix early.
-    # (I realize that this is a stupid hack to do something obvious)
-    for idx, arg in enumerate(sys.argv):
-        if arg == '--user':
-            return os.path.expanduser('~/.local')
-
-        if arg.startswith('--prefix'):
-            if '=' in arg:
-                _, path = arg.split('=', 1)
-                return path
-            else:
-                return sys.argv[idx + 1]
-
-    return '/usr'
-
-
-PREFIX = get_prefix()
-
-
-class PrePlusPostInstall(install):
+class install_glib_resources(install_data):
     def run(self):
-        # Compile the resource bundle freshly
-        print('==> Compiling resource bundle')
+        self._build_gresources()
+        super().run()
+        self._build_gschemas()
 
-        if os.access('shredder/resources/shredder.gresource', os.R_OK):
-            print('==> Using existing. Lucky boy.')
-        else:
-            print('==> Calling glib-compile-resources')
-            try:
-                subprocess.call([
-                    'glib-compile-resources',
-                    'shredder/resources/shredder.gresource.xml',
-                    '--sourcedir',
-                    'shredder/resources'
-                ])
-            except subprocess.CalledProcessError as err:
-                print('==> Failed :(')
-
-        # Run the usual distutils install routine:
-        install.run(self)
-
-        # Make sure the schema file is updated.
-        # Otherwise the gui will trace trap.
-        print('==> Compiling GLib Schema files')
-
+    def _build_gresources(self):
+        '''
+        Compile the resource bundle
+        '''
+        print('==> Calling glib-compile-resources')
         try:
-            schema_dir = os.path.join(PREFIX, 'share/glib-2.0/schemas')
             subprocess.call([
-                'glib-compile-schemas',
-                schema_dir,
-                "--targetdir",
-                schema_dir,
+                'glib-compile-resources',
+                '--sourcedir={}'.format(GRESOURCE_DIR),
+                os.path.join(GRESOURCE_DIR, GRESOURCE_FILE)
             ])
+        except subprocess.CalledProcessError as err:
+            print('==> Failed :(')
+
+    def _build_gschemas(self):
+        '''
+        Make sure the schema file is updated after installation,
+        otherwise the gui will trace trap.
+        '''
+        print('==> Compiling GLib Schema files')
+        # Use 'self.install_dir' to build the path, so that it works
+        # for both global and local '--user' installs.
+        gschema_dir = os.path.join(self.install_dir, GSCHEMA_DIR_SUFFIX)
+        compile_command = [
+                'glib-compile-schemas',
+                gschema_dir]
+        try:
+            subprocess.call(compile_command)
         except subprocess.CalledProcessError as err:
             print('==> Could not update schemas: ', err)
             print('==> Please run the following manually:\n')
-            print('    sudo glib-compile-schemas {prefix}'.format(
-                prefix=os.path.join(PREFIX, 'share/glib-2.0/schemas')
-            ))
+            print('    sudo {}'.format(' '.join(compile_command)))
         else:
             print('==> OK!')
 
@@ -91,7 +71,7 @@ setup(
     url='https://rmlint.rtfd.org',
     license='GPLv3',
     platforms='any',
-    cmdclass={'install': PrePlusPostInstall},
+    cmdclass={'install_data': install_glib_resources},
     packages=['shredder', 'shredder.views'],
     package_data={'': [
         'resources/*.gresource'
