@@ -87,5 +87,6 @@ setup(
             'share/applications',
             ['shredder.desktop']
         ),
-    ]
+    ],
+    scripts=['bin/shredder'],
 )
