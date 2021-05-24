@@ -25,7 +25,17 @@ from gi.repository import GObject
 try:
     from gi.repository import Polkit
 except ImportError:
+    print('running without Polkit')
     Polkit = None
+
+if Polkit is not None:
+    import gi
+    try:
+        gi.require_version('Polkit', '1.0')
+    except:
+        print('Polkit version 1.0 required, got ', gi.get_version('Polkit'))
+        print('running without Polkit')
+        Polkit = None
 
 # Internal:
 from shredder.util import View, IconButton, scrolled, size_to_human_readable
