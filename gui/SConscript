@@ -6,6 +6,9 @@ import os
 
 Import('env')
 
+GUI_DIR = 'gui'
+FILES_RECORD = '.files.txt'
+FILES_RECORD_FULL = os.path.join(GUI_DIR, FILES_RECORD)
 
 def which(program):
     def is_exe(fpath):
@@ -35,9 +38,10 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
         py_install = env.Command(
             'always.install',
             ['setup.py'],
-            'cd gui && {} setup.py install --prefix {} --record .files.txt'.format(
+            'cd {} && {} setup.py install --record {}'.format(
+                GUI_DIR,
                 python_exe,
-                GetOption('prefix')
+                FILES_RECORD
             )
         )
         env.Alias('install', py_install)
@@ -46,20 +50,21 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
 if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
     def uninstall_python_module(**kwargs):
         try:
-            with open('gui/.files.txt') as handle:
+            with open(FILES_RECORD_FULL, 'r') as handle:
                 for path in handle:
                     path = path.strip()
                     try:
                         os.remove(path)
                     except OSError as err:
                         print('Unable to delete', path, ':', err)
+
         except OSError as err:
-            print('Could not open .files.txt: ', err)
+            print('Could not open {}: '.format(FILES_RECORD_FULL), err)
 
 
     env.Alias('uninstall',
         env.Command(
-            'gui/.files.txt', '',
+            FILES_RECORD_FULL, '',
             Action(uninstall_python_module , "Uninstalling recorded files...")
         )
     )
