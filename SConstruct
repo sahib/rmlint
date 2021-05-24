@@ -13,6 +13,9 @@ from SCons.Script.SConscript import SConsEnvironment
 
 pkg_config = os.getenv('PKG_CONFIG', 'pkg-config')
 
+DEFAULT_PREFIX = '/usr/bin'
+PREFIX_RECORD_FILE = '.prefix.txt'
+
 def read_version():
     with open('.version', 'r') as handle:
         version_string = handle.read()
@@ -497,8 +500,22 @@ link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
 #                            Option Parsing                               #
 ###########################################################################
 
+def get_default_prefix():
+    if 'uninstall' in COMMAND_LINE_TARGETS:
+        try:
+            with open(PREFIX_RECORD_FILE, 'r') as f:
+                PREFIX = f.read()
+                print('===> Using cached installation prefix "{}"'
+                        .format(PREFIX))
+                return PREFIX
+        except Exception as err:
+            print('===> Failed to get cached installation prefix: {}'
+                    .format(err))
+        return DEFAULT_PREFIX
+
+
 AddOption(
-    '--prefix', default='/usr/local',
+    '--prefix', default=get_default_prefix(),
     dest='prefix', type='string', nargs=1,
     action='store', metavar='DIR', help='installation prefix'
 )
@@ -524,6 +541,14 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'gui']:
         '--with-' + suffix, action='store_const', default=True, const=True,
         dest='with_' + suffix
     )
+
+env = Environment(PREFIX = GetOption('prefix'))
+
+if 'install' in COMMAND_LINE_TARGETS:
+    # record the installation prefix for later uninstall
+    with open(PREFIX_RECORD_FILE, 'w') as f:
+        f.write(GetOption('prefix'))
+
 
 # General Environment
 options = dict(

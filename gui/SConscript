@@ -2,10 +2,14 @@
 # encoding: utf-8
 
 import os
-
+import subprocess
 
 Import('env')
 
+GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
+GUI_DIR = 'gui'
+FILES_RECORD = '.files.txt'
+FILES_RECORD_FULL = os.path.join(GUI_DIR, FILES_RECORD)
 
 def which(program):
     def is_exe(fpath):
@@ -24,17 +28,21 @@ def which(program):
 
     return None
 
+PYTHON = ARGUMENTS.get('PYTHON', 'python3')
 
 if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
-    if not which('python3'):
-        print('!! Unable to find python3 executable.')
+    python_exe = which(PYTHON)
+    if not python_exe:
+        print('!! Unable to find {} executable.'.format(PYTHON))
         print('!! Will build no GUI.')
     else:
         py_install = env.Command(
             'always.install',
             ['setup.py'],
-            'cd gui && python3 setup.py install --prefix {} --record .files.txt'.format(
-                GetOption('prefix')
+            'cd {} && {} setup.py install --record {}'.format(
+                GUI_DIR,
+                python_exe,
+                FILES_RECORD
             )
         )
         env.Alias('install', py_install)
@@ -43,20 +51,32 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
 if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
     def uninstall_python_module(**kwargs):
         try:
-            with open('gui/.files.txt') as handle:
+            with open(FILES_RECORD_FULL, 'r') as handle:
                 for path in handle:
                     path = path.strip()
                     try:
                         os.remove(path)
                     except OSError as err:
                         print('Unable to delete', path, ':', err)
+
         except OSError as err:
-            print('Could not open .files.txt: ', err)
+            print('Could not open {}: '.format(FILES_RECORD_FULL), err)
+
+        # recompile remaining glib schemas after deleting ours
+        print('Recompiling glib schemas')
+        gschema_dir = os.path.join(env['PREFIX'], GSCHEMA_DIR_SUFFIX)
+        compile_command = [
+                'glib-compile-schemas',
+                gschema_dir]
+        try:
+            subprocess.call(compile_command)
+        except subprocess.CalledProcessError as err:
+            print("Error recompiling glib schemas post uninstall")
 
 
     env.Alias('uninstall',
         env.Command(
-            'gui/.files.txt', '',
+            FILES_RECORD_FULL, '',
             Action(uninstall_python_module , "Uninstalling recorded files...")
         )
     )
