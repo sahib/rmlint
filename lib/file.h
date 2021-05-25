@@ -244,11 +244,6 @@ typedef struct RmFile {
      */
     bool is_hidden : 1;
 
-    /* If false rm_file_destroy will not destroy the digest. This is useful
-     * for sharing the digest of duplicates in a group.
-     */
-    bool free_digest : 1;
-
     /* Set to true if rm_shred_process_file() for hash increment */
     bool shredder_waiting : 1;
 
