@@ -246,7 +246,7 @@ int rm_rank_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *ses
  * duplicates by splitting whereever rm_rank_group(a, b) != 0 */
 gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
 
-    RETURN_IF_NONZERO(SIGN_DIFF(file_a->file_size, file_b->file_size));
+    RETURN_IF_NONZERO(SIGN_DIFF(file_a->actual_file_size, file_b->actual_file_size));
 
     RmCfg *cfg = file_a->session->cfg;
 
