@@ -201,10 +201,6 @@ typedef struct RmFile {
     gint16 outer_link_count;
 
 
-    /* What kind of lint this file is.
-     */
-    RmLintType lint_type;
-
     /* Caching bitmasks to ensure each file is only matched once
      * for every GRegex combination.
      * See also preprocess.c for more explanation.
@@ -214,6 +210,11 @@ typedef struct RmFile {
 
 
     /*----- bitfield types ----- */
+
+    /* What kind of lint this file is.
+     */
+    RmLintType lint_type : 4;
+
 
     /* True if the file is a symlink
      * shredder needs to know this, since the metadata might be about the
