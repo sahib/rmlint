@@ -249,9 +249,6 @@ typedef struct RmFile {
      */
     bool free_digest : 1;
 
-    /* If true, the file will be request to be pre-cached on the next read */
-    bool fadvise_requested : 1;
-
     /* Set to true if rm_shred_process_file() for hash increment */
     bool shredder_waiting : 1;
 

@@ -498,10 +498,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     g_assert(tag);
     RmOff balanced_bytes = tag->page_size * SHRED_BALANCED_PAGES;
     RmOff target_bytes = balanced_bytes * group->offset_factor;
-    if(group->next_offset == 2) {
-        file->fadvise_requested = 1;
-    }
-
     /* round to even number of pages, round up to MIN_READ_PAGES */
     RmOff target_pages = MAX(target_bytes / tag->page_size, 1);
     target_bytes = target_pages * tag->page_size;
@@ -509,7 +505,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     /* test if cost-effective to read the whole file */
     if(group->hash_offset + target_bytes + (balanced_bytes) >= group->file_size) {
         group->next_offset = group->file_size;
-        file->fadvise_requested = 1;
     } else {
         group->next_offset = group->hash_offset + target_bytes;
     }
