@@ -520,7 +520,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
             MIN(group->next_offset, group->hash_offset + SHRED_PARANOID_BYTES);
     }
 
-    file->status = RM_FILE_STATE_NORMAL;
     result = (group->next_offset - file->hash_offset);
 
     return result;
@@ -994,10 +993,8 @@ static RmFile *rm_shred_sift(RmFile *file) {
                 g_list_remove(current_group->in_progress_digests, file->digest);
         }
 
-        if(file->status == RM_FILE_STATE_IGNORE) {
-            /* reading/hashing failed somewhere */
+        if(file->hashing_failed) {
             rm_shred_discard_file(file, NULL);
-
         } else {
             g_assert(file->digest);
 
@@ -1651,7 +1648,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
 
     if(rm_session_was_aborted() || session->equal_exit_code == EXIT_FAILURE) {
-        file->status = RM_FILE_STATE_IGNORE;
+        file->hashing_failed = TRUE;
         rm_shred_sift(file);
         return 1;
     }
@@ -1676,7 +1673,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink, &bytes_read)) {
             /* rm_hasher_start_increment failed somewhere */
-            file->status = RM_FILE_STATE_IGNORE;
+            file->hashing_failed = TRUE;
             shredder_waiting = FALSE;
         }
 

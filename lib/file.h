@@ -29,18 +29,6 @@
 
 #include "cfg.h"
 
-typedef enum RmFileState {
-    /* File still processing
-     */
-    RM_FILE_STATE_NORMAL,
-
-    /* File can be ignored, has a unique hash, gets read failure
-     * or is elsewhise not noteworthy.
-     */
-    RM_FILE_STATE_IGNORE,
-
-} RmFileState;
-
 /* types of lint */
 typedef enum RmLintType {
     RM_LINT_TYPE_UNKNOWN = 0,
@@ -183,6 +171,9 @@ typedef struct RmFile {
     /* Set to true if was read from [json] cache as an original */
     bool cached_original : 1;
 
+    /* File hashing failed (probably read error or user interrupt) */
+    bool hashing_failed : 1;
+
     /* The pre-matched file cluster that this file belongs to (or NULL) */
     GQueue *cluster;
 
@@ -206,10 +197,6 @@ typedef struct RmFile {
      * (lower or equal file_size)
      */
     RmOff hash_offset;
-
-    /* Flag for when we do intermediate steps within a hash increment because the file is
-     * fragmented */
-    RmFileState status;
 
     /* digest of this file updated on every hash iteration.  Use a pointer so we can share
      * with RmShredGroup
