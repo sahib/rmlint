@@ -471,7 +471,7 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     }
 
     self->held_files = g_queue_new();
-    self->file_size = file->file_size;
+    self->file_size = rm_file_clamped_size(file);
     self->hash_offset = file->hash_offset;
 
     self->session = file->session;
@@ -717,7 +717,8 @@ static void rm_shred_discard_file(RmFile *file, _UNUSED gpointer user_data) {
     if(file->has_disk_ref) {
         rm_mds_device_ref(rm_shred_disk(file, session), -1);
         file->has_disk_ref = FALSE;
-        rm_shred_adjust_counters(tag, -1, -(gint64)(file->file_size - file->hash_offset));
+        rm_shred_adjust_counters(tag, -1,
+            -(gint64)(rm_file_clamped_size(file) - file->hash_offset));
     }
 
     /* toss the file (and any embedded hardlinks)*/
@@ -1108,7 +1109,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     rm_mds_device_ref(device, 1);
     file->has_disk_ref = TRUE;
 
-    rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
+    rm_shred_adjust_counters(shredder, 1, rm_file_clamped_size(file) - file->hash_offset);
 
     rm_shred_group_push_file(*group, file, true);
 }
@@ -1666,7 +1667,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         RmOff bytes_to_read = rm_shred_get_read_size(file, tag);
 
         gboolean shredder_waiting =
-            (file->shred_group->next_offset != file->file_size) &&
+            (file->shred_group->next_offset != rm_file_clamped_size(file)) &&
             (cfg->shred_always_wait ||
              (!cfg->shred_never_wait && file->is_on_rotational_disk &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
@@ -1686,7 +1687,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         /* Update totals for file, device and session*/
         file->hash_offset += bytes_to_read;
         if(file->is_symlink) {
-            rm_shred_adjust_counters(tag, 0, -(gint64)file->file_size);
+            rm_shred_adjust_counters(tag, 0, -rm_file_clamped_size(file));
         } else {
             rm_shred_adjust_counters(tag, 0, -(gint64)bytes_to_read);
         }

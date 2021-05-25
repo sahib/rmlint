@@ -98,12 +98,7 @@ typedef struct RmFile {
 
     /*----- 64-bit types ----- */
 
-    /* Filesize in bytes; this may be less than actual_file_size,
-     * since -q / -Q may limit this number.
-     */
-    RmOff file_size;
-
-    /* Filesize of a file when it was traversed by rmlint.
+    /* Filesize of a file according to stat when it was traversed by rmlint.
      */
     RmOff actual_file_size;
 
@@ -405,5 +400,10 @@ static inline ino_t rm_file_parent_inode(const RmFile *file) {
 static inline dev_t rm_file_parent_dev(const RmFile *file) {
     return rm_node_get_dev(file->node->parent);
 }
+
+/**
+ * @brief file size after clamping start and end offsets.
+ */
+RmOff rm_file_clamped_size(RmFile *file);
 
 #endif /* end of include guard */
