@@ -98,10 +98,6 @@ typedef struct RmFile {
 
     /*----- 64-bit types ----- */
 
-    /* file path lookup ID (if using swap table)
-     * */
-    RmOff path_id;
-
     /* The index of the path this file belongs to. */
     RmOff path_index;
 
