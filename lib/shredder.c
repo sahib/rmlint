@@ -1090,7 +1090,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     g_assert(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
 
     /* Create an empty checksum for empty files */
-    if(file->file_size == 0) {
+    if(file->actual_file_size == 0) {
         file->digest = rm_digest_new(cfg->checksum_type, 0);
     }
 
