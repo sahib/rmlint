@@ -705,6 +705,13 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
     }
 }
 
+static RmMDSDevice *rm_shred_disk(RmFile *file, const RmSession *session) {
+    dev_t dev = (session->cfg->fake_pathindex_as_disk) ?
+        (dev_t)file->path_index + 1 :
+        rm_file_dev(file);
+    return rm_mds_device_get(session->mds, NULL, dev);
+}
+
 /* Unlink RmFile from Shredder
  */
 static void rm_shred_discard_file(RmFile *file, _UNUSED gpointer user_data) {
@@ -712,9 +719,9 @@ static void rm_shred_discard_file(RmFile *file, _UNUSED gpointer user_data) {
     RmShredTag *tag = session->shredder;
 
     /* update device counters (unless this file was a bundled hardlink) */
-    if(file->disk) {
-        rm_mds_device_ref(file->disk, -1);
-        file->disk = NULL;
+    if(file->has_disk_ref) {
+        rm_mds_device_ref(rm_shred_disk(file, session), -1);
+        file->has_disk_ref = FALSE;
         rm_shred_adjust_counters(tag, -1, -(gint64)(file->file_size - file->hash_offset));
     }
 
@@ -736,7 +743,8 @@ static void rm_shred_push_queue(RmFile *file) {
             file->disk_offset = rm_file_inode(file);
         }
     }
-    rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
+    rm_mds_push_task(rm_shred_disk(file, file->session), rm_file_dev(file),
+        file->disk_offset, NULL, file);
 }
 
 //////////////////////////////////
@@ -1099,11 +1107,11 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
 
     RM_DEFINE_PATH(file);
 
-    /* add reference for this file to the MDS scheduler, and get pointer to its device */
-    file->disk = rm_mds_device_get(
-        session->mds, file_path,
-        (cfg->fake_pathindex_as_disk) ? (dev_t)file->path_index + 1 : rm_file_dev(file));
-    rm_mds_device_ref(file->disk, 1);
+    /* add reference for this file to the MDS scheduler */
+    RmMDSDevice *device = rm_shred_disk(file, session);
+    file->is_on_rotational_disk = rm_mds_device_is_rotational(device);
+    rm_mds_device_ref(device, 1);
+    file->has_disk_ref = TRUE;
 
     rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
 
@@ -1665,7 +1673,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         gboolean shredder_waiting =
             (file->shred_group->next_offset != file->file_size) &&
             (cfg->shred_always_wait ||
-             (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
+             (!cfg->shred_never_wait && file->is_on_rotational_disk &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
 
         gsize bytes_read = 0;
@@ -1718,7 +1726,8 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     }
     if(file) {
         /* file was not handled by rm_shred_sift so we need to add it back to the queue */
-        rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
+        rm_mds_push_task(rm_shred_disk(file, session), rm_file_dev(file),
+            file->disk_offset, NULL, file);
     }
     return result;
 }
