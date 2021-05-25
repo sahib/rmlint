@@ -134,11 +134,6 @@ typedef struct RmFile {
      * */
     gdouble mtime;
 
-    /* Number of children this file has.
-     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
-     * */
-    size_t n_children;
-
 
     /*----- pointer types ----- */
 
@@ -182,6 +177,12 @@ typedef struct RmFile {
     /*----- 32-bit types ----- */
 
     guint ref_count;
+
+    /* Number of children this file has.
+     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
+     * */
+    guint32 n_children;
+
 
     /*----- 16-bit types ----- */
 
