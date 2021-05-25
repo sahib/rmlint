@@ -98,9 +98,6 @@ typedef struct RmFile {
 
     /*----- 64-bit types ----- */
 
-    /* The index of the path this file belongs to. */
-    RmOff path_index;
-
     /* Filesize in bytes; this may be less than actual_file_size,
      * since -q / -Q may limit this number.
      */
@@ -185,6 +182,9 @@ typedef struct RmFile {
 
 
     /*----- 16-bit types ----- */
+
+    /* The index of the path this file belongs to. */
+    guint16 path_index;
 
     /* Depth of the file, relative to the command-line path it was found under.
      */

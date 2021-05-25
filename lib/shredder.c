@@ -1102,7 +1102,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     /* add reference for this file to the MDS scheduler, and get pointer to its device */
     file->disk = rm_mds_device_get(
         session->mds, file_path,
-        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : rm_file_dev(file));
+        (cfg->fake_pathindex_as_disk) ? (dev_t)file->path_index + 1 : rm_file_dev(file));
     rm_mds_device_ref(file->disk, 1);
 
     rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
