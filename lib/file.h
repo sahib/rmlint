@@ -95,17 +95,99 @@ struct RmDirectory;
  * RmFile structure; used by pretty much all rmlint modules.
  */
 typedef struct RmFile {
+
+    /*----- 64-bit types ----- */
+
     /* file path lookup ID (if using swap table)
      * */
     RmOff path_id;
+
+    /* The index of the path this file belongs to. */
+    RmOff path_index;
+
+    /* Filesize in bytes; this may be less than actual_file_size,
+     * since -q / -Q may limit this number.
+     */
+    RmOff file_size;
+
+    /* Filesize of a file when it was traversed by rmlint.
+     */
+    RmOff actual_file_size;
+
+    /* How many bytes were already read.
+     * (lower or equal file_size)
+     */
+    RmOff hash_offset;
+
+    /* Those are never used at the same time.
+     * disk_offset is used during computation,
+     * twin_count during output.
+     */
+    union {
+        /* Count of twins of this file.
+         * (i.e. length of group of this file)
+         */
+        gint64 twin_count;
+
+        /* Disk fiemap / physical offset at start of file (tests mapping subsequent
+         * file fragments did not deliver any significant additionl benefit) */
+        RmOff disk_offset;
+    };
+
+    /* File modification date/time
+     * */
+    gdouble mtime;
+
+    /* Number of children this file has.
+     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
+     * */
+    size_t n_children;
+
+
+    /*----- pointer types ----- */
+
+    /* The pre-matched file cluster that this file belongs to (or NULL) */
+    GQueue *cluster;
+
+    /* pointer to hardlinks collection (or NULL); one list shared between hardlink twin
+     * set */
+    GQueue *hardlinks;
+
+    /* digest of this file updated on every hash iteration.  Use a pointer so we can share
+     * with RmShredGroup
+     */
+    RmDigest *digest;
+
+    /* digest of this file read from file extended attributes (previously written by
+     * rmlint)
+     */
+    const char *ext_cksum;
+
+    /* multi-disk scheduler disk link */
+    struct _RmMDSDevice *disk;
 
     /* file path as node of folder n-ary tree
      * */
     RmNode *node;
 
-    /* File modification date/time
-     * */
-    gdouble mtime;
+    /* Link to the RmShredGroup that the file currently belongs to */
+    struct RmShredGroup *shred_group;
+
+    /* Required for rm_file_equal and for RM_DEFINE_PATH */
+    const struct RmSession *session;
+
+    struct RmSignal *signal;
+
+    /* Parent directory.
+     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
+     */
+    struct RmDirectory *parent_dir;
+
+    /*----- 32-bit types ----- */
+
+    guint ref_count;
+
+    /*----- 16-bit types ----- */
 
     /* Depth of the file, relative to the command-line path it was found under.
      */
@@ -121,7 +203,20 @@ typedef struct RmFile {
      * */
     gint16 outer_link_count;
 
-    struct _RmMDSDevice *disk;
+
+    /* What kind of lint this file is.
+     */
+    RmLintType lint_type;
+
+    /* Caching bitmasks to ensure each file is only matched once
+     * for every GRegex combination.
+     * See also preprocess.c for more explanation.
+     * */
+    RmPatternBitmask pattern_bitmask_path;
+    RmPatternBitmask pattern_bitmask_basename;
+
+
+    /*----- bitfield types ----- */
 
     /* True if the file is a symlink
      * shredder needs to know this, since the metadata might be about the
@@ -174,85 +269,6 @@ typedef struct RmFile {
     /* File hashing failed (probably read error or user interrupt) */
     bool hashing_failed : 1;
 
-    /* The pre-matched file cluster that this file belongs to (or NULL) */
-    GQueue *cluster;
-
-    /* pointer to hardlinks collection (or NULL); one list shared between hardlink twin
-     * set */
-    GQueue *hardlinks;
-
-    /* The index of the path this file belongs to. */
-    RmOff path_index;
-
-    /* Filesize in bytes; this may be less than actual_file_size,
-     * since -q / -Q may limit this number.
-     */
-    RmOff file_size;
-
-    /* Filesize of a file when it was traversed by rmlint.
-     */
-    RmOff actual_file_size;
-
-    /* How many bytes were already read.
-     * (lower or equal file_size)
-     */
-    RmOff hash_offset;
-
-    /* digest of this file updated on every hash iteration.  Use a pointer so we can share
-     * with RmShredGroup
-     */
-    RmDigest *digest;
-
-    /* digest of this file read from file extended attributes (previously written by
-     * rmlint)
-     */
-    const char *ext_cksum;
-
-    /* Those are never used at the same time.
-     * disk_offset is used during computation,
-     * twin_count during output.
-     */
-    union {
-        /* Count of twins of this file.
-         * (i.e. length of group of this file)
-         */
-        gint64 twin_count;
-
-        /* Disk fiemap / physical offset at start of file (tests mapping subsequent
-         * file fragments did not deliver any significant additionl benefit) */
-        RmOff disk_offset;
-    };
-
-    /* What kind of lint this file is.
-     */
-    RmLintType lint_type;
-
-    /* Link to the RmShredGroup that the file currently belongs to */
-    struct RmShredGroup *shred_group;
-
-    /* Required for rm_file_equal and for RM_DEFINE_PATH */
-    const struct RmSession *session;
-
-    struct RmSignal *signal;
-
-    /* Caching bitmasks to ensure each file is only matched once
-     * for every GRegex combination.
-     * See also preprocess.c for more explanation.
-     * */
-    RmPatternBitmask pattern_bitmask_path;
-    RmPatternBitmask pattern_bitmask_basename;
-
-    /* Parent directory.
-     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
-     */
-    struct RmDirectory *parent_dir;
-
-    /* Number of children this file has.
-     * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
-     * */
-    size_t n_children;
-
-    guint ref_count;
 } RmFile;
 
 /* Defines a path variable containing the file's path */
