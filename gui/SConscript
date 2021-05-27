@@ -10,6 +10,7 @@ GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 GUI_DIR = 'gui'
 FILES_RECORD = '.files.txt'
 FILES_RECORD_FULL = os.path.join(GUI_DIR, FILES_RECORD)
+PREFIX = env['PREFIX']
 
 def which(program):
     def is_exe(fpath):
@@ -39,9 +40,10 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
         py_install = env.Command(
             'always.install',
             ['setup.py'],
-            'cd {} && {} setup.py install --record {}'.format(
+            'cd {} && {} setup.py install --prefix {} --record {}'.format(
                 GUI_DIR,
                 python_exe,
+                PREFIX,
                 FILES_RECORD
             )
         )
