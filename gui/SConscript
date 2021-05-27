@@ -10,6 +10,8 @@ GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 GUI_DIR = 'gui'
 FILES_RECORD = '.files.txt'
 FILES_RECORD_FULL = os.path.join(GUI_DIR, FILES_RECORD)
+PREFIX = env['PREFIX']
+COMPILE_SCHEMAS = GetOption('schemas_compile')
 
 def which(program):
     def is_exe(fpath):
@@ -39,10 +41,12 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
         py_install = env.Command(
             'always.install',
             ['setup.py'],
-            'cd {} && {} setup.py install --record {}'.format(
+            'cd {} && {} setup.py install --prefix {} --record {} {}'.format(
                 GUI_DIR,
                 python_exe,
-                FILES_RECORD
+                PREFIX,
+                FILES_RECORD,
+                '--compile-schemas' if COMPILE_SCHEMAS else ''
             )
         )
         env.Alias('install', py_install)
@@ -62,16 +66,17 @@ if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
         except OSError as err:
             print('Could not open {}: '.format(FILES_RECORD_FULL), err)
 
-        # recompile remaining glib schemas after deleting ours
-        print('Recompiling glib schemas')
-        gschema_dir = os.path.join(env['PREFIX'], GSCHEMA_DIR_SUFFIX)
-        compile_command = [
-                'glib-compile-schemas',
-                gschema_dir]
-        try:
-            subprocess.call(compile_command)
-        except subprocess.CalledProcessError as err:
-            print("Error recompiling glib schemas post uninstall")
+        if COMPILE_SCHEMAS:
+            # recompile remaining glib schemas after deleting ours
+            print('Recompiling glib schemas')
+            gschema_dir = os.path.join(env['PREFIX'], GSCHEMA_DIR_SUFFIX)
+            compile_command = [
+                    'glib-compile-schemas',
+                    gschema_dir]
+            try:
+                subprocess.call(compile_command)
+            except subprocess.CalledProcessError as err:
+                print("Error recompiling glib schemas post uninstall")
 
 
     env.Alias('uninstall',
