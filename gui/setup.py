@@ -13,6 +13,7 @@ import subprocess
 GRESOURCE_DIR = 'shredder/resources'
 GRESOURCE_FILE = 'shredder.gresource.xml'
 GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
+COMPILE_SCHEMAS = 0
 
 def read_version():
     with open('../.version', 'r') as handle:
@@ -21,6 +22,19 @@ def read_version():
     return version_string.strip()
 
 class install_glib_resources(install):
+    user_options = install.user_options + [
+        ('compile-schemas', None, 'Compile glib schemas after install (default false)')
+    ]
+
+    def initialize_options(self):
+        install.initialize_options(self)
+        self.compile_schemas = 0
+
+    def finalize_options(self):
+        install.finalize_options(self)
+        global COMPILE_SCHEMAS
+        COMPILE_SCHEMAS = self.compile_schemas
+
     def run(self):
         self._build_gresources()
         super().run()
@@ -44,7 +58,11 @@ class compile_glib_schemas(install_data):
 
     def run(self):
         super().run()
-        self._build_gschemas()
+        if COMPILE_SCHEMAS == 1:
+            self._build_gschemas()
+        else:
+            print("==> Not compiling glib schemas")
+            self.print_compile_instructions()
 
     def gschema_dir(self):
         return os.path.join(self.install_dir, GSCHEMA_DIR_SUFFIX)
