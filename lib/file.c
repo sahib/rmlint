@@ -140,7 +140,7 @@ static gint rm_file_unref_impl(RmFile *file, gboolean unref_hardlinks) {
     if(!file) {
         return 0;
     }
-    if(--file->ref_count != 0) {
+    if(!g_atomic_int_dec_and_test(&file->ref_count)) {
         // somebody still loves me!
         return 0;
     }
@@ -177,7 +177,7 @@ gint rm_file_unref_full(RmFile *file) {
 }
 
 RmFile *rm_file_ref(RmFile *file) {
-    file->ref_count++;
+    g_atomic_int_inc (&file->ref_count);
     return file;
 }
 

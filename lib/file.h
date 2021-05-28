@@ -165,6 +165,8 @@ typedef struct RmFile {
 
     /*----- 32-bit types ----- */
 
+    guint ref_count;
+
     /* Number of children this file has.
      * Only filled if type is RM_LINT_TYPE_PART_OF_DIRECTORY.
      * */
@@ -189,8 +191,6 @@ typedef struct RmFile {
      * This is used for the 'oO'-sortcriteria.
      * */
     gint16 outer_link_count;
-
-    guint16 ref_count;
 
 
     /* Caching bitmasks to ensure each file is only matched once
@@ -304,7 +304,7 @@ RmFile *rm_file_new(struct RmSession *session, const char *path, RmStat *statp,
 /**
  * @brief Decrease reference count to file;
  * free resources if this is the last reference.
- * @note NOT threadsafe
+ * @note threadsafe
  * @note nullable
  * @retval 1 if the file freed else 0
  */
