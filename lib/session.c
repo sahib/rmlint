@@ -76,7 +76,6 @@ bool rm_session_check_kernel_version(int need_major, int need_minor) {
 }
 
 void rm_session_init(RmSession *session, RmCfg *cfg) {
-    rm_log_warning("Sizeof(RmFile): %lu\n", sizeof(RmFile));
     memset(session, 0, sizeof(RmSession));
     session->timer = g_timer_new();
 
