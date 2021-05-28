@@ -542,6 +542,12 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'gui']:
         dest='with_' + suffix
     )
 
+AddOption(
+    '--without-schemas-compile',
+    action='store_false', dest='schemas_compile', default=True,
+    help="don't compile glib schemas after install"
+)
+
 env = Environment(PREFIX = GetOption('prefix'))
 
 if 'install' in COMMAND_LINE_TARGETS:
