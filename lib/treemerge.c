@@ -378,8 +378,7 @@ static void rm_directory_to_file(RmTreeMerger *merger, const RmDirectory *self,
     file->depth = rm_util_path_depth(self->dirname);
 
     /* Recursively calculate the file size */
-    file->file_size = rm_tm_calc_file_size(self);
-    file->actual_file_size = file->file_size;
+    file->actual_file_size = rm_tm_calc_file_size(self);
     file->is_prefd = (self->prefd_files >= self->dupe_count);
     file->parent_dir = (RmDirectory *)self;
     file->n_children = self->dupe_count;

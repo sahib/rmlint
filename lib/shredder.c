@@ -471,7 +471,7 @@ static RmShredGroup *rm_shred_group_new(RmFile *file) {
     }
 
     self->held_files = g_queue_new();
-    self->file_size = file->file_size;
+    self->file_size = rm_file_end_seek(file);
     self->hash_offset = file->hash_offset;
 
     self->session = file->session;
@@ -498,10 +498,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     g_assert(tag);
     RmOff balanced_bytes = tag->page_size * SHRED_BALANCED_PAGES;
     RmOff target_bytes = balanced_bytes * group->offset_factor;
-    if(group->next_offset == 2) {
-        file->fadvise_requested = 1;
-    }
-
     /* round to even number of pages, round up to MIN_READ_PAGES */
     RmOff target_pages = MAX(target_bytes / tag->page_size, 1);
     target_bytes = target_pages * tag->page_size;
@@ -509,7 +505,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
     /* test if cost-effective to read the whole file */
     if(group->hash_offset + target_bytes + (balanced_bytes) >= group->file_size) {
         group->next_offset = group->file_size;
-        file->fadvise_requested = 1;
     } else {
         group->next_offset = group->hash_offset + target_bytes;
     }
@@ -520,7 +515,6 @@ static gint32 rm_shred_get_read_size(RmFile *file, RmShredTag *tag) {
             MIN(group->next_offset, group->hash_offset + SHRED_PARANOID_BYTES);
     }
 
-    file->status = RM_FILE_STATE_NORMAL;
     result = (group->next_offset - file->hash_offset);
 
     return result;
@@ -706,6 +700,13 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
     }
 }
 
+static RmMDSDevice *rm_shred_disk(RmFile *file, const RmSession *session) {
+    dev_t dev = (session->cfg->fake_pathindex_as_disk) ?
+        (dev_t)file->path_index + 1 :
+        rm_file_dev(file);
+    return rm_mds_device_get(session->mds, NULL, dev);
+}
+
 /* Unlink RmFile from Shredder
  */
 static void rm_shred_discard_file(RmFile *file, _UNUSED gpointer user_data) {
@@ -713,10 +714,11 @@ static void rm_shred_discard_file(RmFile *file, _UNUSED gpointer user_data) {
     RmShredTag *tag = session->shredder;
 
     /* update device counters (unless this file was a bundled hardlink) */
-    if(file->disk) {
-        rm_mds_device_ref(file->disk, -1);
-        file->disk = NULL;
-        rm_shred_adjust_counters(tag, -1, -(gint64)(file->file_size - file->hash_offset));
+    if(file->has_disk_ref) {
+        rm_mds_device_ref(rm_shred_disk(file, session), -1);
+        file->has_disk_ref = FALSE;
+        rm_shred_adjust_counters(tag, -1,
+            -(gint64)(rm_file_end_seek(file) - file->hash_offset));
     }
 
     /* toss the file (and any embedded hardlinks)*/
@@ -737,7 +739,8 @@ static void rm_shred_push_queue(RmFile *file) {
             file->disk_offset = rm_file_inode(file);
         }
     }
-    rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
+    rm_mds_push_task(rm_shred_disk(file, file->session), rm_file_dev(file),
+        file->disk_offset, NULL, file);
 }
 
 //////////////////////////////////
@@ -994,10 +997,8 @@ static RmFile *rm_shred_sift(RmFile *file) {
                 g_list_remove(current_group->in_progress_digests, file->digest);
         }
 
-        if(file->status == RM_FILE_STATE_IGNORE) {
-            /* reading/hashing failed somewhere */
+        if(file->hashing_failed) {
             rm_shred_discard_file(file, NULL);
-
         } else {
             g_assert(file->digest);
 
@@ -1090,7 +1091,7 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
     g_assert(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE);
 
     /* Create an empty checksum for empty files */
-    if(file->file_size == 0) {
+    if(file->actual_file_size == 0) {
         file->digest = rm_digest_new(cfg->checksum_type, 0);
     }
 
@@ -1102,13 +1103,13 @@ static void rm_shred_file_preprocess(RmFile *file, RmShredGroup **group) {
 
     RM_DEFINE_PATH(file);
 
-    /* add reference for this file to the MDS scheduler, and get pointer to its device */
-    file->disk = rm_mds_device_get(
-        session->mds, file_path,
-        (cfg->fake_pathindex_as_disk) ? file->path_index + 1 : rm_file_dev(file));
-    rm_mds_device_ref(file->disk, 1);
+    /* add reference for this file to the MDS scheduler */
+    RmMDSDevice *device = rm_shred_disk(file, session);
+    file->is_on_rotational_disk = rm_mds_device_is_rotational(device);
+    rm_mds_device_ref(device, 1);
+    file->has_disk_ref = TRUE;
 
-    rm_shred_adjust_counters(shredder, 1, (gint64)file->file_size - file->hash_offset);
+    rm_shred_adjust_counters(shredder, 1, rm_file_end_seek(file) - file->hash_offset);
 
     rm_shred_group_push_file(*group, file, true);
 }
@@ -1651,7 +1652,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     RmShredTag *tag = session->shredder;
 
     if(rm_session_was_aborted() || session->equal_exit_code == EXIT_FAILURE) {
-        file->status = RM_FILE_STATE_IGNORE;
+        file->hashing_failed = TRUE;
         rm_shred_sift(file);
         return 1;
     }
@@ -1666,9 +1667,9 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         RmOff bytes_to_read = rm_shred_get_read_size(file, tag);
 
         gboolean shredder_waiting =
-            (file->shred_group->next_offset != file->file_size) &&
+            (file->shred_group->next_offset != rm_file_end_seek(file)) &&
             (cfg->shred_always_wait ||
-             (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
+             (!cfg->shred_never_wait && file->is_on_rotational_disk &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
 
         gsize bytes_read = 0;
@@ -1676,7 +1677,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink, &bytes_read)) {
             /* rm_hasher_start_increment failed somewhere */
-            file->status = RM_FILE_STATE_IGNORE;
+            file->hashing_failed = TRUE;
             shredder_waiting = FALSE;
         }
 
@@ -1686,7 +1687,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
         /* Update totals for file, device and session*/
         file->hash_offset += bytes_to_read;
         if(file->is_symlink) {
-            rm_shred_adjust_counters(tag, 0, -(gint64)file->file_size);
+            rm_shred_adjust_counters(tag, 0, -rm_file_clamped_size(file));
         } else {
             rm_shred_adjust_counters(tag, 0, -(gint64)bytes_to_read);
         }
@@ -1721,7 +1722,8 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
     }
     if(file) {
         /* file was not handled by rm_shred_sift so we need to add it back to the queue */
-        rm_mds_push_task(file->disk, rm_file_dev(file), file->disk_offset, NULL, file);
+        rm_mds_push_task(rm_shred_disk(file, session), rm_file_dev(file),
+            file->disk_offset, NULL, file);
     }
     return result;
 }
