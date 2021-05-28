@@ -35,6 +35,10 @@ def build_config_template(target, source, env):
             HAVE_LINUX_FS_H=env['HAVE_LINUX_FS_H'],
             HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
             HAVE_MM_CRC32_U64=env['HAVE_MM_CRC32_U64'],
+            HAVE_AVX2=env['HAVE_AVX2'],
+            HAVE_AVX512F=env['HAVE_AVX512F'],
+            HAVE_AVX512VL=env['HAVE_AVX512VL'],
+            HAVE_SSE4_1=env['HAVE_SSE4_1'],
             HAVE_BUILTIN_CPU_SUPPORTS=env['HAVE_BUILTIN_CPU_SUPPORTS'],
             HAVE_UNAME=env['HAVE_UNAME'],
             HAVE_SYSMACROS_H=env['HAVE_SYSMACROS_H'],
@@ -89,12 +93,35 @@ sh_formatter = env.Command(
     'formats/sh.c', 'formats/sh.c.in', build_sh_formatter
 )
 
+blake3 = Glob('checksums/blake3/*.[cS]')
+if not env['HAVE_AVX2']:
+	print('Not compiling blake3 avx2 options')
+	blake3 = [f for f in blake3 if 'avx2' not in f.path]
+	env.Append(CCFLAGS=['-DBLAKE3_NO_AVX2'])
+
+
+if not env['HAVE_AVX512F'] or not  env['HAVE_AVX512VL']:
+	print('Not compiling blake3 avx512 options')
+	blake3 = [f for f in blake3 if 'avx512' not in f.path]
+	env.Append(CCFLAGS=['-DBLAKE3_NO_AVX512'])
+
+if not env['HAVE_SSE4_1']:
+	print('Not compiling blake3 sse41 options')
+	blake3 = [f for f in blake3 if 'sse41' not in f.path]
+	env.Append(CCFLAGS=['-DBLAKE3_NO_SSE41'])
+
+if not env['HAVE_SSE2']:
+	print('Not compiling blake3 sse2 options')
+	blake3 = [f for f in blake3 if 'sse41' not in f.path]
+	env.Append(CCFLAGS=['-DBLAKE3_NO_SSE2'])
+
 library = env.Library(
     '../rmlint',
     Glob('*.c')           +
     Glob('checksums/*.c') +
     Glob('checksums/xxhash/*.c') +
     Glob('checksums/blake2/*.c') +
+    blake3 +
     Glob('checksums/sha3/*.c') +
     Glob('formats/*.c') +
     Glob('fts/*.c')

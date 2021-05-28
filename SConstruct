@@ -412,6 +412,29 @@ def check_builtin_cpu_supports(context):
     return rc
 
 
+def check_cpu_extensions(context):
+	l_cpuInfo = {'flags' : []}
+	print('==> Checking CPU checksum and vector extensions...')
+	rc = 1
+	if ARGUMENTS.get('CPU_EXTENSIONS') != '0':
+		try:
+			import sys
+			sys.path.append('submodules/py-cpuinfo')
+			from cpuinfo import get_cpu_info
+			l_cpuInfo = get_cpu_info()
+		except:
+			print('   Unable to get cpuinfo, maybe install py-cpuinfo')
+			rc = 0
+
+	for ext in ['AVX512F', 'AVX512VL', 'AVX2', 'SSE4_1', 'SSE2']:
+		have_ext = 1 if ext.lower() in l_cpuInfo['flags'] else 0
+		conf.env['HAVE_' + ext] = have_ext
+		print('    {}: {}'.format(ext, have_ext))
+
+	context.did_show_result = True
+	context.Result(rc)
+	return rc
+
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
         Delete("$SOURCE"),
@@ -608,6 +631,7 @@ conf = Configure(env, custom_tests={
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
     'check_mm_crc32_u64': check_mm_crc32_u64,
+    'check_cpu_extensions': check_cpu_extensions,
     'check_builtin_cpu_supports': check_builtin_cpu_supports,
     'check_sysmacro_h': check_sysmacro_h
 })
@@ -710,6 +734,7 @@ conf.env.Append(CCFLAGS=[
     '-Wno-implicit-fallthrough',
 ])
 
+
 env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
 
 
@@ -731,9 +756,23 @@ conf.check_btrfs_h()
 conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
+conf.check_cpu_extensions()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+if conf.env['HAVE_AVX2']:
+	conf.env.Append(CCFLAGS=['-mavx2'])
+
+if conf.env['HAVE_AVX512F'] and conf.env['HAVE_AVX512VL']:
+	conf.env.Append(CCFLAGS=['-mavx512f', '-mavx512vl'])
+
+if conf.env['HAVE_SSE4_1']:
+	conf.env.Append(CCFLAGS=['-msse4.1'])
+
+if conf.env['HAVE_SSE2']:
+	conf.env.Append(CCFLAGS=['-msse2'])
+
 
 if ARGUMENTS.get('GDB') == '1':
     ARGUMENTS['DEBUG'] = '1'
@@ -908,6 +947,10 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Support for SHA512 (needs glib >= 2.31)               : {sha512}
+    AVX512F and AVX512VL cpu extensions                   : {avx512}
+    AVX2 cpu extensions                                   : {avx2}
+    SSE4.1 cpu extensions                                 : {sse41}
+    SSE2 cpu extensions                                   : {sse2}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
     Checking for proper support of big files >= 4GB       : {bigfiles}
@@ -945,6 +988,10 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
+            avx512=yesno(env['HAVE_AVX512F'] and env['HAVE_AVX512VL']),
+            avx2=yesno(env['HAVE_AVX2']),
+            sse41=yesno(env['HAVE_SSE4_1']),
+            sse2=yesno(env['HAVE_SSE2']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
             bigstat=yesno(env['HAVE_BIG_STAT']),

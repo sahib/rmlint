@@ -37,6 +37,7 @@
 
 #include "checksums/highwayhash.h"
 #include "checksums/blake2/blake2.h"
+#include "checksums/blake3/blake3.h"
 #include "checksums/metrohash.h"
 #include "checksums/murmur3.h"
 #include "checksums/sha3/sha3.h"
@@ -563,7 +564,7 @@ RM_DIGEST_DEFINE_SHA3(512)
 //      blake hashes     //
 ///////////////////////////
 
-#define CREATE_BLAKE_INTERFACE(ALGO, ALGO_BIG)                                  \
+#define CREATE_BLAKE2_INTERFACE(ALGO, ALGO_BIG)                                  \
                                                                                 \
     static ALGO##_state *rm_digest_##ALGO##_new(void) {                         \
         ALGO##_state *state = g_slice_new(ALGO##_state);                        \
@@ -595,10 +596,58 @@ RM_DIGEST_DEFINE_SHA3(512)
         .copy = (RmDigestCopyFunc)rm_digest_##ALGO##_copy,                      \
         .steal = (RmDigestStealFunc)rm_digest_##ALGO##_steal};
 
-CREATE_BLAKE_INTERFACE(blake2b, BLAKE2B);
-CREATE_BLAKE_INTERFACE(blake2bp, BLAKE2B);
-CREATE_BLAKE_INTERFACE(blake2s, BLAKE2S);
-CREATE_BLAKE_INTERFACE(blake2sp, BLAKE2S);
+CREATE_BLAKE2_INTERFACE(blake2b, BLAKE2B);
+CREATE_BLAKE2_INTERFACE(blake2bp, BLAKE2B);
+CREATE_BLAKE2_INTERFACE(blake2s, BLAKE2S);
+CREATE_BLAKE2_INTERFACE(blake2sp, BLAKE2S);
+
+static blake3_hasher *rm_digest_blake3_new(void) {
+    blake3_hasher *hasher = g_slice_new(blake3_hasher);
+    blake3_hasher_init(hasher);
+    return hasher;
+}
+
+static void rm_digest_blake3_free(blake3_hasher *hasher) {
+    g_slice_free(blake3_hasher, hasher);
+}
+
+static blake3_hasher *rm_digest_blake3_copy(blake3_hasher *hasher) {
+    blake3_hasher *copy = g_slice_copy(sizeof(blake3_hasher), hasher);
+    return copy;
+}
+
+static void rm_digest_blake3_steal(blake3_hasher *hasher, guint8 *result) {
+    blake3_hasher *copy = rm_digest_blake3_copy(hasher);
+    blake3_hasher_finalize(copy, result, BLAKE3_OUT_LEN);
+    rm_digest_blake3_free(copy);
+}
+
+static void rm_digest_blake3_512_steal(blake3_hasher *hasher, guint8 *result) {
+    blake3_hasher *copy = rm_digest_blake3_copy(hasher);
+    blake3_hasher_finalize(copy, result, 64);
+    rm_digest_blake3_free(copy);
+}
+
+static const RmDigestInterface blake3_interface = {
+    .name = "blake3",
+    .bits = 8 * BLAKE3_OUT_LEN,
+    .len = NULL,
+    .new = (RmDigestNewFunc)rm_digest_blake3_new,
+    .free = (RmDigestFreeFunc)rm_digest_blake3_free,
+    .update = (RmDigestUpdateFunc)blake3_hasher_update,
+    .copy = (RmDigestCopyFunc)rm_digest_blake3_copy,
+    .steal = (RmDigestStealFunc)rm_digest_blake3_steal};
+
+static const RmDigestInterface blake3_512_interface = {
+    .name = "blake3_512",
+    .bits = 512,
+    .len = NULL,
+    .new = (RmDigestNewFunc)rm_digest_blake3_new,
+    .free = (RmDigestFreeFunc)rm_digest_blake3_free,
+    .update = (RmDigestUpdateFunc)blake3_hasher_update,
+    .copy = (RmDigestCopyFunc)rm_digest_blake3_copy,
+    .steal = (RmDigestStealFunc)rm_digest_blake3_512_steal};
+
 
 ///////////////////////////
 //      ext  hash        //
@@ -826,6 +875,8 @@ static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
         [RM_DIGEST_BLAKE2B] = &blake2b_interface,
         [RM_DIGEST_BLAKE2SP] = &blake2sp_interface,
         [RM_DIGEST_BLAKE2BP] = &blake2bp_interface,
+        [RM_DIGEST_BLAKE3]   = &blake3_interface,
+        [RM_DIGEST_BLAKE3_512] = &blake3_512_interface,
         [RM_DIGEST_EXT] = &ext_interface,
         [RM_DIGEST_CUMULATIVE] = &cumulative_interface,
         [RM_DIGEST_PARANOID] = &paranoid_interface,

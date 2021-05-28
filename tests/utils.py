@@ -40,6 +40,8 @@ CKSUM_TYPES = [
     'blake2b',
     'blake2sp',
     'blake2bp',
+    'blake3',
+    'blake3_512',
     'xxhash',
     'highway64',
     'highway128',
