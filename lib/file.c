@@ -38,14 +38,14 @@ static RmOff rm_file_start_seek(RmFile *file) {
     }
 }
 
-static RmOff rm_file_end_seek(RmFile *file) {
+RmOff rm_file_end_seek(RmFile *file) {
     RmCfg *cfg = file->session->cfg;
-    RmOff end_seek = file->actual_file_size;
+    RmOff file_size = file->actual_file_size;
 
     if(cfg->use_absolute_end_offset) {
-        return end_seek - MIN(cfg->skip_end_offset, end_seek);
+        return MIN(cfg->skip_end_offset, file_size);
     } else {
-        return end_seek * cfg->skip_end_factor;
+        return MIN(file_size, file_size * cfg->skip_end_factor);
     }
 }
 

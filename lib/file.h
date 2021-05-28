@@ -406,4 +406,9 @@ static inline dev_t rm_file_parent_dev(const RmFile *file) {
  */
 RmOff rm_file_clamped_size(RmFile *file);
 
+/**
+ * @brief file end position after clamping end offset.
+ */
+RmOff rm_file_end_seek(RmFile *file);
+
 #endif /* end of include guard */
