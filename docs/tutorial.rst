@@ -311,10 +311,11 @@ Here's the list of currently available formatters and their config options:
 
     - *clone*: reflink-capable filesystems only. Try to clone both files with the
       FIDEDUPERANGE ``ioctl(3p)`` (or BTRFS_IOC_FILE_EXTENT_SAME on older kernels).
-      This will free up duplicate extents. Needs at least kernel 4.2.
-    - *reflink*: Try to reflink the duplicate file to the original. See also
-      ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
-      it.
+      This will free up duplicate extents while preserving the metadata of both. 
+      Needs at least kernel 4.2.
+    - *reflink*: Try to replace the duplicate file with a reflink to the original. 
+      See also ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not 
+      support it.
     - *hardlink*: Replace the duplicate file with a hardlink to the original
       file. Fails if both files are not on the same partition.
     - *symlink*: Tries to replace the duplicate file with a symbolic link to
