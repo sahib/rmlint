@@ -190,11 +190,11 @@ General Options
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
     Use ``-p`` if you want byte-by-byte comparison without any hashing.
 
-    * **-p** is equivalent to **--algorithm=paranoid**
+    * ``-p`` is equivalent to ``--algorithm=paranoid``
 
-    * **-P** is equivalent to **--algorithm=highway256**
-    * **-PP** is equivalent to **--algorithm=metro256**
-    * **-PPP** is equivalent to **--algorithm=metro**
+    * ``-P`` is equivalent to ``--algorithm=highway256``
+    * ``-PP`` is equivalent to ``--algorithm=metro256``
+    * ``-PPP`` is equivalent to ``--algorithm=metro``
 
 :``-v --loud`` / ``-V --quiet``:
 
