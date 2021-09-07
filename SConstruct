@@ -515,7 +515,7 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui', 'docs']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -804,7 +804,8 @@ env.Default(library)
 
 SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')
-SConscript('docs/SConscript')
+if GetOption("with_docs"):
+    SConscript('docs/SConscript')
 SConscript('gui/SConscript')
 
 
@@ -898,6 +899,9 @@ if 'config' in COMMAND_LINE_TARGETS:
         (needs <locale.h> for compile side support)       : {locale}
         (needs msgfmt to compile .po files)               : {msgfmt}
 
+    Enable GUI                                            : {gui}
+    Build docs                                            : {docs}
+
 {grey}The following constants will be used during the build:{end}
 
     Version information  : {version}
@@ -925,6 +929,8 @@ Type 'scons' to actually compile rmlint now. Good luck.
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
             bigstat=yesno(env['HAVE_BIG_STAT']),
+            gui=yesno(GetOption("with_gui")),
+            docs=yesno(GetOption("with_docs")),
             sphinx=COLORS['green'] + 'yes, using ' + COLORS['end'] + sphinx_bin if sphinx_bin else yesno(sphinx_bin),
             compiler=env['CC'],
             prefix=GetOption('prefix'),
