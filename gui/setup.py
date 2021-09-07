@@ -37,7 +37,7 @@ def get_prefix():
 PREFIX = get_prefix()
 
 
-class PrePlusPostInstall(install):
+class PreInstall(install):
     def run(self):
         # Compile the resource bundle freshly
         print('==> Compiling resource bundle')
@@ -59,24 +59,6 @@ class PrePlusPostInstall(install):
         # Run the usual distutils install routine:
         install.run(self)
 
-        # Make sure the schema file is updated.
-        # Otherwise the gui will trace trap.
-        print('==> Compiling GLib Schema files')
-
-        try:
-            subprocess.call([
-                'glib-compile-schemas',
-                os.path.join(PREFIX, 'share/glib-2.0/schemas')
-            ])
-        except subprocess.CalledProcessError as err:
-            print('==> Could not update schemas: ', err)
-            print('==> Please run the following manually:\n')
-            print('    sudo glib-compile-schemas {prefix}'.format(
-                prefix=os.path.join(PREFIX, 'share/glib-2.0/schemas')
-            ))
-        else:
-            print('==> OK!')
-
 
 setup(
     name='Shredder',
@@ -88,7 +70,7 @@ setup(
     url='https://rmlint.rtfd.org',
     license='GPLv3',
     platforms='any',
-    cmdclass={'install': PrePlusPostInstall},
+    cmdclass={'install': PreInstall},
     packages=['shredder', 'shredder.views'],
     package_data={'': [
         'resources/*.gresource'
