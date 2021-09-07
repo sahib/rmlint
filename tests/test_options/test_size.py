@@ -90,7 +90,7 @@ def test_replay_size():
     create_file('yyy', 'b/yyy')
     create_testdir('empty_dir')
 
-    replay_path = '/tmp/replay.json'
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
     head, *data, footer = run_rmlint('-o json:{p}'.format(
         p=replay_path
     ))
