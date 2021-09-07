@@ -133,7 +133,7 @@ def run_rmlint_once(*args,
 
     cmd += shlex.split(' '.join(args))
     if with_json:
-        cmd += ['-o', 'json:/tmp/out.json', '-c', 'json:oneline']
+        cmd += ['-o', 'json:' + os.path.join(TESTDIR_NAME, 'out.json'), '-c', 'json:oneline']
 
     for idx, output in enumerate(outputs or []):
         cmd.append('-o')
@@ -168,7 +168,7 @@ def run_rmlint_once(*args,
         return output
 
     if with_json:
-        with open('/tmp/out.json', 'r') as f:
+        with open(os.path.join(TESTDIR_NAME, 'out.json'), 'r') as f:
             json_data = json.loads(f.read())
     else:
         json_data = []
