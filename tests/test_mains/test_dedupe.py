@@ -45,7 +45,7 @@ def is_on_reflink_fs(path):
                 print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
                 return (part.fstype in REFLINK_CAPABLE_FILESYSTEMS)
 
-    print("No mountpoint found for {0}", path)
+    print("No mountpoint found for {}".format(path))
     return False
 
 
