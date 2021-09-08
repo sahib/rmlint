@@ -351,7 +351,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
             return 0;
         }
 
-        if(fraction_num == ULONG_MAX && errno == ERANGE) {
+        if(fraction_num == ULLONG_MAX && errno == ERANGE) {
             g_set_error(error, RM_ERROR_QUARK, 0, _("Fraction is too big for uint64"));
             return 0;
         }
@@ -371,7 +371,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
             return 0;
         }
 
-        if(base_size == ULONG_MAX && errno == ERANGE) {
+        if(base_size == ULLONG_MAX && errno == ERANGE) {
             g_set_error(error, RM_ERROR_QUARK, 0, _("Size is too big for uint64"));
             return 0;
         }
