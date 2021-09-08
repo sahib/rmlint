@@ -18,7 +18,7 @@ DESCRIPTION
 ===========
 
 ``rmlint`` finds space waste and other broken things on your filesystem.
-It's main focus lies on finding duplicate files and directories.
+Its main focus lies on finding duplicate files and directories.
 
 It is able to find the following types of lint:
 
