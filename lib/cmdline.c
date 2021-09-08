@@ -97,7 +97,7 @@ static void rm_cmd_show_version(void) {
 }
 
 static void rm_cmd_show_manpage(void) {
-    static const char *commands[] = {"man %s docs/rmlint.1.gz 2> /dev/null",
+    static const char *commands[] = {"man %s docs/_build/man/rmlint.1 2> /dev/null",
                                      "man %s rmlint", NULL};
 
     bool found_manpage = false;
