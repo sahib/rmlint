@@ -37,8 +37,9 @@ Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 def check_gcc_version(context):
     context.Message('Checking for GCC version... ')
 
+    gcc = os.environ.get("CC", "gcc")
     try:
-        v = subprocess.check_output("printf '%s\n' __GNUC__ | gcc -E -P -", shell=True)
+        v = subprocess.check_output("printf '%s\n' __GNUC__ | {} -E -P -".format(gcc), shell=True)
         try:
             v = int(v)
             context.Result(str(v))
