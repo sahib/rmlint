@@ -1076,7 +1076,7 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
             }
 
             /* move offsets in preparation for reading next extent */
-            file_offset += fm_ext.fe_length;
+            file_offset = fm_ext.fe_logical + fm_ext.fe_length;
             expected = fm_ext.fe_physical + fm_ext.fe_length;
         }
 
