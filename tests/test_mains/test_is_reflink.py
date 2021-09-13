@@ -120,3 +120,17 @@ def _make_reflink_testcase(extents, hole_extents=None, break_link=False):
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_second_extent_differs():
     _make_reflink_testcase(extents=5, break_link=True)
+
+
+# GitHub issue #528, part 1: Make sure the last extent is not ignored.
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_last_extent_differs():
+    _make_reflink_testcase(extents=2, break_link=True)
+
+
+# GitHub issue #528, part 2: Make sure files that end in a hole can be identified as reflinked.
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_reflink_ends_with_hole():
+    _make_reflink_testcase(extents=1, hole_extents=1)

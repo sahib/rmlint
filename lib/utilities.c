@@ -1041,10 +1041,10 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
             break;
         }
 
-        if (fm->fm_mapped_extents == 0) {
-#if _RM_OFFSET_DEBUG
-            rm_log_info_line(_("rm_offset_get_fiemap: got no extents for %d"), fd);
-#endif
+        if(fm->fm_mapped_extents == 0) {
+            if(file_offset != 0) {
+                rm_log_warning_line(_("rm_offset_get_fiemap: got no extents for %d at offset %" G_GUINT64_FORMAT), fd, file_offset);
+            }
             done = TRUE;
         } else {
 
@@ -1245,7 +1245,6 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
 
     bool is_last_1 = false;
     bool is_last_2 = false;
-    bool at_least_one_checked = false;
 
     while(!rm_session_was_aborted()) {
         RmOff logical_next_1 = 0;
@@ -1256,10 +1255,6 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
 
         if(is_last_1 != is_last_2) {
             RM_RETURN(RM_LINK_NONE);
-        }
-
-        if(is_last_1 && is_last_2 && at_least_one_checked) {
-            RM_RETURN(RM_LINK_REFLINK);
         }
 
         if(physical_1 != physical_2) {
@@ -1298,7 +1293,7 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
             RM_RETURN(RM_LINK_ERROR)
         }
 
-        if(logical_next_1 >= (RmOff)stat1.st_size) {
+        if(is_last_1) {
             /* phew, we got to the end */
 #if _RM_OFFSET_DEBUG
             rm_log_debug_line("Files are clones (share same data)")
@@ -1307,7 +1302,6 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
         }
 
         logical_current = logical_next_1;
-        at_least_one_checked = true;
     }
 
     RM_RETURN(RM_LINK_ERROR);
