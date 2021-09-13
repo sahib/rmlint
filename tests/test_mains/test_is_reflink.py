@@ -142,26 +142,45 @@ def _copy_file_range(src, dst, count, offset_src, offset_dst):
         raise RuntimeError('copy_file_range only copied {} bytes (expected {})'.format(bytes_copied, count))
 
 
-# GitHub issue #611: Make sure holes can be detected when the physical offsets and logical
-# extent ends are otherwise the same.
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hole_before_extent():
+def kb(n):
+    return 1024 * n
+
+
+def _hole_testcase_inner(extents):
     path_a = os.path.join(TESTDIR_NAME, 'a')
     path_b = os.path.join(TESTDIR_NAME, 'b')
 
-    def kb(n): return 1024 * n
-
-    _run_dd_urandom(path_a, '8K', 2)
+    _run_dd_urandom(path_a, kb(16) // extents, extents)
     with open(path_b, 'wb') as f:
         os.truncate(f.fileno(), kb(16))  # same-sized file with no extents
 
     with open(path_a, 'rb') as fsrc, open(path_b, 'wb') as fdst:
         infd, outfd = fsrc.fileno(), fdst.fileno()
+        yield infd, outfd
+
+    # expect RM_LINK_NONE
+    check_is_reflink_status(1, path_a, path_b)
+
+
+# GitHub issue #611: Make sure holes can be detected when the physical offsets and logical
+# extent ends are otherwise the same.
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hole_before_extent():
+    for infd, outfd in _hole_testcase_inner(extents=2):
         # copy first half of first extent with 4K offset
         _copy_file_range(infd, outfd, kb(4), kb(0), kb(4))
         # copy second extent
         _copy_file_range(infd, outfd, kb(8), kb(8), kb(8))
 
-    # expect RM_LINK_NONE
-    check_is_reflink_status(1, path_a, path_b)
+
+# GitHub issue #530: Make sure physically adjacent extents aren't merged if there is a
+# hole between them logically.
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hole_between_extents():
+    for infd, outfd in _hole_testcase_inner(extents=1):
+        # copy first extent
+        _copy_file_range(infd, outfd, kb(8), kb(0), kb(0))
+        # copy first half of second extent with 4K offset
+        _copy_file_range(infd, outfd, kb(4), kb(8), kb(12))
