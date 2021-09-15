@@ -2,25 +2,8 @@
 
 import os
 import subprocess
-from contextlib import contextmanager
 from nose import with_setup
 from tests.utils import *
-
-
-@contextmanager
-def assert_exit_code(status_code):
-    """
-    Assert that the with block yields a subprocess.CalledProcessError
-    with a certain return code. If nothing is thrown, status_code
-    is required to be 0 to survive the test.
-    """
-    try:
-        yield
-    except subprocess.CalledProcessError as exc:
-        assert exc.returncode == status_code
-    else:
-        # No exception? status_code should be fine.
-        assert status_code == 0
 
 
 def check_is_reflink_status(status_code, *paths):
@@ -104,3 +87,36 @@ def test_symlink():
         pass  # expected failure
     else:
         raise AssertionError('test was epxected to fail')
+
+
+def _run_dd_urandom(outfile, blocksize, count, extra=''):
+    fmt = 'dd status=none oflag=sync bs={bs} count={c} {e} if=/dev/urandom'
+    subprocess.run(
+        [*fmt.format(bs=blocksize, c=count, e=extra).split(), 'of=' + outfile],
+        check=True,
+    )
+
+
+def _make_reflink_testcase(extents, hole_extents=None, break_link=False):
+    path_a = os.path.join(TESTDIR_NAME, 'a')
+    path_b = os.path.join(TESTDIR_NAME, 'b')
+
+    _run_dd_urandom(path_a, '4K', extents)
+
+    if hole_extents is not None:
+        os.truncate(path_a, (extents + hole_extents) * 4 * 1024)
+
+    subprocess.run(['cp', '--reflink', path_a, path_b], check=True)
+
+    if break_link:
+        _run_dd_urandom(path_b, '4K', 1, 'seek=1 conv=notrunc')
+
+    # expect RM_LINK_NONE or RM_LINK_REFLINK
+    check_is_reflink_status(1 if break_link else 0, path_a, path_b)
+
+
+# GitHub issue #527: Make sure rmlint does not skip every other extent.
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_second_extent_differs():
+    _make_reflink_testcase(extents=5, break_link=True)
