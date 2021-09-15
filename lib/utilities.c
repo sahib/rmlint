@@ -1057,13 +1057,9 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
                 /* check if subsequent extents are contiguous */
                 if(fm_ext.fe_physical != expected)  {
                     /* current extent is not contiguous with previous, so we can stop */
-                    done = TRUE;
+                    g_free(fm);
+                    break;
                 }
-            }
-
-            if (!done && file_offset_next != NULL) {
-                /* update logical offset of next fragment */
-                *file_offset_next = fm_ext.fe_logical + fm_ext.fe_length;
             }
 
             if(fm_ext.fe_flags & FIEMAP_EXTENT_LAST) {

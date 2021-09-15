@@ -9,12 +9,15 @@ import os
 import json
 import time
 import pprint
+import psutil
 import shutil
 import shlex
 import struct
 import subprocess
 import contextlib
 import xattr
+from nose.plugins.skip import SkipTest
+from nose.tools import make_decorator
 
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
@@ -42,6 +45,9 @@ CKSUM_TYPES = [
     #'ext',
     'paranoid',
 ]
+
+_REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
+
 
 def runs_as_root():
     return os.geteuid() == 0
@@ -408,3 +414,57 @@ def must_read_xattr(path):
           See create_special_fs for a workaround.
     """
     return dict(xattr.xattr(os.path.join(TESTDIR_NAME, path)).items())
+
+
+@contextlib.contextmanager
+def assert_exit_code(status_code):
+    """
+    Assert that the with block yields a subprocess.CalledProcessError
+    with a certain return code. If nothing is thrown, status_code
+    is required to be 0 to survive the test.
+    """
+    try:
+        yield
+    except subprocess.CalledProcessError as exc:
+        assert exc.returncode == status_code
+    else:
+        # No exception? status_code should be fine.
+        assert status_code == 0
+
+
+def _up(path):
+    while path:
+        yield path
+        if path == "/":
+            break
+        path = os.path.dirname(path)
+
+
+def is_on_reflink_fs(path):
+    parts = psutil.disk_partitions(all=True)
+
+    # iterate up from `path` until mountpoint found
+    for up_path in _up(path):
+        for part in parts:
+            if up_path == part.mountpoint:
+                print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
+                return (part.fstype in _REFLINK_CAPABLE_FILESYSTEMS)
+
+    print("No mountpoint found for {}".format(path))
+    return False
+
+
+# decorator for tests dependent on reflink-capable testdir
+def needs_reflink_fs(test):
+    def no_support(*args):
+        raise SkipTest("btrfs not supported")
+
+    def not_reflink_fs(*args):
+        raise SkipTest("testdir is not on reflink-capable filesystem")
+
+    if not has_feature('btrfs-support'):
+        return make_decorator(test)(no_support)
+    elif not is_on_reflink_fs(TESTDIR_NAME):
+        return make_decorator(test)(not_reflink_fs)
+    else:
+        return test
