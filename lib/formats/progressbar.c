@@ -33,6 +33,10 @@
 
 #include <sys/ioctl.h>
 
+#if defined(__sun)
+#include <sys/termios.h>
+#endif
+
 typedef struct RmFmtHandlerProgress {
     /* must be first */
     RmFmtHandler parent;
