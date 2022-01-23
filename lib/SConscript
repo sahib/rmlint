@@ -112,7 +112,7 @@ if not env['HAVE_SSE4_1']:
 
 if not env['HAVE_SSE2']:
 	print('Not compiling blake3 sse2 options')
-	blake3 = [f for f in blake3 if 'sse41' not in f.path]
+	blake3 = [f for f in blake3 if 'sse2' not in f.path]
 	env.Append(CCFLAGS=['-DBLAKE3_NO_SSE2'])
 
 library = env.Library(
