@@ -246,6 +246,8 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
 
 #else
 
+G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_size) == G_SIZEOF_MEMBER(__fts_stat_t, st_size));
+
 #define ADD_FILE(lint_type, is_symlink) \
     _ADD_FILE(lint_type, is_symlink, (RmStat *)p->fts_statp)
 

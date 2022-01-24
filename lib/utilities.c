@@ -1154,8 +1154,6 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
 
 #if HAVE_FIEMAP
 
-#define _RM_OFFSET_DEBUG 0
-
 /* Return fiemap structure containing n_extents for file descriptor fd.
  * Return NULL if errors encountered.
  * Needs to be freed with g_free if not NULL.

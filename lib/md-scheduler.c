@@ -27,6 +27,8 @@
 #include "md-scheduler.h"
 
 
+#define _RM_MDS_DEBUG 0
+
 /* How many milliseconds to sleep if we encounter an empty file queue.
  * This prevents a "starving" RmShredDevice from hogging cpu and cluttering up
  * debug messages by continually recycling back to the joiner.

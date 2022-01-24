@@ -773,6 +773,9 @@ if conf.env['HAVE_SSE4_1']:
 if conf.env['HAVE_SSE2']:
 	conf.env.Append(CCFLAGS=['-msse2'])
 
+# NB: After checks so they don't fail
+conf.env.Append(CCFLAGS=['-Werror=undef'])
+
 
 if ARGUMENTS.get('GDB') == '1':
     ARGUMENTS['DEBUG'] = '1'
