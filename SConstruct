@@ -710,6 +710,10 @@ conf.check_sysmacro_h()
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
+# NB: After checks so they don't fail
+conf.env.Append(CCFLAGS=['-Werror=undef'])
+
+
 if ARGUMENTS.get('GDB') == '1':
     ARGUMENTS['DEBUG'] = '1'
     ARGUMENTS['SYMBOLS'] = '1'
