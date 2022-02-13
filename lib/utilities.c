@@ -296,7 +296,7 @@ bool rm_util_is_nonstripped(_UNUSED const char *path, _UNUSED RmStat *statp) {
 #if HAVE_LIBELF
     g_return_val_if_fail(path, false);
 
-    if(statp && (statp->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
+    if(!S_ISREG(statp->st_mode) || (statp->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
         return false;
     }
 

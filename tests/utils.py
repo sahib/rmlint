@@ -106,7 +106,8 @@ def run_rmlint_once(*args,
                     directly_return_output=False,
                     use_shell=False,
                     verbosity="-V",
-                    check=True):
+                    check=True,
+                    timeout=None):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -159,7 +160,7 @@ def run_rmlint_once(*args,
         # Use /bin/bash, not /bin/sh
         cmd = ["/bin/bash", "-c", " ".join(cmd)]
 
-    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
     print(result.stderr.decode('utf-8'), end='')
 
     if get_env_flag('RM_TS_USE_GDB'):

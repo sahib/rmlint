@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
-from tests.utils import *
+
 import os
 
+from nose import with_setup
+from nose.plugins.skip import SkipTest
+from tests.utils import *
 
 SOURCE = '''
 #include <stddef.h>
@@ -51,3 +53,20 @@ def test_positive():
     assert footer['total_files'] == 2
     assert footer['total_lint_size'] == 0  # We cannot determine exact lint size.
     assert data[0]['type'] == 'nonstripped'
+
+
+# regression test for GitHub issue #555
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_executable_fifo():
+    if has_feature('nonstripped') is False:
+        raise SkipTest("needs 'nonstripped' feature")
+
+    fifo_path = os.path.join(TESTDIR_NAME, 'fifo')
+    os.mkfifo(fifo_path)
+    os.chmod(fifo_path, 0o755)
+
+    # executable FIFO should not hang rmlint
+    head, *data, footer = run_rmlint('-T nonstripped', timeout=5)
+    assert footer['total_files'] == 0
+    assert footer['total_lint_size'] == 0
+    assert not data
