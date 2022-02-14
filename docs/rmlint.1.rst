@@ -792,7 +792,7 @@ OTHER STAND-ALONE COMMANDS
     etc.) will be executed by default. At least two paths need to be passed.
 
     Note: This even works for directories and also in combination with paranoid
-    mode (pass ``-pp`` for byte comparison); remember that rmlint does not care
+    mode (pass ``-p`` for byte comparison); remember that rmlint does not care
     about the layout of the directory, but only about the content of the files
     in it. At least two paths need to be given to the commandline.
 
@@ -859,7 +859,7 @@ This is a collection of common use cases and other tricks:
 
 * Compare files byte-by-byte in current directory:
 
-  ``$ rmlint -pp .``
+  ``$ rmlint -p .``
 
 * Find duplicates with same basename (excluding extension):
 
