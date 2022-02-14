@@ -115,7 +115,7 @@ General Options
     **Formatters** section below.
 
     If ``-o`` is specified, rmlint's default outputs are overwritten.  With
-    ``--O`` the defaults are preserved.  Either ``-o`` or ``-O`` may be
+    ``-O`` the defaults are preserved.  Either ``-o`` or ``-O`` may be
     specified multiple times to get multiple outputs, including multiple
     outputs of the same format.
 
