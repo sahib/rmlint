@@ -16,7 +16,7 @@ by default. Suspicious options you should look into are:
 * ``--merge-directories``: pulls in both ``--hidden`` and ``--hardlinked``.
 
 If there's still a difference, check with another algorithm. In particular use
-``-pp`` to enable paranoid mode. Also make sure to have ``-D``
+``-p`` to enable paranoid mode. Also make sure to have ``-D``
 (``--merge-directories``) disabled to see the raw number of duplicate files.
 
 Still here? Maybe talk to us on the `issue tracker`_.
