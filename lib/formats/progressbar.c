@@ -454,7 +454,9 @@ static void rm_fmt_prog(RmSession *session,
     int text_width = MAX(0, ceil(self->terminal.ws_col * text_width_percentage) - 1.0);
 
     if(self->last_state != state && self->last_state != RM_PROGRESS_STATE_INIT) {
+        rm_fmt_progress_format_text(session, self, text_width, out);
         self->percent = 1.05;
+
         if(state != RM_PROGRESS_STATE_PRE_SHUTDOWN) {
             if(progress_bar_width > 0) {
                 rm_fmt_progress_print_bar(
@@ -464,8 +466,11 @@ static void rm_fmt_prog(RmSession *session,
                     out
                 );
             }
+
+            rm_fmt_progress_print_text(self, text_width, out);
             fprintf(out, "\n");
         }
+
         g_timer_start(self->timer);
         force_draw = true;
     }
