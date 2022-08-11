@@ -8,7 +8,7 @@ import string
 
 
 FILE_SIZE = 256 * 1024 * 1024
-MIDDLE = FILE_SIZE / 2
+MIDDLE = FILE_SIZE // 2
 
 @attr('slow')
 @with_setup(usual_setup_func, usual_teardown_func)

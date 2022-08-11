@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+import errno
 from nose.plugins.attrib import attr
+from nose.plugins.skip import SkipTest
 from nose import with_setup
 from tests.utils import *
 
@@ -18,8 +20,13 @@ def test_collision_resistance():
     # this should detect gross errors in checksum encoding...
 
     numfiles = 1024*1024
-    for i in range(numfiles):
-        create_file(i, str(i), write_binary=True)
+    try:
+        for i in range(numfiles):
+            create_file(i, str(i), write_binary=True)
+    except OSError as e:
+        if e.errno == errno.ENOSPC:
+            raise SkipTest('not enough space in testdir')
+        raise
 
     for algo in CKSUM_TYPES:
         if algo not in BLACKLIST:
