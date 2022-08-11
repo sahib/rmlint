@@ -47,6 +47,9 @@ def test_valid():
     *_, footer = run_rmlint('--size 1-18446744073709551615')
     assert footer['duplicates'] == 6
 
+    *_, footer = run_rmlint('--size 1-18446744073709549K')
+    assert footer['duplicates'] == 6
+
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_invalid():
     create_set()
