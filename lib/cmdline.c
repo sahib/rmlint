@@ -351,7 +351,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
             return 0;
         }
 
-        if(fraction_num == ULONG_MAX && errno == ERANGE) {
+        if(fraction_num == ULLONG_MAX && errno == ERANGE) {
             g_set_error(error, RM_ERROR_QUARK, 0, _("Fraction is too big for uint64"));
             return 0;
         }
@@ -371,7 +371,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
             return 0;
         }
 
-        if(base_size == ULONG_MAX && errno == ERANGE) {
+        if(base_size == ULLONG_MAX && errno == ERANGE) {
             g_set_error(error, RM_ERROR_QUARK, 0, _("Size is too big for uint64"));
             return 0;
         }
@@ -380,13 +380,15 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
     RmOff result = base_size;
     if(need_multiply) {
         // Only multiply if we really have to.
-        result = (result + fraction) * size_factor;
+        double fres = (result + fraction) * size_factor;
 
         // Check if an overflow happened during multiplication.
-        if(result < base_size) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Size factor would overflow size (max. 2**64 allowed)"));
+        if(fres > nextafter((double)ULLONG_MAX, 0)) {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Size factor would overflow size (max. 2**64 allowed)"));
             return 0;
         }
+        result = fres;
     }
 
     return result;
