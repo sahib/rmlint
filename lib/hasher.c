@@ -31,20 +31,23 @@
 
 #include "utilities.h"
 
+#ifndef POSIX_FADV_SEQUENTIAL
+# define POSIX_FADV_SEQUENTIAL 0
+#endif
+#ifndef POSIX_FADV_WILLNEED
+# define POSIX_FADV_WILLNEED 0
+#endif
+#ifndef POSIX_FADV_NOREUSE
+# define POSIX_FADV_NOREUSE 0
+#endif
+
 /* Flags for the fadvise() call that tells the kernel
  * what we want to do with the file.
  */
-const int HASHER_FADVISE_FLAGS = 0
-#ifdef POSIX_FADV_SEQUENTIAL
-                                 | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size    */
-#endif
-#ifdef POSIX_FADV_WILLNEED
-                                 | POSIX_FADV_WILLNEED /* Tell the kernel to readahead */
-#endif
-#ifdef POSIX_FADV_NOREUSE
-                                 | POSIX_FADV_NOREUSE /* We will not reuse old data  */
-#endif
-    ;
+#define HASHER_FADVISE_FLAGS 0                                 \
+    | POSIX_FADV_SEQUENTIAL /* Read from 0 to file-size     */ \
+    | POSIX_FADV_WILLNEED   /* Tell the kernel to readahead */ \
+    | POSIX_FADV_NOREUSE    /* We will not reuse old data   */
 
 #define DIVIDE_CEIL(n, m) ((n) / (m) + !!((n) % (m)))
 

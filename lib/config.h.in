@@ -57,17 +57,20 @@
 #define LLI G_GINT64_FORMAT
 
 
+#include <stdint.h> /* for UINTPTR_MAX */
 #define RM_PLATFORM_32 (UINTPTR_MAX == 0xffffffff)
 #define RM_PLATFORM_64 (UINTPTR_MAX == 0xffffffffffffffff)
 
-#ifdef __APPLE__
-# ifdef __MACH__
-#  define RM_IS_APPLE 1
-# endif
+#if defined(__APPLE__) && defined(__MACH__)
+# define RM_IS_APPLE 1
+#else
+# define RM_IS_APPLE 0
 #endif
 
 #ifdef __CYGWIN__
 # define RM_IS_CYGWIN 1
+#else
+# define RM_IS_CYGWIN 0
 #endif
 
 #include <glib.h>
@@ -118,5 +121,7 @@ typedef guint64 RmOff;
     /* give up */
     #define WARN_UNUSED_RESULT
 #endif
+
+#define _RM_OFFSET_DEBUG 0
 
 #endif
