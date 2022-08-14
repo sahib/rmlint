@@ -296,15 +296,12 @@ static const RmDigestInterface metrocrc256_interface = {
 
 #endif
 
-#define RM_DIGEST_CUMULATIVE_INTS (RM_DIGEST_CUMULATIVE_LEN / RM_DIGEST_CUMULATIVE_ALIGN)
-
 typedef struct RmDigestCumulative {
     union {
         guint8 *data;
         RM_DIGEST_CUMULATIVE_T *bigdata;
     };
     RM_DIGEST_CUMULATIVE_T bytes; /* data length */
-    RM_DIGEST_CUMULATIVE_T pos; /* byte offset within data */
 } RmDigestCumulative;
 
 static guint rm_digest_cumulative_len(RmDigestCumulative *state) {
@@ -329,17 +326,10 @@ static void rm_digest_cumulative_update(RmDigestCumulative *state,
         state->bytes = RM_DIGEST_CUMULATIVE_ALIGN * CLAMP(size / RM_DIGEST_CUMULATIVE_ALIGN, 1, RM_DIGEST_CUMULATIVE_MAX_BYTES / RM_DIGEST_CUMULATIVE_ALIGN);
         state->data = g_slice_alloc0(state->bytes);
     }
-        
+
+    RM_DIGEST_CUMULATIVE_T pos = 0; /* byte offset within data */
     guint8 *ptr = (guint8 *)data;
     guint8 *stop = ptr + size;
-
-    /* align so we can use [32|64]-bit xor */
-    while((state->pos % RM_DIGEST_CUMULATIVE_ALIGN != 0) && ptr < stop) {
-        state->data[state->pos++] ^= *(ptr++);
-        if(state->pos == state->bytes) {
-            state->pos = 0;
-        }
-    }
 
     RM_DIGEST_CUMULATIVE_T *ptr_big = (RM_DIGEST_CUMULATIVE_T *)ptr;
     RM_DIGEST_CUMULATIVE_T *stop_big =
@@ -347,19 +337,19 @@ static void rm_digest_cumulative_update(RmDigestCumulative *state,
 
     /* plough through body of data efficiently */
     while(ptr_big < stop_big) {
-        state->bigdata[state->pos / RM_DIGEST_CUMULATIVE_ALIGN] ^= *ptr_big++;
-        state->pos = state->pos + RM_DIGEST_CUMULATIVE_ALIGN;
-        if(state->pos == state->bytes) {
-            state->pos = 0;
+        state->bigdata[pos / RM_DIGEST_CUMULATIVE_ALIGN] ^= *ptr_big++;
+        pos = pos + RM_DIGEST_CUMULATIVE_ALIGN;
+        if(pos == state->bytes) {
+            pos = 0;
         }
     }
 
     /* process remaining date byte-wise */
     ptr = (guint8 *)ptr_big;
     while(ptr < stop) {
-        state->data[state->pos++] ^= *(ptr++);
-        if(state->pos == state->bytes) {
-            state->pos = 0;
+        state->data[pos++] ^= *(ptr++);
+        if(pos == state->bytes) {
+            pos = 0;
         }
     }
 }

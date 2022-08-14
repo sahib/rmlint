@@ -437,13 +437,21 @@ def test_equal_content_different_layout():
     create_file('xxx', "tree-b/x")
     create_file('yyy', "tree-b/y")
 
-    head, *data, footer = run_rmlint('-p -D --rank-by a')
-    data = filter_part_of_directory(data)
+    # Test all checksum types, even outside of pedantic mode.
+    # That allows us to test for regressions in the cumulative digest.
+    options = ['-p']
+    if not get_env_flag('RM_TS_PEDANTIC'):
+        for cksum_type in CKSUM_TYPES:
+            options.append('--algorithm=' + cksum_type)
 
-    assert data[0]["path"].endswith("tree-a")
-    assert data[0]["is_original"] is True
-    assert data[1]["path"].endswith("tree-b")
-    assert data[1]["is_original"] is False
+    for option in options:
+        head, *data, footer = run_rmlint('-D --rank-by a', option)
+        data = filter_part_of_directory(data)
+
+        assert data[0]["path"].endswith("tree-a")
+        assert data[0]["is_original"] is True
+        assert data[1]["path"].endswith("tree-b")
+        assert data[1]["is_original"] is False
 
     # Now, try to honour the layout
     head, *data, footer = run_rmlint('-p -Dj --rank-by a')
