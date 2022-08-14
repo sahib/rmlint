@@ -365,7 +365,7 @@ Traversal Options
     Only consider those files as dupes that do not share the same basename.
     See also ``man 1 basename``. The comparison of the basenames is case-insensitive.
 
-:``-e --match-with-extension`` / ``-E --no-match-with-extension`` (**default**):
+:``-e --match-extension`` / ``-E --no-match-extension`` (**default**):
 
     Only consider those files as dupes that have the same file extension. For
     example two photos would only match if they are a ``.png``. The extension is

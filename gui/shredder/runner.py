@@ -57,7 +57,7 @@ class MatchType(Enum):
     MAPPING = {
         NONE: [],
         BASENAME: ['--match-basename'],
-        EXTENSION: ['--match-with-extension'],
+        EXTENSION: ['--match-extension'],
         WITHOUT_EXTENSION: ['--match-without-extension']
     }
 
