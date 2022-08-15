@@ -138,3 +138,22 @@ def test_equal_empty_files_or_other_lint():
             '--equal', path_a, path_b,
             use_default_dir=False,
         )
+
+
+# regression test for GitHub issue #552
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_default_outputs_disabled():
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(TESTDIR_NAME)
+        run_rmlint('--equal a b', use_default_dir=False, with_json=False)
+
+        # Users of --equal, including our own sh format, do not expect to
+        # create or overwrite rmlint.sh or rmlint.json.
+        assert not os.path.exists('rmlint.sh')
+        assert not os.path.exists('rmlint.json')
+    finally:
+        os.chdir(cwd)

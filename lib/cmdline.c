@@ -1333,6 +1333,10 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
+    if(session->cfg->run_equal_mode) {
+        return true;
+    }
+
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifying both -o and -O is not allowed"));
