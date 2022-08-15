@@ -150,27 +150,6 @@ bool rm_fmt_is_valid_key(RmFmtTable *self, const char *formatter, const char *ke
     return false;
 }
 
-void rm_fmt_remove_by_name(RmFmtTable *self, char *name) {
-    GQueue deleted_iters = G_QUEUE_INIT;
-    for(GList *iter = self->handler_order->head; iter; iter = iter->next) {
-        RmFmtHandler *handler = iter->data;
-        if(!g_str_equal(handler->name, name)) {
-            continue;
-        }
-
-        g_hash_table_remove(self->handler_to_file, handler);
-        g_hash_table_remove(self->path_to_handler, handler->path);
-        g_queue_push_tail(&deleted_iters, iter);
-    }
-
-    for(GList *iter = deleted_iters.head; iter; iter = iter->next) {
-        g_queue_delete_link(self->handler_order, iter);
-    }
-
-    // Since we removed all handlers
-    g_hash_table_remove(self->handler_set, name);
-}
-
 // NOTE: This is the same as g_date_time_format_iso8601.
 // It is only copied here because it is only available since
 // GLib 2.62. Remove this in a few years (written as of end 2019)

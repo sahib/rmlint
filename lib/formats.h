@@ -262,11 +262,6 @@ bool rm_fmt_is_stream(RmFmtTable *self, RmFmtHandler *handler);
 bool rm_fmt_has_formatter(RmFmtTable *self, const char *name);
 
 /**
- * @brief Remove all registered formatters with `name`.
- */
-void rm_fmt_remove_by_name(RmFmtTable *self, char *name);
-
-/**
  * You can use this template for implementing new RmFmtHandlers.
  * All callbacks are not required to be implemented, leave them to NULL if
  * you do not implement them:
