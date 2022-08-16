@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+
+import os
+import subprocess
+
 from nose import with_setup
 from tests.utils import *
 from parameterized import parameterized
@@ -137,3 +141,24 @@ def test_xattr_detail(extra_opts):
         assert must_read_xattr(path_2) == {}
         assert must_read_xattr(path_3) == {}
         assert must_read_xattr(path_4) == {}
+
+
+# regression test for GitHub issue #475
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_treemerge_xattr_hardlink():
+    create_file('xxx', 'a/x')
+    create_file('yyy', 'a/y')
+    create_file('xxx', 'b/x')
+    create_file('yyy', 'b/y')
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    head, *data, foot = run_rmlint('--xattr-write -o sh:{p} -c sh:hardlink'.format(p=sh_path))
+    assert len(data) == 4
+
+    # run script to hardlink files
+    subprocess.check_output([sh_path, '-d'])
+
+    # This used to fail with 'rm_shred_group_free: assertion failed: (self->num_pending == 0)'
+    head, *data, foot = run_rmlint('-D --xattr-read')
+    assert len(data) == 6
