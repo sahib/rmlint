@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 from nose import with_setup
+from parameterized import parameterized
 from tests.utils import *
 
 
 def filter_part_of_directory(data):
-    return [entry for entry in data if entry["type"] != "part_of_directory"]
+    data = [entry for entry in data if entry["type"] != "part_of_directory"]
+    data.sort(key=lambda entry: (entry['path'],) if entry['type'] == 'unique_file' else ())
+    return data
 
+
+# --write-unfinished variant is a regression test for GitHub issue #562
+@parameterized([((),), (('--write-unfinished',),)])
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(extra_opts):
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
 
-    head, *data, footer = run_rmlint('-p -D --rank-by A')
+    head, *data, footer = run_rmlint('-p -D --rank-by A', *extra_opts)
     data = filter_part_of_directory(data)
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
