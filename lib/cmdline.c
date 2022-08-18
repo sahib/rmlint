@@ -1609,8 +1609,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         ); goto cleanup;
     }
 
-    if(cfg->dedupe) {
-        /* dedupe session; regular rmlint configs are ignored */
+    if(cfg->dedupe || cfg->is_reflink) {
+        /* dedupe or is-reflink session; regular rmlint configs are ignored */
         goto cleanup;
     }
 

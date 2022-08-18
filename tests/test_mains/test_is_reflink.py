@@ -184,3 +184,23 @@ def test_hole_between_extents():
         _copy_file_range(infd, outfd, kb(8), kb(0), kb(0))
         # copy first half of second extent with 4K offset
         _copy_file_range(infd, outfd, kb(4), kb(8), kb(12))
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_default_outputs_disabled():
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(TESTDIR_NAME)
+        try:
+            run_rmlint('--is-reflink a b', use_default_dir=False, with_json=False)
+        except subprocess.CalledProcessError:
+            pass  # nonzero exit status is expected
+
+        # --is-reflink should not create or overwrite rmlint.sh or rmlint.json
+        assert not os.path.exists('rmlint.sh')
+        assert not os.path.exists('rmlint.json')
+    finally:
+        os.chdir(cwd)
