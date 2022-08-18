@@ -114,16 +114,6 @@ def test_dedupe_works():
             verbosity=""
         )
 
-# count the number of line in a file which start with patterns[]
-def pattern_count(path, patterns):
-    counts = [0] * len(patterns)
-    with open(path, 'r') as f:
-        for line in f:
-            for i, pattern in enumerate(patterns):
-                if re.match(pattern, line):
-                    counts[i] += 1
-    return counts
-
 
 @needs_reflink_fs
 @with_setup(usual_setup_func, usual_teardown_func)
