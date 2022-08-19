@@ -165,12 +165,19 @@ static int rm_xattr_is_fail(const char *name, char *path, int rc) {
         return 0;
     }
 
-    if(errno != ENOTSUP && errno != ENODATA) {
-        rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
-        return errno;
+    if(errno == ENOTSUP || errno == ENODATA) {
+        return 0;
     }
 
-    return 0;
+#ifdef ENOATTR
+    /* Mac OS X, *BSD, etc. */
+    if(errno == ENOATTR) {
+        return 0;
+    }
+#endif
+
+    rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
+    return rc;
 }
 
 static int rm_xattr_set(RmFile *file,
