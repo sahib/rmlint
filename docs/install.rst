@@ -93,19 +93,19 @@ Here's a list of readily prepared commands for known operating systems:
 
   This most likely applies to most distributions that are derived from Ubuntu.
   Note that the ``GUI`` depends on ``GTK+ >= 3.12``! 
-  Ubuntu 14.04 LTS and earlier `still ships`_  with ``3.10``.
+  Ubuntu 14.04 LTS and earlier `ships`_  with ``3.10``.
 
   .. code-block:: bash
 
-    $ apt-get install pkg-config git scons python3-sphinx python3-nose gettext build-essential
+    $ sudo apt-get install pkg-config git scons python3-sphinx python3-nose gettext build-essential
     # Optional dependencies for more features:
-    $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
+    $ sudo apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
     # Optional dependencies for the GUI:
-    $ apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 python-cairo gir1.2-polkit-1.0 gir1.2-gtksource-3.0 
+    $ sudo apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 python3-cairo gir1.2-polkit-1.0 gir1.2-gtksource-3.0 
 
  
 .. _`ships an official package`: https://packages.debian.org/de/sid/rmlint
-.. _`still ships`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
+.. _`ships`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
 
 * **macOS**
 
