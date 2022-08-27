@@ -82,9 +82,10 @@ def test_path_starting_with_dash():
 
 # Regression test for https://github.com/sahib/rmlint/issues/400
 # Do not search in current directory when piped empty input.
-@parameterized([("-", ), ("-0", )])
+# Also, treemerge should not fail if given zero paths.
+@parameterized([('-',), ('-0',), ('-D', '-')])
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_stdin_empty(stdin_opt):
+def test_stdin_empty(*opts):
     create_file('1234', 'a')
     create_file('1234', 'b')
 
@@ -93,7 +94,7 @@ def test_stdin_empty(stdin_opt):
     try:
         os.chdir(TESTDIR_NAME)
         proc = subprocess.Popen(
-            [cwd + '/rmlint', stdin_opt, '-o', 'json'],
+            [cwd + '/rmlint', *opts, '-o', 'json'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
         )

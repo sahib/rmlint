@@ -191,8 +191,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     g_assert(cfg);
     guint path_count = cfg->path_count;
 
-    g_assert(path_count);
     g_assert(path_count == g_slist_length(cfg->paths));
+    if(path_count == 0) {
+        return true;
+    }
 
     const char **const path_vec = malloc(sizeof(*path_vec) * (path_count + 1));
     if(!path_vec) {
