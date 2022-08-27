@@ -68,6 +68,8 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
     gint result = SIGN_DIFF(file_a->file_size, file_b->file_size);
     RETURN_IF_NONZERO(result);
 
+    RETURN_IF_NONZERO(SIGN_DIFF(file_a->is_symlink, file_b->is_symlink))
+
     RmCfg *cfg = file_a->session->cfg;
 
     if(cfg->match_basename) {
