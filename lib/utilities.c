@@ -588,7 +588,7 @@ static bool fs_supports_reflinks(char *fstype, char *mountpoint) {
     }
     if(strcmp(fstype, "xfs")==0) {
         /* xfs *might* support reflinks...*/
-        char *cmd = g_strdup_printf("xfs_info '%s' | grep -q 'reflink=1'", mountpoint);
+        char *cmd = g_strdup_printf("xfs_info '%s' 2>/dev/null | grep -q 'reflink=1'", mountpoint);
         int res = system(cmd);
         g_free(cmd);
         return(res==0);
