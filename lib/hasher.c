@@ -142,7 +142,7 @@ static void rm_hasher_request_readahead(int fd, RmOff seek_offset, RmOff bytes_t
 
 static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
                                        RmDigest *digest, char *path,
-                                       gsize *bytes_actually_read) {
+                                       guint64 *bytes_actually_read) {
     /* Read contents of symlink (i.e. path of symlink's target).  */
 
     RmBuffer *buffer = rm_buffer_new(hasher->buf_sem, hasher->buf_size);
@@ -168,8 +168,8 @@ static gboolean rm_hasher_symlink_read(RmHasher *hasher, GThreadPool *hashpipe,
  * increments *bytes_read by the actual bytes read */
 
 static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
-                                        RmDigest *digest, char *path, gsize start_offset,
-                                        gsize bytes_to_read, gsize *bytes_actually_read) {
+                                        RmDigest *digest, char *path, guint64 start_offset,
+                                        guint64 bytes_to_read, guint64 *bytes_actually_read) {
     FILE *fd = NULL;
     fd = fopen(path, "rb");
     if(fd == NULL) {
@@ -219,10 +219,10 @@ static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
             rm_log_error_line("Unexpected EOF in rm_hasher_buffered_read");
             break;
         } else if(bytes_read == 0) {
-            rm_log_warning_line(_("Something went wrong reading %s; expected %li bytes, "
-                                "got %li; ignoring"),
-                              path, (long int)bytes_to_read,
-                              (long int)*bytes_actually_read);
+            rm_log_warning_line(_("Something went wrong reading %s; expected %lli bytes, "
+                                "got %lli; ignoring"),
+                              path, (long long)bytes_to_read,
+                              (long long)*bytes_actually_read);
             break;
         }
     }
@@ -236,8 +236,8 @@ static gboolean rm_hasher_buffered_read(RmHasher *hasher, GThreadPool *hashpipe,
 
 static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpipe,
                                           RmDigest *digest, char *path,
-                                          gint64 start_offset, gint64 bytes_to_read,
-                                          gsize *bytes_actually_read) {
+                                          guint64 start_offset, guint64 bytes_to_read,
+                                          guint64 *bytes_actually_read) {
     gint32 bytes_read = 0;
     guint64 file_offset = start_offset;
 
@@ -276,7 +276,7 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
     memset(readvec, 0, sizeof(readvec));
 
     gboolean success = FALSE;
-    gsize bytes_remaining = bytes_to_read;
+    guint64 bytes_remaining = bytes_to_read;
 
     while(TRUE) {
         /* allocate buffers for preadv */
@@ -329,10 +329,10 @@ static gboolean rm_hasher_unbuffered_read(RmHasher *hasher, GThreadPool *hashpip
             success = TRUE;
             break;
         } else if(bytes_read == 0) {
-            rm_log_error_line(_("Something went wrong reading %s; expected %li bytes, "
-                                "got %li; ignoring"),
-                              path, (long int)bytes_to_read,
-                              (long int)*bytes_actually_read);
+            rm_log_error_line(_("Something went wrong reading %s; expected %lli bytes, "
+                                "got %lli; ignoring"),
+                              path, (long long)bytes_to_read,
+                              (long long)*bytes_actually_read);
             break;
         }
     }
@@ -475,9 +475,9 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher, RmDigest *digest,
 }
 
 gboolean rm_hasher_task_hash(RmHasherTask *task, char *path, guint64 start_offset,
-                             gsize bytes_to_read, gboolean is_symlink,
-                             gsize *bytes_read_out) {
-    gsize bytes_read = 0;
+                             guint64 bytes_to_read, gboolean is_symlink,
+                             guint64 *bytes_read_out) {
+    guint64 bytes_read = 0;
     gboolean success = false;
 
     if(is_symlink) {
