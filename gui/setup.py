@@ -14,7 +14,8 @@ def read_version():
     with open('../.version', 'r') as handle:
         version_string = handle.read()
 
-    return version_string.strip()
+    version_numbers, _ = version_string.split(' ', 1)
+    return version_numbers
 
 
 def get_prefix():
