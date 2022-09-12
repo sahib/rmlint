@@ -78,7 +78,7 @@ static void signal_handler(int signum) {
         rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
                           g_strsignal(signum));
         rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
-        exit(1);
+        /* SA_RESETHAND has reset the disposition so the program will terminate now */
     default:
         break;
     }
@@ -122,6 +122,9 @@ int main(int argc, const char **argv) {
     sa.sa_handler = signal_handler;
 
     sigaction(SIGINT, &sa, NULL);
+
+    /* set SA_RESETHAND so we get a core dump and accurate exit status */
+    sa.sa_flags = SA_RESETHAND;
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
