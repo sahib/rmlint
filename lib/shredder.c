@@ -1317,11 +1317,21 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
         session->dup_counter++;
         session->duplicate_bytes += file->actual_file_size;
 
-        /* Only check file size if it's not a hardlink.  Since deleting
-         * hardlinks does not free any space they should not be counted unless
-         * all of them would be removed.
-         */
-        if(!RM_FILE_IS_HARDLINK(file) && file->outer_link_count == 0) {
+        bool would_free_inode = true;
+        if(RM_FILE_IS_HARDLINK(file) || file->outer_link_count != 0) {
+            would_free_inode = false; // ignored hardlink
+        } else if(file->hardlinks) {
+            // Do not count hardlinks unless all of them would be removed.
+            for(GList *iter = file->hardlinks->head; iter; iter = iter->next) {
+                RmFile *link = iter->data;
+                if(link->is_original) {
+                    would_free_inode = false;
+                    break;
+                }
+            }
+        }
+
+        if(would_free_inode) {
             session->total_lint_size += file->actual_file_size;
         }
     } else {
@@ -1441,7 +1451,7 @@ static void rm_shred_tag_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTa
  * maybe split out mtime rejects (--mtime-window option)
  * maybe split out basename twins (--unmatched-basename option)
  */
-static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
+static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag, GSList **free_list) {
     if(!group) {
         return;
     }
@@ -1454,8 +1464,8 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
      * This is done here.
      * */
     rm_shred_group_find_original(tag->session, group->held_files, group->status);
-    rm_shred_group_postprocess(rm_shred_basename_rejects(group, tag), tag);
-    rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag);
+    rm_shred_group_postprocess(rm_shred_basename_rejects(group, tag), tag, free_list);
+    rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag, free_list);
 
     /* re-check whether what is left of the group still meets all criteria */
     group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING
@@ -1500,12 +1510,9 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag) {
     if(group->status == RM_SHRED_GROUP_FINISHING) {
         group->status = RM_SHRED_GROUP_FINISHED;
     }
-#if _RM_SHRED_DEBUG
-    rm_log_debug_line("Free from rm_shred_group_postprocess");
-#endif
 
-    /* Do not force free files here, output module might need do that itself. */
-    rm_shred_group_free(group, false);
+    /* defer free so hardlinked files remain valid after postprocessing linked rejects */
+    *free_list = g_slist_prepend(*free_list, group);
 }
 
 static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
@@ -1550,7 +1557,14 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
         }
     }
 
-    rm_shred_group_postprocess(group, tag);
+    GSList *free_list = NULL;
+    rm_shred_group_postprocess(group, tag, &free_list);
+#if _RM_SHRED_DEBUG
+    rm_log_debug_line("Free from rm_shred_result_factory");
+#endif
+
+    /* Do not force free files here, output module might need do that itself. */
+    g_slist_foreach(free_list, (GFunc)rm_shred_group_free, GUINT_TO_POINTER(false));
 }
 
 /////////////////////////////////
