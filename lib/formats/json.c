@@ -356,15 +356,11 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
             if(session->cfg->find_hardlinked_dupes) {
                 RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
 
-                if(hardlink_head && hardlink_head != file && file->digest) {
-                    char orig_checksum_str[rm_digest_get_bytes(file->digest) * 2 + 1];
-                    rm_fmt_json_cksum(hardlink_head, orig_checksum_str,
-                                      sizeof(orig_checksum_str));
-
+                if(hardlink_head && hardlink_head != file) {
                     RM_DEFINE_PATH(hardlink_head);
 
                     guint32 orig_id = rm_fmt_json_generate_id(
-                        self, hardlink_head, hardlink_head_path, orig_checksum_str);
+                        self, hardlink_head, hardlink_head_path, checksum_str);
 
                     rm_fmt_json_key_int(out, "hardlink_of", orig_id);
                     rm_fmt_json_sep(self, out);

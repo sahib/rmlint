@@ -24,7 +24,6 @@ def test_simple():
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_hardlink_of():
     create_file('xxx', 'a')
-    create_file('yyy', 'b')  # need non-hardlink twin for digest to be computed
     create_link('a', 'c')
 
     _, *data, _ = run_rmlint('-S a')
