@@ -19,3 +19,18 @@ def test_simple():
     assert os.stat(full_path_a).st_size ==  data[0]['size']
     assert os.stat(full_path_b).st_size ==  data[1]['size']
     assert footer['total_lint_size'] == 1
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hardlink_of():
+    create_file('xxx', 'a')
+    create_file('yyy', 'b')  # need non-hardlink twin for digest to be computed
+    create_link('a', 'c')
+
+    _, *data, _ = run_rmlint('-S a')
+    assert len(data) == 2
+    assert data[0]['type'] == 'duplicate_file'
+    assert data[0]['path'].endswith('/a')
+    assert data[1]['type'] == 'duplicate_file'
+    assert data[1]['path'].endswith('/c')
+    assert data[1]['hardlink_of'] == data[0]['id']

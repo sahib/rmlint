@@ -40,8 +40,8 @@ typedef struct RmFmtHandlerJSON {
     /* More human readable output? */
     bool pretty;
 
-    /* set of already existing ids */
-    GHashTable *id_set;
+    /* table of already existing ids */
+    GHashTable *id_table;
 } RmFmtHandlerJSON;
 
 //////////////////////////////////////////
@@ -60,12 +60,13 @@ static guint32 rm_fmt_json_generate_id(RmFmtHandlerJSON *self, RmFile *file,
             hash ^= MurmurHash3_x86_32(cksum, strlen(cksum), i);
         }
 
-        if(!g_hash_table_contains(self->id_set, GUINT_TO_POINTER(hash))) {
+        RmFile *match = g_hash_table_lookup(self->id_table, GUINT_TO_POINTER(hash));
+        if(!match || match == file) {
             break;
         }
     }
 
-    g_hash_table_add(self->id_set, GUINT_TO_POINTER(hash));
+    g_hash_table_insert(self->id_table, GUINT_TO_POINTER(hash), file);
     return hash;
 }
 
@@ -180,7 +181,7 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
     fprintf(out, "[\n");
 
     RmFmtHandlerJSON *self = (RmFmtHandlerJSON *)parent;
-    self->id_set = g_hash_table_new(NULL, NULL);
+    self->id_table = g_hash_table_new(NULL, NULL);
 
     if(rm_fmt_get_config_value(session->formats, "json", "oneline")) {
         self->pretty = false;
@@ -247,7 +248,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
     }
 
     fprintf(out, "]\n");
-    g_hash_table_unref(self->id_set);
+    g_hash_table_unref(self->id_table);
 }
 
 static void rm_fmt_json_cksum(RmFile *file, char *checksum_str, size_t size) {
