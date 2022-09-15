@@ -1350,6 +1350,12 @@ static int rm_shred_sort_by_mtime(const RmFile *file_a, const RmFile *file_b,
 }
 
 static RmShredGroup *rm_shred_create_rejects(RmShredGroup *group, RmFile *file) {
+    if(RM_FILE_IS_HARDLINK(file)) {
+        // splitting a hardlink of a a file we hashed, propogate hash_offset
+        file->shred_group = group;
+        file->hash_offset = group->hash_offset;
+    }
+    g_assert(file->hash_offset == group->hash_offset);
     if(group->digest) {
         file->digest = rm_digest_copy(group->digest);
     }
@@ -1361,6 +1367,14 @@ static RmShredGroup *rm_shred_create_rejects(RmShredGroup *group, RmFile *file) 
 
 static void rm_shred_group_transfer(RmFile *file, RmShredGroup *source,
                                     RmShredGroup *dest) {
+    if(RM_FILE_IS_HARDLINK(file)) {
+        // splitting a hardlink of a a file we hashed, propogate hash_offset
+        RmFile *head = RM_FILE_HARDLINK_HEAD(file);
+        file->shred_group = head->shred_group;
+        file->hash_offset = head->hash_offset;
+    }
+    g_assert(file->hash_offset == file->shred_group->hash_offset);
+
     rm_shred_group_push_file(dest, file, FALSE);
     gboolean success = g_queue_remove(source->held_files, file);
     g_assert(success); (void)success;
@@ -1425,22 +1439,17 @@ static void rm_shred_tag_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTa
         return;
     }
 
-    /* do triangular iteration over group to check if non-originals are hardlinks of
-     * originals */
+    /* iterate over group to check if non-originals are hardlinks of originals */
     for(GList *i_orig = group->held_files->head; i_orig; i_orig = i_orig->next) {
         RmFile *orig = i_orig->data;
-        if(!orig->is_original) {
-            /* have gone past last original */
-            break;
-        }
-        if(!orig->hardlinks) {
+        if(orig->is_original || !orig->hardlinks) {
             continue;
         }
-        for(GList *i_dupe = i_orig->next, *next = NULL; i_dupe; i_dupe = next) {
-            next = i_dupe->next;
-            RmFile *dupe = i_dupe->data;
-            if(dupe->hardlinks == orig->hardlinks) {
-                dupe->is_original = TRUE;
+        for(GList *i_link = orig->hardlinks->head; i_link; i_link = i_link->next) {
+            RmFile *link = i_link->data;
+            if(link->is_original) {
+                orig->is_original = TRUE;
+                break;
             }
         }
     }
@@ -1509,6 +1518,13 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag, GSL
 
     if(group->status == RM_SHRED_GROUP_FINISHING) {
         group->status = RM_SHRED_GROUP_FINISHED;
+    } else {
+        /* mark files as original for purposes of --keep-hardlinked and dupe
+         * stats, since they will not be processed */
+        for(GList *iter = group->held_files->head; iter; iter = iter->next) {
+            RmFile *file = iter->data;
+            file->is_original = true;
+        }
     }
 
     /* defer free so hardlinked files remain valid after postprocessing linked rejects */
