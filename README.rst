@@ -26,6 +26,9 @@ to remove it.
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
 
+.. image:: https://badges.gitter.im/rmlint/community.svg
+   :target: https://gitter.im/rmlint/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+
 **Features:**
 
 Finds…
