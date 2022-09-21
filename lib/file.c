@@ -181,8 +181,10 @@ gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
 }
 
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {
+    g_assert(!link->hardlinks);
     if(!head->hardlinks) {
         head->hardlinks = g_queue_new();
+        g_queue_push_tail(head->hardlinks, head);
     }
     link->hardlinks = head->hardlinks;
     g_queue_push_tail(head->hardlinks, link);

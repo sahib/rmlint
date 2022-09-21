@@ -82,8 +82,8 @@ typedef struct RmParrot {
     /* Root array of the json document */
     JsonArray *root;
 
-    /* Last original file that we encountered */
-    RmFile *last_original;
+    /* Map known IDs to their RmFiles */
+    GHashTable *file_table;
 
     /* Index inside the document
      * (0 is header, 1 first element, len(root) is footer)
@@ -124,6 +124,7 @@ static void rm_parrot_close(RmParrot *polly) {
         g_object_unref(polly->parser);
     }
 
+    g_hash_table_unref(polly->file_table);
     g_hash_table_unref(polly->disk_ids);
 
     /* Free the GQeues in the trie */
@@ -146,6 +147,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     RmParrot *polly = g_malloc0(sizeof(RmParrot));
     polly->session = session;
     polly->parser = json_parser_new();
+    polly->file_table = g_hash_table_new(NULL, NULL);
     polly->disk_ids = g_hash_table_new(NULL, NULL);
     polly->index = 1;
     polly->is_prefd = is_prefd;
@@ -300,10 +302,6 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         file->actual_file_size = lstat_buf.st_size;
     }
 
-    if(file->is_original) {
-        polly->last_original = file;
-    }
-
     JsonNode *depth_node = json_object_get_member(object, "depth");
     if(depth_node != NULL) {
         file->depth = json_node_get_int(depth_node);
@@ -321,7 +319,13 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     /* Fix the hardlink relationship */
     JsonNode *hardlink_of = json_object_get_member(object, "hardlink_of");
     if(hardlink_of != NULL) {
-        rm_file_hardlink_add(polly->last_original, file);
+        gint64 head_id = json_node_get_int(hardlink_of);
+        RmFile *head = g_hash_table_lookup(polly->file_table, GINT_TO_POINTER(head_id));
+        if(head) {
+            rm_file_hardlink_add(head, file);
+        } else {
+            rm_log_warning_line(_("unknown ID in hardlink_of: %lld"), (long long)head_id);
+        }
     } else {
         g_assert(!file->hardlinks);
     }
@@ -336,6 +340,11 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
 
         g_queue_push_tail(children, file);
     }
+
+    gint64 id = json_object_get_int_member(object, "id");
+    bool notexist = g_hash_table_insert(polly->file_table, GINT_TO_POINTER(id), file);
+    (void)notexist;
+    g_assert(notexist);
 
     return file;
 }
@@ -739,6 +748,12 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
         && file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
             file->is_original = false;
         }
+    }
+
+    rm_shred_tag_hardlink_rejects(cage->session, group);
+
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
 
         rm_parrot_update_stats(cage, file);
         file->twin_count = group->length;

@@ -1430,17 +1430,13 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
 
 
 /* if cfg->keep_hardlinked_dupes then tag hardlinked dupes as originals */
-static void rm_shred_tag_hardlink_rejects(RmShredGroup *group, _UNUSED RmShredTag *tag) {
-    if(!tag->session->cfg->keep_hardlinked_dupes) {
-        return;
-    }
-
-    if(group->status != RM_SHRED_GROUP_FINISHING) {
+void rm_shred_tag_hardlink_rejects(RmSession *session, GQueue *files) {
+    if(!session->cfg->keep_hardlinked_dupes) {
         return;
     }
 
     /* iterate over group to check if non-originals are hardlinks of originals */
-    for(GList *i_orig = group->held_files->head; i_orig; i_orig = i_orig->next) {
+    for(GList *i_orig = files->head; i_orig; i_orig = i_orig->next) {
         RmFile *orig = i_orig->data;
         if(orig->is_original || !orig->hardlinks) {
             continue;
@@ -1485,7 +1481,9 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag, GSL
      */
     rm_shred_group_find_original(tag->session, group->held_files, group->status);
 
-    rm_shred_tag_hardlink_rejects(group, tag);
+    if(group->status == RM_SHRED_GROUP_FINISHING) {
+        rm_shred_tag_hardlink_rejects(tag->session, group->held_files);
+    }
 
     /* Update statistics */
     if(group->status == RM_SHRED_GROUP_FINISHING) {

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+
+import os
+
 from nose import with_setup
+from nose.plugins.skip import SkipTest
+from parameterized import parameterized
 from tests.utils import *
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_keep_hardlinks():
+def test_hardlinks_ignored():
     create_file('xxx', 'file_a')
     create_link('file_a', 'file_b')
     create_file('xxx', 'file_z')
@@ -24,7 +29,24 @@ def test_keep_hardlinks():
     assert data[2]["path"].endswith("file_z")
     assert data[2]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--keep-hardlinked -S a')
+
+@parameterized.expand([(False,), (True,)])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_keep_hardlinked(replay):
+    if replay and not has_feature('replay'):
+        raise SkipTest('rmlint built without replay support')
+
+    create_file('xxx', 'file_a')
+    create_link('file_a', 'file_b')
+    create_file('xxx', 'file_z')
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+
+    replay_args = []
+    if replay:
+        run_rmlint('-o json:{}'.format(replay_path))
+        replay_args += ['--replay', replay_path]
+
+    head, *data, footer = run_rmlint('--keep-hardlinked -S a', *replay_args)
     assert data[0]["path"].endswith("file_a")
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("file_b")
@@ -32,7 +54,7 @@ def test_keep_hardlinks():
     assert data[2]["path"].endswith("file_z")
     assert data[2]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--keep-hardlinked -S A')
+    head, *data, footer = run_rmlint('--keep-hardlinked -S A', *replay_args)
     assert data[0]["path"].endswith("file_z")
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("file_b")

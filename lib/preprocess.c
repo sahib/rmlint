@@ -514,7 +514,7 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
         return FALSE;
     }
 
-    if(head->hardlinks) {
+    if(file->session->cfg->find_hardlinked_dupes) {
         /* bundle hardlink */
         rm_file_hardlink_add(head, file);
     }
@@ -533,8 +533,6 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
  * file (unless ALL the files are "other lint"). */
 static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_cluster,
                                             RmSession *session) {
-    RmCfg *cfg = session->cfg;
-
     if(inode_cluster->length > 1) {
         /* there is a cluster of inode matches */
 
@@ -563,10 +561,6 @@ static gboolean rm_pp_handle_inode_clusters(_UNUSED gpointer key, GQueue *inode_
     if(inode_cluster->length > 1) {
         /* bundle or free the non-head files */
         RmFile *headfile = inode_cluster->head->data;
-        if(cfg->find_hardlinked_dupes) {
-            /* prepare to bundle files under the hardlink head */
-            rm_file_hardlink_add(headfile, headfile);
-        }
 
         /* hardlink cluster are counted as filtered files since they are either
          * ignored or treated as automatic duplicates depending on settings (so
