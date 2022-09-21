@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+
+import os
+import time
+from itertools import combinations, permutations
+from pprint import pformat
+
 from nose import with_setup
 from nose.plugins.attrib import attr
+from nose.plugins.skip import SkipTest
+from parameterized import parameterized
 from tests.utils import *
-
-import time
-
-from itertools import permutations, combinations
-
 
 PATHS = ['b_dir/', 'a_dir/', 'c_dir/']
 
@@ -470,3 +473,58 @@ def test_replay_unpack_directories():
     expected["part_of_directory"] = EXPECTED_WITH_TREEMERGE["part_of_directory"]
 
     assert data_by_type(data) == expected
+
+
+def _check_json_matches(data, replay_data):
+    data_map = {row['id']: row for row in data}
+    replay_data_map = {row['id']: row for row in replay_data}
+
+    for ident in set(data_map) | set(replay_data_map):
+        if ident not in data_map:
+            raise ValueError('Extra entry in replay output:\n{}'.format(pformat(replay_data_map[ident])))
+        if ident not in replay_data_map:
+            raise ValueError('Missing entry in replay output:\n{}'.format(pformat(data_map[ident])))
+    assert len(data) == len(replay_data)
+
+    # ignore the 'progress' key which does not match
+    def no_progress(row):
+        row = row.copy()
+        del row['progress']
+        return row
+
+    for ident in set(data_map) | set(replay_data_map):
+        orig = no_progress(data_map[ident])
+        replay = no_progress(replay_data_map[ident])
+        if replay.get('checksum') == '':
+            del replay['checksum']  # fix empty checksum
+        if orig != replay:
+            raise ValueError('Entry in replay output does not match.\n\nOriginal entry:\n{}\n\nReplay entry:\n{}'.format(
+                pformat(orig), pformat(replay),
+            ))
+
+
+@parameterized.expand([('',), ('--followlinks',), ('--no-followlinks',)])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_symlinks(link_opt):
+    if not has_feature('replay'):
+        raise SkipTest('rmlint built without replay support')
+
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+    create_link('a', 'l1', symlink=True)
+    create_link('a', 'l2', symlink=True)
+
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+    head, *data, foot = run_rmlint('-S a -o json:{}'.format(replay_path))
+    assert len(data) == 4
+
+    head, *replay_data, foot = run_rmlint('-S a --replay', replay_path, link_opt)
+
+    if link_opt:
+        # symlinks filtered out
+        assert len(replay_data) == 2
+        assert replay_data[0]['path'].endswith('/a')
+        assert replay_data[1]['path'].endswith('/b')
+    else:
+        # replay should use lstat, so the inode, size, and mtime match
+        _check_json_matches(data, replay_data)

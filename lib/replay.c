@@ -246,25 +246,23 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         return NULL;
     }
 
-    /* Collect file information (for rm_file_new) */
-    RmStat lstat_buf, stat_buf;
-    RmStat *stat_info = &lstat_buf;
-    if(rm_sys_lstat(path, &lstat_buf) == -1) {
+    /* Collect file information (for rm_file_new). Never follow symlinks,
+     * because we do not know the checksum of the target. */
+    RmStat stat_buf;
+    if(rm_sys_lstat(path, &stat_buf) == -1) {
         return NULL;
     }
 
-    /* use stat() after lstat() to find out if it's an symlink.
-     * If it's a bad link, this will fail with stat_info still pointing to lstat.
-     * */
-    if(rm_sys_stat(path, &stat_buf) != -1) {
-        stat_info = &stat_buf;
+    if(S_ISLNK(stat_buf.st_mode) && type != RM_LINT_TYPE_BADLINK &&
+            !polly->session->cfg->see_symlinks) {
+        // ignore symlink dupe candidates unless --see-symlinks is enabled
+        return NULL;
     }
 
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
     if(mtime_node) {
-        /* Note: lstat_buf used here since for symlinks we want their mtime */
-        gdouble stat_mtime = rm_sys_stat_mtime_float(&lstat_buf);
+        gdouble stat_mtime = rm_sys_stat_mtime_float(&stat_buf);
         gdouble json_mtime = json_node_get_double(mtime_node);
 
         /* Allow them a rather large span to deviate to account for inaccuracies */
@@ -275,9 +273,9 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Fill up the RmFile */
-    file = rm_file_new(polly->session, path, stat_info, type, 0, 0, 0);
+    file = rm_file_new(polly->session, path, &stat_buf, type, 0, 0, 0);
     file->is_original = json_object_get_boolean_member(object, "is_original");
-    file->is_symlink = S_ISLNK(lstat_buf.st_mode);
+    file->is_symlink = S_ISLNK(stat_buf.st_mode);
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
 
     if(type != RM_LINT_TYPE_UNIQUE_FILE) {
@@ -289,17 +287,11 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     if(type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
         // stat() reports directories as size zero.
         // Fix this by actually using the size field from the json node.
-        if(stat_info->st_mode & S_IFDIR) {
+        if(stat_buf.st_mode & S_IFDIR) {
             file->actual_file_size = json_object_get_int_member(object, "size");
         }
 
         file->n_children = (size_t)json_object_get_int_member(object, "n_children");
-    }
-
-    // If the file is a symbolic link and we remove it,
-    // we should not count the target size.
-    if(type == RM_LINT_TYPE_DUPE_CANDIDATE && file->is_symlink) {
-        file->actual_file_size = lstat_buf.st_size;
     }
 
     JsonNode *depth_node = json_object_get_member(object, "depth");
