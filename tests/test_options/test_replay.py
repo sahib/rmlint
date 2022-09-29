@@ -73,10 +73,7 @@ def test_replay_match_basename():
     create_file('xxx', 'test2/a')
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    head, *data, footer = run_rmlint(with_json='replay.json')
 
     assert len(data) == 3
 
@@ -108,10 +105,7 @@ def test_replay_hidden():
     create_file('xxx', 'test/.b')
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-
-    head, *data, footer = run_rmlint('--hidden -o json:{p}'.format(
-        p=replay_path
-    ))
+    head, *data, footer = run_rmlint('--hidden', with_json='replay.json')
 
     assert len(data) == 2
 
@@ -134,10 +128,7 @@ def test_replay_must_match_tagged():
     create_file('xxx', 'test_b/a')
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    head, *data, footer = run_rmlint(with_json='replay.json')
 
     assert len(data) == 2
 
@@ -190,8 +181,8 @@ def test_sorting():
     for combo in combos:
         combo_str = '-y ' + combo
         head, *data, footer = run_rmlint(
-            combo_str + search_paths, '-o json:{p}'.format(p=replay_path),
-            use_default_dir=False
+            combo_str + search_paths,
+            with_json='replay.json', use_default_dir=False,
         )
         assert len(data) == 7
 
@@ -223,8 +214,7 @@ def test_replay_no_dir():
         os.chdir(TESTDIR_NAME)
         replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
         head, *data, footer = run_rmlint(
-                '-o json:{p}'.format(p=replay_path),
-                use_default_dir=False,
+            with_json='replay.json', use_default_dir=False,
         )
         assert len(data) == 3
 
@@ -247,7 +237,7 @@ def test_replay_unicode_fuckup():
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p}'.format(p=replay_path))
+    head, *data, footer = run_rmlint(with_json='replay.json')
     assert len(data) == 3
     assert set([os.path.basename(e['path']) for e in data]) == set(names)
 
@@ -268,8 +258,8 @@ def test_replay_tagged_order():
 
     # Create replay-a.json
     head, *data, footer = run_rmlint(
-        '-S a {r} -o json:{p}'.format(r=TESTDIR_NAME + '/a', p=replay_path_a),
-        use_default_dir=False
+        '-S a', TESTDIR_NAME + '/a',
+        with_json='replay-a.json', use_default_dir=False,
     )
 
     assert len(data) == 2
@@ -278,8 +268,8 @@ def test_replay_tagged_order():
 
     # Create replay-b.json
     head, *data, footer = run_rmlint(
-        '{r} -o json:{p}'.format(r=TESTDIR_NAME + '/b', p=replay_path_b),
-        use_default_dir=False
+        TESTDIR_NAME + '/b',
+        with_json='replay-b.json', use_default_dir=False,
     )
 
     assert len(data) == 2
@@ -330,7 +320,7 @@ def test_replay_duplicate_directory_size():
     create_file('xxx', 'b/xxx')
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, footer = run_rmlint('-o json:{p} -S a'.format(p=replay_path))
+    head, *data, footer = run_rmlint('-S a', with_json='replay.json')
     assert len(data) == 2
 
     head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
@@ -432,7 +422,7 @@ def test_replay_pack_directories():
     # Do a run without -D and pack it later during --replay.
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p} -S ahD'.format(p=replay_path))
+    head, *data, footer = run_rmlint('-S ahD', with_json='replay.json')
     assert len(data) == 13
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
@@ -453,7 +443,7 @@ def test_replay_unpack_directories():
 
     # Do a run with -D and pack it later during --replay.
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, footer = run_rmlint('-o json:{p} -S ahD -D'.format(p=replay_path))
+    head, *data, footer = run_rmlint('-S ahD -D', with_json='replay.json')
 
     assert len(data) == 21
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
@@ -515,7 +505,7 @@ def test_symlinks(link_opt):
     create_link('a', 'l2', symlink=True)
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, foot = run_rmlint('-S a -o json:{}'.format(replay_path))
+    head, *data, foot = run_rmlint('-S a', with_json='replay.json')
     assert len(data) == 4
 
     head, *replay_data, foot = run_rmlint('-S a --replay', replay_path, link_opt)

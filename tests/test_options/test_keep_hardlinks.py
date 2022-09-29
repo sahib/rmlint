@@ -43,7 +43,7 @@ def test_keep_hardlinked(replay):
 
     replay_args = []
     if replay:
-        run_rmlint('-o json:{}'.format(replay_path))
+        run_rmlint(with_json='replay.json')
         replay_args += ['--replay', replay_path]
 
     head, *data, footer = run_rmlint('--keep-hardlinked -S a', *replay_args)

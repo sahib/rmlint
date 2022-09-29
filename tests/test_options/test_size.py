@@ -91,9 +91,7 @@ def test_replay_size():
     create_testdir('empty_dir')
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    head, *data, footer = run_rmlint(with_json='replay.json')
 
     assert len(data) == 7
     assert [e["type"] for e in data] == \
