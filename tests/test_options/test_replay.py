@@ -493,6 +493,18 @@ def _check_json_matches(data, replay_data):
             ))
 
 
+def _get_replay_data(expect_len, opts, replay_opts=None):
+    if replay_opts is None:
+        replay_opts = opts
+
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+    head, *data, foot = run_rmlint('-S a', opts, with_json='replay.json')
+    assert len(data) == expect_len
+
+    head, *replay_data, foot = run_rmlint('-S a --replay', replay_path, replay_opts)
+    return data, replay_data
+
+
 @parameterized.expand([('',), ('--followlinks',), ('--no-followlinks',)])
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_symlinks(link_opt):
@@ -504,12 +516,7 @@ def test_symlinks(link_opt):
     create_link('a', 'l1', symlink=True)
     create_link('a', 'l2', symlink=True)
 
-    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, foot = run_rmlint('-S a', with_json='replay.json')
-    assert len(data) == 4
-
-    head, *replay_data, foot = run_rmlint('-S a --replay', replay_path, link_opt)
-
+    data, replay_data = _get_replay_data(4, '', link_opt)
     if link_opt:
         # symlinks filtered out
         assert len(replay_data) == 2
@@ -518,3 +525,15 @@ def test_symlinks(link_opt):
     else:
         # replay should use lstat, so the inode, size, and mtime match
         _check_json_matches(data, replay_data)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_empty_file():
+    if not has_feature('replay'):
+        raise SkipTest('rmlint built without replay support')
+
+    create_file('', 'empty')
+
+    # replay should not ignore the lone file
+    data, replay_data = _get_replay_data(1, '-T "none +ef"')
+    assert len(data) == len(replay_data)

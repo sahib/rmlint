@@ -111,6 +111,11 @@ typedef struct RmParrot {
     RmTrie directory_trie;
 } RmParrot;
 
+static inline bool rm_parrot_lint_type_is_dupe(RmLintType lint_type) {
+    return lint_type == RM_LINT_TYPE_DUPE_CANDIDATE
+        || lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE;
+}
+
 static int rm_parrot_dir_trie_clear_children(_UNUSED RmTrie *self, RmNode *node, _UNUSED int level, _UNUSED void *user_data) {
     GQueue *children = node->data;
     if(children != NULL) {
@@ -436,8 +441,7 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
         return true;
     }
 
-    if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
-       file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(!rm_parrot_lint_type_is_dupe(file->lint_type)) {
         // Non-lint files always count as good size.
         // See: https://github.com/sahib/rmlint/issues/368
         return true;
@@ -633,8 +637,7 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
 
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
-           file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        if(!rm_parrot_lint_type_is_dupe(file->lint_type)) {
             // -k and -m only applies to dupes.
             return;
         }
@@ -664,8 +667,7 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
         session->total_files += file->n_children;
     }
 
-    if(file->lint_type == RM_LINT_TYPE_DUPE_CANDIDATE ||
-       file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+    if(rm_parrot_lint_type_is_dupe(file->lint_type)) {
         session->dup_group_counter += file->is_original;
         if(!file->is_original) {
             session->dup_counter += 1;
@@ -736,8 +738,7 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
         /* Other lint never should bother for is_original,
          * since this definition doesn't make sense there.
          * */
-        if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE
-        && file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        if(!rm_parrot_lint_type_is_dupe(file->lint_type)) {
             file->is_original = false;
         }
     }
@@ -935,7 +936,9 @@ void rm_parrot_cage_flush(RmParrotCage *cage) {
 
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
-        if(group->length > 1) {
+        RmFile *head_file = group->head->data;
+
+        if(group->length > 1 || !rm_parrot_lint_type_is_dupe(head_file->lint_type)) {
             rm_parrot_cage_write_group(cage, group, pack_directories);
         }
     }
