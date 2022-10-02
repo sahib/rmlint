@@ -36,8 +36,8 @@
  * Options that alter the hashing/reading of duplicates will have no
  * effect since almost no IO will be done except for some lstat/stat.
  *
- * Additionally, --followlinks, --crossdev, --hardlink (as well as their
- * negative pendants) and --write-unfinished will have no effect.
+ * Additionally, --followlinks will behave as --no-followlinks, and
+ * --no-crossdev will have no effect.
  *
  * Only paths are printed that are given on the commandline.
  *
