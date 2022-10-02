@@ -225,6 +225,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         return NULL;
     }
 
+    RmSession *session = polly->session;
     RmFile *file = NULL;
     const char *path = NULL;
 
@@ -259,7 +260,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     if(S_ISLNK(stat_buf.st_mode) && type != RM_LINT_TYPE_BADLINK &&
-            !polly->session->cfg->see_symlinks) {
+            !session->cfg->see_symlinks) {
         // ignore symlink dupe candidates unless --see-symlinks is enabled
         return NULL;
     }
@@ -278,7 +279,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Fill up the RmFile */
-    file = rm_file_new(polly->session, path, &stat_buf, type, 0, 0, 0);
+    file = rm_file_new(session, path, &stat_buf, type, 0, 0, 0);
     file->is_original = json_object_get_boolean_member(object, "is_original");
     file->is_symlink = S_ISLNK(stat_buf.st_mode);
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
@@ -318,10 +319,16 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     if(hardlink_of != NULL) {
         gint64 head_id = json_node_get_int(hardlink_of);
         RmFile *head = g_hash_table_lookup(polly->file_table, GINT_TO_POINTER(head_id));
+        if(!head) {
+            rm_log_warning_line(_("unknown ID in hardlink_of: %lld"), (long long)head_id);
+        }
+        if(!session->cfg->find_hardlinked_dupes) {
+            // ignore hardlink if --no-hardlinked is given
+            rm_file_destroy(file);
+            return NULL;
+        }
         if(head) {
             rm_file_hardlink_add(head, file);
-        } else {
-            rm_log_warning_line(_("unknown ID in hardlink_of: %lld"), (long long)head_id);
         }
     } else {
         g_assert(!file->hardlinks);
