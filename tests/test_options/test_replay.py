@@ -555,3 +555,22 @@ def test_empty_file():
     # replay should not ignore the lone file
     data, replay_data = _get_replay_data(1, '-T "none +ef"')
     assert len(data) == len(replay_data)
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hardlink_sort():
+    create_file('xxx', 'd1/a')
+    create_file('xxx', 'd1/b')
+    create_link('d1/a', 'd1/a2')
+    create_link('d1/a', 'd1/a3')
+    create_dirs('d2')
+    create_link('d1/b', 'd2/b')
+
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+    head, *data, footer = run_rmlint(with_json='replay.json')
+
+    head, *data, footer = run_rmlint(
+        '-S HA {t}/d1 --replay {r}'.format(t=TESTDIR_NAME, r=replay_path),
+        use_default_dir=False,
+    )
+    assert data[0]['path'].endswith('/d1/a3')

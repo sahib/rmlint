@@ -282,6 +282,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     file = rm_file_new(session, path, &stat_buf, type, 0, 0, 0);
     file->is_original = json_object_get_boolean_member(object, "is_original");
     file->is_symlink = S_ISLNK(stat_buf.st_mode);
+    file->link_count = stat_buf.st_nlink;
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
 
     if(type != RM_LINT_TYPE_UNIQUE_FILE) {
