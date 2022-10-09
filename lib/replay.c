@@ -697,6 +697,12 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
 static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool pack_directories) {
     RmCfg *cfg = cage->session->cfg;
 
+    // set outer_link_count for ranking
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        file->outer_link_count = file->link_count - (file->hardlinks ? file->hardlinks->length : 1);
+    }
+
     if(cfg->filter_mtime) {
         gsize older = 0;
         for(GList *iter = group->head; iter; iter = iter->next) {

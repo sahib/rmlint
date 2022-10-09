@@ -569,8 +569,14 @@ def test_hardlink_sort():
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
     head, *data, footer = run_rmlint(with_json='replay.json')
 
-    head, *data, footer = run_rmlint(
-        '-S HA {t}/d1 --replay {r}'.format(t=TESTDIR_NAME, r=replay_path),
-        use_default_dir=False,
-    )
+    def run(sort):
+        return run_rmlint(
+            '-S {s} {t}/d1 --replay {r}'.format(s=sort, t=TESTDIR_NAME, r=replay_path),
+            use_default_dir=False,
+        )
+
+    head, *data, foot = run('HA')
     assert data[0]['path'].endswith('/d1/a3')
+
+    head, *data, foot = run('Oa')
+    assert data[0]['path'].endswith('/d1/b')
