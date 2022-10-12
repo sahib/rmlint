@@ -759,6 +759,20 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
 
     rm_shred_tag_hardlink_rejects(cage->session, group);
 
+    // are any left to be dupes?
+    bool has_non_original = false;
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if(!file->is_original) {
+            has_non_original = true;
+            break;
+        }
+    }
+    if(!has_non_original) {
+        g_queue_foreach(group, (GFunc)rm_file_destroy, NULL);
+        return;
+    }
+
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
 

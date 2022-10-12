@@ -326,14 +326,6 @@ typedef struct RmShredTag {
 
 } RmShredTag;
 
-#define NEEDS_PREF(group) \
-    (group->session->cfg->must_match_tagged || group->session->cfg->keep_all_untagged)
-#define NEEDS_NPREF(group) \
-    (group->session->cfg->must_match_untagged || group->session->cfg->keep_all_tagged)
-#define NEEDS_NEW(group) \
-    (group->session->cfg->min_mtime)
-
-
 typedef struct RmShredGroup {
     /* holding queue for files; they are held here until the group first meets
      * criteria for further hashing (normally just 2 or more files, but sometimes
@@ -787,17 +779,63 @@ static void rm_shred_group_free(RmShredGroup *self, bool force_free) {
     g_slice_free(RmShredGroup, self);
 }
 
-static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
+static gboolean rm_shred_group_has_non_original(RmShredGroup *group, bool unbundle) {
+    // unbundle hardlinks and clusters
+    GQueue expanded = G_QUEUE_INIT;
+    GList *iter;
+    for(iter = group->held_files->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if(unbundle && file->cluster) {
+            for(GList *titer = file->cluster->head; titer; titer = titer->next) {
+                RmFile *twin = titer->data;
+                if(twin != file) {
+                    g_queue_push_tail(&expanded, twin);
+                }
+            }
+        }
+
+        if(unbundle && file->hardlinks) {
+            for(GList *liter = file->hardlinks->head; liter; liter = liter->next) {
+                g_queue_push_tail(&expanded, liter->data);
+            }
+        } else {
+            g_queue_push_tail(&expanded, file);
+        }
+    }
+
+    // mark original files
+    rm_shred_group_find_original((RmSession *)group->session, &expanded, RM_SHRED_GROUP_FINISHING);
+    rm_shred_tag_hardlink_rejects(group->session, &expanded);
+
+    // are any left to be dupes?
+    bool has_non_original = false;
+    for(iter = expanded.head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        if(!file->is_original) {
+            has_non_original = true;
+            break;
+        }
+    }
+    g_queue_clear(&expanded);
+    return has_non_original;
+}
+
+static gboolean rm_shred_group_qualifies(RmShredGroup *group, bool unbundle) {
+    RmCfg *cfg = group->session->cfg;
     return 1 && (group->num_files >= 2)
            /* it takes 2 to tango */
-           && (group->n_pref > 0 || !NEEDS_PREF(group))
+           && (group->n_pref > 0 || !cfg->must_match_tagged)
            /* we have at least one file from preferred path, or we don't care */
-           && (group->n_npref > 0 || !NEEDS_NPREF(group))
+           && (group->n_npref > 0 || !cfg->must_match_untagged)
            /* we have at least one file from non-pref path, or we don't care */
-           && (group->n_new > 0 || !NEEDS_NEW(group))
+           && (group->n_new > 0 || cfg->min_mtime == 0)
            /* we have at least one file newer than cfg->min_mtime, or we don't care */
-           && (!group->unique_basename || !group->session->cfg->unmatched_basenames);
-    /* we have more than one unique basename, or we don't care */
+           && (!group->unique_basename || !group->session->cfg->unmatched_basenames)
+           /* we have more than one unique basename, or we don't care -- this check is
+            * incomplete as it doesn't consider the result of group splitting, but that's
+            * a lot of effort for a little performance gain */
+           && rm_shred_group_has_non_original(group, unbundle);
+           /* there is at least one file in the group that would not be marked original */
 }
 
 /* call unlocked; should be no contention issues since group is finished */
@@ -809,7 +847,7 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
     case RM_SHRED_GROUP_DORMANT:
         /* Group didn't need hashing, either because it didn't meet criteria,
          * or possible because all files were pre-matched */
-        if(rm_shred_group_qualifies(self)) {
+        if(rm_shred_group_qualifies(self, true)) {
             /* upgrade status */
             self->status = RM_SHRED_GROUP_FINISHING;
         }
@@ -837,11 +875,11 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
 }
 
 /* Checks whether group qualifies as duplicate candidate (ie more than
- * two members and meets has_pref and NEEDS_PREF criteria).
+ * two members and meets rm_shred_group_qualifies criteria).
  * Assume group already protected by group_lock.
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
-    if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group) &&
+    if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group, true) &&
        group->hash_offset < group->file_size &&
        (group->n_clusters > 1 ||
         (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
@@ -911,11 +949,17 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
 
         g_assert(file->hash_offset == shred_group->hash_offset);
 
+        // tentatively push file to group for rm_shred_group_has_non_original
+        if(shred_group->held_files) {
+            g_queue_push_head(shred_group->held_files, file);
+        }
         rm_shred_group_update_status(shred_group);
+
         switch(shred_group->status) {
         case RM_SHRED_GROUP_START_HASHING:
             /* clear the queue and push all its rmfiles to the md-scheduler */
             if(shred_group->held_files) {
+                g_queue_pop_head(shred_group->held_files);
                 shred_group->num_pending += g_queue_get_length(shred_group->held_files);
                 g_queue_free_full(shred_group->held_files,
                                   (GDestroyNotify)rm_shred_push_queue);
@@ -927,6 +971,10 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             }
         /* FALLTHROUGH */
         case RM_SHRED_GROUP_HASHING:
+            if(shred_group->held_files) {
+                g_queue_pop_head(shred_group->held_files);
+            }
+
             shred_group->num_pending++;
             if(!file->shredder_waiting) {
                 /* add file to device queue */
@@ -938,8 +986,7 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             break;
         case RM_SHRED_GROUP_DORMANT:
         case RM_SHRED_GROUP_FINISHING:
-            /* add file to held_files */
-            g_queue_push_head(shred_group->held_files, file);
+            /* file was added to held_files */
             break;
         case RM_SHRED_GROUP_FINISHED:
         default:
@@ -1279,17 +1326,6 @@ void rm_shred_group_find_original(RmSession *session, GQueue *files,
     }
 }
 
-static gboolean rm_shred_has_duplicates(GQueue *group) {
-    for(GList *iter=group->head; iter; iter=iter->next) {
-        RmFile *file = iter->data;
-        if(!file->is_original) {
-            return TRUE;
-        }
-    }
-
-    return FALSE;
-}
-
 void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
     g_assert(session);
     g_assert(group);
@@ -1301,12 +1337,10 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 #endif
 
     /* Hand it over to the printing module */
-    if(rm_shred_has_duplicates(group)) {
-        for(GList *iter = group->head; iter; iter = iter->next) {
-            RmFile *file = iter->data;
-            file->twin_count = group->length;
-            rm_fmt_write(file, session->formats);
-        }
+    for(GList *iter = group->head; iter; iter = iter->next) {
+        RmFile *file = iter->data;
+        file->twin_count = group->length;
+        rm_fmt_write(file, session->formats);
     }
 }
 
@@ -1430,7 +1464,7 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
 
 
 /* if cfg->keep_hardlinked_dupes then tag hardlinked dupes as originals */
-void rm_shred_tag_hardlink_rejects(RmSession *session, GQueue *files) {
+void rm_shred_tag_hardlink_rejects(const RmSession *session, GQueue *files) {
     if(!session->cfg->keep_hardlinked_dupes) {
         return;
     }
@@ -1473,8 +1507,8 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag, GSL
     rm_shred_group_postprocess(rm_shred_mtime_rejects(group, tag), tag, free_list);
 
     /* re-check whether what is left of the group still meets all criteria */
-    group->status = (rm_shred_group_qualifies(group)) ? RM_SHRED_GROUP_FINISHING
-                                                      : RM_SHRED_GROUP_DORMANT;
+    group->status = (rm_shred_group_qualifies(group, false)) ? RM_SHRED_GROUP_FINISHING
+                                                             : RM_SHRED_GROUP_DORMANT;
 
     /* find the original(s) (note this also sorts the group from highest
      * ranked to lowest ranked
