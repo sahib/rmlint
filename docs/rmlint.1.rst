@@ -317,20 +317,24 @@ Traversal Options
     equivalent to a directory listing. A depth of 2 would also consider all
     children directories and so on.
 
-:``-l --hardlinked`` (**default**) / ``--keep-hardlinked`` / ``-L --no-hardlinked``:
+:``-l --hardlinked`` (**default**) / ``-L --no-hardlinked``:
 
     Hardlinked files are treated as duplicates by default (``--hardlinked``). If
-    ``--keep-hardlinked`` is given, `rmlint` will not delete any files that are
+    `--no-hardlinked` is given, only one file (of a set of hardlinked files) is
+    considered, all the others are ignored; this means, they are not deleted and
+    also not even shown in the output. The "highest ranked" of the set is the
+    one that is considered.
+
+:``--keep-hardlinked`` / ``--no-keep-hardlinked`` (**default**):
+
+    If ``--keep-hardlinked`` is given, `rmlint` will not delete any files that are
     hardlinked to an original in their respective group. Such files will be
     displayed like originals, i.e. for the default output with a "ls" in front.
     The reasoning here is to maximize the number of kept files, while maximizing
     the number of freed space: Removing hardlinks to originals will not allocate
     any free space.
 
-    If `--no-hardlinked` is given, only one file (of a set of hardlinked files)
-    is considered, all the others are ignored; this means, they are not
-    deleted and also not even shown in the output. The "highest ranked" of the
-    set is the one that is considered.
+    This option has no effect when ``--no-hardlinked`` is enabled.
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 

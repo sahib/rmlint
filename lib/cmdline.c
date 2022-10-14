@@ -1472,6 +1472,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-progress"                , 'G' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_progress)             , "Disable progressbar"                 , NULL} ,
         {"no-xattr-read"              , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr   , "Disable --xattr-read"                , NULL} ,
         {"no-xattr-write"             , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr    , "Disable --xattr-write"               , NULL} ,
+        {"no-keep-hardlinked"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->keep_hardlinked_dupes   , "Disable --keep-hardlinked"           , NULL} ,
         {"no-partial-hidden"          , 0   , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_partial_hidden)       , "Invert --partial-hidden"             , NULL} ,
         {NULL                         , 0   , 0                , 0                     , NULL                          , NULL                                  , NULL}
     };
