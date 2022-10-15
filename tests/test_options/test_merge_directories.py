@@ -241,14 +241,16 @@ def test_symlinks():
     assert data[1]['path'].endswith('z')
     assert not data[1]['is_original']
 
-    head, *data, footer = run_rmlint('-p -D -S a -f')
+    head, *data, footer = run_rmlint('-p -D -S a -f --no-keep-symlinks')
     data = filter_part_of_directory(data)
 
-    assert len(data) == 2
+    assert len(data) == 4
     assert data[0]['path'].endswith('/a')
     assert data[0]['is_original']
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
+    assert data[2]['path'].endswith('/a/z')
+    assert data[3]['path'].endswith('/a/x')
 
 
 def mount_bind_teardown_func():

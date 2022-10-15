@@ -70,6 +70,10 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
 
     RmCfg *cfg = file_a->session->cfg;
 
+    if(cfg->see_symlinks) {
+        RETURN_IF_NONZERO(SIGN_DIFF(file_a->is_symlink, file_b->is_symlink))
+    }
+
     if(cfg->match_basename) {
         result = rm_file_basenames_cmp(file_a, file_b);
         RETURN_IF_NONZERO(result);

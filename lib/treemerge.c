@@ -246,9 +246,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
         case FTS_DEFAULT:
             /* Save this path as countable file, but only if we consider empty files */
             if(!(cfg->find_emptyfiles) || ent->fts_statp->st_size > 0) {
-                if(!(cfg->follow_symlinks && ent->fts_info == FTS_SL)) {
-                    rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
-                }
+                rm_trie_insert(&file_tree, ent->fts_path, GINT_TO_POINTER(false));
             }
         case FTS_D:
         case FTS_DNR:
@@ -969,6 +967,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 rm_shred_group_find_original(self->session, file_list,
                                              RM_SHRED_GROUP_FINISHING);
                 rm_shred_tag_hardlink_rejects(self->session, file_list);
+                rm_shred_tag_symlink_rejects(self->session, file_list);
                 rm_tm_output_group(self, file_list);
             }
         }

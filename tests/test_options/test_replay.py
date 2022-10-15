@@ -505,7 +505,7 @@ def _get_replay_data(expect_len, opts, replay_opts=None):
     return data, replay_data
 
 
-@parameterized.expand([('',), ('--followlinks',), ('--no-followlinks',)])
+@parameterized.expand([('',), ('--no-followlinks',)])
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_symlinks(link_opt):
     if not has_feature('replay'):

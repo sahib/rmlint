@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 from nose import with_setup
+from parameterized import parameterized
 from tests.utils import *
 
 
@@ -36,8 +37,18 @@ def test_merge_directories_with_ignored_symlinks():
         '/b',
     }
 
+
+def get_file_names(data):
+    return {e['path'][len(TESTDIR_NAME):] for e in data}
+
+
+def get_orig_flags(data):
+    return [int(p['is_original']) for p in data]
+
+
+@parameterized.expand([('',), ('--no-keep-symlinks',), ('--no-keep-symlinks --keep-hardlinked',)])
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_order():
+def test_order1(nks_opt):
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
     create_file('xxx', 'b/z')
@@ -46,19 +57,25 @@ def test_order():
 
     head, *data, footer = run_rmlint('-F')
     assert len(data) == 2
-    assert data[0]['path'].endswith('z')
-    assert data[0]['is_original']
-    assert data[1]['path'].endswith('z')
+    assert get_file_names(data) == {'/a/z', '/b/z'}
+    assert get_orig_flags(data) == [1, 0]
 
-    head, *data, footer = run_rmlint('-f -S a')
-    assert sum(p['is_original'] for p in data) == 1
+    head, *data, footer = run_rmlint('-f -S a', nks_opt)
+    assert len(data) == 5
 
-    assert len(data) == 2
-    assert data[0]['path'].endswith('z')
-    assert data[0]['is_original']
+    assert get_orig_flags(data) == [1, 0] + 3 * [0 if nks_opt else 1]
+    assert get_file_names(data[0:2]) == {'/a/z', '/b/z'}
+    assert get_file_names(data[2:4]) == {'/a/x', '/b/x'}
+    assert get_file_names(data[4:]) == {'/b/y'}
 
-    assert data[1]['path'].endswith('z')
-    assert not data[1]['is_original']
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_order2():
+    create_file('xxx', 'a/z')
+    create_link('a/z', 'a/x', symlink=True)
+    create_file('xxx', 'b/z')
+    create_link('b/z', 'b/x', symlink=True)
+    create_link('b/z', 'b/y', symlink=True)
 
     head, *data, footer = run_rmlint('-@ -S a')
     assert sum(p['is_original'] for p in data) == 2
@@ -78,3 +95,39 @@ def test_order():
     assert data[file_idx]['path'].endswith('z')
     assert data[file_idx]['is_original']
     assert data[file_idx + 1]['path'].endswith('z')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_keep_symlinks():
+    create_file('xxx', 'a')
+    create_link('a', 'l', symlink=True)
+
+    # --keep-symlinks should ignore lone files with symlinks
+    head, *data, foot = run_rmlint('-f')
+    assert not data
+    assert foot['duplicates'] == 0
+    assert foot['duplicate_sets'] == 0
+
+    # --keep-symlinks should mark all symlinks as original
+    create_file('xxx', 'b')
+    head, *data, foot = run_rmlint('-f -S A')
+    assert len(data) == 3
+    assert get_file_names(data) == {'/b', '/a', '/l'}
+    assert get_orig_flags(data) == [1, 0, 1]
+    assert foot['duplicates'] == 1
+    assert foot['duplicate_sets'] == 1
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_keep_symlinks_merge_directories():
+    create_file('xxx', 'a/x')
+    create_file('xxx', 'b/x')
+    create_link('a/x', 'a/z', symlink=True)
+    create_link('b/x', 'b/z', symlink=True)
+
+    # --keep-symlinks should apply to files emitted by treemerge
+    head, *data, foot = run_rmlint('-D -S a -f')
+    data = [e for e in data if e['type'] != 'part_of_directory']
+    assert len(data) == 2
+    assert data[0]['path'].endswith('/a')
+    assert data[1]['path'].endswith('/b')

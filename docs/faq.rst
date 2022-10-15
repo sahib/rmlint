@@ -13,7 +13,7 @@ Suspicious options you should look into are:
 
 * ``--hidden``: Disabled by default, since it might screw up ``.git/`` and similar directories.
 * ``--followlinks``: Might lead ``rmlint`` to different places on the filesystem.
-* ``--merge-directories``: implies ``--partial-hidden``.
+* ``--merge-directories``: Implies ``--partial-hidden``.
 
 If there's still a difference, check with another algorithm. In particular use
 ``-pp`` to enable paranoid mode. Also make sure to have ``-D``

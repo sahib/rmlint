@@ -770,7 +770,6 @@ The usage of the ``--replay`` feature is best understood by example:
    Options that are related to traversing and hashing/reading have no effect.
    Those are:
 
-   * `--followlinks`
    * `--algorithm and --paranoid`
    * `--clamp-low`
    * `--write-unfinished`

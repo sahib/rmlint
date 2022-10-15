@@ -60,6 +60,7 @@ typedef struct RmCfg {
     gboolean partial_hidden;
     gboolean follow_symlinks;
     gboolean see_symlinks;
+    gboolean keep_symlinks;
     gboolean find_badids;
     gboolean find_badlinks;
     gboolean find_duplicates;

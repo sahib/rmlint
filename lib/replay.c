@@ -252,23 +252,30 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
         return NULL;
     }
 
-    /* Collect file information (for rm_file_new). Never follow symlinks,
-     * because we do not know the checksum of the target. */
-    RmStat stat_buf;
-    if(rm_sys_lstat(path, &stat_buf) == -1) {
+    /* Collect file information (for rm_file_new). */
+    RmStat lstat_buf, stat_buf;
+    RmStat *stat_info = &lstat_buf;
+    if(rm_sys_lstat(path, &lstat_buf) == -1) {
         return NULL;
     }
 
-    if(S_ISLNK(stat_buf.st_mode) && type != RM_LINT_TYPE_BADLINK &&
-            !session->cfg->see_symlinks) {
-        // ignore symlink dupe candidates unless --see-symlinks is enabled
+    /* use stat() instead of lstat() if --followlinks is enabled */
+    if(rm_sys_stat(path, &stat_buf) == -1) {
+        type = RM_LINT_TYPE_BADLINK;
+    } else if(session->cfg->follow_symlinks) {
+        stat_info = &stat_buf;
+    }
+
+    if(S_ISLNK(lstat_buf.st_mode) && type != RM_LINT_TYPE_BADLINK &&
+            !session->cfg->see_symlinks && !session->cfg->follow_symlinks) {
+        // ignore symlink dupe candidates if --no-followlinks is enabled
         return NULL;
     }
 
     /* Check if we're late and issue an warning */
     JsonNode *mtime_node = json_object_get_member(object, "mtime");
     if(mtime_node) {
-        gdouble stat_mtime = rm_sys_stat_mtime_float(&stat_buf);
+        gdouble stat_mtime = rm_sys_stat_mtime_float(stat_info);
         gdouble json_mtime = json_node_get_double(mtime_node);
 
         /* Allow them a rather large span to deviate to account for inaccuracies */
@@ -279,10 +286,10 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Fill up the RmFile */
-    file = rm_file_new(session, path, &stat_buf, type, 0, 0, 0);
+    file = rm_file_new(session, path, stat_info, type, 0, 0, 0);
     file->is_original = json_object_get_boolean_member(object, "is_original");
-    file->is_symlink = S_ISLNK(stat_buf.st_mode);
-    file->link_count = stat_buf.st_nlink;
+    file->is_symlink = S_ISLNK(lstat_buf.st_mode);
+    file->link_count = stat_info->st_nlink;
     file->digest = rm_digest_new(RM_DIGEST_EXT, 0);
 
     if(type != RM_LINT_TYPE_UNIQUE_FILE) {
@@ -671,7 +678,7 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
 
     if(rm_parrot_lint_type_is_dupe(file->lint_type)) {
         session->dup_group_counter += file->is_original;
-        if(!file->is_original) {
+        if(!file->is_original && !(session->cfg->follow_symlinks && file->is_symlink)) {
             session->dup_counter += 1;
 
             if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
@@ -694,7 +701,17 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
     // set outer_link_count for ranking
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        file->outer_link_count = file->link_count - (file->hardlinks ? file->hardlinks->length : 1);
+        if(!file->hardlinks) {
+            file->outer_link_count = file->link_count - 1;
+        } else {
+            file->outer_link_count = file->link_count;
+            for(GList *link = file->hardlinks->head; link; link = link->next) {
+                RmFile *bundled_file = link->data;
+                if(!(cfg->follow_symlinks && bundled_file->is_symlink)) {
+                    file->outer_link_count--;
+                }
+            }
+        }
     }
 
     if(cfg->filter_mtime) {

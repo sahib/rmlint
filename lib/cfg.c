@@ -72,6 +72,7 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->verbosity = G_LOG_LEVEL_INFO;
     cfg->see_symlinks = true;
     cfg->follow_symlinks = false;
+    cfg->keep_symlinks = true;
 
     /* Optimum buffer size based on /usr without dropping caches:
      * 4k  => 5.29 seconds

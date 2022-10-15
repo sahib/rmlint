@@ -806,6 +806,7 @@ static gboolean rm_shred_group_has_non_original(RmShredGroup *group, bool unbund
     // mark original files
     rm_shred_group_find_original((RmSession *)group->session, &expanded, RM_SHRED_GROUP_FINISHING);
     rm_shred_tag_hardlink_rejects(group->session, &expanded);
+    rm_shred_tag_symlink_rejects(group->session, &expanded);
 
     // are any left to be dupes?
     bool has_non_original = false;
@@ -1347,6 +1348,11 @@ void rm_shred_forward_to_output(RmSession *session, GQueue *group) {
 /* only called by rm_shred_result_factory() which is single-thread threadpool
  * so no lock required for session->dup_counter or session->total_lint_size */
 static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
+    RmCfg *cfg = session->cfg;
+    if(cfg->follow_symlinks && file->is_symlink) {
+        return; // deleting symlinks doesn't free meaningful space
+    }
+
     if(!file->is_original) {
         session->dup_counter++;
         session->duplicate_bytes += file->actual_file_size;
@@ -1358,7 +1364,7 @@ static void rm_shred_dupe_totals(RmFile *file, RmSession *session) {
             // Do not count hardlinks unless all of them would be removed.
             for(GList *iter = file->hardlinks->head; iter; iter = iter->next) {
                 RmFile *link = iter->data;
-                if(link->is_original) {
+                if(link->is_original && !(cfg->follow_symlinks && link->is_symlink)) {
                     would_free_inode = false;
                     break;
                 }
@@ -1465,22 +1471,41 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
 
 /* if cfg->keep_hardlinked_dupes then tag hardlinked dupes as originals */
 void rm_shred_tag_hardlink_rejects(const RmSession *session, GQueue *files) {
-    if(!session->cfg->keep_hardlinked_dupes) {
+    RmCfg *cfg = session->cfg;
+    if(!cfg->keep_hardlinked_dupes) {
         return;
     }
 
     /* iterate over group to check if non-originals are hardlinks of originals */
     for(GList *i_orig = files->head; i_orig; i_orig = i_orig->next) {
         RmFile *orig = i_orig->data;
-        if(orig->is_original || !orig->hardlinks) {
+        if(orig->is_original || !orig->hardlinks || (cfg->follow_symlinks && orig->is_symlink)) {
             continue;
         }
         for(GList *i_link = orig->hardlinks->head; i_link; i_link = i_link->next) {
             RmFile *link = i_link->data;
-            if(link->is_original) {
+            /* in --followlinks mode stat() on a symlink gives the same inode,
+             * but is not considered a hardlink */
+            if(link->is_original && !(cfg->follow_symlinks && link->is_symlink)) {
                 orig->is_original = TRUE;
                 break;
             }
+        }
+    }
+}
+
+/* if cfg->follow_symlinks and cfg->keep_symlinks then tag symlink dupes as originals */
+void rm_shred_tag_symlink_rejects(const RmSession *session, GQueue *files) {
+    RmCfg *cfg = session->cfg;
+    if(!(cfg->follow_symlinks && cfg->keep_symlinks)) {
+        return;
+    }
+
+    /* iterate over group to set symlinks to be originals */
+    for(GList *i_orig = files->head; i_orig; i_orig = i_orig->next) {
+        RmFile *orig = i_orig->data;
+        if(orig->is_symlink) {
+            orig->is_original = TRUE;
         }
     }
 }
@@ -1517,6 +1542,7 @@ static void rm_shred_group_postprocess(RmShredGroup *group, RmShredTag *tag, GSL
 
     if(group->status == RM_SHRED_GROUP_FINISHING) {
         rm_shred_tag_hardlink_rejects(tag->session, group->held_files);
+        rm_shred_tag_symlink_rejects(tag->session, group->held_files);
     }
 
     /* Update statistics */
@@ -1590,7 +1616,13 @@ static void rm_shred_result_factory(RmShredGroup *group, RmShredTag *tag) {
             /* if group member has a hardlink cluster attached to it then
              * unbundle the cluster and append it to the queue
              */
-            file->outer_link_count = file->link_count - file->hardlinks->length;
+            file->outer_link_count = file->link_count;
+            for(GList *link = file->hardlinks->head; link; link = link->next) {
+                RmFile *bundled_file = link->data;
+                if(!(tag->session->cfg->follow_symlinks && bundled_file->is_symlink)) {
+                    file->outer_link_count--;
+                }
+            }
 
             for(GList *link = file->hardlinks->head; link; link = link->next) {
                 RmFile *bundled_file = link->data;

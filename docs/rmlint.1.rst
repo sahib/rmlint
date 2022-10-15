@@ -319,21 +319,31 @@ Traversal Options
 
 :``--keep-hardlinked`` / ``--no-keep-hardlinked`` (**default**):
 
-    If ``--keep-hardlinked`` is given, `rmlint` will not delete any files that are
-    hardlinked to an original in their respective group. Such files will be
+    If ``--keep-hardlinked`` is given, `rmlint` will not delete any files that
+    are hardlinked to an original in their respective group. Such files will be
     displayed like originals, i.e. for the default output with a "ls" in front.
-    The reasoning here is to maximize the number of kept files, while maximizing
-    the number of freed space: Removing hardlinks to originals will not allocate
-    any free space.
+    The reasoning here is to maximize the number of kept files, while
+    maximizing the number of freed space: Removing hardlinks to originals will
+    not free significant disk space.
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
-    ``-f`` will always follow symbolic links. If file system loops occurs
-    ``rmlint`` will detect this. If `-F` is specified, symbolic links will be
-    ignored completely, if ``-@`` is specified, ``rmlint`` will see symlinks and
-    treats them like small files with the path to their target in them. The
-    latter is the default behaviour, since it is a sensible default for
-    ``--merge-directories``.
+    ``-f`` will always follow symbolic links - symlinks to files are treated as
+    copies of their target, and symlinks to directories are followed. If `-F` is
+    specified, symbolic links will be ignored completely, if ``-@`` is
+    specified, ``rmlint`` will see symlinks and treats them like small files
+    with the path to their target in them. The latter is the default behaviour,
+    since it is a sensible default for ``--merge-directories``.
+
+:``--no-keep-symlinks`` / ``--keep-symlinks`` (**default**):
+
+    By default, `rmlint` will not delete symlinks which match other files or
+    symlinks. Such files will be displayed like originals, i.e. for the default
+    output with a "ls" in front. The reasoning here is to maximize the number
+    of kept files, while maximizing the number of freed space: Removing
+    symlinks will not free significant free space.
+
+    These options only apply to ``--followlinks`` mode.
 
 :``-x --no-crossdev`` / ``-X --crossdev`` (**default**):
 
@@ -497,7 +507,6 @@ Caching
 
     By design, some options will not have any effect. Those are:
 
-    - ``--followlinks``
     - ``--algorithm``
     - ``--paranoid``
     - ``--clamp-low``
