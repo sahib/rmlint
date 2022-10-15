@@ -124,3 +124,18 @@ def test_keep_hardlinks_multiple_originals():
     assert len(data) == 4  # unique files
     assert all(e['type'] == 'unique_file' for e in data)
     assert footer['duplicate_sets'] == 0
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_merge_directories():
+    create_file('xxx', 'a/x')
+    create_file('xxx', 'b/x')
+    create_link('a/x', 'a/z')
+    create_link('b/x', 'b/z')
+
+    # --keep-hardlinked should apply to files emitted by treemerge
+    head, *data, foot = run_rmlint('-D -S a --keep-hardlinked')
+    data = [e for e in data if e['type'] != 'part_of_directory']
+    assert len(data) == 2
+    assert data[0]['path'].endswith('/a')
+    assert data[1]['path'].endswith('/b')

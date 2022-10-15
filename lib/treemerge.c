@@ -968,6 +968,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
             } else {
                 rm_shred_group_find_original(self->session, file_list,
                                              RM_SHRED_GROUP_FINISHING);
+                rm_shred_tag_hardlink_rejects(self->session, file_list);
                 rm_tm_output_group(self, file_list);
             }
         }
