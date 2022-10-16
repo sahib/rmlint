@@ -29,7 +29,7 @@ variables which are:
 - ``RM_TS_PEDANTIC``: Run each test several times with different optimization options
   and check for errors between the runs. *(slow)*.
 - ``RM_TS_SLEEP``: Waits a long time before executing a command. Useful for
-  starting the testcase and manually running `rmlint` on the priorly generated
+  starting the testcase and manually running ``rmlint`` on the priorly generated
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 - ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
@@ -124,4 +124,5 @@ Rules
     def test_debian_support():
         assert random.choice([True, False]):
 
-* Unresolved issues can be marked with `known_issue` attribute to avoid failing automated travis testing
+* Unresolved issues can be marked with the ``known_issue`` attribute to avoid
+  failing automated travis testing.

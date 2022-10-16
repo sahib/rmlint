@@ -72,7 +72,7 @@ General Options
 
 :``-T --types="list"`` (**default\:** *defaults*):
 
-    Configure the types of lint rmlint will look for. The `list` string is a
+    Configure the types of lint rmlint will look for. The ``list`` string is a
     comma-separated list of lint types or lint groups (other separators like
     semicolon or space also work though).
 
@@ -256,15 +256,16 @@ General Options
 
 :``-y --sort-by=order`` (**default\:** *none*):
 
-    During output, sort the found duplicate groups by criteria described by `order`.
-    `order` is a string that may consist of one or more of the following letters:
+    During output, sort the found duplicate groups by criteria described by
+    ``order``. ``order`` is a string that may consist of one or more of the
+    following letters:
 
-    * `s`: Sort by size of group.
-    * `a`: Sort alphabetically by the basename of the original.
-    * `m`: Sort by mtime of the original.
-    * `p`: Sort by path-index of the original.
-    * `o`: Sort by natural found order (might be different on each run).
-    * `n`: Sort by number of files in the group.
+    * ``s``: Sort by size of group.
+    * ``a``: Sort alphabetically by the basename of the original.
+    * ``m``: Sort by mtime of the original.
+    * ``p``: Sort by path-index of the original.
+    * ``o``: Sort by natural found order (might be different on each run).
+    * ``n``: Sort by number of files in the group.
 
     The letter may also be written uppercase (similar to ``-S /
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
@@ -273,7 +274,7 @@ General Options
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them.
-    If you pipe `rmlints` output to a file ``-W`` is assumed automatically.
+    If you pipe ``rmlint``'s output to a file ``-W`` is assumed automatically.
 
 :``-h --help`` / ``-H --show-man``:
 
@@ -290,7 +291,7 @@ Traversal Options
 :``-s --size=range`` (**default\:** "1"):
 
     Only consider files as duplicates in a certain size range.
-    The format of `range` is `min-max`, where both ends can be specified
+    The format of ``range`` is ``min-max``, where both ends can be specified
     as a number with an optional multiplier. The available multipliers are:
 
     - *C* (1^1), *W* (2^1), B (512^1), *K* (1000^1), KB (1024^1), *M* (1000^2), *MB* (1024^2), *G* (1000^3), *GB* (1024^3),
@@ -320,22 +321,22 @@ Traversal Options
 :``-l --hardlinked`` (**default**) / ``--keep-hardlinked`` / ``-L --no-hardlinked``:
 
     Hardlinked files are treated as duplicates by default (``--hardlinked``). If
-    ``--keep-hardlinked`` is given, `rmlint` will not delete any files that are
-    hardlinked to an original in their respective group. Such files will be
+    ``--keep-hardlinked`` is given, ``rmlint`` will not delete any files that
+    are hardlinked to an original in their respective group. Such files will be
     displayed like originals, i.e. for the default output with a "ls" in front.
     The reasoning here is to maximize the number of kept files, while maximizing
     the number of freed space: Removing hardlinks to originals will not allocate
     any free space.
 
-    If `--no-hardlinked` is given, only one file (of a set of hardlinked files)
-    is considered, all the others are ignored; this means, they are not
+    If ``--no-hardlinked`` is given, only one file (of a set of hardlinked
+    files) is considered, all the others are ignored; this means, they are not
     deleted and also not even shown in the output. The "highest ranked" of the
     set is the one that is considered.
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
     ``-f`` will always follow symbolic links. If file system loops occurs
-    ``rmlint`` will detect this. If `-F` is specified, symbolic links will be
+    ``rmlint`` will detect this. If ``-F`` is specified, symbolic links will be
     ignored completely, if ``-@`` is specified, ``rmlint`` will see symlinks and
     treats them like small files with the path to their target in them. The
     latter is the default behaviour, since it is a sensible default for
@@ -393,8 +394,7 @@ Traversal Options
 
     Note that ``rmlint`` will find duplicates newer than ``timestamp``, even if
     the original is older.  If you want only find duplicates where both
-    original and duplicate are newer than ``timestamp`` you can use
-    ``find(1)``:
+    original and duplicate are newer than ``timestamp`` you can use `find(1)`:
 
     * ``find -mtime -1 -print0 | rmlint -0 # pass all files younger than a day to rmlint``
 
@@ -440,24 +440,27 @@ Original Detection Options
     - **o**: keep file with lowest number of hardlinks outside of the paths traversed by ``rmlint``.
     - **O**: keep file with highest number of hardlinks outside of the paths traversed by ``rmlint``.
 
-    Alphabetical sort will only use the basename of the file and ignore its case.
-    One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
-    **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+    Alphabetical sort will only use the basename of the file and ignore its
+    case. One can have multiple criteria, e.g.: ``-S am`` will choose first
+    alphabetically; if tied then by mtime. **Note:** original path criteria
+    (specified using ``//``) will always take first priority over ``-S``
+    options.
 
     For more fine grained control, it is possible to give a regular expression
     to sort by. This can be useful when you know a common fact that identifies
     original paths (like a path component being ``src`` or a certain file ending).
 
     To use the regular expression you simply enclose it in the criteria string
-    by adding `<REGULAR_EXPRESSION>` after specifying `r` or `x`. Example: ``-S
-    'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files.
+    by adding ``<REGULAR_EXPRESSION>`` after specifying ``r`` or ``x``. Example:
+    ``-S 'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original
+    files.
 
     Warning: When using **r** or **x**, try to make your regex to be as specific
     as possible! Good practice includes adding a ``$`` anchor at the end of the regex.
 
     Tips:
 
-    - **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
+    - **l** is useful for files like ``file.mp3`` vs ``file.1.mp3`` or ``file.mp3.bak``.
     - **a** can be used as last criteria to assert a defined order.
     - **o/O** and **h/H** are only useful if there any hardlinks in the traversed path.
     - **o/O** takes the number of hardlinks outside the traversed paths (and
@@ -756,9 +759,9 @@ FORMATTERS
 
   Available options:
 
-  * *omitfirst:* Same as the ``-f / --omitfirst`` option in ``fdupes(1)``. Omits the
-    first line of each set of duplicates (i.e. the original file.
-  * *sameline:* Same as the ``-1 / --sameline`` option in ``fdupes(1)``. Does not
+  * *omitfirst:* Same as the ``-f / --omitfirst`` option in `fdupes(1)`. Omits
+    the first line of each set of duplicates (i.e. the original file.
+  * *sameline:* Same as the ``-1 / --sameline`` option in `fdupes(1)`. Does not
     print newlines between files, only a space. Newlines are printed only between
     sets of duplicates.
 
@@ -865,7 +868,7 @@ This is a collection of common use cases and other tricks:
 
   ``$ rmlint -e``
 
-* Do more complex traversal using ``find(1)``.
+* Do more complex traversal using `find(1)`.
 
   ``$ find /usr/lib -iname '*.so' -type f | rmlint - # find all duplicate .so files``
 
