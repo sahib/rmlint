@@ -44,9 +44,9 @@
         <value nick="Hardlink duplicates" value="4"/>
     </enum>
     <schema id="org.gnome.Shredder" path="/org/gnome/Shredder/" gettext-domain="shredder">
-        <key name="general-find-hardlinks" type="b">
-            <default>true</default>
-            <summary>Report duplicate hardlinks</summary>
+        <key name="general-keep-hardlinks" type="b">
+            <default>false</default>
+            <summary>Keep duplicate hardlinks</summary>
             <description>Duplicate files might have hardlinked twins</description>
         </key>
         <key name="general-find-symlinks" enum="org.gnome.Shredder.SymlinkType">

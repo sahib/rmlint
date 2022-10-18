@@ -103,11 +103,11 @@ class MustMatchType(Enum):
 
 
 class HardlinkType(Enum):
-    """Key: "general-find-hardlinks"""
+    """Key: "general-keep-hardlinks"""
     OFF, ACTIVE = False, True
     MAPPING = {
-        ACTIVE: ['--hardlinked'],
-        OFF: ['--no-hardlinked']
+        ACTIVE: ['--keep-hardlinked'],
+        OFF: ['--no-keep-hardlinked']
     }
 
 
@@ -163,7 +163,7 @@ def _create_rmlint_process(
             map_cfg(HandlerType,
                     cfg.get_enum('general-handler-type')),
             map_cfg(HardlinkType,
-                    cfg.get_boolean('general-find-hardlinks')),
+                    cfg.get_boolean('general-keep-hardlinks')),
             map_cfg(CrossMountType,
                     cfg.get_boolean('traverse-cross-mounts')),
             map_cfg(AlgorithmType,

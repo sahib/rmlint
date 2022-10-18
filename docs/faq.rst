@@ -6,14 +6,14 @@ Frequently Asked Questions
 
 Make sure that *none* of the following applies to you:
 
-Both tools might investigate a different number of files. ``rmlint`` e.g. does not
-look through hidden files by default, while other tools might follow symlinks
-by default. Suspicious options you should look into are:
+Both tools might investigate a different number of files. ``rmlint`` e.g. does
+not look through hidden files by default, while other tools might follow
+symlinks by default. ``rmlint`` also counts hardlinks as duplicate files.
+Suspicious options you should look into are:
 
 * ``--hidden``: Disabled by default, since it might screw up ``.git/`` and similar directories.
-* ``--hardlinked``: Might find larger amount files, but not more lint itself.
 * ``--followlinks``: Might lead ``rmlint`` to different places on the filesystem.
-* ``--merge-directories``: pulls in both ``--hidden`` and ``--hardlinked``.
+* ``--merge-directories``: implies ``--partial-hidden``.
 
 If there's still a difference, check with another algorithm. In particular use
 ``-pp`` to enable paranoid mode. Also make sure to have ``-D``

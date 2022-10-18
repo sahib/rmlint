@@ -173,13 +173,6 @@ on our `Issue Tracker`_ if you find an exception.
    $  rmlint dir dir
    ==> In total 2 files, whereof 0 are duplicates in 0 groups.
    ==> This equals 0 B of duplicates which could be removed.
-   $
-   $ # rmlint with hardlink duplicate detection enabled:
-   $  rmlint --hardlinked dir dir
-   ==> In total 2 files, whereof 0 are duplicates in 0 groups.
-   ==> This equals 0 B of duplicates which could be removed.
-   $ ls dir
-   file
 
 **Symlinks:**
 

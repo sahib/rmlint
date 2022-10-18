@@ -527,9 +527,8 @@ def test_symlinks(link_opt):
         _check_json_matches(data, replay_data)
 
 
-@parameterized.expand([('',), ('--no-hardlinked',)])
 @with_setup(usual_setup_func, usual_teardown_func)
-def test_hardlinks(link_opt):
+def test_hardlinks():
     if not has_feature('replay'):
         raise SkipTest('rmlint built without replay support')
 
@@ -537,12 +536,9 @@ def test_hardlinks(link_opt):
     create_link('a', 'h1')
     create_link('a', 'h2')
 
-    data, replay_data = _get_replay_data(3, '', link_opt)
-    if link_opt:
-        assert not replay_data  # hardlinks filtered out
-    else:
-        # hardlinks should be preserved
-        _check_json_matches(data, replay_data)
+    data, replay_data = _get_replay_data(3, '')
+    # hardlinks should be preserved
+    _check_json_matches(data, replay_data)
 
 
 @with_setup(usual_setup_func, usual_teardown_func)

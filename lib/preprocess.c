@@ -514,10 +514,8 @@ static gint rm_pp_handle_hardlink(RmFile *file, RmFile *head) {
         return FALSE;
     }
 
-    if(file->session->cfg->find_hardlinked_dupes) {
-        /* bundle hardlink */
-        rm_file_hardlink_add(head, file);
-    }
+    /* bundle hardlink */
+    rm_file_hardlink_add(head, file);
 
     /* remove file from inode_cluster queue */
     return TRUE;

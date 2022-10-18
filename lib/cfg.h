@@ -70,7 +70,6 @@ typedef struct RmCfg {
     gboolean keep_all_untagged;
     gboolean must_match_tagged;
     gboolean must_match_untagged;
-    gboolean find_hardlinked_dupes;
     gboolean keep_hardlinked_dupes;
     gboolean limits_specified;
     gboolean filter_mtime;

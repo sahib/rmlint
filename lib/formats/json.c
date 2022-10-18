@@ -353,18 +353,15 @@ static void rm_fmt_elem(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
 
 			}
 
-            if(session->cfg->find_hardlinked_dupes) {
-                RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
+            RmFile *hardlink_head = RM_FILE_HARDLINK_HEAD(file);
+            if(hardlink_head && hardlink_head != file) {
+                RM_DEFINE_PATH(hardlink_head);
 
-                if(hardlink_head && hardlink_head != file) {
-                    RM_DEFINE_PATH(hardlink_head);
+                guint32 orig_id = rm_fmt_json_generate_id(
+                    self, hardlink_head, hardlink_head_path, checksum_str);
 
-                    guint32 orig_id = rm_fmt_json_generate_id(
-                        self, hardlink_head, hardlink_head_path, checksum_str);
-
-                    rm_fmt_json_key_int(out, "hardlink_of", orig_id);
-                    rm_fmt_json_sep(self, out);
-                }
+                rm_fmt_json_key_int(out, "hardlink_of", orig_id);
+                rm_fmt_json_sep(self, out);
             }
         }
 

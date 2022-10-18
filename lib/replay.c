@@ -320,16 +320,10 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     if(hardlink_of != NULL) {
         gint64 head_id = json_node_get_int(hardlink_of);
         RmFile *head = g_hash_table_lookup(polly->file_table, GINT_TO_POINTER(head_id));
-        if(!head) {
-            rm_log_warning_line(_("unknown ID in hardlink_of: %lld"), (long long)head_id);
-        }
-        if(!session->cfg->find_hardlinked_dupes) {
-            // ignore hardlink if --no-hardlinked is given
-            rm_file_destroy(file);
-            return NULL;
-        }
         if(head) {
             rm_file_hardlink_add(head, file);
+        } else {
+            rm_log_warning_line(_("unknown ID in hardlink_of: %lld"), (long long)head_id);
         }
     } else {
         g_assert(!file->hardlinks);

@@ -70,7 +70,7 @@ def test_hardlinks():
     create_link('2/a', '2/link1')
     create_link('2/a', '2/link2')
 
-    head, *data, footer = run_rmlint('-p -D -l -S a')
+    head, *data, footer = run_rmlint('-p -D -S a')
     data = filter_part_of_directory(data)
     assert len(data) == 5
     assert data[0]['type'] == 'duplicate_dir'
@@ -88,14 +88,6 @@ def test_hardlinks():
     assert data[4]['type'] == 'duplicate_file'
     assert data[4]['path'].endswith('1/link2')
     assert not data[4]['is_original']
-
-    head, *data, footer = run_rmlint('-D -S a -L')
-    data = filter_part_of_directory(data)
-    assert len(data) == 2
-    assert data[0]['type'] == 'duplicate_file'
-    assert data[0]['path'].endswith('a')
-    assert data[1]['type'] == 'duplicate_file'
-    assert data[1]['path'].endswith('a')
 
 
 @with_setup(usual_setup_func, usual_teardown_func)

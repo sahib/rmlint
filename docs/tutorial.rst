@@ -696,9 +696,9 @@ yes, it checks if the hashes are equal using a Merkle Tree. If it matches, it
 continues on the parent directory.
 
 Some file like hidden files will not be recognized as duplicates, but still
-added to the count. This will of course lead to unmerged directories. That's why
-the ``-D`` option implies the ``-r`` (``--hidden``) and ``-l``
-(``--hardlinked``) option in order to make this convenient.
+added to the count. This will of course lead to unmerged directories. That's
+why the ``-D`` option implies the ``--partial-hidden`` option in order to make
+this convenient.
 
 A note to symbolic links: The default behaviour with --merge-directories is to
 not follow symbolic links, but to compare the link targets. If the target is the
@@ -773,7 +773,6 @@ The usage of the ``--replay`` feature is best understood by example:
    * `--followlinks`
    * `--algorithm and --paranoid`
    * `--clamp-low`
-   * `--hardlinked`
    * `--write-unfinished`
    * all other caching options.
 

@@ -288,10 +288,6 @@ static char *rm_fmt_sh_get_extra_equal_args(RmSession *session) {
         }
     }
 
-    if(cfg->find_hardlinked_dupes == false) {
-        g_string_append(buf, " --no-hardlinked");
-    }
-
     if(cfg->honour_dir_layout == true) {
         g_string_append(buf, " --honour-dir-layout");
     }

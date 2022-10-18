@@ -653,8 +653,6 @@ static gboolean rm_cmd_parse_merge_directories(_UNUSED const char *option_name,
     cfg->see_symlinks = true;
     rm_cmd_parse_partial_hidden(NULL, NULL, session, error);
 
-    cfg->find_hardlinked_dupes = true;
-
     /* Keep RmFiles after shredder. */
     cfg->cache_file_structs = true;
 
@@ -1433,7 +1431,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"merge-directories"        , 'D'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(merge_directories)        , _("Find duplicate directories")                                           , NULL}     ,
         {"honour-dir-layout"        , 'j'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(honour_dir_layout)        , _("Only find directories with same file layout")                          , NULL}     ,
         {"perms"                    , 'z'  , OPTIONAL  , G_OPTION_ARG_CALLBACK  , FUNC(permissions)              , _("Only use files with certain permissions")                              , "[RWX]+"} ,
-        {"no-hardlinked"            , 'L'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->find_hardlinked_dupes    , _("Ignore hardlink twins")                                                , NULL}     ,
         {"keep-hardlinked"          , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->keep_hardlinked_dupes    , _("Keep hardlink that are linked to any original")                        , NULL}     ,
         {"partial-hidden"           , 0    , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(partial_hidden)           , _("Find hidden files in duplicate folders only")                          , NULL}     ,
         {"mtime-window"             , 'Z'  , 0         , G_OPTION_ARG_DOUBLE    , &cfg->mtime_window             , _("Consider duplicates only equal when mtime differs at max. T seconds")  , "T"}      ,
@@ -1461,7 +1458,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     const GOptionEntry inversed_option_entries[] = {
         {"no-hidden"                  , 'R' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_hidden)               , "Ignore hidden files"                 , NULL} ,
         {"with-color"                 , 'w' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->with_color              , "Be colorful like a unicorn"          , NULL} ,
-        {"hardlinked"                 , 'l' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->find_hardlinked_dupes   , _("Report hardlinks as duplicates")   , NULL} ,
         {"crossdev"                   , 'X' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->crossdev                , "Cross mountpoints"                   , NULL} ,
         {"less-paranoid"              , 'P' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(less_paranoid)           , "Use less paranoid hashing algorithm" , NULL} ,
         {"see-symlinks"               , '@' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(see_symlinks)            , "Treat symlinks a regular files"      , NULL} ,
