@@ -279,6 +279,9 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     /* use stat() instead of lstat() if --followlinks is enabled */
     if(rm_sys_stat(path, &stat_buf) == -1) {
         type = RM_LINT_TYPE_BADLINK;
+    } else if(type == RM_LINT_TYPE_BADLINK) {
+        rm_log_warning_line(_("`%s` is no longer a broken symlink. Ignoring."), path);
+        return NULL;
     } else if(session->cfg->follow_symlinks) {
         stat_info = &stat_buf;
     }

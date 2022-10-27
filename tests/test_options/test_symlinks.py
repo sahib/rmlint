@@ -152,3 +152,34 @@ def test_replay_followlinks_differs():
     assert len(data) == 2
     with assert_exit_code(1):
         run_rmlint('-f --replay', shlex.quote(replay_path))
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_badlink_differs():
+    path_a = create_file('xxx', 'a')
+    create_link('a', 'b', symlink=True)
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+
+    # run with good symlink
+    head, *data, foot = run_rmlint('-c json:unique', with_json='replay.json')
+    assert len(data) == 2
+    assert data[0]['type'] == 'unique_file'
+    assert data[1]['type'] == 'unique_file'
+
+    # break the link
+    os.unlink(path_a)
+
+    head, *data, foot = run_rmlint('--replay', shlex.quote(replay_path))
+    assert len(data) == 1
+    assert data[0]['type'] == 'badlink'  # previously good link is now broken
+
+    # run with bad symlink
+    head, *data, foot = run_rmlint(with_json='replay.json')
+    assert len(data) == 1
+    assert data[0]['type'] == 'badlink'
+
+    # fix the link
+    create_file('xxx', 'a')
+
+    head, *data, foot = run_rmlint('--replay', shlex.quote(replay_path))
+    assert not data  # previously broken link is ignored
