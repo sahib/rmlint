@@ -204,6 +204,23 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
         }
     }
 
+    JsonNode *follow_symlinks_node = json_object_get_member(object, "follow_symlinks");
+    if(follow_symlinks_node != NULL) {
+        bool json_had_followlinks = json_node_get_boolean(follow_symlinks_node);
+
+        if(session->cfg->follow_symlinks != json_had_followlinks) {
+            if(json_had_followlinks) {
+                g_set_error(error, RM_ERROR_QUARK, 0, _("'%s' was created with -f, but you're running without it."), json_path);
+            } else {
+                g_set_error(error, RM_ERROR_QUARK, 0, _("'%s' was created without -f, but you're running with it."), json_path);
+            }
+            return NULL;
+        }
+    } else if(session->cfg->follow_symlinks) {
+        g_set_error(error, RM_ERROR_QUARK, 0, _("'%s' was created with an older version of rmlint with incompatible -f behavior."), json_path);
+        return NULL;
+    }
+
     return polly;
 }
 

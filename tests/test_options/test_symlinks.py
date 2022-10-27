@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+
+import os
+import shlex
+
 from nose import with_setup
 from parameterized import parameterized
 from tests.utils import *
@@ -131,3 +135,20 @@ def test_keep_symlinks_merge_directories():
     assert len(data) == 2
     assert data[0]['path'].endswith('/a')
     assert data[1]['path'].endswith('/b')
+
+
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_replay_followlinks_differs():
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+
+    head, *data, foot = run_rmlint('-f', with_json='replay.json')
+    assert len(data) == 2
+    with assert_exit_code(1):
+        run_rmlint('--replay', shlex.quote(replay_path))
+
+    head, *data, foot = run_rmlint(with_json='replay.json')
+    assert len(data) == 2
+    with assert_exit_code(1):
+        run_rmlint('-f --replay', shlex.quote(replay_path))

@@ -402,3 +402,19 @@ def must_read_xattr(path):
           See create_special_fs for a workaround.
     """
     return dict(xattr.xattr(os.path.join(TESTDIR_NAME, path)).items())
+
+
+@contextlib.contextmanager
+def assert_exit_code(status_code):
+    """
+    Assert that the with block yields a subprocess.CalledProcessError
+    with a certain return code. If nothing is thrown, status_code
+    is required to be 0 to survive the test.
+    """
+    try:
+        yield
+    except subprocess.CalledProcessError as exc:
+        assert exc.returncode == status_code
+    else:
+        # No exception? status_code should be fine.
+        assert status_code == 0

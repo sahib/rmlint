@@ -4,25 +4,7 @@ import os
 import json
 
 from nose import with_setup
-from contextlib import contextmanager
-
 from tests.utils import *
-
-
-@contextmanager
-def assert_exit_code(status_code):
-    """
-    Assert that the with block yields a subprocess.CalledProcessError
-    with a certain return code. If nothing is thrown, status_code
-    is required to be 0 to survive the test.
-    """
-    try:
-        yield
-    except subprocess.CalledProcessError as exc:
-        assert exc.returncode == status_code
-    else:
-        # No exception? status_code should be fine.
-        assert status_code == 0
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
