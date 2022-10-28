@@ -789,6 +789,7 @@ static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool p
     }
 
     rm_shred_tag_hardlink_rejects(cage->session, group);
+    rm_shred_tag_symlink_rejects(cage->session, group);
 
     // are any left to be dupes?
     bool has_non_original = false;

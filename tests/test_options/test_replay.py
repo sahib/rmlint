@@ -527,6 +527,22 @@ def test_symlinks(link_opt):
         _check_json_matches(data, replay_data)
 
 
+@parameterized.expand([('',), ('--no-keep-symlinks',)])
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_follow_symlinks(keep_opt):
+    if not has_feature('replay'):
+        raise SkipTest('rmlint built without replay support')
+
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+    create_link('a', 'l1', symlink=True)
+    create_link('a', 'l2', symlink=True)
+
+    data, replay_data = _get_replay_data(4, '-f ' + keep_opt)
+    # replay should use stat, so the inode, size, and mtime match
+    _check_json_matches(data, replay_data)
+
+
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_hardlinks():
     if not has_feature('replay'):
