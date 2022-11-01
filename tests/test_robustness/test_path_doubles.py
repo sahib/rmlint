@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+from nose.plugins.attrib import attr
 from nose import with_setup
 from tests.utils import *
 
@@ -58,6 +59,7 @@ def mount_bind_teardown_func():
 
     usual_teardown_func()
 
+@attr('known_issue')
 @with_setup(usual_setup_func, mount_bind_teardown_func)
 def test_mount_binds():
     if not runs_as_root():

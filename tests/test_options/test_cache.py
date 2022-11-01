@@ -80,6 +80,9 @@ def test_xattr_detail(extra_opts):
         # The mount step sadly needs root privileges.
         return
 
+    def cksum(attrs):
+        return attrs['user.rmlint.blake2b.cksum']
+
     with create_special_fs("this-is-not-tmpfs") as ext4_path:
         # Keep the checksum fixed, if we change the default we don't want to
         # break this test (although I'm sure some tests will break)
@@ -101,9 +104,9 @@ def test_xattr_detail(extra_opts):
         xattr_1 = must_read_xattr(path_1)
         xattr_2 = must_read_xattr(path_2)
         xattr_3 = must_read_xattr(path_3)
-        assert xattr_1["user.rmlint.blake2b.cksum"] == \
+        assert cksum(xattr_1) == \
                 b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
-        assert xattr_1 == xattr_2
+        assert cksum(xattr_1) == cksum(xattr_2)
 
         # no --write-unfinished given.
         assert xattr_3 == {}
@@ -117,13 +120,13 @@ def test_xattr_detail(extra_opts):
             xattr_1 = must_read_xattr(path_1)
             xattr_2 = must_read_xattr(path_2)
             xattr_3 = must_read_xattr(path_3)
-            assert xattr_1["user.rmlint.blake2b.cksum"] == \
+            assert cksum(xattr_1) == \
                     b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
-            assert xattr_1 == xattr_2
+            assert cksum(xattr_1) == cksum(xattr_2)
 
             # --write-unfinished will also write the unfinished one.
             xattr_3 = must_read_xattr(path_3)
-            assert xattr_3["user.rmlint.blake2b.cksum"] == \
+            assert cksum(xattr_3) == \
                     b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
 
             # unique file which was not hashed -> does not need to be touched.
