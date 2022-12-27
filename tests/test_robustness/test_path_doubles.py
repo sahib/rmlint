@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_cmdline():
+def test_cmdline(usual_setup_usual_teardown):
     create_file('xxx', '1/a')
     # feed rmlint the same file twice via command line
     head, *data, footer = run_rmlint('{t}/1 {t}/1'.format(t=TESTDIR_NAME), use_default_dir=False)
@@ -18,8 +16,7 @@ def test_cmdline():
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_symlink_noloop():
+def test_symlink_noloop(usual_setup_usual_teardown):
     create_file('xxx', '1/a')
     create_link('1/a', '1/link', symlink=True)
 
@@ -35,8 +32,7 @@ def test_symlink_noloop():
     head, *data, footer = run_rmlint('{t}/1/a {t}/1/link'.format(t=TESTDIR_NAME), use_default_dir=False)
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_symlink_loop():
+def test_symlink_loop(usual_setup_usual_teardown):
     create_file('xxx', '1/a')
     create_link('1', '1/link', symlink=True)
 
@@ -47,19 +43,7 @@ def test_symlink_loop():
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
 
-def mount_bind_teardown_func():
-    if runs_as_root():
-        subprocess.call(
-            'umount {dst}'.format(
-                dst=os.path.join(TESTDIR_NAME, 'a/b')
-            ),
-            shell=True
-        )
-
-    usual_teardown_func()
-
-@with_setup(usual_setup_func, mount_bind_teardown_func)
-def test_mount_binds():
+def test_mount_binds(usual_setup_mount_bind_teardown):
     if not runs_as_root():
         return
 

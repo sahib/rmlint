@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
@@ -8,8 +7,7 @@ def filter_part_of_directory(data):
     return [e for e in data if e['type'] != 'part_of_directory']
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(usual_setup_usual_teardown):
     create_file('xxx', '.a/1')
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
@@ -22,8 +20,7 @@ def test_simple():
     assert footer['duplicate_sets'] == 1
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hidden():
+def test_hidden(usual_setup_usual_teardown):
     create_file('xxx', '.a/1')
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
@@ -35,8 +32,7 @@ def test_hidden():
     assert footer['duplicate_sets'] == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_explicit():
+def test_explicit(usual_setup_usual_teardown):
     create_file('xxx', '.a/1')
     create_file('xxx', '.a/2')
     head, *data, footer = run_rmlint('--no-hidden', dir_suffix='.a')
@@ -47,8 +43,7 @@ def test_explicit():
     assert footer['duplicate_sets'] == 1
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_partial_hidden():
+def test_partial_hidden(usual_setup_usual_teardown):
     create_file('1', 'a/.hidden')
     create_file('1', 'b/.hidden')
     create_file('1', '.hidden')

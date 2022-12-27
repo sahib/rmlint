@@ -392,6 +392,17 @@ def usual_teardown_func():
             pass
 
 
+def mount_bind_teardown_func():
+    if runs_as_root():
+        subprocess.call(
+            'umount {dst}'.format(
+                dst=os.path.join(TESTDIR_NAME, 'a/b')
+            ),
+            shell=True
+        )
+
+    usual_teardown_func()
+
 @contextlib.contextmanager
 def create_special_fs(name, fs_type='ext4'):
     """

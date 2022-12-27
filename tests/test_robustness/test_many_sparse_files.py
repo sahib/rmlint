@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from nose.plugins.attrib import attr
-from nose import with_setup
-from tests.utils import *
 import string
+import pytest
 
+from tests.utils import *
 
 
 FILE_SIZE = 256 * 1024 * 1024
 MIDDLE = FILE_SIZE // 2
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_1000_files():
+@pytest.mark.slow
+def test_1000_files(usual_setup_usual_teardown):
 
     # this is really a test of mem limiter for paranoid hashing
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from nose import with_setup
 from tests.utils import *
-from nose.plugins.attrib import attr
-from parameterized import parameterized
+
+import pytest
 
 INCREMENTS = [4096, 1024, 1, 20000]
 
@@ -29,7 +28,7 @@ def streaming_compliance_check(patterns):
                 assert False, "{} fails streaming test with increment {}".format(algo, increment)
                 break
 
-@parameterized([
+@pytest.mark.parametrize("pat", [
         'murmur',
         'metro',
         ['glib:', 'md5', 'sha1', 'sha256', 'sha512'],
@@ -38,7 +37,7 @@ def streaming_compliance_check(patterns):
         'xxhash',
         'highway'
         ])
-def test_hash_function(*pat):
+def test_hash_function(usual_setup_usual_teardown, pat):
     if(len(pat)==1):
         streaming_compliance_check(pat)
     else:

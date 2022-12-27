@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
-from parameterized import parameterized
+
+import pytest
 
 
 def create_files():
@@ -62,8 +62,7 @@ def check(data, write_cache):
     assert path_in('4.d', dupe_files)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr_basic():
+def test_xattr_basic(usual_setup_usual_teardown):
     create_files()
 
     for _ in range(2):
@@ -78,9 +77,8 @@ def test_xattr_basic():
         head, *data, footer = run_rmlint_once('-D -S pa --xattr-clear')
 
 
-@parameterized([("", ), ("-D", )])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr_detail(extra_opts):
+@pytest.mark.parametrize("extra_opts", ["", "-D"])
+def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
     if not runs_as_root():
         # This tests need a ext4 fs which is created during the test.
         # The mount step sadly needs root privileges.

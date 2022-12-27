@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose.plugins.attrib import attr
-from nose import with_setup
 from tests.utils import *
 
 FILE_SIZE_KB = 10000
 DIFFERENT_BYTES = 1
 KBYTES_FROM_END = 10
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bigfiles():
+def test_bigfiles(usual_setup_usual_teardown):
 
     num_bytes = int(FILE_SIZE_KB * 1024)
     # create two identical files and a third one which differs near the end:

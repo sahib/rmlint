@@ -4,7 +4,6 @@
 import os
 import subprocess
 from contextlib import contextmanager
-from nose import with_setup
 from tests.utils import *
 
 
@@ -34,8 +33,7 @@ def check_is_reflink_status(status_code, *paths):
         )
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_arguments():
+def test_bad_arguments(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxx', 'b')
     path_c = create_file('xxx', 'c')
@@ -47,44 +45,38 @@ def test_bad_arguments():
         check_is_reflink_status(1, *paths)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_directories():
+def test_directories(usual_setup_usual_teardown):
     path_a = create_dirs('dir_a')
     path_b = create_dirs('dir_b')
     check_is_reflink_status(3, path_a, path_b)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_different_sizes():
+def test_different_sizes(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxxx', 'b')
     check_is_reflink_status(4, path_a, path_b)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_same_path():
+def test_same_path(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     check_is_reflink_status(6, path_a, path_a)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_path_double():
+def test_path_double(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'dir/a')
     create_link('dir', 'dir_symlink', symlink=True)
     path_b = os.path.join(TESTDIR_NAME, 'dir_symlink/a')
     check_is_reflink_status(7, path_a, path_b)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hardlinks():
+def test_hardlinks(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = path_a + '_hardlink'
     create_link('a', 'a_hardlink', symlink=False)
     check_is_reflink_status(8, path_a, path_b)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_symlink():
+def test_symlink(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxx', 'b') + '_symlink'
     create_link('b', 'b_symlink', symlink=True)

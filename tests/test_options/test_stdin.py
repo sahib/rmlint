@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from nose import with_setup
-from tests.utils import *
-from subprocess import STDOUT, check_output
-from parameterized import parameterized
-
 import json
 import os
+import pytest
+
+from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_stdin_read():
+def test_stdin_read(usual_setup_usual_teardown):
     path_a = create_file('1234', 'a') + '\n'
     path_b = create_file('1234', 'b') + '\n'
     path_c = create_file('1234', '.hidden') + '\n'
@@ -33,8 +29,7 @@ def test_stdin_read():
     assert data[3]['path'].endswith('c')
     assert footer['total_lint_size'] == 12
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_stdin_read_newlines():
+def test_stdin_read_newlines(usual_setup_usual_teardown):
     path_a = create_file('1234', 'a') + '\0'
     path_b = create_file('1234', 'name\nwith\nnewlines') + '\0'
     path_c = create_file('1234', '.hidden') + '\0'
@@ -57,8 +52,7 @@ def test_stdin_read_newlines():
     assert data[3]['path'].endswith('newlines')
     assert footer['total_lint_size'] == 12
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_path_starting_with_dash():
+def test_path_starting_with_dash(usual_setup_usual_teardown):
     subdir = '-look-in-here'
     create_file('1234', subdir + '/a')
     create_file('1234', subdir + '/b')
@@ -84,9 +78,8 @@ def test_path_starting_with_dash():
 
 # Regression test for https://github.com/sahib/rmlint/issues/400
 # Do not search in current directory when piped empty input.
-@parameterized([("-", ), ("-0", )])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_stdin_empty(stdin_opt):
+@pytest.mark.parametrize("stdin_opt", ("-", "-0"))
+def test_stdin_empty(usual_setup_usual_teardown, stdin_opt):
     create_file('1234', 'a')
     create_file('1234', 'b')
 

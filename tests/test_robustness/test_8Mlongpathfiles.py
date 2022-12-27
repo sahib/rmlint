@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 import errno
-import sys
-from nose.plugins.attrib import attr
-from nose.plugins.skip import SkipTest
-from nose import with_setup
+import pytest
+
 from tests.utils import *
 
 NUMPAIRS = 1024+1
@@ -27,15 +24,14 @@ def branch_tree(current_path, remaining_depth):
             create_link(current_path + 'b' + str(i).zfill(7), current_path + 'h' + str(i).zfill(7))
 
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_manylongpathfiles():
+@pytest.mark.slow
+def test_manylongpathfiles(usual_setup_usual_teardown):
     max_depth = 10 # will give 8M files total if NUMPAIRS = 1024+1
     try:
         branch_tree ("", max_depth)
     except OSError as e:
         if e.errno == errno.ENOSPC:
-            raise SkipTest('not enough space in testdir')
+            pytest.skip('not enough space in testdir')
         raise
 
     head, *data, footer = run_rmlint('-c json:no_body')

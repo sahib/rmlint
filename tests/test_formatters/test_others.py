@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_just_call_it():
+def test_just_call_it(usual_setup_usual_teardown):
     create_file('1234', 'a')
     create_file('1234', 'b')
 

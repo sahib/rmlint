@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from nose import with_setup
-from nose.tools import make_decorator
-from nose.plugins.skip import SkipTest
-from nose.plugins.attrib import attr
 from contextlib import contextmanager
 import psutil
+import pytest
 import re
 
 from tests.utils import *
@@ -59,25 +56,17 @@ def is_on_reflink_fs(path):
     return False
 
 
-# decorator for tests dependent on reflink-capable testdir
-def needs_reflink_fs(test):
-    def no_support(*args):
-        raise SkipTest("btrfs not supported")
-
-    def not_reflink_fs(*args):
-        raise SkipTest("testdir is not on reflink-capable filesystem")
-
+@pytest.fixture
+# fixture for tests dependent on reflink-capable testdir
+def needs_reflink_fs():
     if not has_feature('btrfs-support'):
-        return make_decorator(test)(no_support)
+        pytest.skip("btrfs not supported")
     elif not is_on_reflink_fs(TESTDIR_NAME):
-        return make_decorator(test)(not_reflink_fs)
-    else:
-        return test
+        pytest.skip("testdir is not on reflink-capable filesystem")
+    yield
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_equal_files():
+def test_equal_files(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = create_file('1234' * 4096, 'b')
@@ -90,10 +79,9 @@ def test_equal_files():
             with_json=False,
             verbosity="")
 
-@attr('valgrind_issue')
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hardlinks():
+
+@pytest.mark.skip(reason="valgrind issue, see #492")
+def test_hardlinks(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = path_a + '_hardlink'
@@ -108,9 +96,7 @@ def test_hardlinks():
             verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_different_files():
+def test_different_files(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = create_file('4321' * 4096, 'b')
@@ -124,9 +110,7 @@ def test_different_files():
             verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_arguments():
+def test_bad_arguments(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = create_file('1234' * 4096, 'b')
@@ -145,9 +129,7 @@ def test_bad_arguments():
                 verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_directories():
+def test_directories(usual_setup_usual_teardown, needs_reflink_fs):
     path_a = os.path.dirname(create_dirs('dir_a'))
     path_b = os.path.dirname(create_dirs('dir_b'))
 
@@ -160,9 +142,7 @@ def test_directories():
             verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_dedupe_works():
+def test_dedupe_works(usual_setup_usual_teardown, needs_reflink_fs):
 
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1' * 100000, 'a')
@@ -208,9 +188,7 @@ def pattern_count(path, patterns):
     return counts
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_clone_handler():
+def test_clone_handler(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1' * 100000, 'a')
     path_b = create_file('1' * 100000, 'b')
