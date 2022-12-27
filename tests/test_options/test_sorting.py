@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
-from nose.plugins.attrib import attr
+import pytest
 from tests.utils import *
 
 from itertools import permutations, combinations
@@ -53,9 +52,8 @@ def validate_order(data, tests):
             assert False
 
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sorting():
+@pytest.mark.slow
+def test_sorting(usual_setup_usual_teardown):
     # create some dupes with different PATHS, names and mtimes:
     create_file('xxx', PATHS[1] + 'a', mtime='2004-02-29  16:21:42.4')
     create_file('xxx', PATHS[0] + 'c', mtime='2004-02-29  16:21:42.6')
@@ -88,8 +86,7 @@ def test_sorting():
 
         validate_order(data, combo)
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_outlyer():
+def test_sort_by_outlyer(usual_setup_usual_teardown):
     create_file('xxx', 'a/foo')
     create_file('xxx', 'b/foo')
 
@@ -110,8 +107,7 @@ def test_sort_by_outlyer():
 # https://github.com/sahib/rmlint/issues/196
 #
 # Testsetup by "Awerick"
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_outlyer_hardcore():
+def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
     for suffix in 'ABCD':
         create_file('xxx', 'inside/foo' + suffix)
 
@@ -152,8 +148,7 @@ def test_sort_by_outlyer_hardcore():
 
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_regex():
+def test_sort_by_regex(usual_setup_usual_teardown):
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
     create_file('xxx', 'b')
@@ -173,8 +168,7 @@ def test_sort_by_regex():
     assert paths[5].endswith('c')
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_regex_bad_input():
+def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
 

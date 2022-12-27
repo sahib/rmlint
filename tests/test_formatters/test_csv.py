@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 import csv
@@ -10,8 +9,7 @@ def csv_string_to_data(csv_dump):
     return data[1:]
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(usual_setup_usual_teardown):
     create_file('1234', 'a')
     create_file('1234', 'b')
     create_file('1234', 'stupid\'file,name')

@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose.plugins.attrib import attr
-from nose import with_setup
+import pytest
 from tests.utils import *
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_manyfiles():
+@pytest.mark.slow
+def test_manyfiles(usual_setup_usual_teardown):
 
     # create heaps of identical files:
     numfiles = 1024 * 32 + 1

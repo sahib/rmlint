@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(usual_setup_usual_teardown):
     create_file('1234567890', 'a10')
     create_file('x23456789x', 'b10')
 
@@ -19,8 +17,7 @@ def test_simple():
         assert len(data) == 2
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_almost_empty():
+def test_almost_empty(usual_setup_usual_teardown):
     create_file('x', 'a1')
     create_file('x', 'b1')
 
@@ -33,8 +30,7 @@ def test_almost_empty():
     assert footer['total_files'] == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_absolute():
+def test_absolute(usual_setup_usual_teardown):
     data1 = ['x'] * 2048
     data2 = ['x'] * 2048
     data2[1023] = 'y'
@@ -59,8 +55,7 @@ def test_absolute():
     assert len(data) == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_clamped_to_empty():
+def test_clamped_to_empty(usual_setup_usual_teardown):
     create_file('x', 'empties/a')
     create_file('x', 'empties/b')
 

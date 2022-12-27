@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose.plugins.attrib import attr
-from nose import with_setup
+import pytest
 from tests.utils import *
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_manylongpathfiles():
+@pytest.mark.slow
+def test_manylongpathfiles(usual_setup_usual_teardown):
 
 	#create ~1000 character path, 4 dirs deep
     longpath = ("long" * (1000//4//4) + "/") * 4

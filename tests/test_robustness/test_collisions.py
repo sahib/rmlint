@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose.plugins.attrib import attr
-from nose import with_setup
+import pytest
 from tests.utils import *
 
 
@@ -11,9 +10,8 @@ from tests.utils import *
 # which degenerates into an inefficient O(n^2) lookup with large size groups
 BLACKLIST = ['paranoid']
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_collision_resistance():
+@pytest.mark.slow
+def test_collision_resistance(usual_setup_usual_teardown):
     # test for at least 20 bits of collision resistancel
     # this should detect gross errors in checksum encoding...
 

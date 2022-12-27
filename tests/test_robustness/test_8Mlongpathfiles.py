@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose.plugins.attrib import attr
-from nose import with_setup
+import pytest
 from tests.utils import *
 import sys
 
@@ -25,9 +24,8 @@ def branch_tree(current_path, remaining_depth):
             create_link(current_path + 'b' + str(i).zfill(7), current_path + 'h' + str(i).zfill(7))
 
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_manylongpathfiles():
+@pytest.mark.slow
+def test_manylongpathfiles(usual_setup_usual_teardown):
     max_depth = 10 # will give 8M files total if NUMPAIRS = 1024+1
     branch_tree ("", max_depth)
 

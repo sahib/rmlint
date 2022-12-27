@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 import stat
@@ -23,8 +22,7 @@ def create_file_with_perms(content, path, permissions):
     os.chmod(os.path.join(TESTDIR_NAME, path), perms)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_combinations():
+def test_combinations(usual_setup_usual_teardown):
     # This test does not work when run as root.
     # root can read the files anyways.
     if runs_as_root():

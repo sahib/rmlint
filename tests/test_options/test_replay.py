@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
-from nose.plugins.attrib import attr
+import pytest
 from tests.utils import *
 
 import time
@@ -63,8 +62,7 @@ def validate_order(data, tests):
             assert False
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_match_basename():
+def test_replay_match_basename(usual_setup_usual_teardown):
     create_file('xxx', 'test1/a')
     create_file('xxx', 'test1/b')
     create_file('xxx', 'test2/a')
@@ -99,8 +97,7 @@ def test_replay_match_basename():
     assert len(data) == 3
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_hidden():
+def test_replay_hidden(usual_setup_usual_teardown):
     create_file('xxx', 'test/.a')
     create_file('xxx', 'test/.b')
 
@@ -125,8 +122,7 @@ def test_replay_hidden():
     assert len(data) == 2
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_must_match_tagged():
+def test_replay_must_match_tagged(usual_setup_usual_teardown):
     create_file('xxx', 'test_a/a')
     create_file('xxx', 'test_b/a')
 
@@ -149,9 +145,8 @@ def test_replay_must_match_tagged():
     assert (os.path.join(TESTDIR_NAME, 'test_a/a'), True) in paths
 
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sorting():
+@pytest.mark.slow
+def test_sorting(usual_setup_usual_teardown):
     # create some dupes with different PATHS, names and mtimes:
     create_file('xxx', PATHS[0] + 'a')
     create_file('xxx', PATHS[1] + 'bb')
@@ -204,8 +199,7 @@ def test_sorting():
         validate_order(data, combo)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_no_dir():
+def test_replay_no_dir(usual_setup_usual_teardown):
     # Regression test for #305.
     # --replay did not replay anything when not specifying some path.
     # (The current working directory was not set in this case correctly)
@@ -234,8 +228,7 @@ def test_replay_no_dir():
         os.chdir(current_cwd)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_unicode_fuckup():
+def test_replay_unicode_fuckup(usual_setup_usual_teardown):
     names = '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона'
 
     create_file('xxx', names[0])
@@ -253,8 +246,7 @@ def test_replay_unicode_fuckup():
     assert set([os.path.basename(e['path']) for e in data]) == set(names)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_tagged_order():
+def test_replay_tagged_order(usual_setup_usual_teardown):
     create_file('xxx', 'a/1')
     create_file('xxx', 'a/2')
     create_file('xxx', 'b/1')
@@ -321,8 +313,7 @@ def test_replay_tagged_order():
     assert data[3]['path'].endswith('a/2')
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_duplicate_directory_size():
+def test_replay_duplicate_directory_size(usual_setup_usual_teardown):
     create_file('xxx', 'a/xxx')
     create_file('xxx', 'b/xxx')
 
@@ -422,8 +413,7 @@ EXPECTED_WITHOUT_TREEMERGE = {
 }
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_pack_directories():
+def test_replay_pack_directories(usual_setup_usual_teardown):
     create_pack_and_unpack_scenario()
 
     # Do a run without -D and pack it later during --replay.
@@ -444,8 +434,7 @@ def test_replay_pack_directories():
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_unpack_directories():
+def test_replay_unpack_directories(usual_setup_usual_teardown):
     create_pack_and_unpack_scenario()
 
     # Do a run with -D and pack it later during --replay.

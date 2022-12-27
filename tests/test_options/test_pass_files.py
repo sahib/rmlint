@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 import json
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_stdin_read():
+def test_stdin_read(usual_setup_usual_teardown):
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
     path_c = create_file('1234', '.hidden')
