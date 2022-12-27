@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_keep_hardlinks():
+def test_keep_hardlinks(usual_setup_usual_teardown):
     create_file('xxx', 'file_a')
     create_link('file_a', 'file_b')
     create_file('xxx', 'file_z')

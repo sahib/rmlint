@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(usual_setup_usual_teardown):
     create_file('xxx', 'not_empty')
     create_file('', 'very_empty')
     head, *data, footer = run_rmlint('-T "none +ef"')

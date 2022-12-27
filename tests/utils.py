@@ -17,8 +17,7 @@ import struct
 import subprocess
 import contextlib
 import xattr
-from nose.plugins.skip import SkipTest
-from nose.tools import make_decorator
+import pytest
 
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
@@ -374,6 +373,18 @@ def usual_teardown_func():
             pass
 
 
+def mount_bind_teardown_func():
+    if runs_as_root():
+        subprocess.call(
+            'umount {dst}'.format(
+                dst=os.path.join(TESTDIR_NAME, 'a/b')
+            ),
+            shell=True
+        )
+
+    usual_teardown_func()
+
+
 @contextlib.contextmanager
 def create_special_fs(name, fs_type='ext4'):
     """
@@ -459,21 +470,14 @@ def is_on_reflink_fs(path):
     return False
 
 
-# decorator for tests dependent on reflink-capable testdir
-def needs_reflink_fs(test):
-    def no_support(*args):
-        raise SkipTest("btrfs not supported")
-
-    def not_reflink_fs(*args):
-        raise SkipTest("testdir is not on reflink-capable filesystem")
-
+@pytest.fixture
+# fixture for tests dependent on reflink-capable testdir
+def needs_reflink_fs():
     if not has_feature('btrfs-support'):
-        return make_decorator(test)(no_support)
+        pytest.skip("btrfs not supported")
     elif not is_on_reflink_fs(TESTDIR_NAME):
-        return make_decorator(test)(not_reflink_fs)
-    else:
-        return test
-
+        pytest.skip("testdir is not on reflink-capable filesystem")
+    yield
 
 # count the number of line in a file which start with each pattern
 def pattern_count(path, patterns):
