@@ -62,7 +62,7 @@ def test_invalid(usual_setup_usual_teardown):
             assert False
 
     # Not a valid range:
-    trigger('--size \-\-17')
+    trigger(r'--size --17')
 
     # max < min
     trigger('--size 10-9')
