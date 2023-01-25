@@ -201,3 +201,21 @@ def test_sort_by_regex_bad_input():
         assert False
     except subprocess.CalledProcessError:
         pass
+
+
+# regression test for GitHub issue #484
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_regex_multiple_matches():
+    paths = [
+        '1/a', '1/a2', '1/b',
+        '2/a', '2/a2', '2/b',
+    ]
+    for path in reversed(paths):
+        create_file('xxx', path)
+
+    # when multiple paths matched a regex, rmlint would not try the next criterion
+    # check multiple times because sort order was inconsistent before the fix
+    for _ in range(3):
+        head, *data, foot = run_rmlint("-S 'r<1>x<a>l'")
+        assert len(data) == len(paths)
+        assert [e['path'] for e in data] == [os.path.join(TESTDIR_NAME, p) for p in paths]
