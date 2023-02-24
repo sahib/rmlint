@@ -134,3 +134,34 @@ def test_last_extent_differs():
 @with_setup(usual_setup_func, usual_teardown_func)
 def test_reflink_ends_with_hole():
     _make_reflink_testcase(extents=1, hole_extents=1)
+
+
+def _copy_file_range(src, dst, count, offset_src, offset_dst):
+    bytes_copied = os.copy_file_range(src, dst, count, offset_src, offset_dst)
+    if bytes_copied < count:
+        raise RuntimeError('copy_file_range only copied {} bytes (expected {})'.format(bytes_copied, count))
+
+
+# GitHub issue #611: Make sure holes can be detected when the physical offsets and logical
+# extent ends are otherwise the same.
+@needs_reflink_fs
+@with_setup(usual_setup_func, usual_teardown_func)
+def test_hole_before_extent():
+    path_a = os.path.join(TESTDIR_NAME, 'a')
+    path_b = os.path.join(TESTDIR_NAME, 'b')
+
+    def kb(n): return 1024 * n
+
+    _run_dd_urandom(path_a, '8K', 2)
+    with open(path_b, 'wb') as f:
+        os.truncate(f.fileno(), kb(16))  # same-sized file with no extents
+
+    with open(path_a, 'rb') as fsrc, open(path_b, 'wb') as fdst:
+        infd, outfd = fsrc.fileno(), fdst.fileno()
+        # copy first half of first extent with 4K offset
+        _copy_file_range(infd, outfd, kb(4), kb(0), kb(4))
+        # copy second extent
+        _copy_file_range(infd, outfd, kb(8), kb(8), kb(8))
+
+    # expect RM_LINK_NONE
+    check_is_reflink_status(1, path_a, path_b)
