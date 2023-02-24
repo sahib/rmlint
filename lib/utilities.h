@@ -416,7 +416,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
  *
  * @return the physical offset starting from the disk.
  */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last);
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, RmOff *logical_offset, bool *is_last);
 
 /**
  * @brief Lookup the physical offset of a file path at any given offset.

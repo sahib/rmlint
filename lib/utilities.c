@@ -1011,13 +1011,14 @@ static struct fiemap *rm_offset_get_fiemap(int fd, const int n_extents,
     return fm;
 }
 
-/* Return physical (disk) offset of the beginning of the file extent containing the
+/* Return physical (disk) offset of the beginning of the file extent found after the
  * specified logical file_offset.
- * If a pointer to file_offset_next is provided then read fiemap extents until
- * the next non-contiguous extent (fragment) is encountered and writes the corresponding
- * file offset to &file_offset_next.
+ * If a pointer to file_offset_next is provided then read fiemap extents until the next
+ * non-contiguous extent (fragment) is encountered and writes the corresponding file
+ * offset to *file_offset_next.
+ * The logical offset of the found extent is written to *logical_offset.
  * */
-RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, bool *is_last) {
+RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, RmOff *logical_offset, bool *is_last) {
     RmOff result = 0;
     bool done = FALSE;
     bool first = TRUE;
@@ -1052,7 +1053,10 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next, 
             if (first) {
                 /* remember disk location of start of data */
                 result = fm_ext.fe_physical;
-                first=FALSE;
+                if(logical_offset != NULL) {
+                    *logical_offset = fm_ext.fe_logical;
+                }
+                first = FALSE;
             } else {
                 /* check if subsequent extents are contiguous */
                 if(fm_ext.fe_physical != expected)  {
@@ -1098,15 +1102,15 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL, NULL);
     rm_sys_close(fd);
     return result;
 }
 
 #else /* Probably FreeBSD */
 
-RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
-                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last) {
+RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset, _UNUSED RmOff *file_offset_next,
+                            _UNUSED RmOff *logical_offset, _UNUSED bool *is_last) {
     return 0;
 }
 
@@ -1245,11 +1249,11 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
     bool is_last_2 = false;
 
     while(!rm_session_was_aborted()) {
-        RmOff logical_next_1 = 0;
-        RmOff logical_next_2 = 0;
+        RmOff logical_1 = 0, logical_2 = 0;
+        RmOff logical_next_1 = 0, logical_next_2 = 0;
 
-        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &is_last_1);
-        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &is_last_2);
+        RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1, &logical_1, &is_last_1);
+        RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2, &logical_2, &is_last_2);
 
         if(is_last_1 != is_last_2) {
             RM_RETURN(RM_LINK_NONE);
@@ -1260,6 +1264,14 @@ RmLinkType rm_util_link_type(char *path1, char *path2) {
             rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
                               ": %"G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
                               logical_current, physical_1, physical_2);
+#endif
+            RM_RETURN(RM_LINK_NONE);
+        }
+        if(logical_1 != logical_2) {
+#if _RM_OFFSET_DEBUG
+            rm_log_debug_line("Logical offsets differ after %" G_GUINT64_FORMAT
+                              " bytes: %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, logical_1, logical_2);
 #endif
             RM_RETURN(RM_LINK_NONE);
         }
