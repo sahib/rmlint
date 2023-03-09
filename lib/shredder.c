@@ -855,17 +855,14 @@ static void rm_shred_group_update_status(RmShredGroup *group) {
     } else if(group->n_clusters > 1) {
         // we have potential match candidates; start hashing
         group->status = RM_SHRED_GROUP_START_HASHING;
-    } else if(group->n_inodes == 1 && group->n_unhashed_clusters > 0 &&
+    } else if(group->num_files > 1 && group->n_unhashed_clusters > 0 &&
               group->session->cfg->merge_directories) {
         /* special case of hardlinked files that still need hashing to help identify
          * matching directories */
         group->status = RM_SHRED_GROUP_START_HASHING;
-    } else if(group->session->cfg->hash_unmatched && group->held_files->length > 0) {
-        RmFile *head = group->held_files->head->data;
-        if(head->digest) {
-            // with hash_unmatched, keep going once we start
-            group->status = RM_SHRED_GROUP_START_HASHING;
-        }
+    } else if(group->session->cfg->hash_unmatched && group->digest) {
+        // with hash_unmatched, keep going once we start
+        group->status = RM_SHRED_GROUP_START_HASHING;
     }
 }
 
