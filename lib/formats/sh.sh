@@ -225,25 +225,34 @@ cp_hardlink() {
 }
 
 cp_reflink() {
-    if [ -d "$1" ]; then
-        # for duplicate dir's, can't clone so use symlink
-        cp_symlink "$@"
-        return $?
-    fi
     print_progress_prefix
     # reflink $1 to $2's data, preserving $1's  mtime
     printf "${COL_YELLOW}Reflinking to original: ${COL_RESET}%%s\n" "$1"
     if original_check "$1" "$2"; then
         if [ -z "$DO_DRY_RUN" ]; then
-            if [ -z "$STAMPFILE2" ]; then
+            if [ -d "$1" ]; then
+                local STAMPFILE2="$(mktemp -d "${TMPDIR:-/tmp}/rmlint.XXXXXXXX.stamp.d")"
+            elif [ -z "$STAMPFILE2" ]; then
                 STAMPFILE2=$(mktemp "${TMPDIR:-/tmp}/rmlint.XXXXXXXX.stamp")
             fi
             cp --archive --attributes-only --no-target-directory -- "$1" "$STAMPFILE2"
             if [ -d "$1" ]; then
+                # to reflink a directory, we will have to delete it, thus changing parent mtime
+                # take care of preserving parent mtime if requested
+                if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
+                    touch -r "$(dirname "$1")" -- "$STAMPFILE"
+                fi
                 rm -rf -- "$1"
             fi
             cp --archive --reflink=always -- "$2" "$1"
             cp --archive --attributes-only --no-target-directory -- "$STAMPFILE2" "$1"
+            if [ -d "$1" ]; then
+                rm -rf -- "$STAMPFILE2"
+                if [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
+                    # restore parent mtime if we saved it
+                    touch -r "$STAMPFILE" -- "$(dirname "$1")"
+                fi
+            fi
         fi
     fi
 }
