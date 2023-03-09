@@ -238,12 +238,12 @@ cp_reflink() {
             if [ -z "$STAMPFILE2" ]; then
                 STAMPFILE2=$(mktemp "${TMPDIR:-/tmp}/rmlint.XXXXXXXX.stamp")
             fi
-            touch -mr "$1" -- "$STAMPFILE2"
+            cp --archive --attributes-only --no-target-directory -- "$1" "$STAMPFILE2"
             if [ -d "$1" ]; then
                 rm -rf -- "$1"
             fi
             cp --archive --reflink=always -- "$2" "$1"
-            touch -mr "$STAMPFILE2" -- "$1"
+            cp --archive --attributes-only --no-target-directory -- "$STAMPFILE2" "$1"
         fi
     fi
 }
