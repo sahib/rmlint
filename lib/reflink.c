@@ -473,6 +473,7 @@ int rm_is_reflink_main(int argc, const char **argv) {
         "     %i:  %s\n"
         "     %i:  %s\n"
         "     %i:  %s\n"
+        "     %i:  %s\n"
         "     %i:  %s\n",
         _("Test if two files are reflinks (share same data extents)"),
         _("Returns 0 if the files are reflinks."),
@@ -486,7 +487,8 @@ int rm_is_reflink_main(int argc, const char **argv) {
         RM_LINK_HARDLINK, desc[RM_LINK_HARDLINK],
         RM_LINK_SYMLINK, desc[RM_LINK_SYMLINK],
         RM_LINK_XDEV, desc[RM_LINK_XDEV],
-        RM_LINK_NONE, desc[RM_LINK_NONE]);
+        RM_LINK_NONE, desc[RM_LINK_NONE],
+        RM_LINK_DIR, desc[RM_LINK_DIR]);
 
 
     g_option_context_set_summary(context, summary);

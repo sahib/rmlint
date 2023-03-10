@@ -1361,7 +1361,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
         RM_RETURN(RM_LINK_ERROR);
     }
 
-    if(!S_ISREG(stat1.st_mode)) {
+    if(!S_ISREG(stat1.st_mode) && !S_ISDIR(stat1.st_mode)) {
         RM_RETURN(S_ISLNK(stat1.st_mode) ? RM_LINK_SYMLINK : RM_LINK_NOT_FILE);
     }
 
@@ -1386,11 +1386,23 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
         RM_RETURN(RM_LINK_ERROR);
     }
 
-    if(!S_ISREG(stat2.st_mode)) {
+    if(!S_ISREG(stat2.st_mode) && !S_ISDIR(stat2.st_mode)) {
         RM_RETURN(S_ISLNK(stat2.st_mode) ? RM_LINK_SYMLINK : RM_LINK_NOT_FILE);
     }
 
-    if(stat1.st_size != stat2.st_size) {
+    /* At this point, path1 or path2 may be a regular file or a directory.
+     * Ensure they both have the same type, otherwise fail. */
+    bool is_dir;
+    if(S_ISDIR(stat1.st_mode) && S_ISDIR(stat2.st_mode)) {
+        is_dir = true;
+    } else if (S_ISREG(stat1.st_mode) && S_ISREG(stat2.st_mode)) {
+        is_dir = false;
+    } else {
+        RM_RETURN(RM_LINK_NOT_FILE);
+    }
+
+    if(!is_dir && stat1.st_size != stat2.st_size) {
+        /* st_size is not defined for directories */
 #if _RM_OFFSET_DEBUG
         rm_log_debug_line(
             "rm_util_link_type: Files have different sizes: %" G_GUINT64_FORMAT
@@ -1419,6 +1431,11 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
         }
     }
 
+    if (is_dir) {
+        /* further tests do not make sense for directories */
+        RM_RETURN(RM_LINK_DIR);
+    }
+
     if(use_fiemap) {
         RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
         RM_RETURN(reflink_type);
@@ -1440,7 +1457,8 @@ const char **rm_link_type_to_desc() {
                                                  N_("Hardlink"),
                                                  N_("Encountered a symlink"),
                                                  N_("Files are on different devices"),
-                                                 N_("Not linked")};
+                                                 N_("Not linked"),
+                                                 N_("Both files are directories")};
     return RM_LINK_TYPE_TO_DESC;
 }
 
