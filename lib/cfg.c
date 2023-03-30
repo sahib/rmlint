@@ -93,6 +93,8 @@ void rm_cfg_set_default(RmCfg *cfg) {
     cfg->sweep_size = 1024 * 1024 * 1024;
     cfg->sweep_count = 1024 * 16;
 
+    cfg->clamp_is_used = false;
+
     cfg->skip_start_factor = 0.0;
     cfg->skip_end_factor = 1.0;
 

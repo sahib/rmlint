@@ -698,6 +698,11 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
         return;
     }
 
+    if(session->cfg->clamp_is_used) {
+        /* Not writing checksums because we're not reading the whole file. */
+        return;
+    }
+
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if(file->ext_cksum == NULL && file->digest != NULL) {
@@ -1724,7 +1729,6 @@ void rm_shred_output_tm_results(RmFile *file, gpointer data) {
 
     RmSession *session = data;
     rm_fmt_write(file, session->formats);
-
 }
 
 void rm_shred_run(RmSession *session) {

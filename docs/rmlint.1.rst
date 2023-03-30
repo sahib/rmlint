@@ -544,6 +544,9 @@ Caching
     This will read from existing checksums at the start of the run and update all hashed
     files at the end.
 
+    ``--xattr-write`` has no effect when ``--clamp-low`` or ``--clamp-top`` is
+    used to prevent false negatives in future runs without clamping.
+
     Usage example::
 
         $ rmlint large_file_cluster/ -U --xattr-write   # first run should be slow.

@@ -627,6 +627,8 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string,
             session->cfg->skip_end_offset = offset;
         }
     }
+
+    session->cfg->clamp_is_used = true;
 }
 
 static gboolean rm_cmd_parse_partial_hidden(_UNUSED const char *option_name,
