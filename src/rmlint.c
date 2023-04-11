@@ -56,10 +56,13 @@ static void logging_callback(_UNUSED const gchar *log_domain,
                              gpointer user_data) {
     RmSession *session = user_data;
     if(session->cfg->verbosity >= log_level) {
+        char *tmp = NULL;
         if(!session->cfg->with_stderr_color) {
-            message = remove_color_escapes((char *)message);
+            tmp = g_strdup(message);
+            message = remove_color_escapes(tmp);
         }
         fputs(message, stderr);
+        g_free(tmp);
     }
 }
 
