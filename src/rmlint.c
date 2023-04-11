@@ -75,9 +75,9 @@ static void signal_handler(int signum) {
          * but that's probably the least thing we have to worry about in case of
          * a segmentation fault.
          */
-        rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
-                          g_strsignal(signum));
-        rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
+        g_printerr(_("Aborting due to a fatal error. (signal received: %s)\n"),
+                   g_strsignal(signum));
+        g_printerr(_("Please file a bug report (See rmlint -h)\n"));
         /* SA_RESETHAND has reset the disposition so the program will terminate now */
     default:
         break;
