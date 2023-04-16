@@ -105,7 +105,8 @@ def run_rmlint_once(*args,
                     with_json=True,
                     directly_return_output=False,
                     use_shell=False,
-                    verbosity="-V"):
+                    verbosity="-V",
+                    check=True):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -158,14 +159,18 @@ def run_rmlint_once(*args,
         # Use /bin/bash, not /bin/sh
         cmd = ["/bin/bash", "-c", " ".join(cmd)]
 
-    output = subprocess.check_output(cmd, env=env)
+    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE)
+
     if get_env_flag('RM_TS_USE_GDB'):
         print('==> START OF GDB OUTPUT <==')
-        print(output.decode('utf-8'))
+        print(result.stdout.decode('utf-8'), end='')
         print('==> END OF GDB OUTPUT <==')
 
+    if check:
+        result.check_returncode()
+
     if directly_return_output:
-        return output
+        return result.stdout if check else (result, result.stdout)
 
     if with_json:
         with open(os.path.join(TESTDIR_NAME, 'out.json'), 'r') as f:
@@ -177,10 +182,9 @@ def run_rmlint_once(*args,
     for idx, output in enumerate(outputs or []):
         with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r', encoding='utf8') as handle:
             read_outputs.append(handle.read())
-    if outputs is None:
-        return json_data
-    else:
-        return json_data + read_outputs
+    if outputs:
+        json_data.extend(read_outputs)
+    return json_data if check else (result, json_data)
 
 
 def compare_json_doc(doc_a, doc_b, compare_checksum=False):
