@@ -159,7 +159,8 @@ def run_rmlint_once(*args,
         # Use /bin/bash, not /bin/sh
         cmd = ["/bin/bash", "-c", " ".join(cmd)]
 
-    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE)
+    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(result.stderr.decode('utf-8'), end='')
 
     if get_env_flag('RM_TS_USE_GDB'):
         print('==> START OF GDB OUTPUT <==')
