@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 import os
@@ -9,8 +8,7 @@ import shutil
 import tempfile
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_backup():
+def test_backup(usual_setup_usual_teardown):
     create_file('content', 'name_x')
     create_file('content', 'name_y')
 

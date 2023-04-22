@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 import os
-from nose import with_setup
 from tests.utils import *
 
 
@@ -9,8 +8,7 @@ def filter_part_of_directory(data):
     return [e for e in data if e['type'] != 'part_of_directory']
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_rankby_simple():
+def test_rankby_simple(usual_setup_usual_teardown):
     create_file('x', 'ax')
     create_file('x', 'ay')
     create_file('yyy', 'bx')
@@ -25,8 +23,7 @@ def test_rankby_simple():
     assert paths == ['by', 'bx', 'ay', 'ax']
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_rankby_dirs():
+def test_rankby_dirs(usual_setup_usual_teardown):
     create_file('x', 'ax')
     create_file('x', 'ay')
     create_file('yyy', 'b/x')

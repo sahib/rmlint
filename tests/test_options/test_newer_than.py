@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 import time
@@ -31,8 +30,7 @@ def create_set(create_stamp, iso8601=False):
     warp_file_to_future('c', 2)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(usual_setup_usual_teardown):
     create_set(False)
     now = time.time()
     head, *data, footer = run_rmlint_once('-S a -N ' + str(time.time()))
@@ -50,8 +48,7 @@ def test_simple():
         assert len(data) == expect
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_stamp_file():
+def test_stamp_file(usual_setup_usual_teardown):
     create_set(True, False)
 
     # Wait 3 seconds, so the new stamp file (written by -n)
@@ -66,8 +63,7 @@ def test_stamp_file():
     assert len(data) == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_stamp_file_iso8601():
+def test_stamp_file_iso8601(usual_setup_usual_teardown):
     create_set(True, True)
 
     head, *data, footer = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))

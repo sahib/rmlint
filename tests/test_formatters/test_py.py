@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 import subprocess
 
-from parameterized import parameterized
+import pytest
 
 
 def _check_interpreter(interpreter):
@@ -16,16 +15,14 @@ def _check_interpreter(interpreter):
         return False
 
 
-@parameterized(["python2", "python3"])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_paranoia(interpreter):
+@pytest.mark.parametrize("interpreter", ["python2", "python3"])
+def test_paranoia(usual_setup_usual_teardown, interpreter):
     if not _check_interpreter(interpreter):
-        print(
+        pytest.skip(
             "Interpreter {} does not seem to be working, skipping test".format(
                 interpreter
             )
         )
-        return
 
     create_file('xxx', 'a')
     create_file('xxx', 'b')

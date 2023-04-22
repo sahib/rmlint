@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
@@ -11,8 +10,7 @@ def create_set():
         create_file('x' * 512, 'small' + suffix)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_valid():
+def test_valid(usual_setup_usual_teardown):
     create_set()
 
     # Scalar:
@@ -47,8 +45,7 @@ def test_valid():
     *_, footer = run_rmlint('--size 1-18446744073709551615')
     assert footer['duplicates'] == 6
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_invalid():
+def test_invalid(usual_setup_usual_teardown):
     create_set()
 
     def trigger(*args):
@@ -80,8 +77,7 @@ def test_invalid():
 
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_replay_size():
+def test_replay_size(usual_setup_usual_teardown):
     create_file('', 'empty1')
     create_file('', 'empty2')
     create_file('xxx', 'a/xxx')

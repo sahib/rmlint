@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_km():
+def test_km(usual_setup_usual_teardown):
     # create some dupes with different paths, names and mtimes:
     create_file('xxx', 'stuff/a')
     create_file('yyy', 'stuff/b')

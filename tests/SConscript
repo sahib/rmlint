@@ -17,14 +17,14 @@ def cmd_exists(cmd):
 
 
 def run_tests(target=None, source=None, env=None):
-    names = ['nosetests-3.3', 'nosetests-3', 'python3-nosetests', 'nosetests3', 'nosetests']
+    names = ["pytest"]
     exes = [exe for exe in names if cmd_exists(exe)]
     if any(exes):
         name = exes[0]
-        print('Found nosetests as "{}"'.format(name))
-        Exit(subprocess.call(name + ' -s -v -a !slow', shell=True))
+        print('Found pytest as "{}"'.format(name))
+        Exit(subprocess.call(name + ' -s -v -k "not slow"', shell=True))
 
-    print('Unable to find nosetests, tried these: ' + str(names))
+    print('Unable to find pytest, tried these: ' + str(names))
     Exit(-1)
 
 

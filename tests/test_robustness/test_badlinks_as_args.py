@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 
 # Regression test for directly passing broken symbolic links
 # to the command line. See https://github.com/sahib/rmlint/pull/444
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_symlinks_as_direct_args():
+def test_bad_symlinks_as_direct_args(usual_setup_usual_teardown):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
