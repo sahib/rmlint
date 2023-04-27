@@ -1428,6 +1428,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"must-match-tagged"        , 'm'  , 0         , G_OPTION_ARG_NONE      , &cfg->must_match_tagged        , _("Must have twin in tagged dir")                                         , NULL}     ,
         {"must-match-untagged"      , 'M'  , 0         , G_OPTION_ARG_NONE      , &cfg->must_match_untagged      , _("Must have twin in untagged dir")                                       , NULL}     ,
         {"match-basename"           , 'b'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_basename           , _("Only find twins with same basename")                                   , NULL}     ,
+        {"match-dirname"            , 'B'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_dirname            , _("Only find twins with same dirname")                                    , NULL}     ,
         {"match-extension"          , 'e'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_with_extension     , _("Only find twins with same extension")                                  , NULL}     ,
         {"match-without-extension"  , 'i'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_without_extension  , _("Only find twins with same basename minus extension")                   , NULL}     ,
         {"merge-directories"        , 'D'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(merge_directories)        , _("Find duplicate directories")                                           , NULL}     ,
