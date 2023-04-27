@@ -217,6 +217,14 @@ gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b, bool 
     return rm_match_strncmp(basename_a, basename_b, a_len, ignore_case);
 }
 
+gint rm_rank_dirname(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
+    if (!file_a->node->parent || !file_b->node->parent)
+        return 0;
+
+    return rm_match_strcmp(file_a->node->parent->basename, file_b->node->parent->basename,
+                           ignore_case);
+}
+
 
 /* Sort criteria for sorting by preferred path (first) then user-input criteria */
 /* Return:
@@ -276,6 +284,11 @@ gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
 
     if (cfg->match_without_extension) {
         rank = rm_rank_without_extension(file_a, file_b, cfg->case_insensitive);
+        RETURN_IF_NONZERO(rank)
+    }
+
+    if (cfg->match_dirname) {
+        rank = rm_rank_dirname(file_a, file_b, cfg->case_insensitive);
         RETURN_IF_NONZERO(rank)
     }
 

@@ -78,6 +78,7 @@ typedef struct RmCfg {
     gboolean filter_mtime;
     gboolean case_insensitive;
     gboolean match_basename;
+    gboolean match_dirname;
     gboolean match_relative_path;
     gboolean unmatched_basenames;
     gboolean match_with_extension;
