@@ -176,7 +176,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         return;
     }
 
-    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, sizeof(RM_PY_BOOTSTRAP)) < 0) {
+    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, strlen(RM_PY_BOOTSTRAP)) < 0) {
         rm_log_warning_line("Could not bootstrap gui: Unable to write to tempfile: %s",
                             g_strerror(errno));
         return;
