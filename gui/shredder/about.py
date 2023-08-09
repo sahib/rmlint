@@ -20,7 +20,8 @@ LOGGER = logging.getLogger('about')
 
 MAIN_AUTHORS = [
     'Christopher Pahl <sahib@online.de>',
-    'Daniel Thomas <thomas_d_j@yahoo.com.au>'
+    'Daniel Thomas <thomas_d_j@yahoo.com.au>',
+    'Cebtenzzre <cebtenzzre@gmail.com>',
 ]
 
 

@@ -66,7 +66,7 @@ todo_include_todos = True
 
 # General information about the project.
 project = 'rmlint documentation'
-copyright = '2014-2019, Christopher Pahl & Daniel Thomas'
+copyright = '2014-2023, Christopher Pahl, Daniel Thomas, and Cebtenzzre'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -318,7 +318,7 @@ latex_elements = {
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('rmlint.1', 'rmlint', 'find duplicate files and other space waste efficiently',
-     ['Christopher Pahl', 'Daniel Thomas'], 1)
+     ['Christopher Pahl', 'Daniel Thomas', 'Cebtenzzre'], 1)
 ]
 
 # If true, show URL addresses after external links.

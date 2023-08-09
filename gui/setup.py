@@ -86,6 +86,8 @@ setup(
     long_description='A graphical user interface to rmlint using GTK+',
     author='Christopher Pahl',
     author_email='sahib@online.de',
+    maintainer='Cebtenzzre',
+    maintainer_email='cebtenzzre@gmail.com',
     url='https://rmlint.rtfd.org',
     license='GPLv3',
     platforms='any',

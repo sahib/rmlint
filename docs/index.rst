@@ -125,6 +125,7 @@ Authors
 ===================================  ============================= ===========================================
 *Christopher Pahl*                   https://github.com/sahib      2010-2019
 *Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2019
+*Cebtenzzre*                         https://github.com/Cebtenzzre 2021-2023
 ===================================  ============================= ===========================================
 
 Additional thanks to:
