@@ -38,7 +38,10 @@ def check_gcc_version(context):
     context.Message('Checking for GCC version... ')
 
     try:
-        v = subprocess.check_output("printf '%s\n' __GNUC__ | gcc -E -P -", shell=True)
+        v = subprocess.check_output(
+            '{cc} -E -P -'.format(cc=conf.env['CC']),
+            shell=True, input=b'__GNUC__\n',
+        )
         try:
             v = int(v)
             context.Result(str(v))

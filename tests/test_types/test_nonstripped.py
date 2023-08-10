@@ -23,10 +23,10 @@ def create_binary(path, stripped=False):
     path = path + '.stripped' if stripped else path + '.nonstripped'
     full_path = os.path.join(TESTDIR_NAME, path)
 
-    command = 'echo \'{src}\' | cc -o {path} {option} -std=c99 -xc -'.format(
-        src=SOURCE, path=full_path, option=('-s' if stripped else '-ggdb3')
+    command = '{cc} -o {path} {option} -std=c99 -xc -'.format(
+        cc=os.environ.get('CC', 'gcc'), path=full_path, option='-s' if stripped else '-ggdb3',
     )
-    subprocess.call(command, shell=True)
+    subprocess.run(command, input=SOURCE, shell=True, universal_newlines=True, check=True)
 
 
 @with_setup(usual_setup_func, usual_teardown_func)
