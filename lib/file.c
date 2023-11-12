@@ -180,6 +180,25 @@ gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
     return g_ascii_strcasecmp(file_a->folder->basename, file_b->folder->basename);
 }
 
+gint rm_file_relpaths_cmp(const RmFile *file_a, const RmFile *file_b) {
+    gint diff = file_a->depth - file_b->depth;
+    RETURN_IF_NONZERO(diff);
+    RmNode* node_a = file_a->folder;
+    RmNode* node_b = file_b->folder;
+
+    for (gint16 depth = file_a->depth; depth > 0; --depth) {
+        g_assert(node_a);
+        g_assert(node_b);
+
+        diff = g_ascii_strcasecmp(node_a->basename, node_b->basename);
+        RETURN_IF_NONZERO(diff);
+
+        node_a = node_a->parent;
+        node_b = node_b->parent;
+    }
+    return 0;
+}
+
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {
     if(!head->hardlinks) {
         head->hardlinks = g_queue_new();
