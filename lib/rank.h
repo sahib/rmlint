@@ -39,6 +39,12 @@ gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b);
 gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b);
 
 /**
+ * @brief Compare relative paths of two files
+ * @retval true if relative paths match.
+ */
+gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b);
+
+/**
  * @brief Compare two files in order to find out which file is the
  * higher ranked (ie original).
  *

@@ -254,6 +254,8 @@ gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
 
     RETURN_IF_NONZERO(cfg->match_basename && rm_rank_basenames(file_a, file_b));
 
+    RETURN_IF_NONZERO(cfg->match_relative_path && rm_rank_relative_path(file_a, file_b));
+
     RETURN_IF_NONZERO(cfg->match_with_extension && rm_rank_with_extension(file_a, file_b));
 
     return cfg->match_without_extension && rm_rank_without_extension(file_a, file_b);
@@ -269,6 +271,25 @@ gint rm_rank_group_gcmp(gconstpointer file_a, gconstpointer file_b,
 
 gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b) {
     return g_ascii_strcasecmp(file_a->node->basename, file_b->node->basename);
+}
+
+gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b) {
+    gint diff = file_a->depth - file_b->depth;
+    RETURN_IF_NONZERO(diff);
+    RmNode* node_a = file_a->node;
+    RmNode* node_b = file_b->node;
+
+    for (gint16 depth = file_a->depth; depth > 0; --depth) {
+        g_assert(node_a);
+        g_assert(node_b);
+
+        diff = g_ascii_strcasecmp(node_a->basename, node_b->basename);
+        RETURN_IF_NONZERO(diff);
+
+        node_a = node_a->parent;
+        node_b = node_b->parent;
+    }
+    return 0;
 }
 
 
