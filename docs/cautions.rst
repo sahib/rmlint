@@ -298,7 +298,7 @@ If you use ``rmlint``'s ``sha1`` hash features, which features 160 bit output,
 you need at least :math:`5.4\times10^{22}` files before you get a :math:`0.1\%`
 probability of collision.  ``rmlint``'s ``-p`` option uses ``SHA512``
 (:math:`5.2\times10^{75}` files for :math:`0.1\%` risk), while ``rmlint``'s
-``-pp`` option uses direct file comparison to eliminate the risk altogether.
+``-p`` option uses direct file comparison to eliminate the risk altogether.
 Refer to the :ref:`benchmark_ref` chapter for speed and memory overhead
 implications.
 
@@ -347,7 +347,7 @@ The speed ratio gives an indication of how effectively the search algorithm mana
 +----------------+----------------+---------------------+---------+
 | ``rmlint``     |   38s          |  106s               |  2.8    |
 +----------------+----------------+---------------------+---------+
-| ``rmlint -pp`` |   40s          |  139s               |  3.5    |
+| ``rmlint -p``  |   40s          |  139s               |  3.5    |
 +----------------+----------------+---------------------+---------+
 
 .. note::
