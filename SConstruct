@@ -201,9 +201,9 @@ def check_bigfiles(context):
     if tests.CheckFunc(
         context, 'stat64',
         header=
-            '#include <sys/types.h>'
-            '#include <sys/stat.h>'
-            '#include <unistd.h>'
+            '#include <sys/types.h>\n'
+            '#include <sys/stat.h>\n'
+            '#include <unistd.h>\n'
 
     ):
         have_stat64 = False
@@ -274,8 +274,8 @@ def check_xattr(context):
         if tests.CheckFunc(
             context, func,
             header=
-                '#include <sys/types.h>'
-                '#include <sys/xattr.h>'
+                '#include <sys/types.h>\n'
+                '#include <sys/xattr.h>\n'
         ):
             rc = 0
             break
@@ -295,8 +295,8 @@ def check_lxattr(context):
         if tests.CheckFunc(
             context, func,
             header=
-                '#include <sys/types.h>'
-                '#include <sys/xattr.h>'
+                '#include <sys/types.h>\n'
+                '#include <sys/xattr.h>\n'
         ):
             rc = 0
             break
