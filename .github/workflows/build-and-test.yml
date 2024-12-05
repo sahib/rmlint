@@ -16,8 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: "Prepare build environment"
         run: |
-          apt update
-          apt install -y --no-install-recommends \
+          sudo apt update
+          sudo apt install -y --no-install-recommends \
             scons python3-sphinx gettext python3-setuptools \
             libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev \
             clang python3-pip python3-cffi python3-dev libffi-dev
@@ -31,7 +31,7 @@ jobs:
       - name: "Prepare test environment"
         # Based off https://github.com/LeastAuthority/mount-tmpfs-action
         run: |
-          mount -o size=14G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
+          sudo mount -o size=14G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
       - name: "Test"
         run: |
           RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest
