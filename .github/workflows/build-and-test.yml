@@ -1,6 +1,8 @@
 name: Build and test rmlint (master)
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - master
