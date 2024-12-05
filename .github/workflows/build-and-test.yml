@@ -1,0 +1,30 @@
+name: Build and test rmlint (master)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RM_TS_DIR: "/tmp/rmlint-unit-testdir"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up build environment
+        run: |
+          apt update
+          apt install -y --no-install-recommends \
+            scons python3-sphinx gettext python3-setuptools \
+            libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev \
+            clang python3-pip python3-cffi python3-dev libffi-dev
+          pip3 install -r tests/requirements.txt
+      - name: Build
+        # Todo: eventually run tests with valgrind (RM_TS_USE_VALGRIND)
+        # Todo enable slow tests in pytest
+        run: |
+          scons config
+          scons VERBOSE=1 DEBUG=1 O=release
+          mkdir -p "${RM_TS_DIR}"
+          RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest
