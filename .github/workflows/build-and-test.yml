@@ -26,5 +26,5 @@ jobs:
         run: |
           scons config
           scons VERBOSE=1 DEBUG=1 O=release
-          mkdir -p "${RM_TS_DIR}"
+          rm -rfv "${RM_TS_DIR}"; mkdir "${RM_TS_DIR}"
           RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest
