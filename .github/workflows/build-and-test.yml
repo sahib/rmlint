@@ -29,7 +29,9 @@ jobs:
           scons config
           scons VERBOSE=1 DEBUG=1 O=release
       - name: "Prepare test environment"
-        # Based off https://github.com/LeastAuthority/mount-tmpfs-action
+        # The test suite is seriously disk-intensive. Given that linux
+        #  instances hosted in GitHub have 16G of RAM available we will
+        #  use it to speed up the run.
         run: |
           sudo mkdir "${RM_TS_DIR}"
           sudo mount -o size=14G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
