@@ -78,15 +78,9 @@ def create_testdir(*extra_path):
     except OSError:
         pass
 
-def cleanup_testdir(*extra_path):
-    try:
-        path = TESTDIR_NAME
-        if extra_path:
-            path = os.path.join(TESTDIR_NAME, *extra_path)
 
-        shutil.rmtree(path, ignore_errors=True)
-    except OSError:
-        pass
+def cleanup_testdir():
+    shutil.rmtree(TESTDIR_NAME, ignore_errors=True)
 
 
 def which(program):
