@@ -84,7 +84,7 @@ def cleanup_testdir(*extra_path):
         if extra_path:
             path = os.path.join(TESTDIR_NAME, *extra_path)
 
-        subprocess.run(["/bin/bash", "-c", f"rm -rf '{path}'"])
+        shutil.rmtree(path, ignore_errors=True)
     except OSError:
         pass
 
