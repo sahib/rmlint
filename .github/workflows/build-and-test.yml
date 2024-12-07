@@ -34,7 +34,7 @@ jobs:
         #  use it to speed up the run.
         run: |
           sudo mkdir "${RM_TS_DIR}"
-          sudo mount -o size=14G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
+          sudo mount -o size=12G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
       - name: "Test"
         run: |
           RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest -s -v
