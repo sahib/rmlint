@@ -79,6 +79,10 @@ def create_testdir(*extra_path):
         pass
 
 
+def cleanup_testdir():
+    shutil.rmtree(TESTDIR_NAME, ignore_errors=True)
+
+
 def which(program):
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
