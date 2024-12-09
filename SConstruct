@@ -270,9 +270,14 @@ def check_posix_fadvise(context):
 def check_xattr(context):
     rc = 1
 
-    for func in ['getxattr', 'setxattr', 'removexattr', 'listxattr']:
+    for func, funcargs in (
+        ('getxattr', '"path", "name", 0, 0'),
+        ('setxattr', '"path", "name", 0, 0, 0'),
+        ('removexattr', '"path", "name"'),
+        ('listxattr', '"path", "name", 0'),
+    ):
         if tests.CheckFunc(
-            context, func,
+            context, func, funcargs=funcargs,
             header=
                 '#include <sys/types.h>'
                 '#include <sys/xattr.h>'
@@ -291,9 +296,14 @@ def check_xattr(context):
 def check_lxattr(context):
     rc = 1
 
-    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr']:
+    for func, funcargs in (
+        ('lgetxattr', '"path", "name", 0, 0'),
+        ('lsetxattr', '"path", "name", 0, 0, 0'),
+        ('lremovexattr', '"path", "name"'),
+        ('llistxattr', '"path", "name", 0'),
+    ):
         if tests.CheckFunc(
-            context, func,
+            context, func, funcargs=funcargs,
             header=
                 '#include <sys/types.h>'
                 '#include <sys/xattr.h>'
