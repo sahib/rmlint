@@ -704,7 +704,7 @@ FORMATTERS
   that is not directly possible with rmlint's built-in options. A very handy tool here is ``jq``.
   Here is an example to output all original files directly from a ``rmlint`` run:
 
-  ``$ rmlint -o | json jq -r '.[1:-1][] | select(.is_original) | .path'``
+  ``$ rmlint -o json | jq -r '.[1:-1][] | select(.is_original) | .path'``
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
