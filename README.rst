@@ -51,7 +51,7 @@ Finds…
 - ``btrfs`` support.
 - ...
 
-It runs and compiles under most Unices, including Linux, FreeBSD and Darwin.
+It runs and compiles under most Unices, including Linux, FreeBSD, Darwin and Solaris.
 The main target is Linux though, some optimisations might not be available
 elsewhere.
 
