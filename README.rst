@@ -66,6 +66,10 @@ Chances are that you might have `rmlint` already as readily made package in your
 favourite distribution. If not, you might consider 
 `compiling it from source <http://rmlint.readthedocs.org/en/latest/install.html>`_.
 
+
+.. image:: https://repology.org/badge/vertical-allrepos/rmlint.svg
+   :target: https://repology.org/project/rmlint/versions
+
 DOCUMENTATION
 -------------
 
