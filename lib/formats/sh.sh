@@ -130,11 +130,9 @@ check_for_equality() {
     if [ -f "$1" ]; then
         # Use the more lightweight builtin `cmp` for regular files:
         cmp -s "$1" "$2"
-        echo $?
     else
         # Fallback to `rmlint --equal` for directories:
         "$RMLINT_BINARY" -p --equal %s "$1" "$2"
-        echo $?
     fi
 }
 
@@ -159,7 +157,8 @@ original_check() {
     if [ -z "$DO_PARANOID_CHECK" ]; then
         return 0
     else
-        if [ "$(check_for_equality "$1" "$2")" -ne "0" ]; then
+        # Check latest result.
+        if ! check_for_equality "$1" "$2"; then
             echo "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}"
             return 1
         fi
