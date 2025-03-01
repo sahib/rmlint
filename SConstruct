@@ -314,7 +314,7 @@ def check_c11(context):
 
     context.Message('Checking for -std=c11 support...')
     try:
-        cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c'
+        cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c -o /dev/null'
         subprocess.check_call(
             cmd.format(cc=conf.env['CC']),
             shell=True
