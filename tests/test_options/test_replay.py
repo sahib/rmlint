@@ -459,3 +459,26 @@ def test_replay_unpack_directories(usual_setup_usual_teardown):
     expected["part_of_directory"] = EXPECTED_WITH_TREEMERGE["part_of_directory"]
 
     assert data_by_type(data) == expected
+
+
+def test_replay_hardlink(usual_setup_usual_teardown):
+    create_file('xxx', 'file_one')
+    create_link('file_one', 'file_one_link')
+    create_file('yyyy', 'file_two')
+    create_link('file_two', 'file_two_link')
+
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+
+    head, *data, footer = run_rmlint('-o json:{p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 4
+
+    head, *data, footer = run_rmlint('--replay {p}'.format(
+        p=replay_path
+    ))
+
+    assert len(data) == 4
+    assert footer['duplicates'] == 2
+    assert footer['duplicate_sets'] == 2
