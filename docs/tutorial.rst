@@ -858,7 +858,7 @@ that can be easily solved with some other tools.
 Copying unique files
 ~~~~~~~~~~~~~~~~~~~~
 
-Imagine you have a folder from which you want to extract one copy of each file
+Imagine you have a directory from which you want to extract one copy of each file
 by content. This does not only mean unique files, but also original files - but
 not their duplicates. This sounds like a job for the ``uniques`` formatter
 (which outputs all unique paths, one by line) and ``jq``. ``jq`` is a great
@@ -872,7 +872,7 @@ little `tool`_ which makes it really easy to extract data from a ``json`` file:
     # - unique_files: Files that have a unique checksum in the directory.
     # - original_files: Files that have the "is_original" field set to true in the json output.
     # The '.[1:-1]' part is for filtering the header and footer part of the json response.
-    $ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
+    $ rmlint dir/ -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
     # Now we only need to combine both files:
     $ cat unique_files original_files
 
