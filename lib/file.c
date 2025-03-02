@@ -180,6 +180,13 @@ gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b) {
     return g_ascii_strcasecmp(file_a->folder->basename, file_b->folder->basename);
 }
 
+gint rm_file_dirnames_cmp(const RmFile *file_a, const RmFile *file_b) {
+    if (!file_a->folder->parent || !file_b->folder->parent)
+        return 0;
+
+    return g_ascii_strcasecmp(file_a->folder->parent->basename, file_b->folder->parent->basename);
+}
+
 void rm_file_hardlink_add(RmFile *head, RmFile *link) {
     if(!head->hardlinks) {
         head->hardlinks = g_queue_new();
