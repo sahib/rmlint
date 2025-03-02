@@ -191,9 +191,9 @@ static void rm_fmt_head(RmSession *session, _UNUSED RmFmtHandler *parent, FILE *
         {
             rm_fmt_json_key(out, "description", "rmlint json-dump of lint files");
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key(out, "cwd", session->cfg->iwd);
+            rm_fmt_json_key_unsafe(out, "cwd", session->cfg->iwd);
             rm_fmt_json_sep(self, out);
-            rm_fmt_json_key(out, "args", session->cfg->joined_argv);
+            rm_fmt_json_key_unsafe(out, "args", session->cfg->joined_argv);
             rm_fmt_json_sep(self, out);
             rm_fmt_json_key(out, "version", RM_VERSION);
             rm_fmt_json_sep(self, out);
