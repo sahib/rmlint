@@ -377,4 +377,10 @@ RmFile *rm_file_copy(RmFile *file);
  */
 gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b);
 
+/**
+ * @brief Compare relative paths of two files
+ * @retval true if relative paths match.
+ */
+gint rm_file_relpaths_cmp(const RmFile *file_a, const RmFile *file_b);
+
 #endif /* end of include guard */
