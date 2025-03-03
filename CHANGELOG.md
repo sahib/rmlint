@@ -6,10 +6,15 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.10.3 Ludicrous Lemur] - Unreleased
 
+### Changed
+- Documentation updates
+
 ### Fixed
 - Fix string format in tests (#602).
 - Fix configuration checks of xattr-functions (#605).
+- Fix recheck in generated shell-script (#683).
 - Avoid generating an empty '-.o' file during configuration (#686).
+- Escape CWD and args strings in generated JSON output (#691).
 
 ## [2.10.2 Ludicrous Lemur] -- 2023-08-08
 
