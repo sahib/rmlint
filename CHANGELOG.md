@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.10.3 Ludicrous Lemur] - Unreleased
+
+### Fixed
+- Fix string format in tests (#602).
+- Fix configuration checks of xattr-functions (#605).
+- Avoid generating an empty '-.o' file during configuration (#686).
+
 ## [2.10.2 Ludicrous Lemur] -- 2023-08-08
 
 ### Changed
