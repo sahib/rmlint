@@ -810,7 +810,7 @@ OTHER STAND-ALONE COMMANDS
 
     This command is similar to ``cp --reflink=always <src> <dest>``
     except that it (a) checks that ``src`` and ``dest`` have identical data, and
-    it makes no changes to ``dest``'s metadata.
+    (b) it makes no changes to ``dest``'s metadata.
 
     Running with ``-r`` option will enable deduplication of read-only [btrfs]
     snapshots (requires root).
