@@ -1009,7 +1009,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         /* all the "easy" ways failed... do manual check of all buffers */
         GSList *a_iter = pa->buffers;
         GSList *b_iter = pb->buffers;
-        guint bytes = 0;
         while(a_iter && b_iter) {
             if(!rm_buffer_equal(a_iter->data, b_iter->data)) {
                 rm_log_error_line(
@@ -1017,7 +1016,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
                     "shadow hash");
                 return false;
             }
-            bytes += ((RmBuffer *)a_iter->data)->len;
             a_iter = a_iter->next;
             b_iter = b_iter->next;
         }
