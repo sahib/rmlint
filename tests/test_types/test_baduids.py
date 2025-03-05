@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 import subprocess
@@ -24,8 +23,7 @@ def exec_cmds(cmds):
             print(cmd, 'failed:', err)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_ids():
+def test_bad_ids(usual_setup_usual_teardown):
     if not runs_as_root():
         return
 

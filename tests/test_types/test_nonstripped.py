@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-
 import os
 
-from nose import with_setup
-from nose.plugins.skip import SkipTest
 from tests.utils import *
 
 SOURCE = '''
@@ -29,8 +25,7 @@ def create_binary(path, stripped=False):
     subprocess.run(command, input=SOURCE, shell=True, universal_newlines=True, check=True)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_negative():
+def test_negative(usual_setup_usual_teardown):
     if has_feature('nonstripped') is False:
         return
 
@@ -42,8 +37,7 @@ def test_negative():
     assert len(data) == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_positive():
+def test_positive(usual_setup_usual_teardown):
     if has_feature('nonstripped') is False:
         return
 
@@ -56,10 +50,9 @@ def test_positive():
 
 
 # regression test for GitHub issue #555
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_executable_fifo():
+def test_executable_fifo(usual_setup_usual_teardown):
     if has_feature('nonstripped') is False:
-        raise SkipTest("needs 'nonstripped' feature")
+        pytest.skip("needs 'nonstripped' feature")
 
     fifo_path = os.path.join(TESTDIR_NAME, 'fifo')
     os.mkfifo(fifo_path)

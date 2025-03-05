@@ -97,7 +97,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ apt-get install pkg-config git scons python3-sphinx python3-nose gettext build-essential
+    $ apt-get install pkg-config git scons python3-sphinx python3-pytest gettext build-essential
     # Optional dependencies for more features:
     $ apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
     # Optional dependencies for the GUI:

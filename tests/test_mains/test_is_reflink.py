@@ -1,8 +1,5 @@
-# encoding: utf-8
-
 import os
 import subprocess
-from nose import with_setup
 from tests.utils import *
 
 
@@ -16,8 +13,7 @@ def check_is_reflink_status(status_code, *paths):
         )
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_arguments():
+def test_bad_arguments(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxx', 'b')
     path_c = create_file('xxx', 'c')
@@ -29,28 +25,24 @@ def test_bad_arguments():
         check_is_reflink_status(1, *paths)  # RM_LINK_NONE
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_directories():
+def test_directories(usual_setup_usual_teardown):
     path_a = create_dirs('dir_a')
     path_b = create_dirs('dir_b')
     check_is_reflink_status(3, path_a, path_b)  # RM_LINK_NOT_FILE
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_different_sizes():
+def test_different_sizes(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxxx', 'b')
     check_is_reflink_status(4, path_a, path_b)  # RM_LINK_WRONG_SIZE
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_same_path():
+def test_same_path(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     check_is_reflink_status(6, path_a, path_a)  # RM_LINK_SAME_FILE
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_path_double():
+def test_path_double(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'dir/a')
     create_link('dir', 'dir_symlink', symlink=True)
     path_b = os.path.join(TESTDIR_NAME, 'dir_symlink/a')
@@ -68,16 +60,14 @@ def test_path_double():
         assert False
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hardlinks():
+def test_hardlinks(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = path_a + '_hardlink'
     create_link('a', 'a_hardlink', symlink=False)
     check_is_reflink_status(8, path_a, path_b)  # RM_LINK_HARDLINK
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_symlink():
+def test_symlink(usual_setup_usual_teardown):
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxx', 'b') + '_symlink'
     create_link('b', 'b_symlink', symlink=True)
@@ -116,23 +106,17 @@ def _make_reflink_testcase(extents, hole_extents=None, break_link=False):
 
 
 # GitHub issue #527: Make sure rmlint does not skip every other extent.
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_second_extent_differs():
+def test_second_extent_differs(usual_setup_usual_teardown, needs_reflink_fs):
     _make_reflink_testcase(extents=5, break_link=True)
 
 
 # GitHub issue #528, part 1: Make sure the last extent is not ignored.
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_last_extent_differs():
+def test_last_extent_differs(usual_setup_usual_teardown, needs_reflink_fs):
     _make_reflink_testcase(extents=2, break_link=True)
 
 
 # GitHub issue #528, part 2: Make sure files that end in a hole can be identified as reflinked.
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_reflink_ends_with_hole():
+def test_reflink_ends_with_hole(usual_setup_usual_teardown, needs_reflink_fs):
     _make_reflink_testcase(extents=1, hole_extents=1)
 
 
@@ -164,9 +148,7 @@ def _hole_testcase_inner(extents):
 
 # GitHub issue #611: Make sure holes can be detected when the physical offsets and logical
 # extent ends are otherwise the same.
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hole_before_extent():
+def test_hole_before_extent(usual_setup_usual_teardown, needs_reflink_fs):
     for infd, outfd in _hole_testcase_inner(extents=2):
         # copy first half of first extent with 4K offset
         _copy_file_range(infd, outfd, kb(4), kb(0), kb(4))
@@ -176,9 +158,7 @@ def test_hole_before_extent():
 
 # GitHub issue #530: Make sure physically adjacent extents aren't merged if there is a
 # hole between them logically.
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hole_between_extents():
+def test_hole_between_extents(usual_setup_usual_teardown, needs_reflink_fs):
     for infd, outfd in _hole_testcase_inner(extents=1):
         # copy first extent
         _copy_file_range(infd, outfd, kb(8), kb(0), kb(0))
@@ -186,8 +166,7 @@ def test_hole_between_extents():
         _copy_file_range(infd, outfd, kb(4), kb(8), kb(12))
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_default_outputs_disabled():
+def test_default_outputs_disabled(usual_setup_usual_teardown):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 

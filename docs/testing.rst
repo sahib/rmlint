@@ -5,7 +5,7 @@ Testsuite
 complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
-The tests are based on ``nosetest`` and are written in ``python>=3.0``.
+The tests are based on ``pytest`` and are written in ``python>=3.0``.
 Every testcase just runs the (previously built) ``rmlint`` binary a
 and parses its json output. So they are technically blackbox-tests.
 
@@ -34,17 +34,17 @@ variables which are:
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 - ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
 
-Additionally slow tests can be omitted with by appending ``-a '!slow'`` to 
-the commandline. More information on this syntax can be found on the `nosetest
+Additionally slow tests can be omitted with by appending ``-k 'not slow'`` to
+the commandline. More information on this syntax can be found on the `pytest
 documentation`_.
 
-.. _`nosetest documentation`: http://nose.readthedocs.org/en/latest/plugins/attrib.html
+.. _`pytest documentation`: https://docs.pytest.org/en/stable/example/markers.html
 
 Before each release we call the testsuite (at least) like this:
 
 .. code-block:: bash
 
-   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 nosetests-3.4 -s -a '!slow !known_issue'
+   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'not slow and not known_issue'
 
 The ``sudo`` here is there for executing some tests that need root access (like
 the creating of bad user and group ids). Most tests will work without.
@@ -59,7 +59,7 @@ were executed (and how often) by the testsuite. Here's a short quickstart using
 .. code-block:: bash
 
     $ CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-fprofile-arcs -ftest-coverage" scons -j4 DEBUG=1
-    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 nosetests-3.4 -s -a '!slow !known_issue'
+    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'slow and not known_issue'
     $ lcov --capture --directory . --output-file coverage.info
     $ genhtml coverage.info --output-directory out
 
@@ -85,11 +85,9 @@ A template for a testcase looks like this:
 
 .. code-block:: python
 
-    from nose import with_setup
     from tests.utils import *
 
-    @with_setup(usual_setup_func, usual_teardown_func)
-    def test_basic():
+    def test_basic(usual_setup_usual_teardown):
         create_file('xxx', 'a')
         create_file('xxx', 'b')
 
@@ -117,11 +115,10 @@ Rules
 
   .. code-block:: python
 
-    from nose.plugins.attrib import attr
+    import pytest
 
-    @attr('slow')
-    @with_setup(usual_setup_func, usual_teardown_func)
-    def test_debian_support():
+    @pytest.mark.slow
+    def test_debian_support(usual_setup_usual_teardown):
         assert random.choice([True, False]):
 
 * Unresolved issues can be marked with `known_issue` attribute to avoid failing automated travis testing

@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-
 import os
 import subprocess
+import pytest
 
-from nose import with_setup
 from tests.utils import *
-from parameterized import parameterized
 
 
 def create_files():
@@ -60,8 +57,7 @@ def check(data, write_cache):
     assert path_in('4.d', dupe_files)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr_basic():
+def test_xattr_basic(usual_setup_usual_teardown):
     create_files()
 
     for _ in range(2):
@@ -76,9 +72,8 @@ def test_xattr_basic():
         head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
 
 
-@parameterized([("", ), ("-D", )])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr_detail(extra_opts):
+@pytest.mark.parametrize("extra_opts", ["", "-D"])
+def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
     if not runs_as_root():
         # This tests need a ext4 fs which is created during the test.
         # The mount step sadly needs root privileges.
@@ -145,8 +140,7 @@ def test_xattr_detail(extra_opts):
 
 # regression test for GitHub issue #475
 # NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_treemerge_xattr_hardlink():
+def test_treemerge_xattr_hardlink(usual_setup_usual_teardown):
     create_file('xxx', 'a/x')
     create_file('yyy', 'a/y')
     create_file('xxx', 'b/x')
@@ -165,9 +159,8 @@ def test_treemerge_xattr_hardlink():
 
 
 # NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
-@parameterized([('-q 1',), ('-Q 1',), ('-q 50%',), ('-Q 50%',)])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_clamp_xattr_false_negative(clamp):
+@pytest.mark.parametrize("clamp", ['-q 1', '-Q 1', '-q 50%', '-Q 50%'])
+def test_clamp_xattr_false_negative(usual_setup_usual_teardown, clamp):
     create_file('xxx', 'a')
     create_file('yyy', 'b')
 
@@ -187,9 +180,8 @@ def test_clamp_xattr_false_negative(clamp):
 
 
 # NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
-@parameterized([('-q 2',), ('-Q 1',), ('-q 70%',), ('-Q 50%',)])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_clamp_xattr_false_positive(clamp):
+@pytest.mark.parametrize("clamp", ['-q 2', '-Q 1', '-q 70%', '-Q 50%'])
+def test_clamp_xattr_false_positive(usual_setup_usual_teardown, clamp):
     # directories 'a' and 'b' obviously do not match
     # extra files are needed to satisfy preprocessing, which compares file size
     create_file('xxx', '1')

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 import os
 
@@ -17,8 +16,7 @@ def create_bad_link(link_name):
         os.remove(fake_target)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_basic():
+def test_basic(usual_setup_usual_teardown):
     create_bad_link('imbad')
 
     for option in ('-f', '-F', '--see-symlinks'):

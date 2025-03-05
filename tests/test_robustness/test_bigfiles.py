@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-
 import os
 import subprocess
 
-from nose import with_setup
-from nose.plugins.attrib import attr
 from tests.utils import *
 
 FILE_SIZE_KB = 10000
@@ -15,8 +11,7 @@ KBYTES_FROM_END = 10
 LARGE_FILE_SIZE = 5 * 1024**3  # 5 GiB
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bigfiles():
+def test_bigfiles(usual_setup_usual_teardown):
 
     num_bytes = int(FILE_SIZE_KB * 1024)
     # create two identical files and a third one which differs near the end:
@@ -59,8 +54,7 @@ def _setup_large_file_offset():
     return path_a, path_b, path_c
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hash_utility():
+def test_hash_utility(usual_setup_usual_teardown):
     path_a, path_b, path_c = _setup_large_file_offset()
 
     # only files 'b' and 'c' should match

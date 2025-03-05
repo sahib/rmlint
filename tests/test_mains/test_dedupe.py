@@ -1,15 +1,7 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-
-from nose import with_setup
-import re
-
 from tests.utils import *
 
-
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_equal_files():
+def test_equal_files(usual_setup_usual_teardown, needs_reflink_fs):
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
 
@@ -29,9 +21,7 @@ def test_equal_files():
             with_json=False)
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_different_files():
+def test_different_files(usual_setup_usual_teardown, needs_reflink_fs):
     path_a = create_file('1234', 'a')
     path_b = create_file('4321', 'b')
 
@@ -44,9 +34,7 @@ def test_different_files():
             verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_bad_arguments():
+def test_bad_arguments(usual_setup_usual_teardown, needs_reflink_fs):
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
     path_c = create_file('1234', 'c')
@@ -64,9 +52,7 @@ def test_bad_arguments():
                 verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_directories():
+def test_directories(usual_setup_usual_teardown, needs_reflink_fs):
     path_a = os.path.dirname(create_dirs('dir_a'))
     path_b = os.path.dirname(create_dirs('dir_b'))
 
@@ -79,9 +65,7 @@ def test_directories():
             verbosity="")
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_dedupe_works():
+def test_dedupe_works(usual_setup_usual_teardown, needs_reflink_fs):
 
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1' * 100000, 'a')
@@ -115,9 +99,7 @@ def test_dedupe_works():
         )
 
 
-@needs_reflink_fs
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_clone_handler():
+def test_clone_handler(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1' * 100000, 'a')
     path_b = create_file('1' * 100000, 'b')

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_negative():
+def test_negative(usual_setup_usual_teardown):
     create_file('xxx', 'a.png')
     create_file('xxx', 'b.jpg')
     create_file('xxx', 'b')
@@ -14,8 +12,7 @@ def test_negative():
     assert footer['duplicates'] == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_positive():
+def test_positive(usual_setup_usual_teardown):
     create_file('xxx', 'a.png')
     create_file('xxx', 'b.png')
     head, *data, footer = run_rmlint('-e')

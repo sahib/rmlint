@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
-
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_simple():
+def test_simple(usual_setup_usual_teardown):
     create_file('xxx', 'not_empty/a')
     create_file('', 'empty_but_with_file/a')
     create_dirs('really_empty')
@@ -21,8 +18,7 @@ def test_simple():
     assert data[1]['type'] == "emptyfile"
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_deep():
+def test_deep(usual_setup_usual_teardown):
     create_dirs('1/2/3/4/5')
     head, *data, footer = run_rmlint('-T "none +ed"')
 
@@ -39,8 +35,7 @@ def test_deep():
     assert data[1]['path'].endswith('4')
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hidden():
+def test_hidden(usual_setup_usual_teardown):
     create_file('xxx', 'not_empty/.hidden')
     head, *data, footer = run_rmlint('-T "none +ed"')
 
