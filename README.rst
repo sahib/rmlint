@@ -102,7 +102,7 @@ Here's a list of developers to blame:
 
 ===================================  ============================= ===========================================
 *Christopher Pahl*                   https://github.com/sahib      2010-2017
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2017
+*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2021
 *Cebtenzzre*                         https://github.com/Cebtenzzre 2021-2023
 ===================================  ============================= ===========================================
 
