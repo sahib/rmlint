@@ -1,11 +1,10 @@
       
 ======
 
-
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
 
-``rmlint`` finds space waste and other broken things on your filesystem and
+`rmlint` finds space waste and other broken things on your filesystem and
 offers to remove it.
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
@@ -48,7 +47,7 @@ Finds…
 - Search for files only newer than a certain ``mtime``.
 - Many ways to handle duplicates.
 - Caching and replaying.
-- ``btrfs`` support.
+- `BTRFS` support.
 - ...
 
 It runs and compiles under most Unices, including Linux, FreeBSD and Darwin.
@@ -62,7 +61,7 @@ elsewhere.
 INSTALLATION
 ------------
 
-Chances are that you might have ``rmlint`` already as readily made package in
+Chances are that you might have `rmlint` already as readily made package in
 your favourite distribution. If not, you might consider
 `compiling it from source <http://rmlint.readthedocs.org/en/latest/install.html>`_.
 
@@ -86,7 +85,7 @@ Sometimes we can be reached via IRC: ``#rmlint`` on ``irc.freenode.net``.
 BUGS
 ----
 
-If you found bugs, having trouble running ``rmlint`` or want to suggest new
+If you found bugs, having trouble running `rmlint` or want to suggest new
 features please `read this <http://rmlint.readthedocs.org/en/latest/developers.html>`_.
 
 Also read the `BUGS <http://rmlint.readthedocs.org/en/latest/rmlint.1.html#bugs>`_ section of the `manpage <http://rmlint.rtfd.org/en/latest/rmlint.1.html>`_
@@ -103,12 +102,12 @@ Here's a list of developers to blame:
 ===================================  ============================= ===========================================
 
 There are some other people that helped us of course.
-Please see the AUTHORS distributed along ``rmlint``.
+Please see the AUTHORS distributed along `rmlint`.
 
 LICENSE
 -------
 
-``rmlint`` is licensed under the conditions of the
+`rmlint` is licensed under the conditions of the
 `GPLv3 <https://www.gnu.org/licenses/quick-guide-gplv3.html.en>`_.
 See the
 `COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`_ 
