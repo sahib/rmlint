@@ -30,7 +30,7 @@ def test_bigfiles(usual_setup_usual_teardown):
 
 def _setup_large_file_offset():
     if not has_feature('bigfiles'):
-        raise_skiptest('rmlint built without large file support')
+        pytest.skip('rmlint built without large file support')
 
     path_a = create_file('', 'a')
     path_b = create_file('', 'b')
@@ -39,7 +39,7 @@ def _setup_large_file_offset():
     os.truncate(path_a, 4 * 1024)
     if os.stat(path_a).st_blocks:
         # only really works on Linux
-        raise_skiptest('cannot make sparse files with truncate()')
+        pytest.skip('cannot make sparse files with truncate()')
 
     # allocate large sparse files
     os.truncate(path_a, LARGE_FILE_SIZE)
