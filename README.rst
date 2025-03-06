@@ -1,12 +1,11 @@
       
 ======
 
-
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
 
-`rmlint` finds space waste and other broken things on your filesystem and offers
-to remove it. 
+`rmlint` finds space waste and other broken things on your filesystem and
+offers to remove it.
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: http://rmlint.rtfd.org
@@ -48,7 +47,7 @@ Finds…
 - Search for files only newer than a certain ``mtime``.
 - Many ways to handle duplicates.
 - Caching and replaying.
-- ``btrfs`` support.
+- `BTRFS` support.
 - ...
 
 It runs and compiles under most Unices, including Linux, FreeBSD and Darwin.
@@ -62,8 +61,8 @@ elsewhere.
 INSTALLATION
 ------------
 
-Chances are that you might have `rmlint` already as readily made package in your
-favourite distribution. If not, you might consider 
+Chances are that you might have `rmlint` already as readily made package in
+your favourite distribution. If not, you might consider
 `compiling it from source <http://rmlint.readthedocs.org/en/latest/install.html>`_.
 
 
