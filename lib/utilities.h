@@ -106,6 +106,8 @@ WARN_UNUSED_RESULT static inline int rm_sys_lstat(const char *path, RmStat *buf)
 static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
     return (gdouble)stat->st_mtimespec.tv_sec + stat->st_mtimespec.tv_nsec / 1000000000.0;
+#elif defined(__sun) && !(!defined(__XOPEN_OR_POSIX) || defined(__EXTENSIONS__))
+    return (gdouble)stat->st_mtim.__tv_sec + stat->st_mtim.__tv_nsec / 1000000000.0;
 #else
     return (gdouble)stat->st_mtim.tv_sec + stat->st_mtim.tv_nsec / 1000000000.0;
 #endif
