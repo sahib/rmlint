@@ -87,5 +87,5 @@ jobs:
       - name: "Cleanup"
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
-            sudo umount "${RM_TS_DIR}"
-            sudo rmdir "${RM_TS_DIR}"
+          sudo umount "${RM_TS_DIR}"
+          sudo rmdir "${RM_TS_DIR}"
