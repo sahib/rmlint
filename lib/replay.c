@@ -834,7 +834,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
         rm_log_debug("[okay]\n");
 
-        if(file->digest != NULL && !rm_digest_equal(file->digest, last_digest)) {
+        if((!file->digest->bytes && file->is_original) || !rm_digest_equal(file->digest, last_digest)) {
             rm_digest_free(last_digest);
             last_digest = rm_digest_copy(file->digest);
             rm_parrot_cage_push_to_group(cage, &group, false);
@@ -873,6 +873,9 @@ static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
     for(GList *iter = cage->groups->head; iter; iter = iter->next) {
         GQueue *group = iter->data;
         RmFile *head_file = group->head->data;
+
+        if (!head_file->digest->bytes)
+            continue;
 
         GQueue *existing_group = g_hash_table_lookup(digest_to_group, head_file->digest);
 
