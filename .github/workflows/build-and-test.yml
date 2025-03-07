@@ -36,7 +36,7 @@ jobs:
       - name: "Check need for testing"
         # TODO also include skipping build but allow docs to be processed
         run: |
-          if git diff --exit-code --name-only origin/$GITHUB_BASE_REF HEAD ':!.gitignore' ':!docs' ':!*.md' ':!*.txt'; then
+          if git diff --exit-code --name-only origin/$GITHUB_BASE_REF...$GITHUB_SHA ':!.gitignore' ':!docs' ':!*.md' ':!*.txt'; then
             echo "RUN_TEST=false" >> "$GITHUB_ENV"
             echo "RUN_TEST = false"
           else
