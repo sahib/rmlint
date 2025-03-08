@@ -1,0 +1,134 @@
+name: Multi-distro build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - master
+
+jobs:
+  multi-distro-build:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      matrix:
+        build:
+          #############
+          # AlmaLinux #
+          #############
+          - {
+            tag: "almalinux:9",
+            installcmd: "dnf install -y epel-release && dnf install -y",
+            pkgs: "glib2-devel json-glib-devel gcc python3-scons",
+          }
+          - {
+            tag: "almalinux:10-kitten",
+            installcmd: "dnf install -y epel-release && dnf install -y",
+            pkgs: "glib2-devel json-glib-devel gcc python3-scons",
+          }
+          ##########
+          # Alpine #
+          ##########
+          - {
+            tag: "alpine:latest",
+            installcmd: "apk add",
+            pkgs: "build-base glib-dev json-glib-dev pkgconf scons",
+          }
+          #############
+          # ArchLinux #
+          #############
+          - {
+            tag: "archlinux:latest",
+            installcmd: "pacman -Sy --noconfirm",
+            pkgs: "base-devel git json-glib scons",
+          }
+          ###########
+          # CachyOS #
+          ###########
+          - {
+            tag: "cachyos/cachyos:latest",
+            installcmd: "pacman -Sy --noconfirm",
+            pkgs: "base-devel git json-glib scons",
+          }
+          ##########
+          # Debian #
+          ##########
+          - {
+            tag: "debian:bullseye",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+          - {
+            tag: "debian:bookworm",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+          - {
+            tag: "debian:trixie",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+          ##########
+          # Fedora #
+          ##########
+          - {
+            tag: "fedora:latest",
+            installcmd: "dnf install -y",
+            pkgs: "glib2-devel json-glib-devel gcc python3-scons",
+          }
+          ############
+          # OpenSUSE #
+          ############
+          - {
+            tag: "opensuse/leap:latest",
+            installcmd: "zypper -n install",
+            pkgs: "json-glib-devel glib2-devel patterns-devel-base-devel_basis scons",
+          }
+          - {
+            tag: "opensuse/tumbleweed:latest",
+            installcmd: "zypper -n install",
+            pkgs: "json-glib-devel glib2-devel patterns-devel-base-devel_basis scons",
+          }
+          ##########
+          # Ubuntu #
+          ##########
+          - {
+            tag: "ubuntu:20.04",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+          - {
+            tag: "ubuntu:22.04",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+          - {
+            tag: "ubuntu:24.04",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+          - {
+            tag: "ubuntu:rolling",
+            env: "DEBIAN_FRONTEND=noninteractive",
+            installcmd: "apt update && apt install -y --no-install-recommends",
+            pkgs: "clang gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-cffi python3-dev python3-pip python3-setuptools python3-sphinx scons",
+          }
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Build on ${{ matrix.build.tag }}"
+        run: >
+          echo "
+            export UNUSED_VAR_SO_THIS_CMD_IS_NEVER_EMPTY= ${{ matrix.build.env }} 
+            ${{ matrix.build.installcmd }} ${{ matrix.build.pkgs }}
+            cd /build
+            scons config
+            scons VERBOSE=1 DEBUG=1 O=release
+            exit
+          " | docker run --rm -i -v "$PWD:/build" "${{ matrix.build.tag }}" sh
