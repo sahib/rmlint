@@ -81,8 +81,6 @@ An online version of the manpage is available at:
 
     http://rmlint.rtfd.org/en/latest/rmlint.1.html
 
-Sometimes we can be reached via IRC: ``#rmlint`` on ``irc.libera.chat``.
-
 BUGS
 ----
 
