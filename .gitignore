@@ -30,6 +30,7 @@ gui/app/resources/app.gresource
 
 rmlint.*.sh
 rmlint.*.json
+.rmlint.json
 
 # JetBrains' IDE
 .idea
