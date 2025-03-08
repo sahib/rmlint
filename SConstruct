@@ -828,8 +828,8 @@ if 'release' in COMMAND_LINE_TARGETS:
         )
 
         cmds = [
-            'sed -i "s/2\.0\.0/{v}/g" po/rmlint.pot',
-            'sed -i "s/^Version:\(\s*\)2\.0\.0/Version:\\1{v}/g" pkg/fedora/rmlint.spec'
+            r'sed -i "s/2\.8\.0/{v}/g" po/rmlint.pot',
+            r'sed -i "s/^Version:\(\s*\)2\.8\.0/Version:\\1{v}/g" pkg/fedora/rmlint.spec'
         ]
 
         for cmd in cmds:
