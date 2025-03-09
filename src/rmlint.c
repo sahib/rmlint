@@ -34,9 +34,6 @@
 #include "../lib/api.h"
 #include "../lib/config.h"
 
-#if HAVE_JSON_GLIB && !GLIB_CHECK_VERSION(2, 36, 0)
-#include <glib-object.h>
-#endif
 
 static char *remove_color_escapes(char *message) {
     char *dst = message;
@@ -135,11 +132,6 @@ int main(int argc, const char **argv) {
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
-
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
 
     /* Parse commandline */
     if(rm_cmd_parse_args(argc, (char **)argv, &session) != 0) {
