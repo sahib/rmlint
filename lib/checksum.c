@@ -991,6 +991,10 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         return false;
     }
 
+    if(a->bytes == 0) {
+        return true; /* this non-sense is used in replays */
+    }
+
     if(a->type == RM_DIGEST_PARANOID) {
         RmParanoid *pa = a->state;
         RmParanoid *pb = b->state;
