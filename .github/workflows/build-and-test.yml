@@ -14,31 +14,53 @@ jobs:
       RM_TS_DIR: "/tmp/rmlint-unit-testdir"
     steps:
       - uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
+
       - name: "Prepare build environment"
         run: |
-          sudo apt update
-          sudo apt install -y --no-install-recommends \
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
             scons python3-sphinx gettext python3-setuptools \
             libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev \
             clang python3-pip python3-cffi python3-dev libffi-dev
           pip3 install -r tests/requirements.txt
+          
       - name: "Build"
         # Todo: eventually run tests with valgrind (RM_TS_USE_VALGRIND)
         # Todo enable slow tests in pytest
         run: |
           scons config
           scons VERBOSE=1 DEBUG=1 O=release
+        
+      - name: "Check need for testing"
+        # TODO also include skipping build but allow docs to be processed
+        run: |
+          if git diff --exit-code --name-only origin/$GITHUB_BASE_REF...$GITHUB_SHA ':!.gitignore' ':!docs' ':!*.md' ':!*.txt'; then
+            echo "RUN_TEST=false" >> "$GITHUB_ENV"
+            echo "RUN_TEST = false"
+          else
+            echo "RUN_TEST=true" >> "$GITHUB_ENV"
+            echo "RUN_TEST = true"
+          fi
+  
       - name: "Prepare test environment"
+        # TODO Ignore linter warning. See https://github.com/github/vscode-github-actions/issues/222        
+        if: ${{ env.RUN_TEST == 'true' }}
         # The test suite is seriously disk-intensive. Given that linux
         #  instances hosted in GitHub have 16G of RAM available we will
         #  use it to speed up the run.
         run: |
           sudo mkdir "${RM_TS_DIR}"
           sudo mount -o size=12G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
-      - name: "Test"
+
+      - name: "Test it"
+        if: ${{ env.RUN_TEST == 'true' }}
         run: |
           RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest -s -v
+
       - name: CoW tests
+        if: ${{ env.RUN_TEST == 'true' }}
         shell: bash
         run: |
           sudo umount "${RM_TS_DIR}"
@@ -61,7 +83,9 @@ jobs:
               items[:] = selected_items
           EOF
           RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest -s -v
+          
       - name: "Cleanup"
+        if: ${{ env.RUN_TEST == 'true' }}
         run: |
           sudo umount "${RM_TS_DIR}"
           sudo rmdir "${RM_TS_DIR}"
