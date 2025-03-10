@@ -15,7 +15,8 @@ GRESOURCE_FILE = 'shredder.gresource.xml'
 GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 
 def read_version():
-    with open('../.version', 'r') as handle:
+    vfp = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, '.version')
+    with open(vfp, 'r') as handle:
         version_string = handle.read()
 
     version_numbers, _ = version_string.split(' ', 1)
@@ -77,10 +78,7 @@ setup(
     long_description='A graphical user interface to rmlint using GTK+',
     author='Christopher Pahl',
     author_email='sahib@online.de',
-    maintainer='Cebtenzzre',
-    maintainer_email='cebtenzzre@gmail.com',
     url='https://rmlint.rtfd.org',
-    license='GPLv3',
     platforms='any',
     cmdclass={
         'install': install_glib_resources,
