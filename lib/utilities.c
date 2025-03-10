@@ -1359,30 +1359,17 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 gdouble rm_iso8601_parse(const char *string) {
-#if GLIB_CHECK_VERSION(2,56,0)
     GDateTime *time_result = g_date_time_new_from_iso8601(string, NULL);
     if(time_result == NULL) {
         rm_log_perror("Converting time failed");
         return 0;
     }
 
-
     gdouble result = g_date_time_to_unix(time_result);
     result += g_date_time_get_microsecond(time_result) / (gdouble)(G_USEC_PER_SEC);
 
     g_date_time_unref(time_result);
     return result;
-#else
-    /* Remove this branch in a few years (written end of 2019) */
-
-    GTimeVal time_result;
-    if(!g_time_val_from_iso8601(string, &time_result)) {
-        rm_log_perror("Converting time failed");
-        return 0;
-    }
-
-    return time_result.tv_sec + time_result.tv_usec / (gdouble)(G_USEC_PER_SEC);
-#endif
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
@@ -1451,119 +1438,4 @@ void rm_running_mean_unref(RmRunningMean *m) {
         g_free(m->values);
         m->values = NULL;
     }
-}
-
-/* This a complete copy of the GLib version here:
- *
- *  https://github.com/GNOME/glib/blob/3dec72b946a527f4b1f35262bddd4afb060409b7/glib/gfileutils.c#L2552
- *
- * The reason we have this here is since rmlint is still often used
- * on older systems (Debian 9...) that don't have a recent enoug GLib.
- * Remove this once some years have progressed.
- */
-gchar *rm_canonicalize_filename (const gchar *filename, const gchar *relative_to) {
-  gchar *canon, *start, *p, *q;
-  guint i;
-
-  g_return_val_if_fail (relative_to == NULL || g_path_is_absolute (relative_to), NULL);
-
-  if (!g_path_is_absolute (filename))
-    {
-      gchar *cwd_allocated = NULL;
-      const gchar  *cwd;
-
-      if (relative_to != NULL)
-        cwd = relative_to;
-      else
-        cwd = cwd_allocated = g_get_current_dir ();
-
-      canon = g_build_filename (cwd, filename, NULL);
-      g_free (cwd_allocated);
-    }
-  else
-    {
-      canon = g_strdup (filename);
-    }
-
-  start = (char *)g_path_skip_root (canon);
-
-  if (start == NULL)
-    {
-      /* This shouldn't really happen, as g_get_current_dir() should
-         return an absolute pathname, but bug 573843 shows this is
-         not always happening */
-      g_free (canon);
-      return g_build_filename (G_DIR_SEPARATOR_S, filename, NULL);
-    }
-
-  /* POSIX allows double slashes at the start to
-   * mean something special (as does windows too).
-   * So, "//" != "/", but more than two slashes
-   * is treated as "/".
-   */
-  i = 0;
-  for (p = start - 1;
-       (p >= canon) &&
-         G_IS_DIR_SEPARATOR (*p);
-       p--)
-    i++;
-  if (i > 2)
-    {
-      i -= 1;
-      start -= i;
-      memmove (start, start+i, strlen (start+i) + 1);
-    }
-
-  /* Make sure we're using the canonical dir separator */
-  p++;
-  while (p < start && G_IS_DIR_SEPARATOR (*p))
-    *p++ = G_DIR_SEPARATOR;
-
-  p = start;
-  while (*p != 0)
-    {
-      if (p[0] == '.' && (p[1] == 0 || G_IS_DIR_SEPARATOR (p[1])))
-        {
-          memmove (p, p+1, strlen (p+1)+1);
-        }
-      else if (p[0] == '.' && p[1] == '.' && (p[2] == 0 || G_IS_DIR_SEPARATOR (p[2])))
-        {
-          q = p + 2;
-          /* Skip previous separator */
-          p = p - 2;
-          if (p < start)
-            p = start;
-          while (p > start && !G_IS_DIR_SEPARATOR (*p))
-            p--;
-          if (G_IS_DIR_SEPARATOR (*p))
-            *p++ = G_DIR_SEPARATOR;
-          memmove (p, q, strlen (q)+1);
-        }
-      else
-        {
-          /* Skip until next separator */
-          while (*p != 0 && !G_IS_DIR_SEPARATOR (*p))
-            p++;
-
-          if (*p != 0)
-            {
-              /* Canonicalize one separator */
-              *p++ = G_DIR_SEPARATOR;
-            }
-        }
-
-      /* Remove additional separators */
-      q = p;
-      while (*q && G_IS_DIR_SEPARATOR (*q))
-        q++;
-
-      if (p != q)
-        memmove (p, q, strlen (q) + 1);
-    }
-
-  /* Remove trailing slashes */
-  if (p > start && G_IS_DIR_SEPARATOR (*(p-1)))
-    *(p-1) = 0;
-
-  return canon;
 }
