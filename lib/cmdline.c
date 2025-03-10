@@ -135,7 +135,7 @@ static void rm_cmd_show_manpage(void) {
 * We try to work around this by manually installing dist-packages to the
 * sys.path by first calling a small bootstrap script.
 */
-static const char RM_PY_BOOTSTRAP[] =
+static const char rm_py_bootstrap[] =
     ""
     "# This is a bootstrap script for the rmlint-gui.                              \n"
     "# See the src/rmlint.c in rmlint's source for more info.                      \n"
@@ -176,7 +176,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         return;
     }
 
-    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, strlen(RM_PY_BOOTSTRAP)) < 0) {
+    if(write(bootstrap_fd, rm_py_bootstrap, sizeof rm_py_bootstrap - 1) < 0) {
         rm_log_warning_line("Could not bootstrap gui: Unable to write to tempfile: %s",
                             g_strerror(errno));
         return;
