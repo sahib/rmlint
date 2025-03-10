@@ -135,30 +135,30 @@ static void rm_cmd_show_manpage(void) {
 * We try to work around this by manually installing dist-packages to the
 * sys.path by first calling a small bootstrap script.
 */
-static const char RM_PY_BOOTSTRAP[] =
+static const char rm_py_bootstrap[] =
     ""
-    "# This is a bootstrap script for the rmlint-gui.                              \n"
-    "# See the src/rmlint.c in rmlint's source for more info.                      \n"
-    "import sys, os, site                                                          \n"
-    "                                                                              \n"
-    "# Also default to dist-packages on debian(-based):                            \n"
-    "sites = site.getsitepackages()                                                \n"
-    "sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites]) \n"
-    "sys.path.extend(sites)                                                        \n"
-    "                                                                              \n"
-    "# Cleanup self:                                                               \n"
-    "try:                                                                          \n"
-    "    os.remove(sys.argv[0])                                                    \n"
-    "except:                                                                       \n"
-    "    print('Note: Could not remove bootstrap script at ', sys.argv[0])         \n"
-    "                                                                              \n"
-    "# Run shredder by importing the main:                                         \n"
-    "try:                                                                          \n"
-    "    import shredder                                                           \n"
-    "    shredder.run_gui()                                                        \n"
-    "except ImportError as err:                                                    \n"
-    "    print('Failed to load shredder:', err)                                    \n"
-    "    print('This might be due to a corrupted install; try reinstalling.')      \n";
+    "# This is a bootstrap script for rmlint-gui (aka Shredder)\n"
+    "# See the lib/cmdline.c in rmlint's source for more info.\n"
+    "import sys, os, site\n"
+    "\n"
+    "# Also default to dist-packages on debian(-based):\n"
+    "sites = site.getsitepackages()\n"
+    "sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites])\n"
+    "sys.path.extend(sites)\n"
+    "\n"
+    "# Cleanup self:\n"
+    "try:\n"
+    "    os.remove(sys.argv[0])\n"
+    "except:\n"
+    "    print('Note: Could not remove bootstrap script at ', sys.argv[0])\n"
+    "\n"
+    "# Run shredder:\n"
+    "try:\n"
+    "    import shredder\n"
+    "    shredder.run_gui()\n"
+    "except ImportError as err:\n"
+    "    print('Failed to load shredder:', err)\n"
+    "    print('This might be due to a corrupted install; try reinstalling.')\n";
 
 static void rm_cmd_start_gui(int argc, const char **argv) {
     const char *commands[] = {"python3", "python", NULL};
@@ -176,7 +176,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         return;
     }
 
-    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, strlen(RM_PY_BOOTSTRAP)) < 0) {
+    if(write(bootstrap_fd, rm_py_bootstrap, sizeof(rm_py_bootstrap) - 1) < 0) {
         rm_log_warning_line("Could not bootstrap gui: Unable to write to tempfile: %s",
                             g_strerror(errno));
         return;
