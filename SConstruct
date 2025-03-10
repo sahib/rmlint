@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
+#!/usr/bin/env python3
 import os
 import sys
 import glob
@@ -507,7 +505,7 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui', 'compile-glib-schemas']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -907,6 +905,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Verbose building     : {verbose}
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
+    Compile Glib schemas : {compile_glib_schemas}
 
 Type 'scons' to actually compile rmlint now. Good luck.
     '''.format(
@@ -929,6 +928,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             compiler=env['CC'],
             prefix=GetOption('prefix'),
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
+            compile_glib_schemas=yesno(GetOption('with_compile-glib-schemas')),
             verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
             debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
             symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),

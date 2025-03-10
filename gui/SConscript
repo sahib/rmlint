@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
+#!/usr/bin/env python3
 import os
 import subprocess
 
@@ -37,6 +35,8 @@ if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
         print('!! Unable to find {} executable.'.format(PYTHON))
         print('!! Will build no GUI.')
     else:
+        if GetOption('with_compile-glib-schemas'):
+            env['ENV']['COMPILE_GLIB_SCHEMA'] = '1'
         py_install = env.Command(
             'always.install',
             ['setup.py'],
@@ -63,6 +63,9 @@ if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
 
         except OSError as err:
             print('Could not open {}: '.format(FILES_RECORD_FULL), err)
+
+        if not GetOption('with_compile-glib-schemas'):
+            return
 
         # recompile remaining glib schemas after deleting ours
         print('Recompiling glib schemas')
