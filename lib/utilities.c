@@ -89,12 +89,6 @@ gint64 rm_sys_preadv(int fd, const struct iovec *iov, int iovcnt, RmOff offset) 
         return 0;
     }
     return readv(fd, iov, iovcnt);
-#elif RM_PLATFORM_32
-    if(lseek64(fd, offset, SEEK_SET) == -1) {
-        rm_log_perror("seek in emulated preadv failed");
-        return 0;
-    }
-    return readv(fd, iov, iovcnt);
 #else
     return preadv(fd, iov, iovcnt, offset);
 #endif

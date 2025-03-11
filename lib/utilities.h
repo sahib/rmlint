@@ -36,6 +36,9 @@
 #include "pathtricia.h"
 #include "logger.h"
 
+/* check that _FILE_OFFSET_BITS=64 is well understood. */
+G_STATIC_ASSERT(sizeof(RmOff) == sizeof(off_t));
+
 /* return values for rm_util_link_type */
 typedef enum RmLinkType {
     RM_LINK_REFLINK         = EXIT_SUCCESS,
@@ -52,11 +55,7 @@ typedef enum RmLinkType {
     RM_LINK_INLINE_EXTENTS  = 12,
 } RmLinkType;
 
-#if HAVE_STAT64 && !RM_IS_APPLE
-typedef struct stat64 RmStat;
-#else
 typedef struct stat RmStat;
-#endif
 
 ////////////////////////
 //  MATHS SHORTCUTS   //
@@ -85,29 +84,15 @@ typedef struct stat RmStat;
 //       SYSCALL WRAPPERS         //
 ////////////////////////////////////
 
-WARN_UNUSED_RESULT static inline int rm_sys_stat(const char *path, RmStat *buf) {
-#if HAVE_STAT64 && !RM_IS_APPLE
-    return stat64(path, buf);
-#else
+WARN_UNUSED_RESULT static inline int rm_sys_stat(const char *path, RmStat *buf)  {
     return stat(path, buf);
-#endif
 }
 
 WARN_UNUSED_RESULT static inline int rm_sys_lstat(const char *path, RmStat *buf) {
-#if HAVE_STAT64 && !RM_IS_APPLE
-    return lstat64(path, buf);
-#else
     return lstat(path, buf);
-#endif
 }
 
 static inline int rm_sys_open(const char *path, int mode) {
-#if HAVE_STAT64
-#ifdef O_LARGEFILE
-    mode |= O_LARGEFILE;
-#endif
-#endif
-
     return open(path, mode, (S_IRUSR | S_IWUSR));
 }
 

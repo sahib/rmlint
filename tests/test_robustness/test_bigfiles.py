@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from tests.utils import RMLINT_BINARY, create_file, has_feature, run_rmlint
+from tests.utils import RMLINT_BINARY, create_file, run_rmlint
 
 FILE_SIZE_KB = 10000
 DIFFERENT_BYTES = 1
@@ -27,8 +27,6 @@ def test_bigfiles():
 
 
 def _setup_large_file_offset():
-    if not has_feature('bigfiles'):
-        pytest.skip('rmlint built without large file support')
 
     path_a = create_file('', 'a')
     path_b = create_file('', 'b')

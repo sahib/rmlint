@@ -207,56 +207,18 @@ static bool rm_traverse_is_hidden(RmCfg *cfg, const char *basename, char *hierar
 }
 
 /* Macro for rm_traverse_directory() for easy file adding */
-#define _ADD_FILE(lint_type, is_symlink, stat_buf)                                 \
-    rm_traverse_file(                                                              \
-        session, (RmStat *)stat_buf, p->fts_path, is_prefd, path_index, lint_type, \
-        is_symlink,                                                                \
-        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),      \
-        rmpath->treat_as_single_vol, p->fts_level, FALSE, NULL);
+#define ADD_FILE(lint_type, is_symlink)                                         \
+    rm_traverse_file(                                                           \
+        session, p->fts_statp, p->fts_path, is_prefd, path_index, lint_type,    \
+        is_symlink,                                                             \
+        rm_traverse_is_hidden(cfg, p->fts_name, is_hidden, p->fts_level + 1),   \
+        rmpath->treat_as_single_vol, p->fts_level, FALSE, NULL)
 
-#if RM_PLATFORM_32 && HAVE_STAT64
-
-static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *buf) {
-    /* Break a leg for supporting large files on 32 bit,
-     * and convert the needed fields to the large version.
-     *
-     * We can't use memcpy here, since the layout might be (fatally) different.
-     * Yes, this is stupid. *Sigh*
-     * */
-    memset(buf, 0, sizeof(RmStat));
-    buf->st_dev = fts_statp->st_dev;
-    buf->st_ino = fts_statp->st_ino;
-    buf->st_mode = fts_statp->st_mode;
-    buf->st_nlink = fts_statp->st_nlink;
-    buf->st_uid = fts_statp->st_uid;
-    buf->st_gid = fts_statp->st_gid;
-    buf->st_rdev = fts_statp->st_rdev;
-    buf->st_size = fts_statp->st_size;
-    buf->st_blksize = fts_statp->st_blksize;
-    buf->st_blocks = fts_statp->st_blocks;
-    buf->st_atim = fts_statp->st_atim;
-    buf->st_mtim = fts_statp->st_mtim;
-    buf->st_ctim = fts_statp->st_ctim;
-}
-
-#define ADD_FILE(lint_type, is_symlink)                         \
-    {                                                           \
-        RmStat buf;                                             \
-        rm_traverse_convert_small_stat_buf(p->fts_statp, &buf); \
-        _ADD_FILE(lint_type, is_symlink, &buf)                  \
-    }
-
-#else /* RM_PLATFORM_32 && HAVE_STAT64 */
-
-// size_t is 32 bits on 32-bit platforms, stat64 uses a 64-bit type
+/* size_t and ino_t can be 32 bits by default on some glibc platforms (32-bits and
+ * even 64-bits, e.g. alpha) but as we define _FILE_OFFSET_BITS=64, we are ok on
+ * glibc since 1999 and on BSDs (even without the macro) since 1991. Check anyway. */
 G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_size) == G_SIZEOF_MEMBER(__fts_stat_t, st_size));
-// ino_t is 32 bits on some 64-bit platforms, stat64 uses a 64-bit type
 G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_ino) == G_SIZEOF_MEMBER(__fts_stat_t, st_ino));
-
-#define ADD_FILE(lint_type, is_symlink) \
-    _ADD_FILE(lint_type, is_symlink, (RmStat *)p->fts_statp)
-
-#endif /* RM_PLATFORM_32 && HAVE_STAT64 */
 
 bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
     /* Initialize ftsp */

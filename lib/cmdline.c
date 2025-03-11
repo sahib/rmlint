@@ -69,7 +69,6 @@ NORETURN static void rm_cmd_show_version(void) {
     } features[] = {{.name = "mounts",         .enabled = HAVE_BLKID & HAVE_GIO_UNIX},
                     {.name = "nonstripped",    .enabled = HAVE_LIBELF},
                     {.name = "fiemap",         .enabled = HAVE_FIEMAP},
-                    {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
                     {.name = "xattr",          .enabled = RM_HAVE_XATTR},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},

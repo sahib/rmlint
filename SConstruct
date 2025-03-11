@@ -211,8 +211,9 @@ if conf.env['HAVE_BLKID']:
 if conf.env['HAVE_GIO_UNIX']:
     packages.append('gio-unix-2.0')
 
+# TODO: migrate _GNU_SOURCE to narrower _DEFAULT_SOURCE
 conf.env.Append(CCFLAGS=[
-    '-std=c17', '-pipe', '-D_GNU_SOURCE'
+    '-std=c17', '-pipe', '-D_GNU_SOURCE', '-D_FILE_OFFSET_BITS=64'
 ])
 
 conf.check_target_platform()
@@ -273,7 +274,6 @@ conf.check_fiemap()
 conf.check_xattr()
 conf.check_lxattr()
 conf.check_extattr()
-conf.check_bigfiles()
 conf.check_gettext()
 conf.check_linux_limits()
 conf.check_posix_fadvise()
@@ -497,9 +497,6 @@ if GetOption('show_config'):
         ...AArch64 NEON                                   : {blake3_simd_neon}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
-    Checking for proper support of big files >= 4GB       : {bigfiles}
-        (needs either sizeof(off_t) >= 8 ...)             : {bigofft}
-        (... or presence of stat64)                       : {bigstat}
 
     Optimize non-rotational disks                         : {nonrotational}
         (needs libblkid for resolving dev_t to path)      : {blkid}
@@ -535,9 +532,6 @@ if GetOption('show_config'):
 
         sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin else yesno(sphinx_bin),
         xattr=yesno(env['HAVE_XATTR'] or env['HAVE_EXTATTR']),
-        bigfiles=yesno(env['HAVE_BIGFILES']),
-        bigofft=yesno(env['HAVE_BIG_OFF_T']),
-        bigstat=yesno(env['HAVE_STAT64']),
 
         nonrotational=yesno(env['HAVE_GIO_UNIX'] & env['HAVE_BLKID']),
         blkid=yesno(env['HAVE_BLKID']),
