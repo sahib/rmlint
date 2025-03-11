@@ -191,28 +191,6 @@ def check_fiemap(context):
     return rc
 
 
-def check_bigfiles(context):
-    off_t_is_big_enough = True
-
-    if tests.CheckTypeSize(context, 'off_t', header='#include <sys/types.h>\n') < 8:
-        off_t_is_big_enough = False
-
-    have_stat64 = True
-    if tests.CheckFunc(
-        context, 'stat64'
-    ):
-        have_stat64 = False
-
-    rc = int(off_t_is_big_enough or have_stat64)
-    conf.env['HAVE_BIG_OFF_T'] = int(off_t_is_big_enough)
-    conf.env['HAVE_BIG_STAT'] = int(have_stat64)
-    conf.env['HAVE_BIGFILES'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
 def check_blkid(context):
     rc = 1
 
@@ -560,7 +538,6 @@ conf = Configure(env, custom_tests={
     'check_blkid': check_blkid,
     'check_posix_fadvise': check_posix_fadvise,
     'check_sys_block': check_sys_block,
-    'check_bigfiles': check_bigfiles,
     'check_c11': check_c11,
     'check_gettext': check_gettext,
     'check_linux_limits': check_linux_limits,
@@ -648,7 +625,7 @@ else:
 conf.env.Append(CCFLAGS=c_standard)
 
 conf.env.Append(CCFLAGS=[
-    '-pipe', '-D_GNU_SOURCE'
+    '-pipe', '-D_GNU_SOURCE', '-D_FILE_OFFSET_BITS=64'
 ])
 
 # Support cygwin:
@@ -693,7 +670,6 @@ conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
 conf.check_lxattr()
-conf.check_bigfiles()
 conf.check_sha512()
 conf.check_gettext()
 conf.check_linux_limits()
@@ -886,9 +862,6 @@ if 'config' in COMMAND_LINE_TARGETS:
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
     Support for reading json caches (needs json-glib)     : {json_glib}
-    Checking for proper support of big files >= 4GB       : {bigfiles}
-        (needs either sizeof(off_t) >= 8 ...)             : {bigofft}
-        (... or presence of stat64)                       : {bigstat}
 
     Optimize non-rotational disks                         : {nonrotational}
         (needs libblkid for resolving dev_t to path)      : {blkid}
@@ -922,9 +895,6 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
-            bigfiles=yesno(env['HAVE_BIGFILES']),
-            bigofft=yesno(env['HAVE_BIG_OFF_T']),
-            bigstat=yesno(env['HAVE_BIG_STAT']),
             sphinx=COLORS['green'] + 'yes, using ' + COLORS['end'] + sphinx_bin if sphinx_bin else yesno(sphinx_bin),
             compiler=env['CC'],
             prefix=GetOption('prefix'),
