@@ -732,22 +732,14 @@ static gboolean rm_cmd_parse_clamp_top(_UNUSED const char *option_name, const gc
     return (error && *error == NULL);
 }
 
-static gboolean rm_cmd_parse_progress(_UNUSED const char *option_name,
-                                      _UNUSED const gchar *value, RmSession *session,
-                                      _UNUSED GError **error) {
-    rm_fmt_remove_by_name(session->formats, "pretty");
-
-    rm_fmt_add(session->formats, "progressbar", "stdout");
-    rm_fmt_add(session->formats, "summary", "stdout");
-
-    session->cfg->progress_enabled = true;
-
-    return true;
-}
-
 static void rm_cmd_set_default_outputs(RmSession *session) {
-    rm_fmt_add(session->formats, "pretty", "stdout");
     rm_fmt_add(session->formats, "summary", "stdout");
+
+    if(session->cfg->progress_enabled) {
+        rm_fmt_add(session->formats, "progressbar", "stdout");
+    } else {
+        rm_fmt_add(session->formats, "pretty", "stdout");
+    }
 
     if(session->cfg->replay) {
         rm_fmt_add(session->formats, "sh", "rmlint.replay.sh");
@@ -756,14 +748,6 @@ static void rm_cmd_set_default_outputs(RmSession *session) {
         rm_fmt_add(session->formats, "sh", "rmlint.sh");
         rm_fmt_add(session->formats, "json", "rmlint.json");
     }
-}
-
-static gboolean rm_cmd_parse_no_progress(_UNUSED const char *option_name,
-                                         _UNUSED const gchar *value, RmSession *session,
-                                         _UNUSED GError **error) {
-    rm_fmt_clear(session->formats);
-    rm_cmd_set_default_outputs(session);
-    return true;
 }
 
 static gboolean rm_cmd_parse_paranoid(_UNUSED const char *option_name,
@@ -1064,7 +1048,7 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifying both -o and -O is not allowed"));
         return false;
-    } else if(session->output_cnt[0] < 0 && session->cfg->progress_enabled == false) {
+    } else if(session->output_cnt[0] < 0) {
         rm_cmd_set_default_outputs(session);
     }
 
@@ -1126,13 +1110,13 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"xattr"            , 'C' , EMPTY    , G_OPTION_ARG_CALLBACK , FUNC(xattr)          , _("Enable xattr based caching")           , ""}                        ,
 
         /* Non-trivial switches */
-        {"progress" , 'g' , EMPTY , G_OPTION_ARG_CALLBACK , FUNC(progress)    , _("Enable progressbar")                  , NULL} ,
         {"loud"     , 'v' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_louder  , _("Be more verbose (-vv for much more)") , NULL} ,
         {"quiet"    , 'V' , EMPTY , G_OPTION_ARG_CALLBACK , rm_logger_quieter , _("Be less verbose (-VV for much less)") , NULL} ,
         {"replay"   , 'Y' , 0     , G_OPTION_ARG_CALLBACK , FUNC(replay)      , _("Re-output a json file")               , "path/to/rmlint.json"} ,
         {"equal"    ,  0 ,  EMPTY , G_OPTION_ARG_CALLBACK , FUNC(equal)       , _("Test for equality of PATHS")          , "PATHS"}           ,
 
         /* Trivial boolean options */
+        {"progress"                 , 'g'  , 0         , G_OPTION_ARG_NONE      , &cfg->progress_enabled         , _("Enable progressbar")                                                   , NULL}     ,
         {"no-with-color"            , 'W'  , DISABLE   , G_OPTION_ARG_NONE      , &cfg->with_color               , _("Be not that colorful")                                                 , NULL}     ,
         {"hidden"                   , 'r'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(hidden)                   , _("Find hidden files")                                                    , NULL}     ,
         {"followlinks"              , 'f'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(follow_symlinks)          , _("Follow symlinks")                                                      , NULL}     ,
@@ -1186,7 +1170,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
         {"no-match-extension"         , 'E' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_with_extension    , "Disable --match-extension"           , NULL} ,
         {"no-match-without-extension" , 'I' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->match_without_extension , "Disable --match-without-extension"   , NULL} ,
-        {"no-progress"                , 'G' , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_progress)             , "Disable progressbar"                 , NULL} ,
+        {"no-progress"                , 'G' , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->progress_enabled        , "Disable progressbar"                 , NULL} ,
         {"no-xattr-read"              , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->read_cksum_from_xattr   , "Disable --xattr-read"                , NULL} ,
         {"no-xattr-write"             , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr    , "Disable --xattr-write"               , NULL} ,
         {"no-partial-hidden"          , 0   , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(no_partial_hidden)       , "Invert --partial-hidden"             , NULL} ,
@@ -1320,16 +1304,6 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
               "-T df)"));
         rm_log_warning_line(
             _("will also disable --merge-directories and trigger this warning."));
-    }
-
-    if(cfg->progress_enabled) {
-        if(!rm_fmt_has_formatter(session->formats, "sh")) {
-            rm_fmt_add(session->formats, "sh", "rmlint.sh");
-        }
-
-        if(!rm_fmt_has_formatter(session->formats, "json")) {
-            rm_fmt_add(session->formats, "json", "rmlint.json");
-        }
     }
 
     /* Overwrite color if we do not print to a terminal directly */

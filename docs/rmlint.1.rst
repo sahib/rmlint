@@ -105,7 +105,7 @@ General Options
     $ rmlint -T "df,dd"        # Only search for duplicate files and directories
     $ rmlint -T "all -df -dd"  # Search for all lint except duplicate files and dirs.
 
-:``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout -o json\:rmlint.json*):
+:``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty -o summary -o json\:rmlint.json*):
 
     Configure the way ``rmlint`` outputs its results. A ``spec`` is in the form
     ``format:file`` or just ``format``.  A ``file`` might either be an
@@ -207,10 +207,7 @@ General Options
 
     Show a progressbar with sane defaults.
 
-    Convenience shortcut for ``-o progressbar -o summary -o sh:rmlint.sh -o json:rmlint.json -VV``.
-
-    NOTE: This flag clears all previous outputs. If you want additional
-    outputs, specify them after this flag using ``-O``.
+    Turns off the default ``-o pretty`` and enables ``-O progressbar -VV``.
 
 :``-D --merge-directories`` (**default\:** *disabled*):
 
