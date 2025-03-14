@@ -2,31 +2,28 @@
 ======
 
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
-   :align: center
+  :align: center
 
 `rmlint` finds space waste and other broken things on your filesystem and
 offers to remove it.
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: http://rmlint.rtfd.org
-
-.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
+ :target: http://rmlint.rtfd.org
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/issues
+ :target: https://github.com/sahib/rmlint/issues
 
 .. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/releases
+ :target: https://github.com/sahib/rmlint/releases
 
 .. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
-   :target: https://github.com/sahib/rmlint/releases/latest
+ :target: https://github.com/sahib/rmlint/releases/latest
 
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
-   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+ :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
 
 .. image:: https://badges.gitter.im/rmlint/community.svg
-   :target: https://gitter.im/rmlint/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+ :target: https://gitter.im/rmlint/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 
 **Features:**
 
@@ -66,8 +63,9 @@ your favourite distribution. If not, you might consider
 `compiling it from source <http://rmlint.readthedocs.org/en/latest/install.html>`_.
 
 
-.. image:: https://repology.org/badge/vertical-allrepos/rmlint.svg
-   :target: https://repology.org/project/rmlint/versions
+.. image:: https://repology.org/badge/vertical-allrepos/rmlint.svg?columns=5
+ :target: https://repology.org/project/rmlint/versions
+  :align: center
 
 DOCUMENTATION
 -------------
