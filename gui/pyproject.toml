@@ -1,0 +1,28 @@
+[project]
+name = "shredder"
+dynamic = ["version"]
+dependencies = [
+    "colorlog",
+    "pycairo",
+    "PyGObject",
+    "parsedatetime",
+]
+authors = [
+    {name = "Christopher Pahl", email="sahib@online.de"}
+]
+description = "A graphical user interface to rmlint using GTK+"
+readme = "README.rst"
+license = "GPL-3.0"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = {}
+
+[project.urls]
+Homepage = "https://rmlint.rtfd.org"
+Documentation = "https://rmlint.readthedocs.io/en/master/"
+Repository = "https://github.com/sahib/rmlint.git"
+Changelog = "https://github.com/sahib/rmlint/blob/master/CHANGELOG.md"
