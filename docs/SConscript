@@ -59,7 +59,7 @@ if 'install' in COMMAND_LINE_TARGETS:
 
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
+    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1')
 
 if 'docs' in COMMAND_LINE_TARGETS:
     env.Alias('docs',
