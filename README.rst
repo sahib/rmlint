@@ -1,5 +1,5 @@
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
-  :align: center
+   :align: center
 
 `rmlint` finds space waste and other broken things on your filesystem and
 offers to remove it.
@@ -14,13 +14,13 @@ offers to remove it.
    :target: http://rmlint.rtfd.org
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
- :target: https://github.com/sahib/rmlint/issues
+   :target: https://github.com/sahib/rmlint/issues
 
 .. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint
    :target: https://github.com/sahib/rmlint/commits/master/
 
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
- :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
 
 **Features:**
 
@@ -61,8 +61,8 @@ your favourite distribution. If not, you might consider
 
 
 .. image:: https://repology.org/badge/vertical-allrepos/rmlint.svg?columns=5
- :target: https://repology.org/project/rmlint/versions
-  :align: center
+   :align: center
+   :target: https://repology.org/project/rmlint/versions
 
 DOCUMENTATION
 -------------
