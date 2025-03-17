@@ -1,4 +1,4 @@
-name: Build and test rmlint (master)
+name: Build & test
 
 on:
   pull_request:
