@@ -1,82 +1,75 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-#!/usr/bin/env python
 
-from distutils.core import setup
-from distutils.command.install import install
+from setuptools import setup
+from setuptools.command.install import install
+from distutils.command.install_data import install_data
 
 import os
-import sys
+import logging
 import subprocess
+
+GRESOURCE_DIR = 'shredder/resources'
+GRESOURCE_FILE = 'shredder.gresource.xml'
+GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 
 
 def read_version():
-    with open('../.version', 'r') as handle:
+    vfp = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, '.version')
+    with open(vfp, 'r') as handle:
         version_string = handle.read()
 
     version_numbers, _ = version_string.split(' ', 1)
     return version_numbers
 
 
-def get_prefix():
-    # distutils apparently has no sane way to get the install prefix early.
-    # (I realize that this is a stupid hack to do something obvious)
-    for idx, arg in enumerate(sys.argv):
-        if arg == '--user':
-            return os.path.expanduser('~/.local')
-
-        if arg.startswith('--prefix'):
-            if '=' in arg:
-                _, path = arg.split('=', 1)
-                return path
-            else:
-                return sys.argv[idx + 1]
-
-    return '/usr'
-
-
-PREFIX = get_prefix()
-
-
-class PrePlusPostInstall(install):
+class install_glib_resources(install):
     def run(self):
-        # Compile the resource bundle freshly
-        print('==> Compiling resource bundle')
+        self._build_gresources()
+        super().run()
 
-        if os.access('shredder/resources/shredder.gresource', os.R_OK):
-            print('==> Using existing. Lucky boy.')
-        else:
-            print('==> Calling glib-compile-resources')
-            try:
-                subprocess.call([
-                    'glib-compile-resources',
-                    'shredder/resources/shredder.gresource.xml',
-                    '--sourcedir',
-                    'shredder/resources'
-                ])
-            except subprocess.CalledProcessError as err:
-                print('==> Failed :(')
-
-        # Run the usual distutils install routine:
-        install.run(self)
-
-        # Make sure the schema file is updated.
-        # Otherwise the gui will trace trap.
-        print('==> Compiling GLib Schema files')
-
+    def _build_gresources(self):
+        '''
+        Compile the resource bundle
+        '''
+        logging.info('==> Calling glib-compile-resources')
         try:
             subprocess.call([
-                'glib-compile-schemas',
-                os.path.join(PREFIX, 'share/glib-2.0/schemas')
+                'glib-compile-resources',
+                '--sourcedir={}'.format(GRESOURCE_DIR),
+                os.path.join(GRESOURCE_DIR, GRESOURCE_FILE)
             ])
         except subprocess.CalledProcessError as err:
-            print('==> Could not update schemas: ', err)
-            print('==> Please run the following manually:\n')
-            print('    sudo glib-compile-schemas {prefix}'.format(
-                prefix=os.path.join(PREFIX, 'share/glib-2.0/schemas')
-            ))
+            logging.error('==> Failed :(')
+
+
+class compile_glib_schemas(install_data):
+    def run(self):
+        super().run()
+        if os.environ.get("COMPILE_GLIB_SCHEMA", False):
+            self._build_gschemas()
         else:
-            print('==> OK!')
+            self.print_compile_instructions()
+
+    def gschema_dir(self):
+        return os.path.join(self.install_dir, GSCHEMA_DIR_SUFFIX)
+
+    def print_compile_instructions(self):
+        logging.info('==> You may need to compile glib schemas manually:\n')
+        logging.info('    sudo glib-compile-schemas {}\n'.format(
+            self.gschema_dir()))
+
+    def _build_gschemas(self):
+        '''
+        Make sure the schema file is updated after installation,
+        otherwise the gui will trace trap.
+        '''
+        logging.info('==> Compiling GLib Schema files')
+        try:
+            subprocess.call(['glib-compile-schemas', self.gschema_dir()])
+            logging.info('==> OK!')
+        except subprocess.CalledProcessError as err:
+            logging.error('==> Could not update schemas: ', err)
+            self.print_compile_instructions()
 
 
 setup(
@@ -86,28 +79,27 @@ setup(
     long_description='A graphical user interface to rmlint using GTK+',
     author='Christopher Pahl',
     author_email='sahib@online.de',
-    maintainer='Cebtenzzre',
-    maintainer_email='cebtenzzre@gmail.com',
     url='https://rmlint.rtfd.org',
-    license='GPLv3',
     platforms='any',
-    cmdclass={'install': PrePlusPostInstall},
+    cmdclass={
+        'install': install_glib_resources,
+        'install_data': compile_glib_schemas
+    },
     packages=['shredder', 'shredder.views'],
     package_data={'': [
         'resources/*.gresource'
     ]},
     data_files=[
         (
-            os.path.join(PREFIX, 'share/icons/hicolor/scalable/apps'),
+            'share/icons/hicolor/scalable/apps',
             ['shredder/resources/shredder.svg']
-        ),
-        (
-            os.path.join(PREFIX, 'share/glib-2.0/schemas'),
+        ),(
+            'share/glib-2.0/schemas',
             ['shredder/resources/org.gnome.Shredder.gschema.xml']
-        ),
-        (
-            os.path.join(PREFIX, 'share/applications'),
+        ),(
+            'share/applications',
             ['shredder.desktop']
         ),
-    ]
+    ],
+    scripts=['bin/shredder'],
 )
