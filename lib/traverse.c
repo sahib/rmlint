@@ -22,7 +22,7 @@
  * Hosted on http://github.com/sahib/rmlint
  *
  */
-
+#include "traverse.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -40,15 +40,6 @@
 #include "xattr.h"
 
 #include "fts/fts.h"
-
-#if defined(__APPLE__)
-#include <AvailabilityMacros.h>
-#if (MAC_OS_X_VERSION_MAX_ALLOWED < 1070)
-#define st_atim st_atimespec
-#define st_ctim st_ctimespec
-#define st_mtim st_mtimespec
-#endif
-#endif
 
 //////////////////////
 // TRAVERSE SESSION //

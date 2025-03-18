@@ -33,4 +33,13 @@
  */
 void rm_traverse_tree(RmSession *session);
 
+#if RM_IS_APPLE
+#include <AvailabilityMacros.h>
+#if (MAC_OS_X_VERSION_MAX_ALLOWED < 1070)
+#define st_atim st_atimespec
+#define st_ctim st_ctimespec
+#define st_mtim st_mtimespec
 #endif
+#endif /* RM_IS_APPLE */
+
+#endif /* RM_TRAVERSE_H */
