@@ -34,31 +34,34 @@ Build dependencies:
 
 Here's a list of readily prepared commands for known operating systems:
 
-* **Fedora** :math:`\geq 21`:
+* **Fedora**
 
   .. code-block:: bash
 
-    $ yum -y install pkgconf git scons python3-sphinx gettext json-glib-devel
-    $ yum -y install glib2-devel libblkid-devel elfutils-libelf-devel
+    $ sudo dnf install git pkgconf gcc gettext scons glib2-devel
+    # Optional dependencies for more features:
+    $ sudo dnf install libblkid-devel elfutils-libelf-devel json-glib-devel
+    # Optional dependencies for building documentation:
+    $ sudo dnf install python3-sphinx
     # Optional dependencies for the GUI:
-    $ yum -y install pygobject3 gtk3 librsvg2
+    $ sudo dnf install python3-devel python3-setuptools gtksourceview3 gtk3 librsvg2 hicolor-icon-theme
 
   There are also pre-built packages on `Fedora Copr`_:
 
   .. code-block:: bash
 
-    $ dnf copr enable eclipseo/rmlint
-    $ dnf install rmlint
+    $ sudo dnf copr enable rodoma92/rmlint
+    $ sudo dnf install rmlint
 
   Since **Fedora 29** we also have an `official package`_.
 
-.. _`official package`: https://bugzilla.redhat.com/show_bug.cgi?id=1655338
+.. _official package: https://src.fedoraproject.org/rpms/rmlint
 
-.. _`Fedora Copr`: https://copr.fedorainfracloud.org/coprs/eclipseo/rmlint/
+.. _Fedora Copr: https://copr.fedorainfracloud.org/coprs/rodoma92/rmlint/
 
-* **ArchLinux:**
+* **ArchLinux**
 
-  There is an official package in ``[community]`` here_:
+  There is/used to be an official package in ``[extra]`` here_:
 
   .. code-block:: bash
 
@@ -68,44 +71,50 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ pacman -S pkgconf git scons python-sphinx
-    $ pacman -S glib2 libutil-linux elfutils json-glib
+    $ sudo pacman -S pkgconf git scons glib2 gettext
+    # Optional dependencies for more features:
+    $ sudo pacman -S util-linux-libs libelf json-glib
+    # Optional dependencies for building documentation:
+    $ sudo pacman -S python-sphinx python-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
-    $ pacman -S gtk3 python-gobject librsvg
+    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview3 librsvg
+    # Optional dependancies for tests:
+    $ sudo pacman -S python-pytest python-xattr python-psutil btrfs-progs
 
-  There is also a `PKGBUILD`_ on the `ArchLinux AUR`_:
+  There is also git packages in AUR, from the ``master`` branch: `rmlint-git`_, `rmlint-shredder-git`_ ; and the ``develop`` branch: `rmlint-develop-git`_, `rmlint-shredder-develop-git`_.
 
   .. code-block:: bash
 
-    $ # Use your favourite AUR Helper.
-    $ yaourt -S rmlint-git
+    # Use your favourite AUR Helper.
+    $ yaourt/yay/paru -S rmlint-git
 
-  It is built from git ``master``, not from the ``develop`` branch.
+.. _here: https://gitlab.archlinux.org/archlinux/packaging/packages/rmlint
+.. _rmlint-git: https://aur.archlinux.org/packages/rmlint-git
+.. _rmlint-shredder-git: https://aur.archlinux.org/packages/rmlint-shredder-git
+.. _rmlint-develop-git: https://aur.archlinux.org/packages/rmlint-develop-git
+.. _rmlint-shredder-develop-git: https://aur.archlinux.org/packages/rmlint-shredder-develop-git
 
-.. _here: https://www.archlinux.org/packages/?name=rmlint
-.. _`PKGBUILD`: https://aur.archlinux.org/packages/rm/rmlint-git/PKGBUILD
-.. _`ArchLinux AUR`: https://aur.archlinux.org/packages/rmlint-git
+* **Debian** / **Ubuntu** / **Raspberry Pi OS**
 
-* **Debian** / **Ubuntu** :math:`\geq 12.04`:
-
-  Note: Debian also `ships an official package`_.
+  Note: `Debian`_ and `Ubuntu`_ ships official packages.
   Use the below instructions if you need a more recent version.
 
-  This most likely applies to most distributions that are derived from Ubuntu.
-  Note that the ``GUI`` depends on ``GTK+ >= 3.12``! 
-  Ubuntu 14.04 LTS and earlier `ships`_  with ``3.10``.
-
   .. code-block:: bash
 
-    $ sudo apt-get install pkg-config git scons python3-sphinx python3-pytest gettext build-essential
+    # Ubuntu-only:
+    $ sudo apt install software-properties-common && add-apt-repository universe
+    $ sudo apt install git scons pkgconf gettext build-essential
     # Optional dependencies for more features:
-    $ sudo apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
+    $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0-0 libjson-glib-dev
+    # Optional dependencies for building documentation:
+    $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
-    $ sudo apt-get install python3-gi gir1.2-rsvg gir1.2-gtk-3.0 python3-cairo gir1.2-polkit-1.0 gir1.2-gtksource-3.0 
+    $ sudo apt install python3-setuptools python3-gi-cairo gir1.2-gtksource-3.0 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
+    # Optional dependancies for tests:
+    $ sudo apt install python3-pytest python3-psutil python3-xattr
 
- 
-.. _`ships an official package`: https://packages.debian.org/de/sid/rmlint
-.. _`ships`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
+.. _Debian: https://packages.debian.org/rmlint
+.. _Ubuntu: https://packages.ubuntu.com/rmlint
 
 * **macOS**
 
@@ -115,26 +124,46 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-      $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   With homebrew installed, execute:
 
   .. code-block:: bash
 
-      $ brew install rmlint
+    $ brew install rmlint
 
-
-  See also this `issue`_ for more information on the homebrew formula.
+  `MacPorts`_ and `PowerPC ports`_ also provide ports.
 
 .. _homebrew: http://brew.sh
-.. _issue: https://github.com/sahib/rmlint/issues/175#issuecomment-253186769
+.. _MacPorts: https://github.com/macports/macports-ports/tree/master/sysutils/rmlint
+.. _PowerPC ports: https://github.com/barracuda156/powerpc-ports/tree/master/sysutils/rmlint
 
-* **FreeBSD** :math:`\geq 10.1`:
+* **FreeBSD**
+
+  `FreeBSD`_ and `DragonFlyBSD`_ both have official ports.
 
   .. code-block:: bash
 
-    $ pkg install git scons py27-sphinx pkgconf
-    $ pkg install glib gettext libelf json-glib
+    $ doas pkg install git scons-py311 pkgconf glib gettext
+    # Optional dependencies for more features:
+    $ doas pkg install json-glib libelf
+    # Optional dependencies for building documentation:
+    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme
+
+.. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
+.. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint
+
+* **Others**
+
+  `GNU Guix`_, `Alpine`_, `Gentoo`_, `NixOS`_, `Void`_, `Slackware`_ and `Solus`_ also provide or used to provide ports or packages.
+
+.. _GNU Guix: https://git.savannah.gnu.org/cgit/guix.git/tree/gnu/packages/disk.scm#n1288
+.. _Alpine: https://gitlab.alpinelinux.org/alpine/aports/-/tree/master/testing/rmlint
+.. _Gentoo: https://gitweb.gentoo.org/repo/gentoo.git/tree/app-misc/rmlint?id=392900cef25d31d5c622e542d636ba37e7a0b71a
+.. _NixOS: https://github.com/NixOS/nixpkgs/tree/master/pkgs/tools/misc/rmlint
+.. _Void: https://github.com/void-linux/void-packages/tree/master/srcpkgs/rmlint
+.. _Slackware: https://git.slackbuilds.org/slackbuilds/plain/misc/rmlint/
+.. _Solus: https://github.com/getsolus/packages/tree/main/packages/r/rmlint
 
 -----
 
@@ -160,9 +189,11 @@ build the software from the potentially unstable ``develop`` branch:
    $ scons config       # Look what features scons would compile
    $ scons DEBUG=1      # Optional, build locally.
    # Install (and build if necessary). For releases you can omit DEBUG=1
-   $ sudo scons DEBUG=1 --prefix=/usr install
+   $ sudo scons DEBUG=1 --prefix=/usr/local install
 
 Done!
+
+See Developer’s Guide for configuration options.
 
 You should be now able to see the manpage with ``rmlint --help`` or ``man 1
 rmlint``.
@@ -180,6 +211,5 @@ with ``/usr/bin/python3: No module named shredder`` (or similar). This is due
 some incompatible changes on Debian's side.
 
 See `this thread`_ for a workaround using ``PYTHONPATH``.
-
 
 .. _`this thread`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974

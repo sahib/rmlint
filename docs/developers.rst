@@ -211,6 +211,14 @@ Arguments
 
     Do not link with ``libintl`` and do not compile any message catalogs.
 
+:--without-gui:
+
+    Do not install ``shredder`` (GUI).
+
+:--without-compile-glib-schemas:
+
+    Do not (re)compile system Glib schemas on installation/uninstallation.
+
 All ``--without-*`` options come with a ``--with-*`` option that inverses its
 effect.  By default ``rmlint`` is built with all features available on the
 system, so you do not need to specify any ``--with-*`` option normally.
