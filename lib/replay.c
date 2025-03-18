@@ -152,7 +152,7 @@ static RmParrot *rm_parrot_open(RmSession *session, const char *json_path, bool 
     rm_trie_init(&polly->directory_trie);
 
     for(GSList *iter = session->cfg->paths; iter; iter = iter->next) {
-        RmPath *rmpath = iter->data;
+        const RmPath *rmpath = iter->data;
         RmStat stat_buf;
         if(rm_sys_stat(rmpath->path, &stat_buf) != -1) {
             g_hash_table_add(polly->disk_ids, GUINT_TO_POINTER(stat_buf.st_dev));
@@ -310,7 +310,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Fake the checksum using RM_DIGEST_EXT */
-    JsonNode *cksum_node = json_object_get_member(object, "checksum");
+    const JsonNode *cksum_node = json_object_get_member(object, "checksum");
     if(cksum_node != NULL) {
         const char *cksum = json_object_get_string_member(object, "checksum");
         if(cksum != NULL) {
@@ -319,7 +319,7 @@ static RmFile *rm_parrot_try_next(RmParrot *polly) {
     }
 
     /* Fix the hardlink relationship */
-    JsonNode *hardlink_of = json_object_get_member(object, "hardlink_of");
+    const JsonNode *hardlink_of = json_object_get_member(object, "hardlink_of");
     if(hardlink_of != NULL) {
         rm_file_hardlink_add(polly->last_original, file);
     } else {
@@ -426,11 +426,11 @@ static RmFile *rm_parrot_next(RmParrot *polly) {
 
 #define FAIL_MSG(msg) rm_log_debug(RED "[" msg "]\n" RESET)
 
-static bool rm_parrot_check_depth(RmCfg *cfg, RmFile *file) {
+static bool rm_parrot_check_depth(const RmCfg *cfg, const RmFile *file) {
     return (file->depth == 0 || file->depth <= cfg->depth);
 }
 
-static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
+static bool rm_parrot_check_size(const RmCfg *cfg, const RmFile *file) {
     if(cfg->limits_specified == false) {
         return true;
     }
@@ -451,7 +451,7 @@ static bool rm_parrot_check_size(RmCfg *cfg, RmFile *file) {
     return false;
 }
 
-static bool rm_parrot_check_hidden(RmCfg *cfg, _UNUSED RmFile *file,
+static bool rm_parrot_check_hidden(const RmCfg *cfg, _UNUSED RmFile *file,
                                    const char *file_path) {
     if(cfg->ignore_hidden == false && cfg->partial_hidden == false) {
         // no need to check.
@@ -507,7 +507,7 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
      */
 
     for(GSList *iter = cfg->paths; iter; iter = iter->next) {
-        RmPath *rmpath = iter->data;
+        const RmPath *rmpath = iter->data;
         size_t path_len = strlen(rmpath->path);
 
         if(strncmp(file_path, rmpath->path, path_len) == 0) {
@@ -527,7 +527,7 @@ static bool rm_parrot_check_path(RmParrot *polly, RmFile *file, const char *file
     return (highest_match > 0);
 }
 
-static bool rm_parrot_check_types(RmCfg *cfg, RmFile *file) {
+static bool rm_parrot_check_types(RmCfg *cfg, const RmFile *file) {
     switch(file->lint_type) {
     case RM_LINT_TYPE_DUPE_CANDIDATE:
         return cfg->find_duplicates;
@@ -623,7 +623,7 @@ static void rm_parrot_fix_duplicate_entries(RmParrotCage *cage, GQueue *group) {
 }
 
 static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
-    RmCfg *cfg = cage->session->cfg;
+    const RmCfg *cfg = cage->session->cfg;
     if(!(cfg->must_match_tagged || cfg->must_match_untagged)) {
         return;
     }
@@ -631,7 +631,7 @@ static void rm_parrot_fix_must_match_tagged(RmParrotCage *cage, GQueue *group) {
     bool has_prefd = false, has_non_prefd = false;
 
     for(GList *iter = group->head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
+        const RmFile *file = iter->data;
         if(file->lint_type != RM_LINT_TYPE_DUPE_CANDIDATE &&
            file->lint_type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
             // -k and -m only applies to dupes.
@@ -684,12 +684,12 @@ static void rm_parrot_update_stats(RmParrotCage *cage, RmFile *file) {
 }
 
 static void rm_parrot_cage_write_group(RmParrotCage *cage, GQueue *group, bool pack_directories) {
-    RmCfg *cfg = cage->session->cfg;
+    const RmCfg *cfg = cage->session->cfg;
 
     if(cfg->filter_mtime) {
         gsize older = 0;
         for(GList *iter = group->head; iter; iter = iter->next) {
-            RmFile *file = iter->data;
+            const RmFile *file = iter->data;
             older += (file->mtime >= cfg->min_mtime);
         }
 
@@ -834,7 +834,7 @@ bool rm_parrot_cage_load(RmParrotCage *cage, const char *json_path, bool is_pref
 
         rm_log_debug("[okay]\n");
 
-        if(file->digest != NULL && !rm_digest_equal(file->digest, last_digest)) {
+        if((!file->digest->bytes && file->is_original) || !rm_digest_equal(file->digest, last_digest)) {
             rm_digest_free(last_digest);
             last_digest = rm_digest_copy(file->digest);
             rm_parrot_cage_push_to_group(cage, &group, false);
@@ -874,10 +874,13 @@ static void rm_parrot_merge_identical_groups(RmParrotCage *cage) {
         GQueue *group = iter->data;
         RmFile *head_file = group->head->data;
 
+        if (!head_file->digest->bytes)
+            continue;
+
         GQueue *existing_group = g_hash_table_lookup(digest_to_group, head_file->digest);
 
         if(existing_group != NULL) {
-            RmFile *existing_head_file = existing_group->head->data;
+            const RmFile *existing_head_file = existing_group->head->data;
 
             /* Merge only groups with the same type */
             if(existing_head_file->lint_type == head_file->lint_type) {
@@ -914,7 +917,7 @@ void rm_parrot_cage_flush(RmParrotCage *cage) {
      * If so, we need to merge them up again using treemerge.c
      */
     for(GList *iter = cage->parrots->head; iter; iter = iter->next) {
-        RmParrot *parrot = iter->data;
+        const RmParrot *parrot = iter->data;
         if(parrot->pack_directories) {
             pack_directories = true;
             break;

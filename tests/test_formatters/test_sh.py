@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
+import shlex
 import subprocess
-
-from parameterized import parameterized
+import pytest
 
 
 def run_shell_script(shell, sh_path, *args):
@@ -21,9 +19,7 @@ def filter_part_of_directory(data):
     return [e for e in data if e['type'] != 'part_of_directory']
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-@parameterized([("sh", ), ("bash", ), ("dash", )])
-def test_basic(shell):
+def test_basic(usual_setup_usual_teardown, shell):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
@@ -71,9 +67,7 @@ def test_basic(shell):
     assert '/a' in text
 
 
-@parameterized([("sh", ), ("bash", ), ("dash", )])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_paranoia(shell):
+def test_paranoia(usual_setup_usual_teardown, shell):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     create_file('xxx', 'c')
@@ -124,8 +118,7 @@ def test_paranoia(shell):
     assert footer['duplicates'] == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_anon_pipe():
+def test_anon_pipe(usual_setup_usual_teardown):
     create_file('xxx', 'long-dummy-file-1')
     create_file('xxx', 'long-dummy-file-2')
 
@@ -140,9 +133,7 @@ def test_anon_pipe():
     assert b'/long-dummy-file-2' in data
 
 
-@parameterized([("sh", ), ("bash", ), ("dash", )])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_hardlink_duplicate_directories(shell):
+def test_hardlink_duplicate_directories(usual_setup_usual_teardown, shell):
     create_file('xxx', 'dir_a/x')
     create_file('xxx', 'dir_b/x')
 
@@ -174,12 +165,8 @@ def _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data):
         assert not os.path.exists(data[1]["path"])
 
 
-@parameterized([
-    ("sh", False), ("bash", False), ("dash", False),
-    ("sh", True), ("bash", True), ("dash", True)
-])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_remove_empty_dirs(shell, inverse_order):
+@pytest.mark.parametrize("inverse_order", [False, True])
+def test_remove_empty_dirs(usual_setup_usual_teardown, shell, inverse_order):
     create_file('xxx', 'deep/a/b/c/d/e/1')
     create_file('xxx', 'deep/x/2')
 
@@ -207,12 +194,8 @@ def test_remove_empty_dirs(shell, inverse_order):
     _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
 
 
-@parameterized([
-    ("sh", False), ("bash", False), ("dash", False),
-    ("sh", True), ("bash", True), ("dash", True)
-])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
+@pytest.mark.parametrize("inverse_order", [False, True])
+def test_remove_empty_dirs_with_dupe_dirs(usual_setup_usual_teardown, shell, inverse_order):
     create_file('xxx', 'deep/a/b/c/d/e/1')
     create_file('xxx', 'deep/x/1')
 
@@ -240,9 +223,7 @@ def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
 
     _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
 
-@with_setup(usual_setup_func, usual_teardown_func)
-@parameterized([("sh", ), ("bash", ), ("dash", )])
-def test_cleanup_emptydirs(shell):
+def test_cleanup_emptydirs(usual_setup_usual_teardown, shell):
     create_file('xxx', 'dir1/a')
 
     # create some ugly dir names
@@ -271,9 +252,7 @@ def test_cleanup_emptydirs(shell):
 
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-@parameterized([("sh", ), ("bash", ), ("dash", )])
-def test_keep_parent_timestamps(shell):
+def test_keep_parent_timestamps(usual_setup_usual_teardown, shell):
     create_file('xxx', 'dir/a')
     create_file('xxx', 'dir/b')
 
@@ -291,3 +270,24 @@ def test_keep_parent_timestamps(shell):
     stat_after = os.stat(dir_path)
 
     assert stat_before.st_mtime == stat_after.st_mtime
+
+
+# regression test for GitHub issue #545
+@pytest.mark.parametrize("tm_opt", ('', '-D'))
+def test_skip_hardlinks(usual_setup_usual_teardown, tm_opt):
+    dir_a = create_dirs('a')
+    create_file('xxx', 'a/1')
+    create_file('yyy', 'a/2')
+    dir_b = create_dirs('b')
+    create_link('a/2', 'b/2')
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    run_rmlint(
+        '-S a -o sh:{p} -c sh:hardlink'.format(p=shlex.quote(sh_path)),
+        tm_opt, dir_a, dir_b,
+        use_default_dir=False,
+    )
+
+    counts = pattern_count(sh_path, ["^cp_hardlink +'", "^skip_hardlink +'"])
+    assert counts[0] == 0
+    assert counts[1] == 1

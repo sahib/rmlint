@@ -31,18 +31,6 @@ def run_sphinx_binary(builder, **kwargs):
         [sphinx_binary, '-Q', '-b', builder, 'docs', build_dir]
     )
 
-
-def gzip_file(target, source, env):
-    source, dest = source[0].get_abspath(), target[0].get_abspath()
-    try:
-        subprocess.check_call('gzip -c {s} > {t}'.format(
-            s=source, t=dest
-        ), shell=True)
-    except Exception as err:
-        print('Warning: could not gzip {s} to {t}: {e}'.format(
-            s=source, t=dest, e=err
-        ))
-
 # Do not use partial(), but a real function.
 # Scons uses this to check if the previous action
 # differs from the current action.
@@ -51,19 +39,14 @@ def run_sphinx_binary_man(**kwargs):
     run_sphinx_binary('man', **kwargs)
 
 
-sphinx = env.Command(
+manpage = env.Command(
     '_build/man/rmlint.1', 'rmlint.1.rst',
     env.Action(run_sphinx_binary_man, "Building manpage from rst...")
 )
 
-manpage = env.Command(
-    'rmlint.1.gz', '_build/man/rmlint.1', gzip_file
-)
-
-env.Default(sphinx)
 env.Default(manpage)
 
-env.Alias('man', env.Depends(manpage, sphinx))
+env.Alias('man', manpage)
 
 
 if 'install' in COMMAND_LINE_TARGETS:
@@ -76,7 +59,7 @@ if 'install' in COMMAND_LINE_TARGETS:
 
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
-    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1.gz')
+    create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1')
 
 if 'docs' in COMMAND_LINE_TARGETS:
     env.Alias('docs',

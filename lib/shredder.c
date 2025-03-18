@@ -357,6 +357,9 @@ typedef struct RmShredGroup {
     /* number of file clusters */
     gsize n_clusters;
 
+    /* number of file clusters that don't have external checksums */
+    gsize n_unhashed_clusters;
+
     /* number of distinct inodes */
     gsize n_inodes;
 
@@ -695,6 +698,11 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
         return;
     }
 
+    if(session->cfg->clamp_is_used) {
+        /* Not writing checksums because we're not reading the whole file. */
+        return;
+    }
+
     for(GList *iter = group->head; iter; iter = iter->next) {
         RmFile *file = iter->data;
         if(file->ext_cksum == NULL && file->digest != NULL) {
@@ -841,11 +849,18 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
  * Assume group already protected by group_lock.
  * */
 static void rm_shred_group_update_status(RmShredGroup *group) {
-    if(group->status == RM_SHRED_GROUP_DORMANT && rm_shred_group_qualifies(group) &&
-       group->hash_offset < group->file_size &&
-       (group->n_clusters > 1 ||
-        (group->n_inodes == 1 && group->session->cfg->merge_directories))) {
-        /* group can go active */
+    if(group->status != RM_SHRED_GROUP_DORMANT || !rm_shred_group_qualifies(group) ||
+       group->hash_offset == group->file_size) {
+        return;
+    }
+
+    if(group->n_clusters > 1) {
+        // we have potential match candidates; start hashing
+        group->status = RM_SHRED_GROUP_START_HASHING;
+    } else if(group->n_inodes == 1 && group->n_unhashed_clusters > 0 &&
+              group->session->cfg->merge_directories) {
+        /* special case of hardlinked files that still need hashing to help identify
+         * matching directories */
         group->status = RM_SHRED_GROUP_START_HASHING;
     }
 }
@@ -907,6 +922,9 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
         shred_group->n_npref += rm_file_n_nprefd(file);
         shred_group->n_new += rm_file_n_new(file);
         shred_group->n_clusters++;
+        if(file->ext_cksum == NULL) {
+            shred_group->n_unhashed_clusters++;
+        }
         shred_group->n_inodes += RM_FILE_INODE_COUNT(file);
 
         g_assert(file->hash_offset == shred_group->hash_offset);
@@ -1650,7 +1668,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
              (!cfg->shred_never_wait && rm_mds_device_is_rotational(file->disk) &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
 
-        gsize bytes_read = 0;
+        guint64 bytes_read = 0;
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink, &bytes_read)) {
@@ -1711,7 +1729,6 @@ void rm_shred_output_tm_results(RmFile *file, gpointer data) {
 
     RmSession *session = data;
     rm_fmt_write(file, session->formats);
-
 }
 
 void rm_shred_run(RmSession *session) {

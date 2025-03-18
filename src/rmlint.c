@@ -56,10 +56,13 @@ static void logging_callback(_UNUSED const gchar *log_domain,
                              gpointer user_data) {
     RmSession *session = user_data;
     if(session->cfg->verbosity >= log_level) {
+        char *tmp = NULL;
         if(!session->cfg->with_stderr_color) {
-            message = remove_color_escapes((char *)message);
+            tmp = g_strdup(message);
+            message = remove_color_escapes(tmp);
         }
         fputs(message, stderr);
+        g_free(tmp);
     }
 }
 
@@ -75,10 +78,10 @@ static void signal_handler(int signum) {
          * but that's probably the least thing we have to worry about in case of
          * a segmentation fault.
          */
-        rm_log_error_line(_("Aborting due to a fatal error. (signal received: %s)"),
-                          g_strsignal(signum));
-        rm_log_error_line(_("Please file a bug report (See rmlint -h)"));
-        exit(1);
+        g_printerr(_("Aborting due to a fatal error. (signal received: %s)\n"),
+                   g_strsignal(signum));
+        g_printerr(_("Please file a bug report (See rmlint -h)\n"));
+        /* SA_RESETHAND has reset the disposition so the program will terminate now */
     default:
         break;
     }
@@ -122,6 +125,9 @@ int main(int argc, const char **argv) {
     sa.sa_handler = signal_handler;
 
     sigaction(SIGINT, &sa, NULL);
+
+    /* set SA_RESETHAND so we get a core dump and accurate exit status */
+    sa.sa_flags = SA_RESETHAND;
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);

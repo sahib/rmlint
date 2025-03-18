@@ -1,0 +1,3 @@
+psutil==7.*
+xattr==1.*
+pytest==8.*

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from nose import with_setup
-from nose.plugins.attrib import attr
-from tests.utils import *
-
+import pytest
 from itertools import permutations, combinations
+
+from tests.utils import *
 
 
 PATHS = ['b_dir/', 'a_dir/', 'c_dir/']
@@ -53,9 +51,8 @@ def validate_order(data, tests):
             assert False
 
 
-@attr('slow')
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sorting():
+@pytest.mark.slow
+def test_sorting(usual_setup_usual_teardown):
     # create some dupes with different PATHS, names and mtimes:
     create_file('xxx', PATHS[1] + 'a', mtime='2004-02-29  16:21:42.4')
     create_file('xxx', PATHS[0] + 'c', mtime='2004-02-29  16:21:42.6')
@@ -88,8 +85,7 @@ def test_sorting():
 
         validate_order(data, combo)
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_outlyer():
+def test_sort_by_outlyer(usual_setup_usual_teardown):
     create_file('xxx', 'a/foo')
     create_file('xxx', 'b/foo')
 
@@ -110,8 +106,7 @@ def test_sort_by_outlyer():
 # https://github.com/sahib/rmlint/issues/196
 #
 # Testsetup by "Awerick"
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_outlyer_hardcore():
+def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
     for suffix in 'ABCD':
         create_file('xxx', 'inside/foo' + suffix)
 
@@ -152,29 +147,27 @@ def test_sort_by_outlyer_hardcore():
 
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_regex():
+def test_sort_by_regex(usual_setup_usual_teardown):
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
     create_file('xxx', 'b')
     create_file('xxx', 'c')
-    create_file('xxx', '1/c')
-    create_file('xxx', 'd')
+    create_file('xxx', 'd/e')
+    create_file('xxx', 'f')
 
-    head, *data, footer = run_rmlint("-S 'r<1/c>x<d$>a'")
+    head, *data, footer = run_rmlint("-S 'r<d/e>x<f$>a'")
 
     paths = [p['path'] for p in data]
 
-    assert paths[0].endswith('1/c')
-    assert paths[1].endswith('d')
+    assert paths[0].endswith('d/e')
+    assert paths[1].endswith('f')
     assert paths[2].endswith('aaaa')
     assert paths[3].endswith('aaab')
     assert paths[4].endswith('b')
     assert paths[5].endswith('c')
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_sort_by_regex_bad_input():
+def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
 
@@ -201,3 +194,20 @@ def test_sort_by_regex_bad_input():
         assert False
     except subprocess.CalledProcessError:
         pass
+
+
+# regression test for GitHub issue #484
+def test_regex_multiple_matches(usual_setup_usual_teardown):
+    paths = [os.path.join(dname, bname)
+             for dname in ['unique_1', 'unique_2']
+             for bname in ['a', 'a2', 'b']]
+
+    for path in reversed(paths):
+        create_file('xxx', path)
+
+    # when multiple paths matched a regex, rmlint would not try the next criterion
+    # check multiple times because sort order was inconsistent before the fix
+    for _ in range(3):
+        head, *data, foot = run_rmlint("-S 'r<unique_1>x<a>l'")
+        assert len(data) == len(paths)
+        assert [e['path'] for e in data] == [os.path.join(TESTDIR_NAME, p) for p in paths]

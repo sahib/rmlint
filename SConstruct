@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
+#!/usr/bin/env python3
 import os
 import sys
 import glob
@@ -38,7 +36,10 @@ def check_gcc_version(context):
     context.Message('Checking for GCC version... ')
 
     try:
-        v = subprocess.check_output("printf '%s\n' __GNUC__ | gcc -E -P -", shell=True)
+        v = subprocess.check_output(
+            '{cc} -E -P -'.format(cc=conf.env['CC']),
+            shell=True, input=b'__GNUC__\n',
+        )
         try:
             v = int(v)
             context.Result(str(v))
@@ -196,12 +197,7 @@ def check_bigfiles(context):
 
     have_stat64 = True
     if tests.CheckFunc(
-        context, 'stat64',
-        header=
-            '#include <sys/types.h>'
-            '#include <sys/stat.h>'
-            '#include <unistd.h>'
-
+        context, 'stat64'
     ):
         have_stat64 = False
 
@@ -269,10 +265,7 @@ def check_xattr(context):
 
     for func in ['getxattr', 'setxattr', 'removexattr', 'listxattr']:
         if tests.CheckFunc(
-            context, func,
-            header=
-                '#include <sys/types.h>'
-                '#include <sys/xattr.h>'
+            context, func
         ):
             rc = 0
             break
@@ -290,10 +283,7 @@ def check_lxattr(context):
 
     for func in ['lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr']:
         if tests.CheckFunc(
-            context, func,
-            header=
-                '#include <sys/types.h>'
-                '#include <sys/xattr.h>'
+            context, func
         ):
             rc = 0
             break
@@ -322,7 +312,7 @@ def check_c11(context):
 
     context.Message('Checking for -std=c11 support...')
     try:
-        cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c'
+        cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c -o /dev/null'
         subprocess.check_call(
             cmd.format(cc=conf.env['CC']),
             shell=True
@@ -515,7 +505,7 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui']:
+for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'json-glib', 'gui', 'compile-glib-schemas']:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -619,6 +609,10 @@ conf.check_pkgconfig('0.15.0')
 # Pkg-config to internal name
 conf.env['HAVE_GLIB'] = 0
 conf.check_pkg('glib-2.0 >= 2.32', 'HAVE_GLIB', required=True)
+conf.env.Append(CCFLAGS=[
+    '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_32',
+    '-DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_32',
+])
 
 conf.env['HAVE_GIO_UNIX'] = 0
 conf.check_pkg('gio-unix-2.0', 'HAVE_GIO_UNIX', required=False)
@@ -665,7 +659,7 @@ else:
 # check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
 
-if 'clang' in os.path.basename(conf.env['CC']):
+if any(cc in os.path.basename(conf.env['CC']) for cc in ('clang', 'include-what-you-use')):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
@@ -709,6 +703,10 @@ conf.check_sysmacro_h()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
+
+# NB: After checks so they don't fail
+conf.env.Append(CCFLAGS=['-Werror=undef'])
+
 
 if ARGUMENTS.get('GDB') == '1':
     ARGUMENTS['DEBUG'] = '1'
@@ -832,8 +830,8 @@ if 'release' in COMMAND_LINE_TARGETS:
         )
 
         cmds = [
-            'sed -i "s/2\.0\.0/{v}/g" po/rmlint.pot',
-            'sed -i "s/^Version:\(\s*\)2\.0\.0/Version:\\1{v}/g" pkg/fedora/rmlint.spec'
+            r'sed -i "s/2\.8\.0/{v}/g" po/rmlint.pot',
+            r'sed -i "s/^Version:\(\s*\)2\.8\.0/Version:\\1{v}/g" pkg/fedora/rmlint.spec'
         ]
 
         for cmd in cmds:
@@ -907,6 +905,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Verbose building     : {verbose}
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
+    Compile Glib schemas : {compile_glib_schemas}
 
 Type 'scons' to actually compile rmlint now. Good luck.
     '''.format(
@@ -929,6 +928,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             compiler=env['CC'],
             prefix=GetOption('prefix'),
             actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
+            compile_glib_schemas=yesno(GetOption('with_compile-glib-schemas')),
             verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
             debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
             symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),

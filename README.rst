@@ -1,27 +1,23 @@
-      
-======
-
-
 .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
    :align: center
 
-`rmlint` finds space waste and other broken things on your filesystem and offers
-to remove it. 
+`rmlint` finds space waste and other broken things on your filesystem and
+offers to remove it.
+
+.. image:: https://img.shields.io/github/v/release/sahib/rmlint?include_prereleases&display_name=release
+   :target: https://github.com/sahib/rmlint/releases
+
+.. image:: https://github.com/sahib/rmlint/actions/workflows/build-and-test.yml/badge.svg
+   :target: https://github.com/sahib/rmlint/actions
 
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: http://rmlint.rtfd.org
 
-.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
-
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
-.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/releases
-
-.. image:: https://img.shields.io/github/downloads/sahib/rmlint/latest/total.svg
-   :target: https://github.com/sahib/rmlint/releases/latest
+.. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint
+   :target: https://github.com/sahib/rmlint/commits/master/
 
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
@@ -45,7 +41,7 @@ Finds…
 - Search for files only newer than a certain ``mtime``.
 - Many ways to handle duplicates.
 - Caching and replaying.
-- ``btrfs`` support.
+- `BTRFS` support.
 - ...
 
 It runs and compiles under most Unices, including Linux, FreeBSD and Darwin.
@@ -59,14 +55,19 @@ elsewhere.
 INSTALLATION
 ------------
 
-Chances are that you might have `rmlint` already as readily made package in your
-favourite distribution. If not, you might consider 
+Chances are that you might have `rmlint` already as readily made package in
+your favourite distribution. If not, you might consider
 `compiling it from source <http://rmlint.readthedocs.org/en/latest/install.html>`_.
+
+
+.. image:: https://repology.org/badge/vertical-allrepos/rmlint.svg?columns=5
+   :align: center
+   :target: https://repology.org/project/rmlint/versions
 
 DOCUMENTATION
 -------------
 
-Detailed documentation is available on: 
+Detailed documentation is available on:
 
     http://rmlint.rtfd.org
 
@@ -77,8 +78,6 @@ Most features you'll ever need are covered in the tutorial:
 An online version of the manpage is available at:
 
     http://rmlint.rtfd.org/en/latest/rmlint.1.html
-
-Sometimes we can be reached via IRC: ``#rmlint`` on ``irc.freenode.net``.
 
 BUGS
 ----
@@ -94,10 +93,11 @@ AUTHORS
 
 Here's a list of developers to blame:
 
-===================================  ============================= ===========================================
-*Christopher Pahl*                   https://github.com/sahib      2010-2017
-*Daniel Thomas*                      https://github.com/SeeSpotRun 2014-2017
-===================================  ============================= ===========================================
+=================== ============================== =========
+*Christopher Pahl*   https://github.com/sahib      2010-2017
+*Daniel Thomas*      https://github.com/SeeSpotRun 2014-2021
+*Cebtenzzre*         https://github.com/Cebtenzzre 2021-2023
+=================== ============================== =========
 
 There are some other people that helped us of course.
 Please see the AUTHORS distributed along `rmlint`.
@@ -108,5 +108,5 @@ LICENSE
 `rmlint` is licensed under the conditions of the
 `GPLv3 <https://www.gnu.org/licenses/quick-guide-gplv3.html.en>`_.
 See the
-`COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`_ 
+`COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`
 file distributed along the source for details.

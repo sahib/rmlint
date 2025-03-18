@@ -117,7 +117,7 @@ static void Permute(const uint64_t v[4], uint64_t* permuted) {
     permuted[3] = (v[1] >> 32) | (v[1] << 32);
 }
 
-void PermuteAndUpdate(HighwayHashState* state) {
+static void PermuteAndUpdate(HighwayHashState* state) {
     uint64_t permuted[4];
     Permute(state->v0, permuted);
     Update(permuted, state);

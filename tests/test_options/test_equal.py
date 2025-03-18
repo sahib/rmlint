@@ -1,32 +1,9 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 import os
-import json
-
-from nose import with_setup
-from contextlib import contextmanager
 
 from tests.utils import *
 
-
-@contextmanager
-def assert_exit_code(status_code):
-    """
-    Assert that the with block yields a subprocess.CalledProcessError
-    with a certain return code. If nothing is thrown, status_code
-    is required to be 0 to survive the test.
-    """
-    try:
-        yield
-    except subprocess.CalledProcessError as exc:
-        assert exc.returncode == status_code
-    else:
-        # No exception? status_code should be fine.
-        assert status_code == 0
-
-
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_equal_files():
+def test_equal_files(usual_setup_usual_teardown):
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
 
@@ -63,8 +40,7 @@ def test_equal_files():
         )
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_no_arguments():
+def test_no_arguments(usual_setup_usual_teardown):
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
             '--equal',
@@ -72,8 +48,7 @@ def test_no_arguments():
         )
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_one_arguments():
+def test_one_arguments(usual_setup_usual_teardown):
     path = create_file('1234', 'a')
     with assert_exit_code(1):
         head, *data, footer = run_rmlint(
@@ -94,8 +69,7 @@ def test_one_arguments():
         )
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_equal_directories():
+def test_equal_directories(usual_setup_usual_teardown):
     path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
     path_b = os.path.dirname(create_file('xxx', 'dir_b/x'))
 
@@ -112,8 +86,7 @@ def test_equal_directories():
         )
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_dir_and_file():
+def test_dir_and_file(usual_setup_usual_teardown):
     path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
     path_b = create_file('xxx', 'x')
 
@@ -127,8 +100,7 @@ def test_dir_and_file():
 
 
 # Regression test for Issue #233
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_equal_hidden_dirs():
+def test_equal_hidden_dirs(usual_setup_usual_teardown):
     path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
     path_b = os.path.dirname(create_file('xxx', '.dir_b/.x'))
 
@@ -142,8 +114,7 @@ def test_equal_hidden_dirs():
 
 
 # Regression test for Issue #234
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_equal_empty_files_or_other_lint():
+def test_equal_empty_files_or_other_lint(usual_setup_usual_teardown):
     path_a = create_file('', 'x')
     path_b = create_file('', 'y')
 
@@ -154,3 +125,21 @@ def test_equal_empty_files_or_other_lint():
             '--equal', path_a, path_b,
             use_default_dir=False,
         )
+
+
+# regression test for GitHub issue #552
+def test_default_outputs_disabled(usual_setup_usual_teardown):
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(TESTDIR_NAME)
+        run_rmlint('--equal a b', use_default_dir=False, with_json=False)
+
+        # Users of --equal, including our own sh format, do not expect to
+        # create or overwrite rmlint.sh or rmlint.json.
+        assert not os.path.exists('rmlint.sh')
+        assert not os.path.exists('rmlint.json')
+    finally:
+        os.chdir(cwd)

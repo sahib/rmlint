@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from nose import with_setup
+import os
+import subprocess
+import pytest
+
 from tests.utils import *
-from parameterized import parameterized
 
 
 def create_files():
@@ -56,8 +57,7 @@ def check(data, write_cache):
     assert path_in('4.d', dupe_files)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr_basic():
+def test_xattr_basic(usual_setup_usual_teardown):
     create_files()
 
     for _ in range(2):
@@ -72,9 +72,8 @@ def test_xattr_basic():
         head, *data, footer = run_rmlint('-D -S pa --xattr-clear')
 
 
-@parameterized([("", ), ("-D", )])
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_xattr_detail(extra_opts):
+@pytest.mark.parametrize("extra_opts", ["", "-D"])
+def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
     if not runs_as_root():
         # This tests need a ext4 fs which is created during the test.
         # The mount step sadly needs root privileges.
@@ -137,3 +136,67 @@ def test_xattr_detail(extra_opts):
         assert must_read_xattr(path_2) == {}
         assert must_read_xattr(path_3) == {}
         assert must_read_xattr(path_4) == {}
+
+
+# regression test for GitHub issue #475
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+def test_treemerge_xattr_hardlink(usual_setup_usual_teardown):
+    create_file('xxx', 'a/x')
+    create_file('yyy', 'a/y')
+    create_file('xxx', 'b/x')
+    create_file('yyy', 'b/y')
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    head, *data, foot = run_rmlint('--xattr-write -o sh:{p} -c sh:hardlink'.format(p=sh_path))
+    assert len(data) == 4
+
+    # run script to hardlink files
+    subprocess.check_output([sh_path, '-d'])
+
+    # This used to fail with 'rm_shred_group_free: assertion failed: (self->num_pending == 0)'
+    head, *data, foot = run_rmlint('-D --xattr-read')
+    assert len(data) == 6
+
+
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@pytest.mark.parametrize("clamp", ['-q 1', '-Q 1', '-q 50%', '-Q 50%'])
+def test_clamp_xattr_false_negative(usual_setup_usual_teardown, clamp):
+    create_file('xxx', 'a')
+    create_file('yyy', 'b')
+
+    # we used to write xattrs even when clamping is used
+    head, *data, foot = run_rmlint('--xattr', clamp)
+    assert all(e['type'] == 'unique_file' for e in data)
+
+    create_file('xxx', 'c')
+
+    # the first run after creating 'c' is ok...
+    head, *data, foot = run_rmlint('--xattr', force_no_pendantic=True)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # 'a' matches 'c'
+
+    # but we would get a false negative here, as the xattrs didn't match
+    head, *data, foot = run_rmlint('--xattr', force_no_pendantic=True)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # do they still match?
+
+
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@pytest.mark.parametrize("clamp", ['-q 2', '-Q 1', '-q 70%', '-Q 50%'])
+def test_clamp_xattr_false_positive(usual_setup_usual_teardown, clamp):
+    # directories 'a' and 'b' obviously do not match
+    # extra files are needed to satisfy preprocessing, which compares file size
+    create_file('xxx', '1')
+    create_file('xxx', 'a/1')
+    create_file('x', '2')
+    create_file('x', 'b/2')
+
+    # we used to write xattrs even when clamping is used
+    head, *data, foot = run_rmlint('--xattr --size 3', clamp)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # '1' matches 'a/1'
+
+    # fill in other xattrs
+    head, *data, foot = run_rmlint('--xattr', force_no_pendantic=True)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 4  # '1' matches 'a/1', '2' matches 'b/2'
+
+    # we would get a false positive here, as the xattrs matched
+    head, *data, foot = run_rmlint('--xattr -T dd', force_no_pendantic=True)
+    assert not any(e['type'] == 'duplicate_dir' for e in data)  # do 'a' and 'b' match?

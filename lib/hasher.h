@@ -141,9 +141,9 @@ RmHasherTask *rm_hasher_task_new(RmHasher *hasher,
 gboolean rm_hasher_task_hash(RmHasherTask *task,
                              char *path,
                              guint64 start_offset,
-                             size_t bytes_to_read,
+                             guint64 bytes_to_read,
                              gboolean is_symlink,
-                             gsize *bytes_read_out);
+                             guint64 *bytes_read_out);
 
 /**
  * @brief Finalise a hashing task

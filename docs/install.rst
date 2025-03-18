@@ -97,7 +97,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ sudo apt-get install pkg-config git scons python3-sphinx python3-nose gettext build-essential
+    $ sudo apt-get install pkg-config git scons python3-sphinx python3-pytest gettext build-essential
     # Optional dependencies for more features:
     $ sudo apt-get install libelf-dev libglib2.0-dev libblkid-dev libjson-glib-1.0 libjson-glib-dev
     # Optional dependencies for the GUI:
@@ -115,7 +115,7 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-      $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)".
+      $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   With homebrew installed, execute:
 

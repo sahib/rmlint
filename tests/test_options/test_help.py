@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 
 # These tests are only here to check if printing help works.
 # Well, actually it's to increase coverage to be honest.
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_help():
+def test_help(usual_setup_usual_teardown):
     yelp = subprocess.check_output(
         ['./rmlint', '--help'], stderr=subprocess.STDOUT
     ).decode('utf-8')
@@ -16,8 +14,7 @@ def test_help():
     assert '--show-man' in yelp
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_man():
+def test_man(usual_setup_usual_teardown):
     yelp = subprocess.check_output(
         ['./rmlint', '--show-man'], stderr=subprocess.STDOUT
     ).decode('utf-8')

@@ -4,6 +4,57 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.10.3 Ludicrous Lemur] - Unreleased
+
+### Changed
+- Documentation updates
+
+### Fixed
+- Fix string format in tests (#602).
+- Fix configuration checks of xattr-functions (#605).
+- Fix recheck in generated shell-script (#683).
+- Avoid generating an empty '-.o' file during configuration (#686).
+- Escape CWD and args strings in generated JSON output (#691).
+
+## [2.10.2 Ludicrous Lemur] -- 2023-08-08
+
+### Changed
+
+* preserve coredump and exit status for fatal signals
+* --equal no longer writes rmlint.sh and rmlint.json by default
+* issue #458: --is-reflink no longer accepts the '-o' option or writes rmlint.sh/rmlint.json
+* issue #434: downgraded 'Added big file "\<filename ...\>' from warning to info
+
+### Fixed
+
+* PR #443: scons: make fiemap feature depend on --with-fiemap, not --with-gettext
+* PR #470: scons: read environment variables before conftests
+* PR #474: scons: when printing parameters such as DEBUG, interpret '0' as 'no'
+* PR #485, issue #484: fix sorting of regex options (-S x and -S r) when multiple paths match
+* issue #496: fix 'free(): invalid pointer' crash with `-c csv:unique`
+* issue #438: fix 'Can't open directory or file "...": Invalid argument' on some platforms
+* issue #621: fix GUI freeze with glib 2.75.3 and above
+* issue #608: fix setuptools InvalidVersion error when installing GUI with packaging 22.0 and above
+* issue #613: actually remove the GUI's Polkit requrement ('Namespace Polkit not available')
+* issue #522: fix --size overflow detection on some platforms
+* issue #549: fix 'assertion failed: (node-\>inode != RM\_NO\_INODE)' on 32-bit platforms
+* issue #555: fix deadlock when `-T nonstripped` encountered an executable FIFO
+* issues #527, #528, #529, #530, #611: fix --is-reflink false-positives and false-negatives
+* fix --merge-directories false-negatives with `--algorithm sha1`
+* issue #577: fix GUI error 'Unknown option --match-with-extension'
+* issue #552: prevent generated script's -p option from overwriting itself with --merge-directories
+* issue #475: fix 'assertion failed: (self-\>num\_pending == 0)' with --merge-directories
+* issue #562: fix 'double free or corruption (out)' with --merge-directories --write-unfinished
+* issue #545: fix skip\_hardlink false-negatives with --merge-directories
+* do not write checksums to xattrs when --clamp-low/--clamp-top are in use
+* issue #431: suppress 'failed to getxattr for ...: Attribute not found' on macOS
+* fix progress text not displaying final results before continuing to next stage
+* fix regular files and symlinks potentially matching with --see-symlinks
+* fix assertion failure with --merge-directories and zero paths from stdin
+* issue #519: suppress 'Permission denied' errors from xfs\_info
+* fix --hash for large files on 32-bit platforms
+* issue #628: fix 'SyntaxError: source code cannot contain null bytes' with --gui and Python 3.12
+
 ## [2.10.1 Ludicrous Lemur] -- 2020-06-13
 
 ### Added

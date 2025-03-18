@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from nose import with_setup
+import os
+
 from tests.utils import *
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_default():
+def test_default(usual_setup_usual_teardown):
     # --see-symlinks should be on by default.
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
@@ -21,8 +20,7 @@ def test_default():
         '/a/z',
     }
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_merge_directories_with_ignored_symlinks():
+def test_merge_directories_with_ignored_symlinks(usual_setup_usual_teardown):
     # Badlinks should not forbid finding duplicate directories
     # when being filtered out during traversing with -T dd,df.
     create_file('xxx', 'a/z')
@@ -36,8 +34,7 @@ def test_merge_directories_with_ignored_symlinks():
         '/b',
     }
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_order():
+def test_order(usual_setup_usual_teardown):
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
     create_file('xxx', 'b/z')
@@ -78,3 +75,13 @@ def test_order():
     assert data[file_idx]['path'].endswith('z')
     assert data[file_idx]['is_original']
     assert data[file_idx + 1]['path'].endswith('z')
+
+
+def test_symlink_matches_file(usual_setup_usual_teardown):
+    create_file('xxx', 'foo')
+    create_file('foo', 'file')
+    os.symlink('foo', os.path.join(TESTDIR_NAME, 'link'))
+
+    # --see-symlinks should not generate false positives between unrelated files and links.
+    head, *data, footer = run_rmlint()
+    assert not data

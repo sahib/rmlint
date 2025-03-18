@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef struct _RmNode {
     /* Element of the path */

@@ -535,14 +535,14 @@ precedence over any ``-S`` options.
 
 Alphabetical sort will only use the basename of the file and ignore its case.
 One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
-**Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+**Note:** original path criteria (specified using ``//``) will always take first priority over ``-S`` options.
 
 For more fine grained control, it is possible to give a regular expression
 to sort by. This can be useful when you know a common fact that identifies
 original paths (like a path component being ``src`` or a certain file ending).
 
 To use the regular expression you simply enclose it in the criteria string
-by adding `<REGULAR_EXPRESSION>` after specifying `r` or `x`. Example: ``-S
+by adding ``<REGULAR_EXPRESSION>`` after specifying ``r`` or ``x``. Example: ``-S
 'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files.
 
 Warning: When using **r** or **x**, try to make your regex to be as specific
@@ -550,7 +550,7 @@ as possible! Good practice includes adding a ``$`` anchor at the end of the rege
 
 **Tips:**
 
-- **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
+- **l** is useful for files like ``file.mp3`` vs ``file.1.mp3`` or ``file.mp3.bak``.
 - **a** can be used as last criteria to assert a defined order.
 - **o/O** and **h/H** are only useful if there any hardlinks in the traversed path.
 - **o/O** takes the number of hardlinks outside the traversed paths (and
@@ -700,7 +700,7 @@ added to the count. This will of course lead to unmerged directories. That's why
 the ``-D`` option implies the ``-r`` (``--hidden``) and ``-l``
 (``--hardlinked``) option in order to make this convenient.
 
-A note to symbolic links: The default behaviour with --merge-directories is to
+A note to symbolic links: The default behaviour with ``--merge-directories`` is to
 not follow symbolic links, but to compare the link targets. If the target is the
 same, the link will be the same. This is a sane default for duplicate directories,
 since twin copies often are created by doing a backup of some files. In this case
@@ -770,11 +770,11 @@ The usage of the ``--replay`` feature is best understood by example:
    Options that are related to traversing and hashing/reading have no effect.
    Those are:
 
-   * `--followlinks`
-   * `--algorithm and --paranoid`
-   * `--clamp-low`
-   * `--hardlinked`
-   * `--write-unfinished`
+   * ``--followlinks``
+   * ``--algorithm`` and ``--paranoid``
+   * ``--clamp-low``
+   * ``--hardlinked``
+   * ``--write-unfinished``
    * all other caching options.
 
 Miscellaneous options
@@ -858,7 +858,7 @@ that can be easily solved with some other tools.
 Copying unique files
 ~~~~~~~~~~~~~~~~~~~~
 
-Imagine you have a folder from which you want to extract one copy of each file
+Imagine you have a directory from which you want to extract one copy of each file
 by content. This does not only mean unique files, but also original files - but
 not their duplicates. This sounds like a job for the ``uniques`` formatter
 (which outputs all unique paths, one by line) and ``jq``. ``jq`` is a great
@@ -872,7 +872,7 @@ little `tool`_ which makes it really easy to extract data from a ``json`` file:
     # - unique_files: Files that have a unique checksum in the directory.
     # - original_files: Files that have the "is_original" field set to true in the json output.
     # The '.[1:-1]' part is for filtering the header and footer part of the json response.
-    $ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
+    $ rmlint dir/ -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files
     # Now we only need to combine both files:
     $ cat unique_files original_files
 

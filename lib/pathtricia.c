@@ -97,18 +97,21 @@ typedef struct RmPathIter {
     char path_buf[PATH_MAX];
 } RmPathIter;
 
-void rm_path_iter_init(RmPathIter *iter, const char *path) {
+static void rm_path_iter_init(RmPathIter *iter, const char *path) {
     if(*path == '/') {
         path++;
     }
 
-    memset(iter->path_buf, 0, PATH_MAX);
     strncpy(iter->path_buf, path, PATH_MAX);
+    if (iter->path_buf[PATH_MAX - 1]) {
+        iter->path_buf[PATH_MAX - 1] = 0;
+        rm_log_error("path too long, truncated to: %s", iter->path_buf);
+    }
 
     iter->curr_elem = iter->path_buf;
 }
 
-char *rm_path_iter_next(RmPathIter *iter) {
+static char *rm_path_iter_next(RmPathIter *iter) {
     char *elem_begin = iter->curr_elem;
 
     if(elem_begin && (iter->curr_elem = strchr(elem_begin, '/'))) {

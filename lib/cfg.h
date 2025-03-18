@@ -101,6 +101,7 @@ typedef struct RmCfg {
     gint depth;
     gint verbosity;
 
+    gboolean clamp_is_used;
     gdouble skip_start_factor;
     gdouble skip_end_factor;
 

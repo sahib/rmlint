@@ -28,9 +28,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../lib/config.h"
-#include "../lib/hasher.h"
-#include "../lib/utilities.h"
+#include "config.h"
+#include "hasher.h"
+#include "utilities.h"
+#include "hash-utility.h"
 
 typedef struct RmHasherSession {
     /* Internal */

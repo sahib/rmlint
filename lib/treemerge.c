@@ -191,8 +191,10 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
     g_assert(cfg);
     guint path_count = cfg->path_count;
 
-    g_assert(path_count);
     g_assert(path_count == g_slist_length(cfg->paths));
+    if(path_count == 0) {
+        return true;
+    }
 
     const char **const path_vec = malloc(sizeof(*path_vec) * (path_count + 1));
     if(!path_vec) {
@@ -662,18 +664,22 @@ static void rm_tm_output_file(RmTreeMerger *self, RmFile *file) {
     g_hash_table_remove(self->free_map, file);
 }
 
-static void rm_tm_write_unfinished_cksums(RmTreeMerger *self, RmDirectory *directory) {
+static void rm_tm_write_unfinished_cksums(RmFile *file, RmTreeMerger *merger) {
+    file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
+    file->twin_count = -1;
+    rm_tm_output_file(merger, file);
+}
+
+static void rm_tm_write_unfinished_cksums_dir(RmTreeMerger *self, RmDirectory *directory) {
     for(GList *iter = directory->known_files.head; iter; iter = iter->next) {
         RmFile *file = iter->data;
-        file->lint_type = RM_LINT_TYPE_UNIQUE_FILE;
-        file->twin_count = -1;
-        rm_tm_output_file(self, file);
+        rm_tm_write_unfinished_cksums(file, self);
     }
 
     /* Recursively propagate to children */
     for(GList *iter = directory->children.head; iter; iter = iter->next) {
         RmDirectory *child = iter->data;
-        rm_tm_write_unfinished_cksums(self, child);
+        rm_tm_write_unfinished_cksums_dir(self, child);
     }
 }
 
@@ -913,10 +919,9 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 }
             }
 
-            if(self->session->cfg->write_unfinished) {
-                rm_tm_write_unfinished_cksums(self, directory);
+            if(self->session->cfg->write_unfinished && directory->finished) {
+                rm_tm_write_unfinished_cksums_dir(self, directory);
             }
-
         }
 
         rm_tm_output_group(self, &file_adaptor_group);
@@ -969,7 +974,12 @@ static void rm_tm_extract(RmTreeMerger *self) {
                 rm_shred_group_find_original(self->session, file_list,
                                              RM_SHRED_GROUP_FINISHING);
                 rm_tm_output_group(self, file_list);
+                continue;
             }
+        }
+
+        if(self->session->cfg->write_unfinished) {
+            g_queue_foreach(file_list, (GFunc)rm_tm_write_unfinished_cksums, self);
         }
     }
 }

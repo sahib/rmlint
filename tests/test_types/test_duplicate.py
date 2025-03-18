@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-from nose import with_setup
 from tests.utils import *
 import os
 
@@ -13,8 +12,7 @@ def create_data(len, flips=None):
     return ''.join(data)
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_small_diffs():
+def test_small_diffs(usual_setup_usual_teardown):
 
     if use_valgrind():
         N = 32
@@ -51,8 +49,7 @@ def test_small_diffs():
             assert len(data) == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_one_byte_file_negative():
+def test_one_byte_file_negative(usual_setup_usual_teardown):
     create_file('1', 'one')
     create_file('2', 'two')
     head, *data, footer = run_rmlint('-S a')
@@ -60,16 +57,14 @@ def test_one_byte_file_negative():
     assert len(data) == 0
 
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_one_byte_file_positive():
+def test_one_byte_file_positive(usual_setup_usual_teardown):
     create_file('1', 'one')
     create_file('1', 'two')
     head, *data, footer = run_rmlint('-S a')
 
     assert len(data) == 2
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_two_hardlinks():
+def test_two_hardlinks(usual_setup_usual_teardown):
     create_file('xxx', 'a')
     create_link('a', 'b')
     head, *data, footer = run_rmlint('-S a')
@@ -77,8 +72,7 @@ def test_two_hardlinks():
     assert len(data) == 2
     assert footer['total_lint_size'] == 0
 
-@with_setup(usual_setup_func, usual_teardown_func)
-def test_two_external_hardlinks():
+def test_two_external_hardlinks(usual_setup_usual_teardown):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     create_dirs('sub')

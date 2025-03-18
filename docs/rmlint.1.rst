@@ -39,7 +39,7 @@ to build from scratch with standard tools.
 In order to find the lint, ``rmlint`` is given one or more directories to traverse.
 If no directories or files were given, the current working directory is assumed.
 By default, ``rmlint`` will ignore hidden files and will not follow symlinks (see
-`Traversal Options`_).  ``rmlint`` will first find "other lint" and then search
+`Traversal Options`_). ``rmlint`` will first find "other lint" and then search
 the remaining files for duplicates.
 
 ``rmlint`` tries to be helpful by guessing what file of a group of duplicates
@@ -51,7 +51,7 @@ come from the same path, it will also apply different fallback sort strategies
 
 This behaviour can be also overwritten if you know that a certain directory
 contains duplicates and another one originals. In this case you write the
-original directory after specifying a single ``//``  on the commandline.
+original directory after specifying a single ``//`` on the commandline.
 Everything that comes after is a preferred (or a "tagged") directory. If there
 are duplicates from an unpreferred and from a preferred directory, the preferred
 one will always count as original. Special options can also be used to always
@@ -72,7 +72,7 @@ General Options
 
 :``-T --types="list"`` (**default\:** *defaults*):
 
-    Configure the types of lint rmlint will look for. The `list` string is a
+    Configure the types of lint rmlint will look for. The ``list`` string is a
     comma-separated list of lint types or lint groups (other separators like
     semicolon or space also work though).
 
@@ -108,14 +108,14 @@ General Options
 :``-o --output=spec`` / ``-O --add-output=spec`` (**default\:** *-o sh\:rmlint.sh -o pretty\:stdout -o summary\:stdout -o json\:rmlint.json*):
 
     Configure the way ``rmlint`` outputs its results. A ``spec`` is in the form
-    ``format:file`` or just ``format``.  A ``file`` might either be an
-    arbitrary path or ``stdout`` or ``stderr``.  If file is omitted, ``stdout``
+    ``format:file`` or just ``format``. A ``file`` might either be an
+    arbitrary path or ``stdout`` or ``stderr``. If file is omitted, ``stdout``
     is assumed. ``format`` is the name of a formatter supported by this
     program. For a list of formatters and their options, refer to the
     **Formatters** section below.
 
-    If ``-o`` is specified, rmlint's default outputs are overwritten.  With
-    ``--O`` the defaults are preserved.  Either ``-o`` or ``-O`` may be
+    If ``-o`` is specified, rmlint's default outputs are overwritten. With
+    ``-O`` the defaults are preserved. Either ``-o`` or ``-O`` may be
     specified multiple times to get multiple outputs, including multiple
     outputs of the same format.
 
@@ -154,7 +154,7 @@ General Options
 
     Choose the algorithm to use for finding duplicate files. The algorithm can be
     either **paranoid** (byte-by-byte file comparison) or use one of several file hash
-    algorithms to identify duplicates.  The following hash families are available (in
+    algorithms to identify duplicates. The following hash families are available (in
     approximate descending order of cryptographic strength):
 
     **sha3**, **blake**,
@@ -256,15 +256,16 @@ General Options
 
 :``-y --sort-by=order`` (**default\:** *none*):
 
-    During output, sort the found duplicate groups by criteria described by `order`.
-    `order` is a string that may consist of one or more of the following letters:
+    During output, sort the found duplicate groups by criteria described by
+    ``order``. ``order`` is a string that may consist of one or more of the
+    following letters:
 
-    * `s`: Sort by size of group.
-    * `a`: Sort alphabetically by the basename of the original.
-    * `m`: Sort by mtime of the original.
-    * `p`: Sort by path-index of the original.
-    * `o`: Sort by natural found order (might be different on each run).
-    * `n`: Sort by number of files in the group.
+    * ``s``: Sort by size of group.
+    * ``a``: Sort alphabetically by the basename of the original.
+    * ``m``: Sort by mtime of the original.
+    * ``p``: Sort by path-index of the original.
+    * ``o``: Sort by natural found order (might be different on each run).
+    * ``n``: Sort by number of files in the group.
 
     The letter may also be written uppercase (similar to ``-S /
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
@@ -273,7 +274,7 @@ General Options
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
     Use color escapes for pretty output or disable them.
-    If you pipe `rmlints` output to a file ``-W`` is assumed automatically.
+    If you pipe ``rmlint``'s output to a file ``-W`` is assumed automatically.
 
 :``-h --help`` / ``-H --show-man``:
 
@@ -290,7 +291,7 @@ Traversal Options
 :``-s --size=range`` (**default\:** "1"):
 
     Only consider files as duplicates in a certain size range.
-    The format of `range` is `min-max`, where both ends can be specified
+    The format of ``range`` is ``min-max``, where both ends can be specified
     as a number with an optional multiplier. The available multipliers are:
 
     - *C* (1^1), *W* (2^1), B (512^1), *K* (1000^1), KB (1024^1), *M* (1000^2), *MB* (1024^2), *G* (1000^3), *GB* (1024^3),
@@ -320,22 +321,22 @@ Traversal Options
 :``-l --hardlinked`` (**default**) / ``--keep-hardlinked`` / ``-L --no-hardlinked``:
 
     Hardlinked files are treated as duplicates by default (``--hardlinked``). If
-    ``--keep-hardlinked`` is given, `rmlint` will not delete any files that are
-    hardlinked to an original in their respective group. Such files will be
+    ``--keep-hardlinked`` is given, ``rmlint`` will not delete any files that
+    are hardlinked to an original in their respective group. Such files will be
     displayed like originals, i.e. for the default output with a "ls" in front.
     The reasoning here is to maximize the number of kept files, while maximizing
     the number of freed space: Removing hardlinks to originals will not allocate
     any free space.
 
-    If `--no-hardlinked` is given, only one file (of a set of hardlinked files)
-    is considered, all the others are ignored; this means, they are not
+    If ``--no-hardlinked`` is given, only one file (of a set of hardlinked
+    files) is considered, all the others are ignored; this means, they are not
     deleted and also not even shown in the output. The "highest ranked" of the
     set is the one that is considered.
 
 :``-f --followlinks`` / ``-F --no-followlinks`` / ``-@ --see-symlinks`` (**default**):
 
     ``-f`` will always follow symbolic links. If file system loops occurs
-    ``rmlint`` will detect this. If `-F` is specified, symbolic links will be
+    ``rmlint`` will detect this. If ``-F`` is specified, symbolic links will be
     ignored completely, if ``-@`` is specified, ``rmlint`` will see symlinks and
     treats them like small files with the path to their target in them. The
     latter is the default behaviour, since it is a sensible default for
@@ -365,7 +366,7 @@ Traversal Options
     Only consider those files as dupes that do not share the same basename.
     See also ``man 1 basename``. The comparison of the basenames is case-insensitive.
 
-:``-e --match-with-extension`` / ``-E --no-match-with-extension`` (**default**):
+:``-e --match-extension`` / ``-E --no-match-extension`` (**default**):
 
     Only consider those files as dupes that have the same file extension. For
     example two photos would only match if they are a ``.png``. The extension is
@@ -380,7 +381,7 @@ Traversal Options
 :``-n --newer-than-stamp=<timestamp_filename>`` / ``-N --newer-than=<iso8601_timestamp_or_unix_timestamp>``:
 
     Only consider files (and their size siblings for duplicates) newer than a
-    certain modification time (*mtime*).  The age barrier may be given as
+    certain modification time (*mtime*). The age barrier may be given as
     seconds since the epoch or as ISO8601-Timestamp like
     *2014-09-08T00:12:32+0200*.
 
@@ -392,9 +393,8 @@ Traversal Options
     ``-N``, in contrast, takes the timestamp directly and will not write anything.
 
     Note that ``rmlint`` will find duplicates newer than ``timestamp``, even if
-    the original is older.  If you want only find duplicates where both
-    original and duplicate are newer than ``timestamp`` you can use
-    ``find(1)``:
+    the original is older. If you want only find duplicates where both
+    original and duplicate are newer than ``timestamp`` you can use `find(1)`:
 
     * ``find -mtime -1 -print0 | rmlint -0 # pass all files younger than a day to rmlint``
 
@@ -440,24 +440,27 @@ Original Detection Options
     - **o**: keep file with lowest number of hardlinks outside of the paths traversed by ``rmlint``.
     - **O**: keep file with highest number of hardlinks outside of the paths traversed by ``rmlint``.
 
-    Alphabetical sort will only use the basename of the file and ignore its case.
-    One can have multiple criteria, e.g.: ``-S am`` will choose first alphabetically; if tied then by mtime.
-    **Note:** original path criteria (specified using `//`) will always take first priority over `-S` options.
+    Alphabetical sort will only use the basename of the file and ignore its
+    case. One can have multiple criteria, e.g.: ``-S am`` will choose first
+    alphabetically; if tied then by mtime. **Note:** original path criteria
+    (specified using ``//``) will always take first priority over ``-S``
+    options.
 
     For more fine grained control, it is possible to give a regular expression
     to sort by. This can be useful when you know a common fact that identifies
     original paths (like a path component being ``src`` or a certain file ending).
 
     To use the regular expression you simply enclose it in the criteria string
-    by adding `<REGULAR_EXPRESSION>` after specifying `r` or `x`. Example: ``-S
-    'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original files.
+    by adding ``<REGULAR_EXPRESSION>`` after specifying ``r`` or ``x``. Example:
+    ``-S 'r<.*\.bak$>'`` makes all files that have a ``.bak`` suffix original
+    files.
 
     Warning: When using **r** or **x**, try to make your regex to be as specific
     as possible! Good practice includes adding a ``$`` anchor at the end of the regex.
 
     Tips:
 
-    - **l** is useful for files like `file.mp3 vs file.1.mp3 or file.mp3.bak`.
+    - **l** is useful for files like ``file.mp3`` vs ``file.1.mp3`` or ``file.mp3.bak``.
     - **a** can be used as last criteria to assert a defined order.
     - **o/O** and **h/H** are only useful if there any hardlinks in the traversed path.
     - **o/O** takes the number of hardlinks outside the traversed paths (and
@@ -543,6 +546,9 @@ Caching
     **NOTE:** You can specify ``--xattr-write`` and ``--xattr-read`` at the same time.
     This will read from existing checksums at the start of the run and update all hashed
     files at the end.
+
+    ``--xattr-write`` has no effect when ``--clamp-low`` or ``--clamp-top`` is
+    used to prevent false negatives in future runs without clamping.
 
     Usage example::
 
@@ -662,7 +668,7 @@ FORMATTERS
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
       it.
     * ``hardlink``: Replace the duplicate file with a hardlink to the original
-      file. The resulting files will have  the same inode number. Fails if both
+      file. The resulting files will have the same inode number. Fails if both
       files are not on the same partition. You can use ``ls -i`` to show the
       inode number of a file and ``find -samefile <path>`` to find all
       hardlinks for a certain file.
@@ -701,7 +707,7 @@ FORMATTERS
   that is not directly possible with rmlint's built-in options. A very handy tool here is ``jq``.
   Here is an example to output all original files directly from a ``rmlint`` run:
 
-  ``$ rmlint -o | json jq -r '.[1:-1][] | select(.is_original) | .path'``
+  ``$ rmlint -o json | jq -r '.[1:-1][] | select(.is_original) | .path'``
 
 * ``py``: Outputs a python script and a JSON document, just like the **json** formatter.
   The JSON document is written to ``.rmlint.json``, executing the script will
@@ -756,9 +762,9 @@ FORMATTERS
 
   Available options:
 
-  * *omitfirst:* Same as the ``-f / --omitfirst`` option in ``fdupes(1)``. Omits the
-    first line of each set of duplicates (i.e. the original file.
-  * *sameline:* Same as the ``-1 / --sameline`` option in ``fdupes(1)``. Does not
+  * *omitfirst:* Same as the ``-f / --omitfirst`` option in `fdupes(1)`. Omits
+    the first line of each set of duplicates (i.e. the original file.
+  * *sameline:* Same as the ``-1 / --sameline`` option in `fdupes(1)`. Does not
     print newlines between files, only a space. Newlines are printed only between
     sets of duplicates.
 
@@ -772,7 +778,7 @@ OTHER STAND-ALONE COMMANDS
     This will only work when ``Shredder`` and its dependencies were installed.
     See also: http://rmlint.readthedocs.org/en/latest/gui.html
 
-    The gui has its own set of options, see ``--gui --help`` for a list.  These
+    The gui has its own set of options, see ``--gui --help`` for a list. These
     should be placed at the end, ie ``rmlint --gui [options]`` when calling
     it from commandline.
 
@@ -781,7 +787,7 @@ OTHER STAND-ALONE COMMANDS
     Make ``rmlint`` work as a multi-threaded file hash utility, similar to the
     popular ``md5sum`` or ``sha1sum`` utilities, but faster and with more algorithms.
     A set of paths given on the commandline or from *stdin* is hashed using one
-    of the available hash algorithms.  Use ``rmlint --hash -h`` to see options.
+    of the available hash algorithms. Use ``rmlint --hash -h`` to see options.
 
 :``rmlint --equal [paths...]``:
 
@@ -792,7 +798,7 @@ OTHER STAND-ALONE COMMANDS
     etc.) will be executed by default. At least two paths need to be passed.
 
     Note: This even works for directories and also in combination with paranoid
-    mode (pass ``-pp`` for byte comparison); remember that rmlint does not care
+    mode (pass ``-p`` for byte comparison); remember that rmlint does not care
     about the layout of the directory, but only about the content of the files
     in it. At least two paths need to be given to the commandline.
 
@@ -807,7 +813,7 @@ OTHER STAND-ALONE COMMANDS
 
     This command is similar to ``cp --reflink=always <src> <dest>``
     except that it (a) checks that ``src`` and ``dest`` have identical data, and
-    it makes no changes to ``dest``'s metadata.
+    (b) it makes no changes to ``dest``'s metadata.
 
     Running with ``-r`` option will enable deduplication of read-only [btrfs]
     snapshots (requires root).
@@ -859,13 +865,13 @@ This is a collection of common use cases and other tricks:
 
 * Compare files byte-by-byte in current directory:
 
-  ``$ rmlint -pp .``
+  ``$ rmlint -p .``
 
 * Find duplicates with same basename (excluding extension):
 
   ``$ rmlint -e``
 
-* Do more complex traversal using ``find(1)``.
+* Do more complex traversal using `find(1)`.
 
   ``$ find /usr/lib -iname '*.so' -type f | rmlint - # find all duplicate .so files``
 
@@ -919,7 +925,7 @@ This is a collection of common use cases and other tricks:
 
 * Produce a list of files that are unique, including original files ("one of each"):
 
-  ``$ rmlint t -o json -o uniques:unique_files |  jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files``
+  ``$ rmlint t -o json -o uniques:unique_files | jq -r '.[1:-1][] | select(.is_original) | .path' | sort > original_files``
   ``$ cat unique_files original_files``
 
 * Sort files by a user-defined regular expression
@@ -950,13 +956,13 @@ PROBLEMS
    The default hash function (blake2b) is very safe but in theory it is possible for
    two files to have then same hash. If you had 10^73 different files, all the same
    size, then the chance of a false positive is still less than 1 in a billion.
-   If you're concerned just use the ``--paranoid`` (``-pp``)
+   If you're concerned just use the ``--paranoid`` (``-p``)
    option. This will compare all the files byte-by-byte and is not much slower than
    blake2b (it may even be faster), although it is a lot more memory-hungry.
 
 2. **File modification during or after rmlint run:** It is possible that a file
    that ``rmlint`` recognized as duplicate is modified afterwards, resulting in
-   a different file.  If you use the rmlint-generated shell script to delete
+   a different file. If you use the rmlint-generated shell script to delete
    the duplicates, you can run it with the ``-p`` option to do a full re-check
    of the duplicate against the original before it deletes the file. When using
    ``-c sh:hardlink`` or ``-c sh:symlink`` care should be taken that
@@ -1012,4 +1018,4 @@ PROGRAM AUTHORS
 * Christopher <sahib> Pahl 2010-2017 (https://github.com/sahib)
 * Daniel <SeeSpotRun> T.   2014-2017 (https://github.com/SeeSpotRun)
 
-Also see the  http://rmlint.rtfd.org for other people that helped us.
+Also see the http://rmlint.rtfd.org for other people that helped us.

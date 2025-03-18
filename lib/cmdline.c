@@ -97,7 +97,7 @@ static void rm_cmd_show_version(void) {
 }
 
 static void rm_cmd_show_manpage(void) {
-    static const char *commands[] = {"man %s docs/rmlint.1.gz 2> /dev/null",
+    static const char *commands[] = {"man %s docs/_build/man/rmlint.1 2> /dev/null",
                                      "man %s rmlint", NULL};
 
     bool found_manpage = false;
@@ -135,30 +135,30 @@ static void rm_cmd_show_manpage(void) {
 * We try to work around this by manually installing dist-packages to the
 * sys.path by first calling a small bootstrap script.
 */
-static const char RM_PY_BOOTSTRAP[] =
+static const char rm_py_bootstrap[] =
     ""
-    "# This is a bootstrap script for the rmlint-gui.                              \n"
-    "# See the src/rmlint.c in rmlint's source for more info.                      \n"
-    "import sys, os, site                                                          \n"
-    "                                                                              \n"
-    "# Also default to dist-packages on debian(-based):                            \n"
-    "sites = site.getsitepackages()                                                \n"
-    "sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites]) \n"
-    "sys.path.extend(sites)                                                        \n"
-    "                                                                              \n"
-    "# Cleanup self:                                                               \n"
-    "try:                                                                          \n"
-    "    os.remove(sys.argv[0])                                                    \n"
-    "except:                                                                       \n"
-    "    print('Note: Could not remove bootstrap script at ', sys.argv[0])         \n"
-    "                                                                              \n"
-    "# Run shredder by importing the main:                                         \n"
-    "try:                                                                          \n"
-    "    import shredder                                                           \n"
-    "    shredder.run_gui()                                                        \n"
-    "except ImportError as err:                                                    \n"
-    "    print('Failed to load shredder:', err)                                    \n"
-    "    print('This might be due to a corrupted install; try reinstalling.')      \n";
+    "# This is a bootstrap script for rmlint-gui (aka Shredder)\n"
+    "# See the lib/cmdline.c in rmlint's source for more info.\n"
+    "import sys, os, site\n"
+    "\n"
+    "# Also default to dist-packages on debian(-based):\n"
+    "sites = site.getsitepackages()\n"
+    "sys.path.extend([d.replace('dist-packages', 'site-packages') for d in sites])\n"
+    "sys.path.extend(sites)\n"
+    "\n"
+    "# Cleanup self:\n"
+    "try:\n"
+    "    os.remove(sys.argv[0])\n"
+    "except:\n"
+    "    print('Note: Could not remove bootstrap script at ', sys.argv[0])\n"
+    "\n"
+    "# Run shredder:\n"
+    "try:\n"
+    "    import shredder\n"
+    "    shredder.run_gui()\n"
+    "except ImportError as err:\n"
+    "    print('Failed to load shredder:', err)\n"
+    "    print('This might be due to a corrupted install; try reinstalling.')\n";
 
 static void rm_cmd_start_gui(int argc, const char **argv) {
     const char *commands[] = {"python3", "python", NULL};
@@ -176,7 +176,7 @@ static void rm_cmd_start_gui(int argc, const char **argv) {
         return;
     }
 
-    if(write(bootstrap_fd, RM_PY_BOOTSTRAP, sizeof(RM_PY_BOOTSTRAP)) < 0) {
+    if(write(bootstrap_fd, rm_py_bootstrap, sizeof(rm_py_bootstrap) - 1) < 0) {
         rm_log_warning_line("Could not bootstrap gui: Unable to write to tempfile: %s",
                             g_strerror(errno));
         return;
@@ -351,7 +351,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
             return 0;
         }
 
-        if(fraction_num == ULONG_MAX && errno == ERANGE) {
+        if(fraction_num == ULLONG_MAX && errno == ERANGE) {
             g_set_error(error, RM_ERROR_QUARK, 0, _("Fraction is too big for uint64"));
             return 0;
         }
@@ -371,7 +371,7 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
             return 0;
         }
 
-        if(base_size == ULONG_MAX && errno == ERANGE) {
+        if(base_size == ULLONG_MAX && errno == ERANGE) {
             g_set_error(error, RM_ERROR_QUARK, 0, _("Size is too big for uint64"));
             return 0;
         }
@@ -380,13 +380,15 @@ static RmOff rm_cmd_size_string_to_bytes(const char *size_spec, GError **error) 
     RmOff result = base_size;
     if(need_multiply) {
         // Only multiply if we really have to.
-        result = (result + fraction) * size_factor;
+        double fres = (result + fraction) * size_factor;
 
         // Check if an overflow happened during multiplication.
-        if(result < base_size) {
-            g_set_error(error, RM_ERROR_QUARK, 0, _("Size factor would overflow size (max. 2**64 allowed)"));
+        if(fres > nextafter((double)ULLONG_MAX, 0)) {
+            g_set_error(error, RM_ERROR_QUARK, 0,
+                        _("Size factor would overflow size (max. 2**64 allowed)"));
             return 0;
         }
+        result = fres;
     }
 
     return result;
@@ -625,6 +627,8 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string,
             session->cfg->skip_end_offset = offset;
         }
     }
+
+    session->cfg->clamp_is_used = true;
 }
 
 static gboolean rm_cmd_parse_partial_hidden(_UNUSED const char *option_name,
@@ -1331,6 +1335,10 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
+    if(session->cfg->run_equal_mode) {
+        return true;
+    }
+
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifying both -o and -O is not allowed"));
@@ -1601,8 +1609,8 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         ); goto cleanup;
     }
 
-    if(cfg->dedupe) {
-        /* dedupe session; regular rmlint configs are ignored */
+    if(cfg->dedupe || cfg->is_reflink) {
+        /* dedupe or is-reflink session; regular rmlint configs are ignored */
         goto cleanup;
     }
 

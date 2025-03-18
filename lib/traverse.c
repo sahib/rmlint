@@ -273,6 +273,11 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
 
 #else
 
+// size_t is 32 bits on 32-bit platforms, stat64 uses a 64-bit type
+G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_size) == G_SIZEOF_MEMBER(__fts_stat_t, st_size));
+// ino_t is 32 bits on some 64-bit platforms, stat64 uses a 64-bit type
+G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_ino) == G_SIZEOF_MEMBER(__fts_stat_t, st_ino));
+
 #define ADD_FILE(lint_type, is_symlink) \
     _ADD_FILE(lint_type, is_symlink, (RmStat *)p->fts_statp)
 
@@ -403,7 +408,7 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmTravSession *trav_sess
                                      rm_traverse_is_hidden(cfg, p->fts_name, is_hidden,
                                                            p->fts_level + 1),
                                      rmpath->treat_as_single_vol, p->fts_level);
-                    rm_log_warning_line(_("Added big file %s"), p->fts_path);
+                    rm_log_info_line(_("Added big file %s"), p->fts_path);
                 } else {
                     rm_log_warning_line(_("cannot stat file %s (skipping)"), p->fts_path);
                 }
