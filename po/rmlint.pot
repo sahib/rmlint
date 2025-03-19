@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.8.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-02-14 01:45+0100\n"
+"POT-Creation-Date: 2025-03-18 15:35+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -923,14 +923,14 @@ msgstr ""
 
 #: lib/cmdline.c
 msgid ""
-"-k and -M should not be specified at the same time (see also: https://github."
-"com/sahib/rmlint/issues/244)"
+"-k and -M should not be specified at the same time (see also: https://"
+"github.com/sahib/rmlint/issues/244)"
 msgstr ""
 
 #: lib/cmdline.c
 msgid ""
-"-K and -m should not be specified at the same time (see also: https://github."
-"com/sahib/rmlint/issues/244)"
+"-K and -m should not be specified at the same time (see also: https://"
+"github.com/sahib/rmlint/issues/244)"
 msgstr ""
 
 #: lib/cmdline.c
@@ -966,4 +966,83 @@ msgstr ""
 
 #: lib/cmdline.c
 msgid "will also disable --merge-directories and trigger this warning."
+msgstr ""
+
+#: src/rmlint.c
+#, c-format
+msgid "Aborting due to a fatal error. (signal received: %s)\n"
+msgstr ""
+
+#: src/rmlint.c
+msgid "Please file a bug report (See rmlint -h)\n"
+msgstr ""
+
+#: lib/formats/summary.c
+#, c-format
+msgid "This run was a replay from a previous run. No I/O done!\n"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Size is empty"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Negative sizes are no good idea"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Given size_format specifier not found"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Failed to parse size fraction"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Fraction is too big for uint64"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Size is too big for uint64"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Size factor would overflow size (max. 2**64 allowed)"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Specifying both -o and -O is not allowed"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Do create backups of previous result files"
+msgstr ""
+
+#: lib/hasher.c
+#, c-format
+msgid ""
+"Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
+msgstr ""
+
+#: lib/formats.c
+#, c-format
+msgid "Moving old file to `%s`. Leave out --backup to disable this."
+msgstr ""
+
+#: lib/utilities.c
+#, c-format
+msgid "rm_offset_get_fiemap: fd=%d, n_extents=%d, file_offset=%d"
+msgstr ""
+
+#: lib/utilities.c
+#, c-format
+msgid "rm_offset_get_fiemap: got no fiemap for %d"
+msgstr ""
+
+#: lib/utilities.c
+msgid "rm_offset_get_fiemap: got no extents for %d at offset %"
+msgstr ""
+
+#: lib/session.c
+msgid "Usage: rmlint --is-reflink [-v|V] file1 file2\n"
 msgstr ""
