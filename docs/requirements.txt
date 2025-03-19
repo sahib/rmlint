@@ -1,2 +1,2 @@
-Sphinx==8.*
-sphinx-bootstrap-theme==0.8.*
+Sphinx>=8.0,<10
+furo>=2025.12.19

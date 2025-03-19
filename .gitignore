@@ -1,42 +1,53 @@
-*.o
-*.gcda
-*.gcno
-*.swp
-*.log
-*.status
-*.mo
-rmlint
+# rmlint-generated outputs
 rmlint.sh
 rmlint.json
-src/config.h
-docs/rmlint.1.gz
-docs/rmlint.1
-
-# Scons
-.scons*
-.sconf*
-.rope*
-*.pyc
-/.prefix.txt
-
-docs/_build
-__pycache__
-
-lib/config.h
-lib/formats/*.c.inc
-uninstall-
-*.a
-
 /rmlint.*.sh
 /rmlint.*.json
 /.rmlint.json
 
+# release tarball
 /rmlint-*.tar.gz
 
-# JetBrains' IDE
-.idea
+# rmlint build artifacts
+/.prefix.txt
+lib/config.h
+lib/formats/*.c.inc
+uninstall-
+
+# object files
+/rmlint
+/librmlint.a
+*.o
+
+# gcov
+*.gcda
+*.gcno
+
+# misc
+*.swp
+*.log
+*.status
+
+# compiled translations
+/po/*.mo
+
+# Scons
+.scons*
+.sconf*
+
+# Python
+.venv/
+.rope*
+*.pyc
+__pycache__
+
+# Docs
+/docs/_build
 
 # generated clang tooling
 /compile_flags.txt
 /.clang_complete
 /compile_commands.json
+
+# JetBrains' IDE
+.idea

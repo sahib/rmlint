@@ -1,4 +1,7 @@
-.. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
+.. image:: docs/_static/logo.png#gh-light-mode-only
+   :align: center
+
+.. image:: docs/_static/logo-dark.png#gh-dark-mode-only
    :align: center
 
 `rmlint` finds space waste and other broken things on your filesystem and

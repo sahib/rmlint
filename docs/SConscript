@@ -16,10 +16,12 @@ def run_sphinx_binary(builder, **kwargs):
     build_dir = os.path.dirname(str(kwargs['target'][0]))
     os.makedirs(build_dir, exist_ok=True)
 
-    subprocess.check_call([
-        SPHINX_BINARY, '-Q', '-D', 'man_make_section_directory=0',
-        '-b', builder, source_dir, build_dir
-    ])
+    command = [SPHINX_BINARY, '-q', '-D', 'man_make_section_directory=0']
+
+    if ARGUMENTS.get('STRICT') == '1':
+        command.append('-W')
+
+    subprocess.check_call(command + ['-b', builder, source_dir, build_dir])
 
 
 # Do not use partial(), but a real function.

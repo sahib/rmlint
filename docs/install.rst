@@ -42,7 +42,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for more features:
     $ sudo dnf install libblkid-devel elfutils-libelf-devel
     # Optional dependencies for building documentation:
-    $ sudo dnf install python3-sphinx
+    $ sudo dnf install python3-sphinx python3-furo
     # Optional dependencies for the GUI:
     $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog
     # Optional dependencies for tests:
@@ -77,7 +77,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for more features:
     $ sudo pacman -S util-linux-libs libelf
     # Optional dependencies for building documentation:
-    $ sudo pacman -S python-sphinx python-sphinx-bootstrap-theme
+    $ sudo pacman -S python-sphinx python-sphinx-furo
     # Optional dependencies for the GUI:
     $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg python-colorlog
     # Optional dependencies for tests:
@@ -110,7 +110,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for more features:
     $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev
     # Optional dependencies for building documentation:
-    $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
+    $ sudo apt install python3-sphinx furo
     # Optional dependencies for running the GUI:
     $ sudo apt install python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 librsvg2-common python3-colorlog
     # Optional dependencies for installing the GUI:
@@ -154,7 +154,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependency for more features:
     $ doas pkg install libblkid
     # Optional dependency for building documentation:
-    $ doas pkg install py312-sphinx
+    $ doas pkg install py312-sphinx py312-furo
     # Optional dependencies for the GUI:
     $ doas pkg install gtksourceview4 librsvg2 py312-colorlog
 

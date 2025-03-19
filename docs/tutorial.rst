@@ -265,7 +265,7 @@ Here's the list of currently available formatters and their config options:
 
     The header contains information about the program invocation, while the footer
     contains statistics about the program-run. Every data element has a type which
-    identifies its lint type (you can lookup all types here_).
+    identifies its lint type (you can lookup all types in the :doc:`manpage <rmlint.1>`).
 
     **Config values:**
 
@@ -347,7 +347,6 @@ Here's the list of currently available formatters and their config options:
 
       $ rmlint -o sh -c sh:cmd='echo "Trashing $1" && trash-put "$1"'
 
-
 :py:
 
     Outputs a python script and a JSON file.  The json file is the same as that produced
@@ -369,7 +368,6 @@ Here's the list of currently available formatters and their config options:
 
        Deleting twins of /home/user/sub2/b
        Handling (duplicate_file): /home/user/sub1/b
-
 
 :csv:
 
@@ -466,7 +464,7 @@ As you see, it just enables a certain duplicate detection algorithm to either us
 a stronger hash function or to do a byte-by-byte comparison. While this might sound
 slow it's often only a few seconds slower than the default behaviour.
 
-There is a bunch of other hash functions you can lookup in the manpage.
+There is a bunch of other hash functions you can lookup in the :doc:`manpage <rmlint.1>`.
 We recommend never to use anything worse than the default.
 
 .. note::
@@ -788,14 +786,14 @@ Here's just a list of options that are nice to know, but are not essential:
 
 - Consecutive runs of ``rmlint`` can be speed up by using ``--xattr``.
 
-  .. code-block:: python
+  .. code-block:: bash
 
     $ rmlint large_dataset/ --xattr
     $ rmlint large_dataset/ --xattr
 
   Here, the second run should (or *might*) run a lot faster, since the first
   run saved all calculated checksums to the extended attributes of each
-  processed file. But be sure to read the caveats stated in the `manpage`_!
+  processed file. But be sure to read the caveats stated in the :doc:`manpage <rmlint.1>`!
   Especially keep in mind that you need to have write access to the files for this to work.
 
   Note that the above example will only save checksums for duplicate files.
@@ -804,7 +802,7 @@ Here's just a list of options that are nice to know, but are not essential:
   the same length.  This may make the first run very slow but will greatly speed up
   future runs.
 
-  .. code-block:: python
+  .. code-block:: bash
 
     $ rmlint large_dataset/ --xattr --hash-unmatched
     $ rmlint large_dataset/ --xattr
@@ -861,8 +859,6 @@ Here's just a list of options that are nice to know, but are not essential:
 
     # Start hashing at byte 100, but not more than 90% of the filesize.
     $ rmlint -q 100 -Q .9
-
-.. _manpage: http://rmlint.readthedocs.org/en/latest/rmlint.1.html
 
 Scripting
 ---------
