@@ -17,22 +17,13 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('./'))
 
-try:
-    import sphinx_bootstrap_theme
-
-    # Activate the theme.
-    templates_path = ['_templates']
-    html_theme = 'bootstrap'
-    html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
-except ImportError:
-    print('Cannot import `sphinx_bootstrap_theme`; falling back to `nature`.')
-    print('^ This is no error, will cause only slightly different html output.')
-    html_theme = 'nature'
+#html_theme = 'pydata_sphinx_theme'
+html_theme = 'alabaster'
 
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.3'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -115,74 +106,13 @@ html_logo = "logo.png"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.
-if html_theme == 'bootstrap':
-    html_theme_options = {
-        # Navigation bar title. (Default: ``project`` value)
-        'navbar_title': " ",
-
-        # Tab name for entire site. (Default: "Site")
-        'navbar_site_name': "Topics",
-
-        # A list of tuples containing pages or urls to link to.
-        # Valid tuples should be in the following forms:
-        #    (name, page)                 # a link to a page
-        #    (name, "/aa/bb", 1)          # a link to an arbitrary relative url
-        #    (name, "http://example.com", True) # arbitrary absolute url
-        # Note the "1" or "True" value above as the third argument to indicate
-        # an arbitrary url.
-        'navbar_links': [
-            ("GitHub", "https://github.com/sahib/rmlint", True),
-            ("Travis", "https://travis-ci.org/sahib/rmlint", True)
-        ],
-
-        # Render the next and previous page links in navbar. (Default: true)
-        'navbar_sidebarrel': False,
-
-        # Render the current pages TOC in the navbar. (Default: true)
-        'navbar_pagenav': True,
-
-        # Tab name for the current pages TOC. (Default: "Page")
-        'navbar_pagenav_name': "Chapters",
-
-        # Global TOC depth for "site" navbar tab. (Default: 1)
-        # Switching to -1 shows all levels.
-        'globaltoc_depth': 2,
-
-        # Include hidden TOCs in Site navbar?
-        #
-        # Note: If this is "false", you cannot have mixed ``:hidden:`` and
-        # non-hidden ``toctree`` directives in the same page, or else the build
-        # will break.
-        #
-        # Values: "true" (default) or "false"
-        'globaltoc_includehidden': "true",
-
-        # HTML navbar class (Default: "navbar") to attach to <div> element.
-        # For black navbar, do "navbar navbar-inverse"
-        'navbar_class': "navbar",
-
-        # Fix navigation bar to top of page?
-        # Values: "true" (default) or "false"
-        'navbar_fixed_top': "true",
-
-        # Location of link to source.
-        # Options are "nav" (default), "footer" or anything else to exclude.
-        'source_link_position': "footer",
-
-        # Bootswatch (http://bootswatch.com/) theme.
-        #
-        # Options are nothing with "" (default) or the name of a valid theme
-        # such as "amelia" or "cosmo".
-        # 'bootswatch_theme': "simplex",
-        # 'bootswatch_theme': "journal",
-        # 'bootswatch_theme': "readable",
-        #'bootswatch_theme': "sandstone",
-        'bootswatch_theme': "readable",
-
-        # Choose Bootstrap version.
-        # Values: "3" (default) or "2" (in quotes)
-        'bootstrap_version': "3",
-    }
+html_theme_options = {
+    'logo': 'logo.png',
+    'github_user': 'sahib',
+    'github_repo': 'rmlint',
+    'github_button': True,
+    'fixed_sidebar': True,
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 
@@ -199,9 +129,6 @@ html_title = 'rmlint ({v}) documentation'.format(v=version_string)
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
-
-# The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
 github_fork = 'sahib'
 
 # The name of an image file (within the static path) to use as favicon of the
@@ -223,13 +150,13 @@ html_last_updated_fmt = '%b %d, %Y'
 # html_use_smartypants = False
 # smart_quotes = True
 
-# Custom sidebar templates, maps document names to template names.
-html_default_sidebars = ['localtoc.html', 'sourcelink.html', 'searchbox.html']
 html_sidebars = {
-    'tutorial': html_default_sidebars,
-    'developers': html_default_sidebars,
-    'install': html_default_sidebars,
-    'translators': html_default_sidebars
+    '**': [
+        'about.html',
+        'searchfield.html',
+        'navigation.html',
+        'relations.html',
+    ]
 }
 
 # Additional templates that should be rendered to pages, maps page names to
