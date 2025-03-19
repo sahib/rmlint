@@ -81,7 +81,7 @@ try:
 
             self.ctx = GtkSource.SearchContext.new(buffer_, settings)
             self.ctx.set_highlight(True)
-            self.ctx.set_match_style(GtkSource.Style(underline=True))
+            self.ctx.set_match_style(GtkSource.Style(pango_underline=Pango.Underline.SINGLE))
             self._last_mark = None
 
         @property
@@ -106,7 +106,7 @@ try:
 
         def on_forward_finish(self, source, result, view):
             """Called once GtkSourceSearchContext has finished processing."""
-            valid, start, end = self.ctx.forward_finish(result)
+            valid, start, end, _ = self.ctx.forward_finish(result)
             self._last_mark = None
 
             # Select & remember mark for next hop

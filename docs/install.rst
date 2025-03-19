@@ -44,7 +44,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo dnf install python3-sphinx
     # Optional dependencies for the GUI:
-    $ sudo dnf install python3-devel python3-setuptools gtksourceview3 gtk3 librsvg2 hicolor-icon-theme
+    $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 librsvg2 hicolor-icon-theme
 
   There are also pre-built packages on `Fedora Copr`_:
 
@@ -77,7 +77,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo pacman -S python-sphinx python-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
-    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview3 librsvg
+    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg
     # Optional dependancies for tests:
     $ sudo pacman -S python-pytest python-xattr python-psutil btrfs-progs
 
@@ -109,7 +109,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
-    $ sudo apt install python3-setuptools python3-gi-cairo gir1.2-gtksource-3.0 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
+    $ sudo apt install python3-setuptools python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
     # Optional dependancies for tests:
     $ sudo apt install python3-pytest python3-psutil python3-xattr
 
@@ -148,7 +148,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for more features:
     $ doas pkg install json-glib libelf
     # Optional dependencies for building documentation:
-    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme
+    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme gtksourceview4
 
 .. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
 .. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint
