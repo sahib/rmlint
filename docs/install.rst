@@ -15,7 +15,7 @@ Dependencies
 Hard dependencies:
 ~~~~~~~~~~~~~~~~~~
 
-* **glib** :math:`\geq 2.32` (general C Utility Library)
+* **glib** :math:`\geq 2.64` (general C Utility Library)
 
 Soft dependencies:
 ~~~~~~~~~~~~~~~~~~
