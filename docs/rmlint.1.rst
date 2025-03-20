@@ -269,7 +269,7 @@ General Options
 
     The letter may also be written uppercase (similar to ``-S /
     --rank-by``) to reverse the sorting. Note that ``rmlint`` has to hold
-    back all results till the end of the run before sorting and printing.
+    back all results until the end of the run before sorting and printing.
 
 :``-w --with-color`` (**default**) / ``-W --no-with-color``:
 
@@ -827,7 +827,7 @@ OTHER STAND-ALONE COMMANDS
     * 3: not a regular file
     * 4: file sizes differ
     * 5: fiemaps can't be read
-    * 6: file1 and file2 are at the same path
+    * 6: resolved absolute paths of file1 and file2 are identical
     * 7: file1 and file2 are the same file under different mountpoints
     * 8: files are hardlinks
     * 9: files are symlinks
