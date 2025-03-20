@@ -25,6 +25,7 @@ jobs:
             libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev \
             clang python3-pip python3-cffi python3-dev libffi-dev
           pip3 install -r tests/requirements.txt
+          pip3 install -r docs/requirements.txt
           
       - name: "Build"
         # Todo: eventually run tests with valgrind (RM_TS_USE_VALGRIND)
