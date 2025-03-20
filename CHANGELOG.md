@@ -4,17 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.10.3 Ludicrous Lemur] - Unreleased
+## [2.10.3 Ludicrous Lemur] - 2025-03-22
+
+### Added
+- Option `--without-compile-glib-schemas` to _scons_ to avoid (re)compiling system schemas on (un)install (#710).
+- Compatibility with Solaris (#533).
+- Compatibility with older macOS for PowerPC support (#573).
+- Github CI (#675, #677, #699, #703, #718).
 
 ### Changed
-- Documentation updates
+- GUI: migration of GtkSourceView from 3.0 to 4.0 (#719).
+- Glib: unify Glib minimum version requirement to 2.64 for all architectures (#707, #716).
+- Documentation updates (#538, #560, #565, #568, #585, #591, #678, #636, #643, #693, #695, #714, #715, #722).
+- Use compiler from `CC` environ if available (#526).
+- Manpage is not longer compressed (#525).
+- Stampfiles are created in /tmp instead of the current directory (#697).
+- The same stampfiles are reused throughout the whole run (#697).
+- Translations (#720).
 
 ### Fixed
 - Fix string format in tests (#602).
 - Fix configuration checks of xattr-functions (#605).
+- Fix Python warnings during configuration (#684).
 - Fix recheck in generated shell-script (#683).
+- Fix data-loss issue when using replays that does not contains checksums (e.g. with hardlinks) (#689).
 - Avoid generating an empty '-.o' file during configuration (#686).
 - Escape CWD and args strings in generated JSON output (#691).
+- Stampfiles are no longer created on dry-runs (#697).
+- Stampfiles are removed on exit (#697).
+- Compilation warnings with GLib >= 2.84 (#708).
+- Shredder bootstrapping (#709).
+- Code linting (#639, #701).
 
 ## [2.10.2 Ludicrous Lemur] -- 2023-08-08
 
