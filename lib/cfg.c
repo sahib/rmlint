@@ -140,7 +140,7 @@ guint rm_cfg_add_path(RmCfg *cfg, bool is_prefd, const char *path) {
 
         /* Continue with the path we got,
          * this is likely a bad symbolic link */
-        real_path = rm_canonicalize_filename(path, NULL);
+        real_path = g_canonicalize_filename(path, NULL);
         realpath_worked = false;
     }
 
