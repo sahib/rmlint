@@ -347,7 +347,6 @@ Here's the list of currently available formatters and their config options:
 
       $ rmlint -o sh -c sh:cmd='echo "Trashing $1" && trash-put "$1"'
 
-
 :py:
 
     Outputs a python script and a JSON file.  The json file is the same as that produced
@@ -369,7 +368,6 @@ Here's the list of currently available formatters and their config options:
 
        Deleting twins of /home/user/sub2/b
        Handling (duplicate_file): /home/user/sub1/b
-
 
 :csv:
 
