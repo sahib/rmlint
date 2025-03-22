@@ -22,7 +22,7 @@
  * Hosted on http://github.com/sahib/rmlint
  *
  */
-
+#include "traverse.h"
 #include <stdlib.h>
 #include <string.h>
 
