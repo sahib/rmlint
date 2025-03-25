@@ -7,10 +7,12 @@ import pytest
 
 
 def run_shell_script(shell, sh_path, *args):
-    return subprocess.check_output([
-            os.path.join("/bin", shell),
-            sh_path,
-        ] + list(args),
+    shell_path = shutil.which(shell)
+    if shell_path is None:
+        raise RuntimeError(f"{shell} not found in path")
+
+    return subprocess.check_output(
+        [shell_path, sh_path] + list(args),
         shell=False
     ).decode("utf-8")
 
