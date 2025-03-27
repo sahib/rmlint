@@ -57,7 +57,8 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
     if(file->lint_type == RM_LINT_TYPE_UNIQUE_FILE) {
         if(!rm_fmt_get_config_value(session->formats, "csv", "unique")) {
             if(!file->digest ||
-               !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
+               !(session->cfg->hash_uniques || session->cfg->hash_unmatched ||
+                 session->cfg->write_unfinished)) {
                 return;
             }
         }

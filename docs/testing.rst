@@ -35,7 +35,7 @@ variables which are:
 - ``RM_TS_PEDANTIC``: Run each test several times with different optimization options
   and check for errors between the runs. *(slow)*.
 - ``RM_TS_SLEEP``: Waits a long time before executing a command. Useful for
-  starting the testcase and manually running `rmlint` on the priorly generated
+  starting the testcase and manually running ``rmlint`` on the priorly generated
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 - ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
@@ -50,7 +50,7 @@ Before each release we call the testsuite (at least) like this:
 
 .. code-block:: bash
 
-   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'not slow'
+   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'not slow and not known_issue'
 
 The ``sudo`` here is there for executing some tests that need root access (like
 the creating of bad user and group ids). Most tests will work without.
@@ -65,7 +65,7 @@ were executed (and how often) by the testsuite. Here's a short quickstart using
 .. code-block:: bash
 
     $ CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-fprofile-arcs -ftest-coverage" scons -j4 DEBUG=1
-    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'not slow'
+    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'slow and not known_issue'
     $ lcov --capture --directory . --output-file coverage.info
     $ genhtml coverage.info --output-directory out
 
@@ -126,6 +126,9 @@ Rules
     @pytest.mark.slow
     def test_debian_support(usual_setup_usual_teardown):
         assert random.choice([True, False]):
+
+* Unresolved issues can be marked with the ``known_issue`` attribute to avoid
+  failing automated travis testing.
 
 Note for Mac Developers
 ~~~~~~~~~~~~~~~~~~~~~~~

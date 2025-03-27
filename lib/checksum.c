@@ -285,7 +285,6 @@ typedef struct RmDigestCumulative {
         RM_DIGEST_CUMULATIVE_T *bigdata;
     };
     RM_DIGEST_CUMULATIVE_T bytes; /* data length */
-    RM_DIGEST_CUMULATIVE_T pos;   /* byte offset within data */
 } RmDigestCumulative;
 
 static guint rm_digest_cumulative_len(RmDigestCumulative *state) {
@@ -312,16 +311,10 @@ static void rm_digest_cumulative_update(RmDigestCumulative *state,
                              RM_DIGEST_CUMULATIVE_MAX_BYTES / RM_DIGEST_CUMULATIVE_ALIGN);
         state->data = g_slice_alloc0(state->bytes);
     }
+
+    RM_DIGEST_CUMULATIVE_T pos = 0; /* byte offset within data */
     guint8 *ptr = (guint8 *)data;
     guint8 *stop = ptr + size;
-
-    /* align so we can use [32|64]-bit xor */
-    while((state->pos % RM_DIGEST_CUMULATIVE_ALIGN != 0) && ptr < stop) {
-        state->data[state->pos++] ^= *(ptr++);
-        if(state->pos == state->bytes) {
-            state->pos = 0;
-        }
-    }
 
     RM_DIGEST_CUMULATIVE_T *ptr_big = (RM_DIGEST_CUMULATIVE_T *)ptr;
     RM_DIGEST_CUMULATIVE_T *stop_big =
@@ -329,19 +322,19 @@ static void rm_digest_cumulative_update(RmDigestCumulative *state,
 
     /* plough through body of data efficiently */
     while(ptr_big < stop_big) {
-        state->bigdata[state->pos / RM_DIGEST_CUMULATIVE_ALIGN] ^= *ptr_big++;
-        state->pos = state->pos + RM_DIGEST_CUMULATIVE_ALIGN;
-        if(state->pos == state->bytes) {
-            state->pos = 0;
+        state->bigdata[pos / RM_DIGEST_CUMULATIVE_ALIGN] ^= *ptr_big++;
+        pos = pos + RM_DIGEST_CUMULATIVE_ALIGN;
+        if(pos == state->bytes) {
+            pos = 0;
         }
     }
 
     /* process remaining date byte-wise */
     ptr = (guint8 *)ptr_big;
     while(ptr < stop) {
-        state->data[state->pos++] ^= *(ptr++);
-        if(state->pos == state->bytes) {
-            state->pos = 0;
+        state->data[pos++] ^= *(ptr++);
+        if(pos == state->bytes) {
+            pos = 0;
         }
     }
 }
@@ -1040,6 +1033,10 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         return false;
     }
 
+    if(a->bytes == 0) {
+        return true; /* this non-sense is used in replays */
+    }
+
     if(a->type == RM_DIGEST_PARANOID) {
         RmParanoid *pa = a->state;
         RmParanoid *pb = b->state;
@@ -1058,7 +1055,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
         /* all the "easy" ways failed... do manual check of all buffers */
         GSList *a_iter = pa->buffers;
         GSList *b_iter = pb->buffers;
-        guint bytes = 0;
         while(a_iter && b_iter) {
             if(!rm_buffer_equal(a_iter->data, b_iter->data)) {
                 rm_log_error_line(
@@ -1066,7 +1062,6 @@ gboolean rm_digest_equal(RmDigest *a, RmDigest *b) {
                     "shadow hash");
                 return false;
             }
-            bytes += ((RmBuffer *)a_iter->data)->len;
             a_iter = a_iter->next;
             b_iter = b_iter->next;
         }

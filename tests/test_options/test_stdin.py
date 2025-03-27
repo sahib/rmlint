@@ -5,6 +5,7 @@ import pytest
 
 from tests.utils import *
 
+import pytest
 
 def test_stdin_read(usual_setup_usual_teardown):
     path_a = create_file('1234', 'a') + '\n'
@@ -78,8 +79,9 @@ def test_path_starting_with_dash(usual_setup_usual_teardown):
 
 # Regression test for https://github.com/sahib/rmlint/issues/400
 # Do not search in current directory when piped empty input.
-@pytest.mark.parametrize("stdin_opt", ("-", "-0"))
-def test_stdin_empty(usual_setup_usual_teardown, stdin_opt):
+# Also, treemerge should not fail if given zero paths.
+@pytest.mark.parametrize("opts", (('-',), ('-0',), ('-D', '-')))
+def test_stdin_empty(usual_setup_usual_teardown, opts):
     create_file('1234', 'a')
     create_file('1234', 'b')
 
@@ -88,7 +90,7 @@ def test_stdin_empty(usual_setup_usual_teardown, stdin_opt):
     try:
         os.chdir(TESTDIR_NAME)
         proc = subprocess.Popen(
-            [cwd + '/rmlint', stdin_opt, '-o', 'json'],
+            [cwd + '/rmlint', *opts, '-o', 'json'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
         )

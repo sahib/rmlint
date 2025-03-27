@@ -248,6 +248,9 @@ gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
 
     RETURN_IF_NONZERO(SIGN_DIFF(file_a->actual_file_size, file_b->actual_file_size));
 
+    /* --see-symlinks should not let regular files match symlinks */
+    RETURN_IF_NONZERO(SIGN_DIFF(file_a->is_symlink, file_b->is_symlink));
+
     RmCfg *cfg = file_a->session->cfg;
 
     RETURN_IF_NONZERO(cfg->match_basename && rm_rank_basenames(file_a, file_b));

@@ -61,10 +61,14 @@ void rm_logger_callback(_UNUSED const gchar *log_domain,
                         const gchar *message,
                         _UNUSED gpointer user_data) {
     if(min_log_level >= log_level) {
+        char *tmp = NULL;
         if(!with_stderr_color) {
-            message = remove_color_escapes((char *)message);
+            /* copy first: the buffer glib hands us must not be modified */
+            tmp = g_strdup(message);
+            message = remove_color_escapes(tmp);
         }
         fputs(message, stderr);
+        g_free(tmp);
     }
 }
 

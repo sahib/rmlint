@@ -1,27 +1,7 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 import os
-import json
-
-from contextlib import contextmanager
 
 from tests.utils import *
-
-
-@contextmanager
-def assert_exit_code(status_code):
-    """
-    Assert that the with block yields a subprocess.CalledProcessError
-    with a certain return code. If nothing is thrown, status_code
-    is required to be 0 to survive the test.
-    """
-    try:
-        yield
-    except subprocess.CalledProcessError as exc:
-        assert exc.returncode == status_code
-    else:
-        # No exception? status_code should be fine.
-        assert status_code == 0
 
 
 def test_equal_files(usual_setup_usual_teardown):
@@ -146,3 +126,21 @@ def test_equal_empty_files_or_other_lint(usual_setup_usual_teardown):
             '--equal', path_a, path_b,
             use_default_dir=False,
         )
+
+
+# regression test for GitHub issue #552
+def test_default_outputs_disabled(usual_setup_usual_teardown):
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(TESTDIR_NAME)
+        run_rmlint('--equal a b', use_default_dir=False, with_json=False)
+
+        # Users of --equal, including our own sh format, do not expect to
+        # create or overwrite rmlint.sh or rmlint.json.
+        assert not os.path.exists('rmlint.sh')
+        assert not os.path.exists('rmlint.json')
+    finally:
+        os.chdir(cwd)

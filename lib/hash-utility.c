@@ -30,8 +30,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "hasher.h"
 #include "utilities.h"
+#include "hash-utility.h"
 
 typedef struct RmHasherSession {
     /* Internal */

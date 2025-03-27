@@ -61,6 +61,6 @@ int rm_dedupe_main(int argc, const char **argv);
  **/
 int rm_is_reflink_main(int argc, const char **argv);
 
-RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size);
+RmLinkType rm_reflink_type_from_fd(int fd1, int fd2);
 
 #endif /* end of include guard */

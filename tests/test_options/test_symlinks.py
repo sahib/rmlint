@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# encoding: utf-8
+import os
+
 from tests.utils import *
 
 
@@ -78,3 +79,13 @@ def test_order(usual_setup_usual_teardown):
     assert data[file_idx]['path'].endswith('z')
     assert data[file_idx]['is_original']
     assert data[file_idx + 1]['path'].endswith('z')
+
+
+def test_symlink_matches_file(usual_setup_usual_teardown):
+    create_file('xxx', 'foo')
+    create_file('foo', 'file')
+    os.symlink('foo', os.path.join(TESTDIR_NAME, 'link'))
+
+    # --see-symlinks should not generate false positives between unrelated files and links.
+    head, *data, footer = run_rmlint()
+    assert not data

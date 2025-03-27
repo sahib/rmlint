@@ -468,7 +468,7 @@ bool rm_util_is_nonstripped(_UNUSED const char *path, _UNUSED RmStat *statp) {
 #if HAVE_LIBELF
     g_return_val_if_fail(path, false);
 
-    if(statp && (statp->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
+    if(!S_ISREG(statp->st_mode) || (statp->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
         return false;
     }
 
@@ -760,7 +760,7 @@ static bool fs_supports_reflinks(char *fstype, char *mountpoint) {
     }
     if(strcmp(fstype, "xfs") == 0) {
         /* xfs *might* support reflinks...*/
-        char *cmd = g_strdup_printf("xfs_info '%s' | grep -q 'reflink=1'", mountpoint);
+        char *cmd = g_strdup_printf("xfs_info '%s' 2>/dev/null | grep -q 'reflink=1'", mountpoint);
         int res = system(cmd);
         g_free(cmd);
         return (res == 0);
@@ -1188,22 +1188,23 @@ static void rm_util_set_nullable_bool(bool *ptr, bool value) {
     }
 }
 
-/* Return physical (disk) offset of the beginning of the file extent containing the
+/* Return physical (disk) offset of the beginning of the file extent found after the
  * specified logical file_offset.
- * If a pointer to file_offset_next is provided then read fiemap extents until
- * the next non-contiguous extent (fragment) is encountered and writes the corresponding
- * file offset to &file_offset_next.
+ * If a pointer to file_offset_next is provided then read fiemap extents until the next
+ * non-contiguous extent (fragment) is encountered and writes the corresponding file
+ * offset to *file_offset_next.
+ * The logical offset of the found extent is written to *logical_offset.
  * */
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
-                            bool *is_last, bool *is_inline) {
+                            RmOff *logical_offset, bool *is_last, bool *is_inline) {
     RmOff result = 0;
     bool done = FALSE;
     bool first = TRUE;
+    struct fiemap_extent fm_last;
     rm_util_set_nullable_bool(is_last, FALSE);
     rm_util_set_nullable_bool(is_inline, FALSE);
 
-    /* used for detecting contiguous extents */
-    unsigned long expected = 0;
+    memset(&fm_last, 0, sizeof(fm_last));
 
     fsync(fd);
 
@@ -1220,9 +1221,9 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
         }
 
         if(fm->fm_mapped_extents == 0) {
-#if _RM_OFFSET_DEBUG
-            rm_log_info_line(_("rm_offset_get_fiemap: got no extents for %d"), fd);
-#endif
+            if(file_offset != 0) {
+                rm_log_warning_line(_("rm_offset_get_fiemap: got no extents for %d at offset %" G_GUINT64_FORMAT), fd, file_offset);
+            }
             done = TRUE;
         } else {
             /* retrieve data from fiemap */
@@ -1231,18 +1232,19 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
             if(first) {
                 /* remember disk location of start of data */
                 result = fm_ext.fe_physical;
+                if(logical_offset != NULL) {
+                    *logical_offset = fm_ext.fe_logical;
+                }
                 first = FALSE;
             } else {
                 /* check if subsequent extents are contiguous */
-                if(fm_ext.fe_physical != expected) {
+                unsigned long expected_dense = fm_last.fe_physical + fm_last.fe_length;
+                unsigned long expected = fm_last.fe_physical + fm_ext.fe_logical - fm_last.fe_logical;
+                if(fm_ext.fe_physical != expected || fm_ext.fe_physical != expected_dense) {
                     /* current extent is not contiguous with previous, so we can stop */
-                    done = TRUE;
+                    g_free(fm);
+                    break;
                 }
-            }
-
-            if(!done && file_offset_next != NULL) {
-                /* update logical offset of next fragment */
-                *file_offset_next = fm_ext.fe_logical + fm_ext.fe_length;
             }
 
             if(fm_ext.fe_flags & FIEMAP_EXTENT_DATA_INLINE) {
@@ -1261,8 +1263,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
             }
 
             /* move offsets in preparation for reading next extent */
-            file_offset += fm_ext.fe_length;
-            expected = fm_ext.fe_physical + fm_ext.fe_length;
+            file_offset = fm_ext.fe_logical + fm_ext.fe_length;
+            fm_last = fm_ext;
         }
 
         g_free(fm);
@@ -1283,7 +1285,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
         rm_log_info("Error opening %s in rm_offset_get_from_path\n", path);
         return 0;
     }
-    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL, NULL);
+    RmOff result = rm_offset_get_from_fd(fd, file_offset, file_offset_next, NULL, NULL, NULL);
     rm_sys_close(fd);
     return result;
 }
@@ -1291,8 +1293,8 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
 #else /* Probably FreeBSD */
 
 RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
-                            _UNUSED RmOff *file_offset_next, _UNUSED bool *is_last,
-                            _UNUSED bool *is_inline) {
+                            _UNUSED RmOff *file_offset_next, _UNUSED RmOff *logical_offset,
+                            _UNUSED bool *is_last, _UNUSED bool *is_inline) {
     return 0;
 }
 
@@ -1420,7 +1422,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
     }
 
     if(use_fiemap) {
-        RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2, stat1.st_size);
+        RmLinkType reflink_type = rm_reflink_type_from_fd(fd1, fd2);
         RM_RETURN(reflink_type);
     }
     RM_RETURN(RM_LINK_NONE);
@@ -1429,18 +1431,20 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
 }
 
 const char **rm_link_type_to_desc() {
+    /* indexes must match RmLinkType values */
     static const char *RM_LINK_TYPE_TO_DESC[] = {N_("Reflink"),
-                                                 N_("An error occurred during checking"),
+                                                 N_("Not linked"),
                                                  "Undefined",
                                                  N_("Not a regular file"),
                                                  N_("File sizes differ"),
-                                                 N_("Files have inline extents"),
+                                                 N_("Maybe a reflink (fiemap data could not be read)"),
                                                  N_("Same file and path"),
                                                  N_("Same file but with different path"),
                                                  N_("Hardlink"),
                                                  N_("Encountered a symlink"),
                                                  N_("Files are on different devices"),
-                                                 N_("Not linked")};
+                                                 N_("An error occurred during checking"),
+                                                 N_("Files have inline extents")};
     return RM_LINK_TYPE_TO_DESC;
 }
 
@@ -1478,7 +1482,6 @@ GThreadPool *rm_util_thread_pool_new(GFunc func, gpointer data, int threads) {
 //////////////////////////////
 
 gdouble rm_iso8601_parse(const char *string) {
-#if GLIB_CHECK_VERSION(2, 56, 0)
     GDateTime *time_result = g_date_time_new_from_iso8601(string, NULL);
     if(time_result == NULL) {
         rm_log_perror("Converting time failed");
@@ -1490,17 +1493,6 @@ gdouble rm_iso8601_parse(const char *string) {
 
     g_date_time_unref(time_result);
     return result;
-#else
-    /* Remove this branch in a few years (written end of 2019) */
-
-    GTimeVal time_result;
-    if(!g_time_val_from_iso8601(string, &time_result)) {
-        rm_log_perror("Converting time failed");
-        return 0;
-    }
-
-    return time_result.tv_sec + time_result.tv_usec / (gdouble)(G_USEC_PER_SEC);
-#endif
 }
 
 bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
@@ -1569,104 +1561,4 @@ void rm_running_mean_unref(RmRunningMean *m) {
         g_free(m->values);
         m->values = NULL;
     }
-}
-
-/* This a complete copy of the GLib version here:
- *
- *  https://github.com/GNOME/glib/blob/3dec72b946a527f4b1f35262bddd4afb060409b7/glib/gfileutils.c#L2552
- *
- * The reason we have this here is since rmlint is still often used
- * on older systems (Debian 9...) that don't have a recent enoug GLib.
- * Remove this once some years have progressed.
- */
-gchar *rm_canonicalize_filename(const gchar *filename, const gchar *relative_to) {
-    gchar *canon, *start, *p, *q;
-    guint i;
-
-    g_return_val_if_fail(relative_to == NULL || g_path_is_absolute(relative_to), NULL);
-
-    if(!g_path_is_absolute(filename)) {
-        gchar *cwd_allocated = NULL;
-        const gchar *cwd;
-
-        if(relative_to != NULL)
-            cwd = relative_to;
-        else
-            cwd = cwd_allocated = g_get_current_dir();
-
-        canon = g_build_filename(cwd, filename, NULL);
-        g_free(cwd_allocated);
-    } else {
-        canon = g_strdup(filename);
-    }
-
-    start = (char *)g_path_skip_root(canon);
-
-    if(start == NULL) {
-        /* This shouldn't really happen, as g_get_current_dir() should
-           return an absolute pathname, but bug 573843 shows this is
-           not always happening */
-        g_free(canon);
-        return g_build_filename(G_DIR_SEPARATOR_S, filename, NULL);
-    }
-
-    /* POSIX allows double slashes at the start to
-     * mean something special (as does windows too).
-     * So, "//" != "/", but more than two slashes
-     * is treated as "/".
-     */
-    i = 0;
-    for(p = start - 1; (p >= canon) && G_IS_DIR_SEPARATOR(*p); p--)
-        i++;
-    if(i > 2) {
-        i -= 1;
-        start -= i;
-        memmove(start, start + i, strlen(start + i) + 1);
-    }
-
-    /* Make sure we're using the canonical dir separator */
-    p++;
-    while(p < start && G_IS_DIR_SEPARATOR(*p))
-        *p++ = G_DIR_SEPARATOR;
-
-    p = start;
-    while(*p != 0) {
-        if(p[0] == '.' && (p[1] == 0 || G_IS_DIR_SEPARATOR(p[1]))) {
-            memmove(p, p + 1, strlen(p + 1) + 1);
-        } else if(p[0] == '.' && p[1] == '.' && (p[2] == 0 || G_IS_DIR_SEPARATOR(p[2]))) {
-            q = p + 2;
-            /* Skip previous separator */
-            p = p - 2;
-            if(p < start)
-                p = start;
-            while(p > start && !G_IS_DIR_SEPARATOR(*p))
-                p--;
-            if(G_IS_DIR_SEPARATOR(*p))
-                *p++ = G_DIR_SEPARATOR;
-            memmove(p, q, strlen(q) + 1);
-        } else {
-            /* Skip until next separator */
-            while(*p != 0 && !G_IS_DIR_SEPARATOR(*p))
-                p++;
-
-            if(*p != 0) {
-                /* Canonicalize one separator */
-                *p++ = G_DIR_SEPARATOR;
-            }
-        }
-
-        /* Remove additional separators */
-        q = p;
-        while(*q && G_IS_DIR_SEPARATOR(*q))
-            q++;
-
-        if(p != q)
-            memmove(p, q, strlen(q) + 1);
-    }
-
-    /* Remove trailing slashes */
-    if(p > start && G_IS_DIR_SEPARATOR(*(p - 1)))
-        *(p - 1) = 0;
-
-    return canon;
 }

@@ -78,4 +78,4 @@ gettext files:
 
    $ scons gettext
 
-Then, proceed to work with the relevant `*.po` file as described above.
+Then, proceed to work with the relevant ``*.po`` file as described above.

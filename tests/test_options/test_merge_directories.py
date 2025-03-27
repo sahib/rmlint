@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 from tests.utils import *
 
 
 def filter_part_of_directory(data):
-    return [entry for entry in data if entry["type"] != "part_of_directory"]
+    data = [entry for entry in data if entry["type"] != "part_of_directory"]
+    data.sort(key=lambda entry: (entry['path'],) if entry['type'] == 'unique_file' else ())
+    return data
 
-def test_simple(usual_setup_usual_teardown):
+
+# --write-unfinished variant is a regression test for GitHub issue #562;
+# --hash-unmatched covers its successor
+@pytest.mark.parametrize('extra_opts', [(), ('--write-unfinished',), ('--hash-unmatched',)])
+def test_simple(usual_setup_usual_teardown, extra_opts):
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
 
-    head, *data, footer = run_rmlint('-p -D --rank-by A')
+    head, *data, footer = run_rmlint('-p -D --rank-by A', *extra_opts)
     data = filter_part_of_directory(data)
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -21,7 +26,7 @@ def test_simple(usual_setup_usual_teardown):
     assert 1 == sum(find['type'] == 'duplicate_file' for find in data if not find['is_original'])
     assert data[0]['size'] == 3
 
-    # -S A should sort in reverse lexigraphic order.
+    # -S A should sort in reverse lexicographic order.
     assert data[0]['is_original']
     assert not data[1]['is_original']
     assert data[0]['path'].endswith('2')
@@ -39,7 +44,7 @@ def test_diff(usual_setup_usual_teardown):
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert data[0]['size'] == 3
 
-    # -S A should sort in reverse lexigraphic order.
+    # -S A should sort in reverse lexicographic order.
     assert data[0]['is_original']
     assert not data[1]['is_original']
     assert data[0]['path'].endswith('2')
@@ -411,13 +416,21 @@ def test_equal_content_different_layout(usual_setup_usual_teardown):
     create_file('xxx', "tree-b/x")
     create_file('yyy', "tree-b/y")
 
-    head, *data, footer = run_rmlint('-p -D --rank-by a')
-    data = filter_part_of_directory(data)
+    # Test all checksum types, even outside of pedantic mode.
+    # That allows us to test for regressions in the cumulative digest.
+    options = ['-p']
+    if not get_env_flag('RM_TS_PEDANTIC'):
+        for cksum_type in CKSUM_TYPES:
+            options.append('--algorithm=' + cksum_type)
 
-    assert data[0]["path"].endswith("tree-a")
-    assert data[0]["is_original"] is True
-    assert data[1]["path"].endswith("tree-b")
-    assert data[1]["is_original"] is False
+    for option in options:
+        head, *data, footer = run_rmlint('-D --rank-by a', option)
+        data = filter_part_of_directory(data)
+
+        assert data[0]["path"].endswith("tree-a")
+        assert data[0]["is_original"] is True
+        assert data[1]["path"].endswith("tree-b")
+        assert data[1]["is_original"] is False
 
     # Now, try to honour the layout
     head, *data, footer = run_rmlint('-p -Dj --rank-by a')

@@ -83,7 +83,7 @@
 #endif
 
 
-RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
+RmLinkType rm_reflink_type_from_fd(int fd1, int fd2) {
 #if HAVE_FIEMAP
 
     RmOff logical_current = 0;
@@ -92,23 +92,18 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
     bool is_last_2 = false;
     bool is_inline_1 = false;
     bool is_inline_2 = false;
-    bool at_least_one_checked = false;
 
     while(!rm_session_was_aborted()) {
-        RmOff logical_next_1 = 0;
-        RmOff logical_next_2 = 0;
+        RmOff logical_1 = 0, logical_2 = 0;
+        RmOff logical_next_1 = 0, logical_next_2 = 0;
 
         RmOff physical_1 = rm_offset_get_from_fd(fd1, logical_current, &logical_next_1,
-                                                 &is_last_1, &is_inline_1);
+                                                 &logical_1, &is_last_1, &is_inline_1);
         RmOff physical_2 = rm_offset_get_from_fd(fd2, logical_current, &logical_next_2,
-                                                 &is_last_2, &is_inline_2);
+                                                 &logical_2, &is_last_2, &is_inline_2);
 
         if(is_last_1 != is_last_2) {
             return RM_LINK_NONE;
-        }
-
-        if(is_last_1 && is_last_2 && at_least_one_checked) {
-            return RM_LINK_REFLINK;
         }
 
         if(physical_1 != physical_2) {
@@ -116,6 +111,14 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
             rm_log_debug_line("Physical offsets differ at byte %" G_GUINT64_FORMAT
                               ": %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
                               logical_current, physical_1, physical_2);
+#endif
+            return RM_LINK_NONE;
+        }
+        if(logical_1 != logical_2) {
+#if _RM_OFFSET_DEBUG
+            rm_log_debug_line("Logical offsets differ after %" G_GUINT64_FORMAT
+                              " bytes: %" G_GUINT64_FORMAT "<> %" G_GUINT64_FORMAT,
+                              logical_current, logical_1, logical_2);
 #endif
             return RM_LINK_NONE;
         }
@@ -136,7 +139,7 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
 #if _RM_OFFSET_DEBUG
             rm_log_debug_line("Can't determine whether files are clones");
 #endif
-            return RM_LINK_ERROR;
+            return RM_LINK_MAYBE_REFLINK;
         }
 
 #if _RM_OFFSET_DEBUG
@@ -151,16 +154,15 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2, guint64 file_size) {
             return RM_LINK_ERROR;
         }
 
-        if(logical_next_1 >= (guint64)file_size) {
+        if(is_last_1) {
             /* phew, we got to the end */
 #if _RM_OFFSET_DEBUG
-            rm_log_debug_line("Files are clones (share same data)")
+            rm_log_debug_line("Files are clones (share same data)");
 #endif
-                return RM_LINK_REFLINK;
+            return RM_LINK_REFLINK;
         }
 
         logical_current = logical_next_1;
-        at_least_one_checked = true;
     }
 
     return RM_LINK_ERROR;
@@ -190,10 +192,10 @@ int rm_dedupe_main(int argc, const char **argv) {
 
 
     const GOptionEntry options[] = {
-        {"xattr"         , 'x' , 0                     , G_OPTION_ARG_NONE     , &check_xattr       , _("Check extended attributes to see if the file is already deduplicated") , NULL},
-        {"readonly"      , 'r' , 0                     , G_OPTION_ARG_NONE     , &dedupe_readonly   , _("Even dedupe read-only snapshots (needs root)")                         , NULL},
-        {"followlinks"   , 'f' , 0                     , G_OPTION_ARG_NONE     , &follow_symlinks   , _("Follow symlinks")                                                      , NULL},
-        {"inline-extents", 'i' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &follow_symlinks   , _("Try to dedupe files with inline extents")                              , NULL},
+        {"xattr"         , 'x' , 0                     , G_OPTION_ARG_NONE     , &check_xattr        , _("Check extended attributes to see if the file is already deduplicated") , NULL},
+        {"readonly"      , 'r' , 0                     , G_OPTION_ARG_NONE     , &dedupe_readonly    , _("Even dedupe read-only snapshots (needs root)")                         , NULL},
+        {"followlinks"   , 'f' , 0                     , G_OPTION_ARG_NONE     , &follow_symlinks    , _("Follow symlinks")                                                      , NULL},
+        {"inline-extents", 'i' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &skip_inline_extents, _("Try to dedupe files with inline extents")                              , NULL},
         {"without-fiemap", 'w' , G_OPTION_FLAG_REVERSE , G_OPTION_ARG_NONE     , &use_fiemap        , _("Don't use fiemap to check whether files are already reflinked")        , NULL},
         {"loud"          , 'v' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_louder   , _("Be more verbose (-vv for much more)")                                  , NULL},
         {"quiet"         , 'V' , G_OPTION_FLAG_NO_ARG  , G_OPTION_ARG_CALLBACK , rm_logger_quieter  , _("Be less verbose (-VV for much less)")                                  , NULL},
@@ -250,6 +252,7 @@ int rm_dedupe_main(int argc, const char **argv) {
         rm_log_debug_line("Skipping files with inline extents");
         return EXIT_SUCCESS;
     }
+    /* RM_LINK_MAYBE_REFLINK falls through */
 
     int source_fd = rm_sys_open(source_path, O_RDONLY);
     if(source_fd < 0) {
@@ -473,20 +476,22 @@ int rm_is_reflink_main(int argc, const char **argv) {
         "     %i:  %s\n"
         "     %i:  %s\n"
         "     %i:  %s\n"
+        "     %i:  %s\n"
         "     %i:  %s\n",
         _("Test if two files are reflinks (share same data extents)"),
         _("Returns 0 if the files are reflinks."),
         _("Other return codes:"),
-        RM_LINK_ERROR, desc[RM_LINK_ERROR],
+        RM_LINK_NONE, desc[RM_LINK_NONE],
         RM_LINK_NOT_FILE, desc[RM_LINK_NOT_FILE],
         RM_LINK_WRONG_SIZE, desc[RM_LINK_WRONG_SIZE],
-        RM_LINK_INLINE_EXTENTS, desc[RM_LINK_INLINE_EXTENTS],
+        RM_LINK_MAYBE_REFLINK, desc[RM_LINK_MAYBE_REFLINK],
         RM_LINK_SAME_FILE, desc[RM_LINK_SAME_FILE],
         RM_LINK_PATH_DOUBLE, desc[RM_LINK_PATH_DOUBLE],
         RM_LINK_HARDLINK, desc[RM_LINK_HARDLINK],
         RM_LINK_SYMLINK, desc[RM_LINK_SYMLINK],
         RM_LINK_XDEV, desc[RM_LINK_XDEV],
-        RM_LINK_NONE, desc[RM_LINK_NONE]);
+        RM_LINK_ERROR, desc[RM_LINK_ERROR],
+        RM_LINK_INLINE_EXTENTS, desc[RM_LINK_INLINE_EXTENTS]);
 
 
     g_option_context_set_summary(context, summary);
@@ -512,6 +517,18 @@ int rm_is_reflink_main(int argc, const char **argv) {
 
     const char *a = argv[1];
     const char *b = argv[2];
+
+    /* Bad paths are a usage error (EXIT_FAILURE), not a link-type result. */
+    RmStat stat_buf;
+    if(rm_sys_lstat(a, &stat_buf) == -1) {
+        rm_log_error_line(_("`%s`: No such file or directory"), a);
+        return EXIT_FAILURE;
+    }
+    if(rm_sys_lstat(b, &stat_buf) == -1) {
+        rm_log_error_line(_("`%s`: No such file or directory"), b);
+        return EXIT_FAILURE;
+    }
+
     rm_log_debug_line("Testing if %s is clone of %s", a, b);
 
     int result = rm_util_link_type(a, b, TRUE);

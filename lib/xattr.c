@@ -25,6 +25,7 @@
 
 #include "xattr.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -165,14 +166,21 @@ static int rm_xattr_is_fail(const char *name, char *path, bool warn, int rc) {
         return 0;
     }
 
-    if(errno != ENOTSUP && errno != ENODATA) {
-        if(warn) {
-            rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
-        }
-        return errno;
+    if(errno == ENOTSUP || errno == ENODATA) {
+        return 0;
     }
 
-    return 0;
+#ifdef ENOATTR
+    /* Mac OS X, *BSD, etc. */
+    if(errno == ENOATTR) {
+        return 0;
+    }
+#endif
+
+    if(warn) {
+        rm_log_warning_line("failed to %s for %s: %s", name, path, g_strerror(errno));
+    }
+    return errno;
 }
 
 static int rm_xattr_set(RmFile *file,
@@ -226,7 +234,7 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
-       rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str), follow) ||
+       rm_xattr_set(file, cksum_key, cksum_hex_str, strlen(cksum_hex_str), follow) ||
        rm_xattr_set(file, mtime_key, timestamp, strlen(timestamp), follow)) {
         return errno;
     }

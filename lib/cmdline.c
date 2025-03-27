@@ -87,7 +87,7 @@ static void rm_cmd_show_version(void) {
 }
 
 static void rm_cmd_show_manpage(void) {
-    static const char *commands[] = {"man %s docs/rmlint.1.gz 2> /dev/null",
+    static const char *commands[] = {"man %s docs/_build/man/rmlint.1 2> /dev/null",
                                      "man %s rmlint", NULL};
 
     bool found_manpage = false;
@@ -169,6 +169,7 @@ static gboolean rm_cmd_parse_xattr(_UNUSED const char *option_name,
     session->cfg->write_cksum_to_xattr = true;
     session->cfg->read_cksum_from_xattr = true;
     session->cfg->clear_xattr_fields = false;
+    session->cfg->write_unfinished = true;
     return true;
 }
 
@@ -357,6 +358,8 @@ static void rm_cmd_parse_clamp_option(RmSession *session, const char *string,
             session->cfg->skip_end_offset = offset;
         }
     }
+
+    session->cfg->clamp_is_used = true;
 }
 
 static gboolean rm_cmd_parse_partial_hidden(_UNUSED const char *option_name,
@@ -988,14 +991,6 @@ static gboolean rm_cmd_parse_dedupe_readonly(_UNUSED const char *option_name,
     return false;
 }
 
-static gboolean rm_cmd_parse_write_unfinished(_UNUSED const char *option_name,
-                                              _UNUSED const gchar *x,
-                                              _UNUSED RmSession *session,
-                                              _UNUSED GError **error) {
-    rm_log_error_line("option --write-unfinished is deprecated, use --hash-unmatched");
-    return false;
-}
-
 static bool rm_cmd_set_cwd(RmCfg *cfg) {
     /* Get current directory */
     char cwd_buf[PATH_MAX + 1];
@@ -1060,6 +1055,10 @@ static bool rm_cmd_set_paths(RmSession *session, char **paths) {
 }
 
 static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
+    if(session->cfg->run_equal_mode) {
+        return true;
+    }
+
     if(session->output_cnt[0] >= 0 && session->output_cnt[1] >= 0) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("Specifying both -o and -O is not allowed"));
@@ -1202,7 +1201,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"sweep-files"            , 0   , HIDDEN           , G_OPTION_ARG_CALLBACK , FUNC(sweep_count)            , "Specify max. file count per pass when scanning disks"        , "S"}    ,
         {"threads"                , 't' , HIDDEN           , G_OPTION_ARG_INT64    , &cfg->threads                , "Specify max. number of hasher threads"                       , "N"}    ,
         {"threads-per-disk"       , 0   , HIDDEN           , G_OPTION_ARG_INT      , &cfg->threads_per_disk       , "Specify number of reader threads per physical disk"          , NULL}   ,
-        {"write-unfinished"       , 0   , EMPTY | HIDDEN   , G_OPTION_ARG_CALLBACK , FUNC(write_unfinished)       , "Output unfinished checksums (deprecated)"                    , NULL}   ,
+        {"write-unfinished"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_unfinished       , "Output unfinished checksums"                                 , NULL}   ,
         {"hash-uniques"           , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_uniques           , "Hash (whole of) unique files too (for json or xattr output)" , NULL}   ,
         {"hash-unmatched"         , 'U' , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->hash_unmatched         , "Same as --hash-uniques but only for files with size twin"    , NULL}   ,
         {"xattr-write"            , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->write_cksum_to_xattr   , "Cache checksum in file attributes"                           , NULL}   ,
@@ -1340,6 +1339,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     } else {
         cfg->with_stdout_color = cfg->with_stderr_color = 0;
     }
+    rm_logger_set_pretty(cfg->with_stderr_color);
 
     g_assert(!(cfg->follow_symlinks && cfg->see_symlinks));
 

@@ -52,7 +52,7 @@ class DeferSizeLabel(Gtk.Bin):
         du_proc.communicate_utf8_async(None, None, self._du_finished)
 
     def _du_finished(self, du_proc, result):
-        """Called when the coreutil du finished running. Harvest results."""
+        """Called when the coreutils du finished running. Harvest results."""
         result, du_data, _ = du_proc.communicate_utf8_finish(result)
         if du_data:
             kbytes = int(''.join([num for num in du_data if num.isdigit()]))
