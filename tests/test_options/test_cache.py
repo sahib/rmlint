@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-
+import os
+import subprocess
 import pytest
+
+from tests.utils import *
 
 
 def create_files():
@@ -169,3 +170,75 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
             xattr_4 = must_read_xattr(path_4)
             assert xattr_4["user.rmlint.blake2b.cksum"] == \
                     b'b8c25c0482c3323cd3fc544cd9e0fb05eee191aedce56e307d1ea1af96f96fe63d2ac82b0a3ba5c42b7b58da92cd438065b25a51170f183889651419a242d24f\x00'
+
+        # Try clearing the attributes:
+        head, *data, footer = run_rmlint(base_options + '--xattr-clear')
+        assert len(data) == 2
+        assert must_read_xattr(path_1) == {}
+        assert must_read_xattr(path_2) == {}
+        assert must_read_xattr(path_3) == {}
+        assert must_read_xattr(path_4) == {}
+
+
+# regression test for GitHub issue #475
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+def test_treemerge_xattr_hardlink(usual_setup_usual_teardown):
+    create_file('xxx', 'a/x')
+    create_file('yyy', 'a/y')
+    create_file('xxx', 'b/x')
+    create_file('yyy', 'b/y')
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    head, *data, foot = run_rmlint('--xattr-write -o sh:{p} -c sh:hardlink'.format(p=sh_path))
+    assert len(data) == 4
+
+    # run script to hardlink files
+    subprocess.check_output([sh_path, '-d'])
+
+    # This used to fail with 'rm_shred_group_free: assertion failed: (self->num_pending == 0)'
+    head, *data, foot = run_rmlint('-D --xattr-read')
+    assert len(data) == 6
+
+
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@pytest.mark.parametrize("clamp", ['-q 1', '-Q 1', '-q 50%', '-Q 50%'])
+def test_clamp_xattr_false_negative(usual_setup_usual_teardown, clamp):
+    create_file('xxx', 'a')
+    create_file('yyy', 'b')
+
+    # we used to write xattrs even when clamping is used
+    head, *data, foot = run_rmlint('--xattr', clamp)
+    assert all(e['type'] == 'unique_file' for e in data)
+
+    create_file('xxx', 'c')
+
+    # the first run after creating 'c' is ok...
+    head, *data, foot = run_rmlint('--xattr', force_no_pedantic=True)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # 'a' matches 'c'
+
+    # but we would get a false negative here, as the xattrs didn't match
+    head, *data, foot = run_rmlint('--xattr', force_no_pedantic=True)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # do they still match?
+
+
+# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@pytest.mark.parametrize("clamp", ['-q 2', '-Q 1', '-q 70%', '-Q 50%'])
+def test_clamp_xattr_false_positive(usual_setup_usual_teardown, clamp):
+    # directories 'a' and 'b' obviously do not match
+    # extra files are needed to satisfy preprocessing, which compares file size
+    create_file('xxx', '1')
+    create_file('xxx', 'a/1')
+    create_file('x', '2')
+    create_file('x', 'b/2')
+
+    # we used to write xattrs even when clamping is used
+    head, *data, foot = run_rmlint('--xattr --size 3', clamp)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # '1' matches 'a/1'
+
+    # fill in other xattrs
+    head, *data, foot = run_rmlint('--xattr', force_no_pedantic=True)
+    assert len([e for e in data if e['type'] == 'duplicate_file']) == 4  # '1' matches 'a/1', '2' matches 'b/2'
+
+    # we would get a false positive here, as the xattrs matched
+    head, *data, foot = run_rmlint('--xattr -T dd', force_no_pedantic=True)
+    assert not any(e['type'] == 'duplicate_dir' for e in data)  # do 'a' and 'b' match?

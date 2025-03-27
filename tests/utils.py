@@ -9,12 +9,15 @@ import os
 import json
 import time
 import pprint
+import psutil
+import re
 import shutil
 import shlex
 import struct
 import subprocess
 import contextlib
 import xattr
+import pytest
 
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
@@ -65,6 +68,9 @@ if has_feature('sse4'):
     CKSUM_TYPES.append('metrocrc')
     CKSUM_TYPES.append('metrocrc256')
 
+_REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
+
+
 def runs_as_root():
     return os.geteuid() == 0
 
@@ -92,6 +98,10 @@ def create_testdir(*extra_path):
         os.makedirs(path)
     except OSError:
         pass
+
+
+def cleanup_testdir():
+    shutil.rmtree(TESTDIR_NAME, ignore_errors=True)
 
 
 def which(program):
@@ -145,7 +155,9 @@ def run_rmlint_once(*args,
                     with_json=True,
                     directly_return_output=False,
                     use_shell=False,
-                    verbosity="-V"):
+                    verbosity="-V",
+                    check=True,
+                    timeout=None):
     if use_default_dir:
         if dir_suffix:
             target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
@@ -173,7 +185,7 @@ def run_rmlint_once(*args,
 
     cmd += shlex.split(' '.join(args))
     if with_json:
-        cmd += ['-o', 'json:/tmp/out.json', '-c', 'json:oneline']
+        cmd += ['-o', 'json:' + os.path.join(TESTDIR_NAME, 'out.json'), '-c', 'json:oneline']
 
     for idx, output in enumerate(outputs or []):
         cmd.append('-o')
@@ -198,17 +210,22 @@ def run_rmlint_once(*args,
         # Use /bin/bash, not /bin/sh
         cmd = ["/bin/bash", "-c", " ".join(cmd)]
 
-    output = subprocess.check_output(cmd, env=env)
+    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+    print(result.stderr.decode('utf-8'), end='')
+
     if get_env_flag('RM_TS_USE_GDB'):
         print('==> START OF GDB OUTPUT <==')
-        print(output.decode('utf-8'))
+        print(result.stdout.decode('utf-8'), end='')
         print('==> END OF GDB OUTPUT <==')
 
+    if check:
+        result.check_returncode()
+
     if directly_return_output:
-        return output
+        return result.stdout if check else (result, result.stdout)
 
     if with_json:
-        with open('/tmp/out.json', 'r') as f:
+        with open(os.path.join(TESTDIR_NAME, 'out.json'), 'r') as f:
             json_data = json.loads(f.read())
     else:
         json_data = []
@@ -217,10 +234,9 @@ def run_rmlint_once(*args,
     for idx, output in enumerate(outputs or []):
         with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r', encoding='utf8') as handle:
             read_outputs.append(handle.read())
-    if outputs is None:
-        return json_data
-    else:
-        return json_data + read_outputs
+    if outputs:
+        json_data.extend(read_outputs)
+    return json_data if check else (result, json_data)
 
 
 def compare_json_doc(doc_a, doc_b, compare_checksum=False):
@@ -228,7 +244,7 @@ def compare_json_doc(doc_a, doc_b, compare_checksum=False):
         'disk_id', 'inode', 'mtime', 'path', 'size', 'type'
     ]
 
-    if compare_checksum and 'checkum' in doc_a and 'checksum' in doc_b:
+    if compare_checksum and 'checksum' in doc_a and 'checksum' in doc_b:
         keys.append('checksum')
 
     for key in keys:
@@ -277,14 +293,15 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--without-fiemap',
         '--fake-pathindex-as-disk',
         '--fake-fiemap',
-        '-P',
-        '-PP',
-        '--limit-mem 1M --algorithm=paranoid',
         '--buffered-read',
         '--threads=1',
         '--shred-never-wait',
         '--shred-always-wait',
-        '--no-mount-table'
+        '--no-mount-table',
+        '-P',
+        '-PP',
+        '-PPP',
+        '--algorithm=paranoid --limit-mem 1M'
     ]
 
 
@@ -308,7 +325,9 @@ def run_rmlint_pedantic(*args, **kwargs):
                 data_skip = data[:-output_len]
 
         # We cannot compare checksum in all cases.
-        compare_checksum = not option.startswith('--algorithm=')
+        # XXX: algorithm options must be grouped at the end of the options list.
+        # TODO: end-to-end tests of algorithms
+        compare_checksum = not any((option.startswith('--algorithm='), option.startswith('-P'), option.startswith('-p')))
 
         if data_skip is not None and not 'directly_return_output' in kwargs and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)
@@ -320,8 +339,8 @@ def run_rmlint_pedantic(*args, **kwargs):
     return data
 
 
-def run_rmlint(*args, force_no_pendantic=False, **kwargs):
-    if get_env_flag('RM_TS_PEDANTIC') and force_no_pendantic is False:
+def run_rmlint(*args, force_no_pedantic=False, **kwargs):
+    if get_env_flag('RM_TS_PEDANTIC') and force_no_pedantic is False:
         return run_rmlint_pedantic(*args, **kwargs)
     else:
         return run_rmlint_once(*args, **kwargs)
@@ -403,6 +422,7 @@ def mount_bind_teardown_func():
 
     usual_teardown_func()
 
+
 @contextlib.contextmanager
 def create_special_fs(name, fs_type='ext4'):
     """
@@ -448,3 +468,61 @@ def must_read_xattr(path):
           See create_special_fs for a workaround.
     """
     return dict(xattr.xattr(os.path.join(TESTDIR_NAME, path)).items())
+
+
+@contextlib.contextmanager
+def assert_exit_code(status_code):
+    """
+    Assert that the with block yields a subprocess.CalledProcessError
+    with a certain return code. If nothing is thrown, status_code
+    is required to be 0 to survive the test.
+    """
+    try:
+        yield
+    except subprocess.CalledProcessError as exc:
+        assert exc.returncode == status_code
+    else:
+        # No exception? status_code should be fine.
+        assert status_code == 0
+
+
+def _up(path):
+    while path:
+        yield path
+        if path == "/":
+            break
+        path = os.path.dirname(path)
+
+
+def is_on_reflink_fs(path):
+    parts = psutil.disk_partitions(all=True)
+
+    # iterate up from `path` until mountpoint found
+    for up_path in _up(path):
+        for part in parts:
+            if up_path == part.mountpoint:
+                print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
+                return (part.fstype in _REFLINK_CAPABLE_FILESYSTEMS)
+
+    print("No mountpoint found for {}".format(path))
+    return False
+
+
+@pytest.fixture
+# fixture for tests dependent on reflink-capable testdir
+def needs_reflink_fs():
+    if not has_feature('btrfs-support'):
+        pytest.skip("btrfs not supported")
+    elif not is_on_reflink_fs(TESTDIR_NAME):
+        pytest.skip("testdir is not on reflink-capable filesystem")
+    yield
+
+# count the number of line in a file which start with each pattern
+def pattern_count(path, patterns):
+    counts = [0] * len(patterns)
+    with open(path, 'r') as f:
+        for line in f:
+            for i, pattern in enumerate(patterns):
+                if re.match(pattern, line):
+                    counts[i] += 1
+    return counts

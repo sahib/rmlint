@@ -134,7 +134,7 @@ static inline uint64_t fmix64(uint64_t k) {
 
 //-----------------------------------------------------------------------------
 
-MurmurHash3_x86_32_state *MurmurHash3_x86_32_new() {
+MurmurHash3_x86_32_state *MurmurHash3_x86_32_new(void) {
     return g_slice_new0(MurmurHash3_x86_32_state);
 }
 

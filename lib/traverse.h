@@ -41,4 +41,13 @@ bool rm_traverse_file(RmSession *session, RmStat *statp, const char *path, bool 
 
 bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth);
 
+#if RM_IS_APPLE
+#include <AvailabilityMacros.h>
+#if (MAC_OS_X_VERSION_MAX_ALLOWED < 1070)
+#define st_atim st_atimespec
+#define st_ctim st_ctimespec
+#define st_mtim st_mtimespec
 #endif
+#endif /* RM_IS_APPLE */
+
+#endif /* RM_TRAVERSE_H */

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 from tests.utils import *
 
+import shlex
 import subprocess
-
 import pytest
 
 
 def run_shell_script(shell, sh_path, *args):
-    return subprocess.check_output([
-            os.path.join("/bin", shell),
-            sh_path,
-        ] + list(args),
+    shell_path = shutil.which(shell)
+    if shell_path is None:
+        raise RuntimeError(f"{shell} not found in path")
+
+    return subprocess.check_output(
+        [shell_path, sh_path] + list(args),
         shell=False
     ).decode("utf-8")
 
@@ -130,7 +131,7 @@ def test_anon_pipe(usual_setup_usual_teardown):
 
     data = run_rmlint(
         "-o sh:>(cat)",
-        force_no_pendantic=True,
+        force_no_pedantic=True,
         directly_return_output=True,
         use_shell=True
     )
@@ -276,3 +277,24 @@ def test_keep_parent_timestamps(usual_setup_usual_teardown, shell):
     stat_after = os.stat(dir_path)
 
     assert stat_before.st_mtime == stat_after.st_mtime
+
+
+# regression test for GitHub issue #545
+@pytest.mark.parametrize("tm_opt", ('', '-D'))
+def test_skip_hardlinks(usual_setup_usual_teardown, tm_opt):
+    dir_a = create_dirs('a')
+    create_file('xxx', 'a/1')
+    create_file('yyy', 'a/2')
+    dir_b = create_dirs('b')
+    create_link('a/2', 'b/2')
+
+    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    run_rmlint(
+        '-S a -o sh:{p} -c sh:hardlink'.format(p=shlex.quote(sh_path)),
+        tm_opt, dir_a, dir_b,
+        use_default_dir=False,
+    )
+
+    counts = pattern_count(sh_path, ["^cp_hardlink +'", "^skip_hardlink +'"])
+    assert counts[0] == 0
+    assert counts[1] == 1

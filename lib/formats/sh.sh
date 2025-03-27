@@ -255,9 +255,9 @@ clone() {
     printf "${COL_YELLOW}Cloning to: ${COL_RESET}%%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
         if [ -n "$DO_CLONE_READONLY" ]; then
-            $SUDO_COMMAND $RMLINT_BINARY --dedupe %s --readonly -- "$2" "$1"
+            $SUDO_COMMAND "$RMLINT_BINARY" --dedupe %s --readonly -- "$2" "$1"
         else
-            $RMLINT_BINARY --dedupe %s -- "$2" "$1"
+            "$RMLINT_BINARY" --dedupe %s -- "$2" "$1"
         fi
     fi
 }

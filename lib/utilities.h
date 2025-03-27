@@ -39,16 +39,17 @@
 /* return values for rm_util_link_type */
 typedef enum RmLinkType {
     RM_LINK_REFLINK         = EXIT_SUCCESS,
-    RM_LINK_ERROR           = EXIT_FAILURE,
+    RM_LINK_NONE            = EXIT_FAILURE,
     RM_LINK_NOT_FILE        = 3,
     RM_LINK_WRONG_SIZE      = 4,
-    RM_LINK_INLINE_EXTENTS  = 5,
+    RM_LINK_MAYBE_REFLINK   = 5,
     RM_LINK_SAME_FILE       = 6,
     RM_LINK_PATH_DOUBLE     = 7,
     RM_LINK_HARDLINK        = 8,
     RM_LINK_SYMLINK         = 9,
     RM_LINK_XDEV            = 10,
-    RM_LINK_NONE            = 11,
+    RM_LINK_ERROR           = 11,
+    RM_LINK_INLINE_EXTENTS  = 12,
 } RmLinkType;
 
 #if HAVE_STAT64 && !RM_IS_APPLE
@@ -113,6 +114,8 @@ static inline int rm_sys_open(const char *path, int mode) {
 static inline gdouble rm_sys_stat_mtime_float(RmStat *stat) {
 #if RM_IS_APPLE
     return (gdouble)stat->st_mtimespec.tv_sec + stat->st_mtimespec.tv_nsec / 1000000000.0;
+#elif defined(__sun) && !(!defined(__XOPEN_OR_POSIX) || defined(__EXTENSIONS__))
+    return (gdouble)stat->st_mtim.__tv_sec + stat->st_mtim.__tv_nsec / 1000000000.0;
 #else
     return (gdouble)stat->st_mtim.tv_sec + stat->st_mtim.tv_nsec / 1000000000.0;
 #endif
@@ -398,7 +401,7 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
  * @return the physical offset starting from the disk.
  */
 RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
-                            bool *is_last, bool *is_inline);
+                            RmOff *logical_offset, bool *is_last, bool *is_inline);
 
 /**
  * @brief Lookup the physical offset of a file path at any given offset.
@@ -502,10 +505,5 @@ gdouble rm_running_mean_get(RmRunningMean *m);
  * @brief Release internal mem used to store values.
  */
 void rm_running_mean_unref(RmRunningMean *m);
-
-/**
- * @brief See GLib docs for g_canonicalize_filename().
- */
-gchar *rm_canonicalize_filename(const gchar *filename, const gchar *relative_to);
 
 #endif /* RM_UTILITIES_H_INCLUDE*/

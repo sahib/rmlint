@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // used to identify RmNodes that haven't been stat'd yet
 #define RM_NO_INODE ((ino_t) 0)

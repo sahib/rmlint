@@ -682,8 +682,14 @@ static void rm_shred_write_group_to_xattr(const RmSession *session, GQueue *grou
     }
 
     if(g_queue_get_length(group) <= 1 &&
-       !(session->cfg->hash_uniques || session->cfg->hash_unmatched)) {
-        /* Do not write incomplete unique file checksums */
+       !(session->cfg->hash_uniques || session->cfg->hash_unmatched ||
+         session->cfg->write_unfinished)) {
+        /* Do not write solitary files' checksums unless requested */
+        return;
+    }
+
+    if(session->cfg->clamp_is_used) {
+        /* Not writing checksums because we're not reading the whole file. */
         return;
     }
 
@@ -1672,7 +1678,7 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
              (!cfg->shred_never_wait && file->is_on_rotational_disk &&
               bytes_to_read < SHRED_TOO_MANY_BYTES_TO_WAIT));
 
-        gsize bytes_read = 0;
+        guint64 bytes_read = 0;
         RmHasherTask *task = rm_hasher_task_new(tag->hasher, file->digest, file);
         if(!rm_hasher_task_hash(task, file_path, file->hash_offset, bytes_to_read,
                                 file->is_symlink, &bytes_read)) {

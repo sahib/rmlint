@@ -28,6 +28,10 @@
 
 #include <sys/ioctl.h>
 
+#if defined(__sun)
+#include <sys/termios.h>
+#endif
+
 #define ARROW \
     fprintf(out, "%s==>%s ", MAYBE_YELLOW(out, session), MAYBE_RESET(out, session));
 

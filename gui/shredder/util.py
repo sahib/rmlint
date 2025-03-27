@@ -280,7 +280,7 @@ class View(Gtk.Grid):
         """Show an infobar with a text message in it.
 
         Note: Latest gtk version color the infobar always blue.
-              This is slightly retarted and basically makes
+              This is slightly restarted and basically makes
               the message_type parameter useless.
         """
         self.infobar.show(message, message_type)
@@ -761,7 +761,7 @@ EXPONENTS = {
     'Kilobyte': 1,
     'Megabyte': 2,
     'Gigabyte': 3,
-    'Terrabyte': 4,
+    'Terabyte': 4,
     'Petabyte': 5
 }
 

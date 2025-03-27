@@ -17,6 +17,7 @@ docs/rmlint.1
 .sconf*
 .rope*
 *.pyc
+/.prefix.txt
 
 docs/_build
 __pycache__
@@ -25,9 +26,13 @@ lib/config.h
 lib/formats/py.c
 lib/formats/sh.c
 uninstall-
-gui/app/resources/app.gresource
 *.a
 
-rmlint.*.sh
-rmlint.*.json
+/rmlint.*.sh
+/rmlint.*.json
+/.rmlint.json
 
+/rmlint-*.tar.gz
+
+# JetBrains' IDE
+.idea

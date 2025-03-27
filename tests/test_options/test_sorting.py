@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import pytest
-from tests.utils import *
-
 from itertools import permutations, combinations
+
+from tests.utils import *
 
 
 PATHS = ['b_dir/', 'a_dir/', 'c_dir/']
@@ -152,15 +152,15 @@ def test_sort_by_regex(usual_setup_usual_teardown):
     create_file('xxx', 'aaab')
     create_file('xxx', 'b')
     create_file('xxx', 'c')
-    create_file('xxx', '1/c')
-    create_file('xxx', 'd')
+    create_file('xxx', 'd/e')
+    create_file('xxx', 'f')
 
-    head, *data, footer = run_rmlint("-S 'r<1/c>x<d$>a'")
+    head, *data, footer = run_rmlint("-S 'r<d/e>x<f$>a'")
 
     paths = [p['path'] for p in data]
 
-    assert paths[0].endswith('1/c')
-    assert paths[1].endswith('d')
+    assert paths[0].endswith('d/e')
+    assert paths[1].endswith('f')
     assert paths[2].endswith('aaaa')
     assert paths[3].endswith('aaab')
     assert paths[4].endswith('b')
@@ -194,3 +194,20 @@ def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
         assert False
     except subprocess.CalledProcessError:
         pass
+
+
+# regression test for GitHub issue #484
+def test_regex_multiple_matches(usual_setup_usual_teardown):
+    paths = [os.path.join(dname, bname)
+             for dname in ['unique_1', 'unique_2']
+             for bname in ['a', 'a2', 'b']]
+
+    for path in reversed(paths):
+        create_file('xxx', path)
+
+    # when multiple paths matched a regex, rmlint would not try the next criterion
+    # check multiple times because sort order was inconsistent before the fix
+    for _ in range(3):
+        head, *data, foot = run_rmlint("-S 'r<unique_1>x<a>l'")
+        assert len(data) == len(paths)
+        assert [e['path'] for e in data] == [os.path.join(TESTDIR_NAME, p) for p in paths]

@@ -28,6 +28,10 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 
+#if defined(__sun)
+#include <sys/termios.h>
+#endif
+
 typedef struct RmFmtHandlerSummary {
     /* must be first */
     RmFmtHandler parent;
