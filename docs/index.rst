@@ -83,9 +83,6 @@ They show you the basic principles and most of the advanced options:
    cautions
    faq
 
-If you have usage questions or find weird behaviour, you can also try to reach
-us via *IRC* in ``#rmlint`` on ``irc.freenode.net``.
-
 Since version ``2.4.0`` we also feature an optional graphical user interface:
 
 .. raw:: html
