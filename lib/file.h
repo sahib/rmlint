@@ -377,4 +377,8 @@ RmFile *rm_file_copy(RmFile *file);
  */
 gint rm_file_basenames_cmp(const RmFile *file_a, const RmFile *file_b);
 
+
+gint rm_file_dirnames_cmp(const RmFile *file_a, const RmFile *file_b);
+
+
 #endif /* end of include guard */

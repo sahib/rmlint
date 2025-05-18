@@ -72,6 +72,11 @@ gint rm_file_cmp(const RmFile *file_a, const RmFile *file_b) {
 
     RmCfg *cfg = file_a->session->cfg;
 
+    if(cfg->match_dirname) {
+        result = rm_file_dirnames_cmp(file_a, file_b);
+        RETURN_IF_NONZERO(result);
+    }
+
     if(cfg->match_basename) {
         result = rm_file_basenames_cmp(file_a, file_b);
         RETURN_IF_NONZERO(result);
