@@ -86,7 +86,7 @@ static bool rm_sh_emit_handler_clone(RmFmtHandlerShScript *self, char **out, RmF
         return false;
     }
 
-    if (!rm_mounts_can_reflink(self->session->mounts, file->dev, self->last_original->dev) ) {
+    if (!rm_mounts_can_dedupe(self->session->mounts, file->dev, self->last_original->dev) ) {
         return false;
     }
 

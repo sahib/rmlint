@@ -352,6 +352,7 @@ typedef struct RmMountTable {
     GHashTable *nfs_table;
     GHashTable *evilfs_table;
     GHashTable *reflinkfs_table;
+    GHashTable *dedupefs_table;
 } RmMountTable;
 
 /**
@@ -408,6 +409,12 @@ bool rm_mounts_is_evil(RmMountTable *self, dev_t to_check);
  * partition supports reflink copies (cp --reflink).
  */
 bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest);
+
+/**
+ * @brief Indicates true if source and dest are on same partition, and the
+ * partition supports the FIDEDUPERANGE ioctl for deduplication.
+ */
+bool rm_mounts_can_dedupe(RmMountTable *self, dev_t source, dev_t dest);
 
 /////////////////////////////////
 //    FIEMAP IMPLEMENTATION     //

@@ -579,7 +579,8 @@ static RmMountEntry *rm_mount_list_next(RmMountEntries *self) {
     }
 }
 
-static bool fs_supports_reflinks(char *fstype, char *mountpoint) {
+static bool fs_supports_dedupe(char *fstype, char *mountpoint) {
+    /* Check if filesystem supports FIDEDUPERANGE ioctl for deduplication */
     if(strcmp(fstype, "btrfs")==0) {
         return true;
     }
@@ -592,6 +593,49 @@ static bool fs_supports_reflinks(char *fstype, char *mountpoint) {
         int res = system(cmd);
         g_free(cmd);
         return(res==0);
+    }
+    return false;
+}
+
+static bool fs_supports_reflinks(char *fstype, char *mountpoint, char *fsname) {
+    /* Check if filesystem supports any form of reflinks/clones */
+    if(fs_supports_dedupe(fstype, mountpoint)) {
+        /* If it supports dedupe ioctl, it supports reflinks */
+        return true;
+    }
+    if(strcmp(fstype, "zfs")==0) {
+        /* ZFS supports reflinks/clones in newer versions (OpenZFS 2.2+).
+         * Note: ZFS does not support the FIDEDUPERANGE ioctl used by
+         * 'rmlint --dedupe', but does support 'cp --reflink=always'.
+         * For sh:handler=reflink, the generated script will use cp --reflink.
+         * For sh:handler=clone, the dedupe operation will fail gracefully. */
+
+        /* Check that the zpool has block_cloning feature enabled.
+         * Get the pool name from fsname (the part before the first '/', if any).
+         * It can be disabled, or not supported because the pool has not been
+         * upgraded yet, or because ZFS is too old. */
+        char *fs = g_strdup(fsname);
+        g_strdelimit(fs, "/", '\0'); /* modifies 'fs' inplace */
+
+        gchar *argv[] = {"zpool", "get", "-H", "-o", "value", "feature@block_cloning", fs, NULL};
+        gchar *standard_output = NULL;
+        gint exit_status = 0;
+        bool supports_cloning = false;
+
+        if(g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_STDERR_TO_DEV_NULL,
+                        NULL, NULL, &standard_output, NULL, &exit_status, NULL)) {
+            if(exit_status == 0 && standard_output != NULL) {
+                /* Check if the feature is "active" or "enabled" */
+                if(strstr(standard_output, "active") != NULL ||
+                   strstr(standard_output, "enabled") != NULL) {
+                    supports_cloning = true;
+                }
+            }
+            g_free(standard_output);
+        }
+
+        g_free(fs);
+        return supports_cloning;
     }
     return false;
 }
@@ -675,13 +719,21 @@ static RmMountEntries *rm_mount_list_open(RmMountTable *table) {
                   evilfs_found->name, wrap_entry->dir, (unsigned)dir_stat.st_dev);
         }
 
-        if(fs_supports_reflinks(wrap_entry->type, wrap_entry->dir)) {
+        if(fs_supports_reflinks(wrap_entry->type, wrap_entry->dir, wrap_entry->fsname)) {
             RmStat dir_stat;
             if(rm_sys_stat(wrap_entry->dir, &dir_stat) == 0) {
                 g_hash_table_insert(table->reflinkfs_table,
                                     GUINT_TO_POINTER(dir_stat.st_dev),
                                     wrap_entry->type);
                 rm_log_debug_line("Filesystem %s: reflink capable", wrap_entry->dir);
+                
+                /* Also check if it supports dedupe ioctl */
+                if(fs_supports_dedupe(wrap_entry->type, wrap_entry->dir)) {
+                    g_hash_table_insert(table->dedupefs_table,
+                                        GUINT_TO_POINTER(dir_stat.st_dev),
+                                        wrap_entry->type);
+                    rm_log_debug_line("Filesystem %s: dedupe capable", wrap_entry->dir);
+                }
                 continue;
             }
         }
@@ -712,6 +764,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
     /* Mapping dev_t => true (used as set) */
     self->evilfs_table = g_hash_table_new(NULL, NULL);
     self->reflinkfs_table = g_hash_table_new(NULL, NULL);
+    self->dedupefs_table = g_hash_table_new(NULL, NULL);
 
     RmMountEntry *entry = NULL;
     RmMountEntries *mnt_entries = rm_mount_list_open(self);
@@ -838,6 +891,7 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_hash_table_unref(self->nfs_table);
     g_hash_table_unref(self->evilfs_table);
     g_hash_table_unref(self->reflinkfs_table);
+    g_hash_table_unref(self->dedupefs_table);
     g_slice_free(RmMountTable, self);
 }
 
@@ -971,6 +1025,25 @@ bool rm_mounts_can_reflink(RmMountTable *self, dev_t source, dev_t dest) {
             g_assert(source_part);
             g_assert(dest_part);
             return (strcmp(source_part->fsname, dest_part->fsname) == 0);
+        }
+    } else {
+        return false;
+    }
+}
+
+bool rm_mounts_can_dedupe(RmMountTable *self, dev_t source, dev_t dest) {
+    g_assert(self);
+    if(g_hash_table_contains(self->dedupefs_table, GUINT_TO_POINTER(source))) {
+        if(source == dest) {
+            return true;
+        } else {
+            RmPartitionInfo *source_part =
+                g_hash_table_lookup(self->part_table, GINT_TO_POINTER(source));
+            RmPartitionInfo *dest_part =
+                g_hash_table_lookup(self->part_table, GINT_TO_POINTER(dest));
+            g_assert(source_part);
+            g_assert(dest_part);
+            return(source_part->disk == dest_part->disk);
         }
     } else {
         return false;

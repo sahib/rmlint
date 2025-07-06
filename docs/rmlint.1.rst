@@ -664,9 +664,10 @@ FORMATTERS
       This will free up duplicate extents. Needs at least kernel 4.2.
       Use this option when you only have read-only access to a btrfs filesystem but still
       want to deduplicate it. This is usually the case for snapshots.
+      Note: This does not work on ZFS as it doesn't support the FIDEDUPERANGE ioctl.
     * ``reflink``: Try to reflink the duplicate file to the original. See also
       ``--reflink`` in ``man 1 cp``. Fails if the filesystem does not support
-      it.
+      it. Works on btrfs, XFS (with reflink enabled), and ZFS (OpenZFS 2.2+).
     * ``hardlink``: Replace the duplicate file with a hardlink to the original
       file. The resulting files will have the same inode number. Fails if both
       files are not on the same partition. You can use ``ls -i`` to show the
@@ -682,7 +683,8 @@ FORMATTERS
     Default is ``remove``.
 
   * *link*: Shortcut for ``-c sh:handler=clone,reflink,hardlink,symlink``.
-    Use this if you are on a reflink-capable system.
+    Use this if you are on a reflink-capable system. On ZFS, the clone
+    handler will be skipped (as it's not supported), and reflink will be used instead.
   * *hardlink*: Shortcut for ``-c sh:handler=hardlink,symlink``.
     Use this if you want to hardlink files, but want to fallback
     for duplicates that lie on different devices.
