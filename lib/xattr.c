@@ -234,7 +234,7 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
        rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
-       rm_xattr_set(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str), follow) ||
+       rm_xattr_set(file, cksum_key, cksum_hex_str, strlen(cksum_hex_str), follow) ||
        rm_xattr_set(file, mtime_key, timestamp, strlen(timestamp), follow)) {
         return errno;
     }
