@@ -1,7 +1,10 @@
 import os
 import subprocess
+from pathlib import Path
 
-from tests.utils import create_file, create_testdir, get_testdir, run_rmlint
+import pytest
+
+from tests.utils import create_dirs, create_file, create_testdir, get_testdir, run_rmlint
 
 
 def create_set():
@@ -102,3 +105,29 @@ def test_replay_size():
 
     assert [e["type"] for e in data] == \
            ["emptydir"] + (["emptyfile"] * 2) + (["duplicate_file"] * 4)
+
+
+def test_directory_size_limit_on_tmpfs():
+    def write_file(directory, name, data):
+        Path(directory, name).write_text(data, encoding="utf-8")
+
+    included = create_dirs('included')
+    skipped = create_dirs('skipped')
+
+    # XXX: directories st_size varies by filesystems, pick a number high enough.
+    for index in range(64):
+        write_file(get_testdir(), 'root-filler-{:03d}'.format(index), '')
+        write_file(included, 'filler-{:03d}'.format(index), '')
+
+    write_file(included, 'duplicate-a', 'x' * 1024)
+    write_file(included, 'duplicate-b', 'x' * 1024)
+    write_file(skipped, 'duplicate-a', 'x' * 1024)
+    write_file(skipped, 'duplicate-b', 'x' * 1024)
+
+    if (os.stat(get_testdir()).st_size < 1024
+        or os.stat(included).st_size < 1024
+        or os.stat(skipped).st_size >= 1024):
+        pytest.skip("incompatible filesystem")
+
+    *_, footer = run_rmlint('-T df --size 1K,d')
+    assert footer['duplicates'] == 1

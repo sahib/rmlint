@@ -157,12 +157,26 @@ static gboolean rm_cmd_parse_limit_sizes(_UNUSED const char *option_name,
                                          const gchar *range_spec,
                                          RmSession *session,
                                          GError **error) {
-    if(!rm_cmd_size_range_string_to_bytes(range_spec, &session->cfg->minsize,
+    gchar **range_parts = g_strsplit(range_spec, ",", 2);
+    const char *range = range_parts[0];
+    const char *modifier = range_parts[1];
+
+    if(modifier != NULL) {
+        if(g_ascii_strcasecmp(modifier, "d") == 0) {
+            session->cfg->apply_limits_to_dirs = true;
+        } else {
+            rm_log_warning_line("Unknown --size modifier: %s (ignored)", modifier);
+        }
+    }
+
+    if(!rm_cmd_size_range_string_to_bytes(range, &session->cfg->minsize,
                                           &session->cfg->maxsize, error)) {
         g_prefix_error(error, _("cannot parse --size: "));
+        g_strfreev(range_parts);
         return false;
     } else {
         session->cfg->limits_specified = true;
+        g_strfreev(range_parts);
         return true;
     }
 }
@@ -1142,7 +1156,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"rank-by"          , 'S' , 0        , G_OPTION_ARG_CALLBACK , FUNC(rankby)         , _("Select originals by given  criteria")  , "[dlamprxhofDLAMPRXHOF]"}  ,
         {"sort-by"          , 'y' , 0        , G_OPTION_ARG_CALLBACK , FUNC(sortby)         , _("Sort rmlint output by given criteria") , "[moansMOANS]"}            ,
         {"types"            , 'T' , 0        , G_OPTION_ARG_CALLBACK , FUNC(lint_types)     , _("Specify lint types")                   , "T"}                       ,
-        {"size"             , 's' , 0        , G_OPTION_ARG_CALLBACK , FUNC(limit_sizes)    , _("Specify size limits")                  , "m-M"}                     ,
+        {"size"             , 's' , 0        , G_OPTION_ARG_CALLBACK , FUNC(limit_sizes)    , _("Specify size limits")                  , "m-M[,d]"}                 ,
         {"algorithm"        , 'a' , 0        , G_OPTION_ARG_CALLBACK , FUNC(algorithm)      , _("Choose hash algorithm")                , "A"}                       ,
         {"output"           , 'o' , 0        , G_OPTION_ARG_CALLBACK , FUNC(small_output)   , _("Add output (override default)")        , "FMT[:PATH]"}              ,
         {"add-output"       , 'O' , 0        , G_OPTION_ARG_CALLBACK , FUNC(large_output)   , _("Add output (add to defaults)")         , "FMT[:PATH]"}              ,
