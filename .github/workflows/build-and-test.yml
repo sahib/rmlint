@@ -85,6 +85,9 @@ jobs:
           sudo apt-get install -y zfsutils-linux
           echo 1 | sudo tee /sys/module/zfs/parameters/zfs_bclone_enabled
           sudo zpool create -m "${RM_TS_DIR}" rmlint ram0
+
+          sleep 10
+
           sudo chmod 0777 "${RM_TS_DIR}"
 
           RM_TS_PEDANTIC=0 python -m pytest -s -v tests/test_mains/test_is_reflink.py
