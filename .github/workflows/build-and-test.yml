@@ -58,9 +58,9 @@ jobs:
       - name: "Test it"
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
-          RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest -s -v
+          RM_TS_PEDANTIC=0 python -m pytest -s -v
 
-      - name: CoW tests
+      - name: CoW tests - BTRFS
         if: ${{ env.RUN_TEST == 'true' }}
         shell: bash
         run: |
@@ -69,22 +69,26 @@ jobs:
           sudo mkfs.btrfs -f /dev/ram0
           sudo mount /dev/ram0 "${RM_TS_DIR}"
           sudo chmod 0777 "${RM_TS_DIR}"
-          cat <<'EOF' >> tests/conftest.py
 
-          def pytest_collection_modifyitems(items, config):
-              selected_items = []
-              deselected_items = []
+          RM_TS_PEDANTIC=0 python -m pytest -s -v tests/test_mains/test_is_reflink.py
+          RM_TS_PEDANTIC=0 python -m pytest -s -v tests/test_mains/test_dedupe.py
 
-              for item in items:
-                  if "needs_reflink_fs" in getattr(item, "fixturenames", ()):
-                      selected_items.append(item)
-                  else:
-                      deselected_items.append(item)
-              config.hook.pytest_deselected(items=deselected_items)
-              items[:] = selected_items
-          EOF
-          RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=0 python -m pytest -s -v
-          
+      - name: CoW tests - ZFS
+        if: ${{ env.RUN_TEST == 'true' }}
+        shell: bash
+# TODO: change to blkdiscard when the runner will be running 6.10+ kernel.
+        run: |
+          sudo umount "${RM_TS_DIR}"
+          sudo rmmod brd
+          sudo modprobe brd rd_nr=1 rd_size=12582912
+
+          sudo apt-get install -y zfsutils-linux
+          echo 1 | sudo tee /sys/module/zfs/parameters/zfs_bclone_enabled
+          sudo zpool create -m "${RM_TS_DIR}" rmlint ram0
+          sudo chmod 0777 "${RM_TS_DIR}"
+
+          RM_TS_PEDANTIC=0 python -m pytest -s -v tests/test_mains/test_is_reflink.py
+
       - name: "Cleanup"
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
