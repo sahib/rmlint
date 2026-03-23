@@ -1,0 +1,1051 @@
+# Georgian translation for rmlint.
+# Copyright (C) 2026 rmlint's authors.
+# This file is distributed under the same license as the rmlint package.
+# Ekaterine Papava <papava.e@gtu.ge>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: rmlint 2.8.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-02-14 01:45+0100\n"
+"PO-Revision-Date: 2026-03-23 06:32+0100\n"
+"Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
+"Language-Team: Georgian <(nothing)>\n"
+"Language: ka\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.9\n"
+
+#: src/rmlint.c
+#, c-format
+msgid "Aborting due to a fatal error. (signal received: %s)"
+msgstr "შეწყდა ფატალური შეცდომის გამო. (მიღებულია სიგნალი: %s)"
+
+#: src/rmlint.c
+msgid "Please file a bug report (See rmlint -h)"
+msgstr "მოგვწერეთ ამ შეცდომის შესახებ (იხილეთ rmlint -h)"
+
+#: lib/formats/pretty.c
+msgid "Bad symlink(s)"
+msgstr "ცუდი სიმბმულ(ებ)-ი"
+
+#: lib/formats/pretty.c
+msgid "Empty dir(s)"
+msgstr "ცარიელი საქაღალდე(ები)"
+
+#: lib/formats/pretty.c
+msgid "Non stripped binarie(s)"
+msgstr "არაგაშიშვლებული გამშვები ფაილ(ებ)ი"
+
+#: lib/formats/pretty.c
+msgid "Bad UID(s)"
+msgstr "არასწორი UID(ები)"
+
+#: lib/formats/pretty.c
+msgid "Bad GID(s)"
+msgstr "არასწორი GID(ები)"
+
+#: lib/formats/pretty.c
+msgid "Bad UID and GID(s)"
+msgstr "არასწორი UID და GID(ები)"
+
+#: lib/formats/pretty.c
+msgid "Empty file(s)"
+msgstr "ცარიელი ფაილ(ებ)-ი"
+
+#: lib/formats/pretty.c
+msgid "Duplicate(s)"
+msgstr "დუბლიკატ(ებ)-ი"
+
+#: lib/formats/pretty.c
+msgid "Duplicate Directorie(s)"
+msgstr "დუბლიკატი საქაღალდე(ები)"
+
+#: lib/formats/summary.c
+#, c-format
+msgid " file(s) after investigation, nothing to search through.\n"
+msgstr " ფაილი ძიების შემდეგ. მოსაძებნი არაფერია.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr "ნაადრევი გამორთვა. ალბათ, ყველა lint აღმოჩენილი არაა.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid ""
+"Note: Please use the saved script below for removal, not the above output."
+msgstr ""
+"შენიშვნა: გამოიყენეთ შენახული სკრიპტი ქვემოთ წასაშლელად და არა ზემოთა "
+"გამოტანა."
+
+#: lib/formats/summary.c
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr "სულ %s ფაილი, საიდანაც %s დუბლიკატია %s ჯგუფში.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr "ეს უდრის %s%s%s დუბლიკატს, რომლის წაშლაც შეიძლება.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr "აღმოჩენილია სხვა საეჭვო ელემენტ(ებ)-ი, რომლების ზომაც ცვლადია.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "Scanning took in total %s%s%s.\n"
+msgstr "სკანირებას სულ დასჭირდა %s%s%s.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "Wrote a %s%s%s file to: %s%s%s\n"
+msgstr "ჩაწერილია %s%s%s ფაილი სად: %s%s%s\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "No shred stats.\n"
+msgstr "სტატისტიკა არ წაიშლება.\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid ""
+"%sDuplicate finding stats (includes hardlinks):%s\n"
+"\n"
+msgstr ""
+"%sდუბლირებული ძებნის სტატისტიკა (შეიცავს მყარ ბმულებს):%s\n"
+"\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of originals\n"
+msgstr "%s%15s%s ბაიტი ორიგინალები\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of duplicates\n"
+msgstr "%s%15s%s ბაიტი დუბლიკატები\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of non-duplicates\n"
+msgstr "%s%15s%s ბაიტი არადუბლიკატები\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of files data actually read\n"
+msgstr "%s%15s%s ბაიტი ფაილები რეალურად წაკითხულია\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15d%s Files in total\n"
+msgstr "%s%15d%s ფაილი სულ\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15ld%s Duplicate files\n"
+msgstr "%s%15ld%s დუბლირებული ფაილი\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15ld%s Groups in total\n"
+msgstr "%s%15ld%s ჯგუფი ჯამში\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15ld%s Other lint items\n"
+msgstr "%s%15ld%s სხვა lint ელემენტები\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s of time spent scanning\n"
+msgstr "%s%15s%s სკანირებაში დახარჯული დრო\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s Algorithm efficiency on total files basis\n"
+msgstr "%s%15s%s ალგორითმის ეფექტურობა ყველა ფაილისთვის\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s Algorithm efficiency on duplicate file basis\n"
+msgstr "%s%15s%s ალგორიტმის ეფექტურობა დუბლირებული ფაილებისთვის\n"
+
+#: lib/formats/progressbar.c
+msgid "reduces files to"
+msgstr "ამცირებს ფაილებს"
+
+#: lib/formats/progressbar.c
+msgid "Traversing"
+msgstr "კვეთა"
+
+#: lib/formats/progressbar.c
+msgid "usable files"
+msgstr "გამოყენებადი ფაილები"
+
+#: lib/formats/progressbar.c
+msgid "ignored files / folders"
+msgstr "გამოტოვებული ფაილები / საქაღალდეები"
+
+#: lib/formats/progressbar.c
+msgid "Preprocessing"
+msgstr "პრეპროცესინგი"
+
+#: lib/formats/progressbar.c
+msgid "found"
+msgstr "ნაპოვნია"
+
+#: lib/formats/progressbar.c
+msgid "other lint"
+msgstr "სხვა lint"
+
+#: lib/formats/progressbar.c
+msgid "Matching"
+msgstr "დამთხვევები"
+
+#: lib/formats/progressbar.c
+msgid "dupes of"
+msgstr "დუბლიკატი რისი"
+
+#: lib/formats/progressbar.c
+msgid "originals"
+msgstr "ორიგინალები"
+
+#: lib/formats/progressbar.c
+msgid "to scan in"
+msgstr "სკანირებისთვის სად"
+
+#: lib/formats/progressbar.c
+msgid "files"
+msgstr "ფაილები"
+
+#: lib/formats/progressbar.c
+msgid "Merging files into directories (stand by...)"
+msgstr "ფაილების შერწყმა საქაღალდეებში (მოითმინეთ...)"
+
+#: lib/formats/sh.c
+#, c-format
+msgid "%s is an invalid handler."
+msgstr "%s არასწორი დამმუშავებელია."
+
+#: lib/hasher.c
+#, c-format
+msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
+msgstr ""
+"%s-ის კითხვისას რაღაც არასწორად წავიდა. მოველოდი %li ბაიტს და მივიღე %li; "
+"გამოტოვება"
+
+#: lib/utilities.c
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr "გახსნის შეცდომა ფაილისთვის'%s' გაუშიშვლებელი შემოწმებისთვის: "
+
+#: lib/utilities.c
+msgid "ELF Library is out of date!"
+msgstr "ELF ბიბლიოთეკა მოძველებულია!"
+
+#: lib/utilities.c
+#, c-format
+msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
+msgstr ""
+"`%s` მიმაგრება დადგენილია მისამართზე %s (#%u). შიგნით ყველა ფაილი "
+"გამოტოვებული იქნება.\n"
+
+#: lib/preprocess.c
+msgid "Pattern has to start with `<`"
+msgstr "ნიმუში უნდა იწყებოდეს სიმბოლოთი `<`"
+
+#: lib/preprocess.c
+#, c-format
+msgid "`<` or `>` imbalance: %d"
+msgstr "`<`-ის, ან `>`-ის ბალანსი დარღვეულია: %d"
+
+#: lib/preprocess.c
+msgid "empty pattern"
+msgstr "ცარიელი ნიმუში"
+
+#: lib/preprocess.c
+msgid "no pattern given in <> after 'r' or 'x'"
+msgstr "<>-ში 'r'-ის, ან 'x'-ის შემდეგ ნიმუში მითითებული არაა"
+
+#: lib/preprocess.c
+#, c-format
+msgid "Cannot add more than %lu regex patterns."
+msgstr "%lu-ზე მეტ რეგგამოსის ნიმუშს ვერ დაამატებთ."
+
+#: lib/preprocess.c
+msgid "Error while parsing sortcriteria patterns: "
+msgstr "შეცდომა დალაგების პირობის ნიმუშების დამუშავებისას: "
+
+#: lib/replay.c
+msgid "No valid json cache (no array in /)"
+msgstr "არასწორი json-ის კეში (/-ში მასივი არაა)"
+
+#: lib/replay.c lib/cmdline.c
+#, c-format
+msgid "lint type '%s' not recognised"
+msgstr "lint ტიპით '%s' უცნობია"
+
+#: lib/replay.c
+#, c-format
+msgid "modification time of `%s` changed. Ignoring."
+msgstr "`%s`-ის ცვლილების დრო შეიცვალა. გამოტოვება."
+
+#: lib/replay.c
+#, c-format
+msgid "Loading json-results `%s'"
+msgstr "იტვირთება json-შედეგები `%s'"
+
+#: lib/replay.c
+msgid "json-glib is needed for using --replay."
+msgstr "--replay-ის გამოყენებისას საჭიროა json-glib."
+
+#: lib/replay.c
+msgid "Please recompile `rmlint` with it installed."
+msgstr "დააკომპილეთ 'rmlint' თავიდან მაშინ, როცა ის დაყენებული გექნებათ."
+
+#: lib/traverse.c
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr "%s-ზე აღმოჩენილია ფაილური სისტემის მარყუჟი (გამოტოვება)"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr "ვერ წავიკითხე საქაღალდე %s: %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr "შეცდომა %d fts_read-ში %s-ისთვის (გამოტოვება)"
+
+#: lib/traverse.c
+#, c-format
+msgid "Added big file %s"
+msgstr "დაემატა დიდი ფაილი %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr "აღმოჩენის შეცდომა ფაილისთვის %s (გამოტოვება)"
+
+#: lib/traverse.c
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr "უცნობი fts_info-ის ალამი %d ფაილისთვის %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr "'%s': fts_read ჩავარდა ფაილზე %s"
+
+#: lib/cfg.c lib/hash-utility.c
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "ვერ გავხსენი საქაღალდე, ან ფაილი \"%s\": %s"
+
+#: lib/cfg.c
+#, c-format
+msgid "Can't get real path for directory or file \"%s\": %s"
+msgstr ""
+"რეალური ბილიკის მიღება შეუძლებელია ქაღალდისთვის, ან ფაილისთვის \"%s\": %s"
+
+#: lib/session.c
+msgid "Received interrupt; stopping..."
+msgstr "მიღებულია შეწყვეტის სიგნალი. გამოსვლა..."
+
+#: lib/session.c
+msgid "Received second interrupt; stopping hard."
+msgstr "მიღებულია მეორე წყვეტა. მყარი გაჩერება."
+
+#: lib/formats.c
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr "ასეთი new_handler ამ სახელით არ არსებობს: %s"
+
+#: lib/formats.c
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr "ფაილის ჩასაწერად გახსნა შეუძლებელია: %s"
+
+#: lib/hash-utility.c lib/cmdline.c
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr "უცნობი ჰეშის ალგორითმი: '%s'"
+
+#: lib/hash-utility.c
+msgid "Digest type [BLAKE2B]"
+msgstr "დაიჯესტის ტიპი [BLAKE2B]"
+
+#: lib/hash-utility.c
+msgid "Number of hashing threads [8]"
+msgstr "ჰეშინგის ნაკადების რაოდენობა [8]"
+
+#: lib/hash-utility.c
+msgid "Megabytes read buffer [256 MB]"
+msgstr "წაკითხვის ბუფერი მეგაბაიტებში [256 მბ]"
+
+#: lib/hash-utility.c
+msgid ""
+"Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr ""
+"ჰეშების გამოტანა დასრულების მიხედვით და არა შეყვანის (ამცირებს მეხსიერების "
+"გამოყენებას)"
+
+#: lib/hash-utility.c
+msgid "Space-separated list of files"
+msgstr "ჰარეთი გამოყოფილი ფაილების სია"
+
+#: lib/hash-utility.c
+msgid "Hash a list of files"
+msgstr "ფაილების სიის ჰეში"
+
+#: lib/hash-utility.c
+#, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"    %s\n"
+"\n"
+"  Versions with different bit numbers:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+"მრავალნაკადიანი ფაილის დაიჯესტის (ჰეშის) გამომთვლელი.\n"
+"\n"
+"  ხელმისაწვდომი დაიჯესტის ტიპებია:\n"
+"     %s\n"
+"\n"
+"  ვერსიები განსხვავებული ბიტების რიცხვით:\n"
+"     %s\n"
+"\n"
+"  მხარდაჭერილია, მაგრამ არა სასარგებლო:\n"
+"     %s\n"
+
+#: lib/hash-utility.c
+msgid "No valid paths given"
+msgstr "სწორი ბილიკები მოწოდებული არაა"
+
+#: lib/hash-utility.c
+#, c-format
+msgid "Directories are not supported: %s"
+msgstr "საქაღალდეები მხარდაჭერილი არაა: %s"
+
+#: lib/hash-utility.c
+#, c-format
+msgid "%s: Unknown file type"
+msgstr "%s: უცნობი ფაილის ტიპი"
+
+#: lib/cmdline.c
+#, c-format
+msgid "compiled with:"
+msgstr "აგებულია რით:"
+
+#: lib/cmdline.c
+#, c-format
+msgid ""
+"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> "
+"Thomas."
+msgstr ""
+"rmlint-ის ავტორებია: Christopher <sahib> Pahl და Daniel <SeeSpotRun> Thomas."
+
+#: lib/cmdline.c
+#, c-format
+msgid ""
+"The code at https://github.com/sahib/rmlint is licensed under the terms of "
+"the GPLv3."
+msgstr ""
+"კოდი მისამართზე https://github.com/sahib/rmlint ვრცელდება ლიცენზიით GPLv3."
+
+#: lib/cmdline.c
+msgid "You seem to have no manpage for rmlint."
+msgstr "როგორც ჩანს, rmlint-ისთვის manpage არ გაქვთ."
+
+#: lib/cmdline.c
+msgid "Please run rmlint --help to show the regular help."
+msgstr "დახმარების საჩვენებლად გაუშვით rmlint --help."
+
+#: lib/cmdline.c
+msgid ""
+"Alternatively, visit https://rmlint.rtfd.org for the online documentation"
+msgstr ""
+"დოკუმენტაციისთვის ასევე შეგიძლიათ, ეწვიოთ ვებგვერდს https://rmlint.rtfd.org"
+
+#: lib/cmdline.c
+msgid "Usage: rmlint --dedupe [-r] source dest\n"
+msgstr "გამოყენება: rmlint --dedupe [-r] წყარო სამიზნე\n"
+
+#: lib/cmdline.c lib/session.c
+msgid "dedupe: failed to open source file"
+msgstr "დედუბლიკაცია: წყარო ფაილის გახსნა ცავარდა"
+
+#: lib/cmdline.c lib/session.c
+#, c-format
+msgid "dedupe: error %i: failed to open dest file.%s"
+msgstr "დედუბლიკაცია: შეცდომა %i: გახსნის შეცდომა სამიზნე ფაილისთვის.%s"
+
+#: lib/cmdline.c lib/session.c
+msgid ""
+"\n"
+"\t(if target is a read-only snapshot then -r option is required)"
+msgstr ""
+"\n"
+"\t(თუ სამიზნე მხოლოდ-წაკითხვადი სწრაფი ასლია, მაშინ აუცილებელია პარამეტრი "
+"-r)"
+
+#: lib/cmdline.c
+#, c-format
+msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
+msgstr "BTRFS_IOC_FILE_EXTENT_SAME-მა დააბრუნა შეცდომა: (%d) %s"
+
+#: lib/cmdline.c
+msgid "Need to run as root user to clone to a read-only snapshot"
+msgstr ""
+"მხოლოდ წაკითხვადი სწრაფი ასლის დასაკლონად საჭიროა root მომხმარებლით გაშვება"
+
+#: lib/cmdline.c
+#, c-format
+msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
+msgstr "BTRFS_IOC_FILE_EXTENT_SAME-მა დააბრუნა სტატუსი %d ფაილისთვის %s"
+
+#: lib/cmdline.c
+msgid "Files don't match - not cloned"
+msgstr "ფაილები არ ემთხვევა - დაკლონილი არაა"
+
+#: lib/cmdline.c
+msgid "rmlint was not compiled with btrfs support."
+msgstr "rmlint არ იყო აგებული btrfs-ის მხარდაჭერით."
+
+#: lib/cmdline.c
+msgid "Input size is empty"
+msgstr "შეყვანის ზომა ცარიელია"
+
+#: lib/cmdline.c
+msgid "This does not look like a number"
+msgstr "ეს რიცხვს არ წააგავს"
+
+#: lib/cmdline.c
+msgid "Negativ sizes are no good idea"
+msgstr "უარყოფითი ზომები კარგი იდეა არაა"
+
+#: lib/cmdline.c
+msgid "Given format specifier not found"
+msgstr "მოცემული ფორმატის მიმთითებელი აღმოჩენილი არაა"
+
+#: lib/cmdline.c
+msgid "Max is smaller than min"
+msgstr "მაქსიმუმი მინიმუმზე მცირეა"
+
+#: lib/cmdline.c
+msgid "cannot parse --size: "
+msgstr "დამუშავების შეცდომა პარამეტრისთვის --size: "
+
+#: lib/cmdline.c
+#, c-format
+msgid "Adding -o %s as output failed"
+msgstr "-o %s-ის გამოტანად დამატება ჩავარდა"
+
+#: lib/cmdline.c
+#, c-format
+msgid "No format (format:key[=val]) specified in '%s'"
+msgstr "'%s'-ში ფორმატი (ფორმატი:გასაღები[=მნიშვნ]) მითითებული არაა"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Missing key (format:key[=val]) in '%s'"
+msgstr "'%s'-ში (ფორმატი:გასაღები[=მნიშვნ]) გასაღები აკლია"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Invalid key `%s' for formatter `%s'"
+msgstr "არასწორი გასაღები `%s' დამფორმატებლისთვის `%s'"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Unable to parse factor \"%s\": error begins at %s"
+msgstr "ფაქტორის \"%s\" დამუშავება შეუძლებელია: შეცდომა იწყება მისამართზე %s"
+
+#: lib/cmdline.c
+#, c-format
+msgid "factor value is not in range [0-1]: %f"
+msgstr "ფაქტორის მნიშვნელობა არაა შუალედში [0-1]: %f"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Unable to parse offset \"%s\": "
+msgstr "დამუშავების შეცდომა წანაცვლებისთვის \"%s\": "
+
+#: lib/cmdline.c
+#, c-format
+msgid "Unable to parse time spec \"%s\""
+msgstr "დამუშავების შეცდომა დროის სპეციფიკაციისთვის \"%s\""
+
+#: lib/cmdline.c
+#, c-format
+msgid "-n %lu is newer than current time (%lu)."
+msgstr "-n %lu უფრო ახალია, ვიდრე მიმდინარე დრო (%lu)."
+
+#: lib/cmdline.c
+msgid "Only up to -pp or down to -PP flags allowed"
+msgstr "დაშვებულია, მხოლოდ, ალმები -pp-დან -PP-მდე"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Invalid size description \"%s\": "
+msgstr "არასწორი ზომის აღწერა \"%s\": "
+
+#: lib/cmdline.c
+msgid "Permissions string needs to be one or many of [rwx]"
+msgstr "წვდომების სტრიქონი უნდა იყოს ერთ-ერთი, ან ბევრი [rwx]"
+
+#: lib/cmdline.c
+#, c-format
+msgid "%s may only contain [%s], not `%c`"
+msgstr "%s შეიძლება, შეიცავდეს [%s]-ს, არა `%c`-ს"
+
+#: lib/cmdline.c
+msgid "Specifiyng both -o and -O is not allowed"
+msgstr "ორივე, -o და -O პარამეტრების მითითება დაშვებული არაა"
+
+#: lib/cmdline.c
+msgid "Could not start graphical user interface."
+msgstr "გრაფიკული ინტერფეისის გაშვება შეუძლებელია."
+
+#: lib/cmdline.c
+msgid "Specify max traversal depth"
+msgstr "მიუთითეთ გავლების მაქს. სიღრმე"
+
+#: lib/cmdline.c
+msgid "Select originals by given  criteria"
+msgstr "ორიგინალების არჩევა მითითებული  პირობით"
+
+#: lib/cmdline.c
+msgid "Sort rmlint output by given criteria"
+msgstr "rmlint-ის გამოტანილი ინფორმაციის დალაგება მითითებული პირობით"
+
+#: lib/cmdline.c
+msgid "Specify lint types"
+msgstr "მიუთიეთ lint-ის ტიპები"
+
+#: lib/cmdline.c
+msgid "Specify size limits"
+msgstr "მიუთითეთ ზომის ლიმიტები"
+
+#: lib/cmdline.c
+msgid "Choose hash algorithm"
+msgstr "აირჩიეთ ჰეშის ალგორითმი"
+
+#: lib/cmdline.c
+msgid "Add output (override default)"
+msgstr "გამოტანის დამატება (ნაგულისხმევის გადაფარვა)"
+
+#: lib/cmdline.c
+msgid "Add output (add to defaults)"
+msgstr "გამოტანის დამატება (დამატება ნაგულისხმევებში)"
+
+#: lib/cmdline.c
+msgid "Newer than stamp file"
+msgstr "უფრო ახალი, ვიდრე შტამპის ფაილი"
+
+#: lib/cmdline.c
+msgid "Newer than timestamp"
+msgstr "უფრო ახალი, ვიდრე დროის შტამპი"
+
+#: lib/cmdline.c
+msgid "Configure a formatter"
+msgstr "დამფორმატებლის მორგება"
+
+#: lib/cmdline.c
+msgid "Enable progressbar"
+msgstr "მიმდინარეობის ზოლის ჩართვა"
+
+#: lib/cmdline.c
+msgid "Be more verbose (-vvv for much more)"
+msgstr "მეტი შეტყობინების გამოტანა (-vvv გაცილებით მეტისთვის)"
+
+#: lib/cmdline.c
+msgid "Be less verbose (-VVV for much less)"
+msgstr "ნაკლები შეტყობინების გამოტანა (-VVV გაცილებით ნაკლებისთვის)"
+
+#: lib/cmdline.c
+msgid "Re-output a json file"
+msgstr "json ფაილის თავიდან გამოტანა"
+
+#: lib/cmdline.c
+msgid "Test for equality of PATHS"
+msgstr "PATH-ების ტოლოგის შემოწმება"
+
+#: lib/cmdline.c
+msgid "Be not that colorful"
+msgstr "ამდენად ფერადიც არ იქნება"
+
+#: lib/cmdline.c
+msgid "Find hidden files"
+msgstr "დამალული ფაილების პოვნა"
+
+#: lib/cmdline.c
+msgid "Follow symlinks"
+msgstr "სიმბმულების მიყოლა"
+
+#: lib/cmdline.c
+msgid "Ignore symlinks"
+msgstr "სიმბმულების გამოტოვება"
+
+#: lib/cmdline.c
+msgid "Use more paranoid hashing"
+msgstr "უფრო პარანოიდალური ჰეშინგის გამოყენება"
+
+#: lib/cmdline.c
+msgid "Do not cross mountpoints"
+msgstr "არ გასცდება მიმაგრების წერტილებს"
+
+#: lib/cmdline.c
+msgid "Keep all tagged files"
+msgstr "ყველა ჭდიანი ფაილის შენარჩუნება"
+
+#: lib/cmdline.c
+msgid "Keep all untagged files"
+msgstr "ყველა ჭდის გარეშე ფაილის შენარჩუნება"
+
+#: lib/cmdline.c
+msgid "Must have twin in tagged dir"
+msgstr "უნდა ჰონდეს ტყუპი ჭდიან საქაღალდეში"
+
+#: lib/cmdline.c
+msgid "Must have twin in untagged dir"
+msgstr "უნდა ჰქონდეს ტყუპი უჭდეო საქაღალდეში"
+
+#: lib/cmdline.c
+msgid "Only find twins with same basename"
+msgstr "მხოლოდ, იგივე საბაზისო სახელის მქონე ტყუპების პოვნა"
+
+#: lib/cmdline.c
+msgid "Only find twins with same extension"
+msgstr "მხოლოდ, იგივე გაფართოების მქონე ტყუპების პოვნა"
+
+#: lib/cmdline.c
+msgid "Only find twins with same basename minus extension"
+msgstr "მხოლოდ, იგივე საბაზისო სახელის, მინუს გაფართოება, ტყუპების პოვნა"
+
+#: lib/cmdline.c
+msgid "Find duplicate directories"
+msgstr "დუბლირებული საქაღალდეების პოვნა"
+
+#: lib/cmdline.c
+msgid "Only find directories with same file layout"
+msgstr "მხოლოდ, იგივე ფაილის განლაგების მქონე საქაღალდეების ძებნა"
+
+#: lib/cmdline.c
+msgid "Only use files with certain permissions"
+msgstr "მხოლოდ, კონკრეტული წვდომების მქონე ფაილების ძებნა"
+
+#: lib/cmdline.c
+msgid "Ignore hardlink twins"
+msgstr "მყარი ბმული ტყუპების გამოტოვება"
+
+#: lib/cmdline.c
+msgid "Find hidden files in duplicate folders only"
+msgstr "დამალული ფაილების, მხოლოდ, დუბლირებულ საქაღალდეებში ძებნა"
+
+#: lib/cmdline.c
+msgid "Consider duplicates only equal when mtime differs at max. T seconds"
+msgstr ""
+"დუბლიკატები ტოლად, მხოლოდ, მაშინ ჩაითვლება, თუ mtime მაქს. T წამით "
+"განსხვავდება"
+
+#: lib/cmdline.c
+msgid "Show the manpage"
+msgstr "მინიდოკუმენტაციის ჩვენება"
+
+#: lib/cmdline.c
+msgid "Show the version & features"
+msgstr "ვერსიისა და ფუნქციების ჩვენება"
+
+#: lib/cmdline.c
+msgid "If installed, start the optional gui with all following args"
+msgstr ""
+"თუ დაყენებულია, გაუშვით არასავალდებულო გრაფიკული ინტერფეისი შემდეგი ყველა "
+"არგუმენტით"
+
+#: lib/cmdline.c
+msgid ""
+"Work like sha1sum for all supported hash algorithms (see also --hash --help)"
+msgstr ""
+"მუშაობა sha1sum-ის მსგავსად ყველა მხარდაჭერილი ჰეშის ალგორითმისთვის (ასევე "
+"იხილეთ --hash --help)"
+
+#: lib/cmdline.c
+msgid "Clone extents from source to dest, if extents match"
+msgstr "ექსტენტების კლონირება წყაროდან სამიზნეზე, თუ ექსტენტები ემთხვევა"
+
+#: lib/cmdline.c
+msgid "Report hardlinks as duplicates"
+msgstr "მყარი ბმულების დუბლიკატად ჩათვლა"
+
+#: lib/cmdline.c
+msgid "Cannot set current working directory"
+msgstr "მიმდინარე სამუშაო საქაღალდის დაყენება შეუძლებელია"
+
+#: lib/cmdline.c
+msgid "Cannot join commandline"
+msgstr "ბრძანების სტრიქონის შეერთება შეუძლებელია"
+
+#: lib/cmdline.c
+msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
+msgstr ""
+"[სამიზნე_საქაღალდე_ან_ფაილები …] [//] [ჭდიანი_სამიზნე_საქაღალდე_ან_ფაილები "
+"…] [-]"
+
+#: lib/cmdline.c
+msgid ""
+"rmlint finds space waste and other broken things on your filesystem and "
+"offers to remove it.\n"
+"It is especially good at finding duplicates and offers a big variety of "
+"options to handle them."
+msgstr ""
+"rmlint პოულობს ადგილის ნარჩენებს და სხვა გაფუჭებულ რამებს თქვენს ფაილურ "
+"სისტემაში და გთავაზობთ, წაშალოთ ის.\n"
+"ის განსაკუთრებულად კარგად პოულობს დუბლიკატებს და გთავაზობთ მრავალფეროვან "
+"არჩევანს მათთან სამუშაოდ."
+
+#: lib/cmdline.c
+msgid ""
+"Only the most important options and options that alter the defaults are "
+"shown above.\n"
+"See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed "
+"usage information,\n"
+"or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
+"Complementary tutorials can be found at: http://rmlint.rtfd.org"
+msgstr ""
+"ზემოთ ნაჩვენებია, მხოლოდ, ყველაზე მნიშვნელოვანი პარამეტრები და პარამეტრები, "
+"რომლებიც ნაგულისხმევ მნიშვნელობებს ცვლიან.\n"
+"გამოყენების უფრო დეტალური ინფორმაციისთვის იხილეთ მინიდოკუმენტაცია (man 1 "
+"rmlint ან rmlint --show-man).\n"
+"ან ინტერნეტში, მისამართზე https://rmlint.readthedocs.io/en/latest/"
+"rmlint.1.html .\n"
+"დამატებითი დოკუმენტაციის ხილვა შეგიძლიათ მისამართზე https://"
+"rmlint.readthedocs.io/en/master"
+
+#: lib/cmdline.c
+msgid ""
+"--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"
+msgstr ""
+"პარამეტრს --honour-dir-layout (-j) პარამეტრის --merge-directories (-D) "
+"გარეშე აზრი არ აქვს"
+
+#: lib/cmdline.c
+msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
+msgstr "ორივეს, --keep-all-tagged და --keep-all-untagged ერთად ვერ მიუთითებთ"
+
+#: lib/cmdline.c
+msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
+msgstr "-q (--clamp-low) უნდა იყოს უფრო მცირე, ვიდრე -Q (--clamp-top)"
+
+#: lib/cmdline.c
+msgid "Not all given paths are valid. Aborting"
+msgstr "მოცემული ბილიკებიდან ყველა სწორი არაა. მუშაობა შეწყდება"
+
+#: lib/cmdline.c
+msgid "No valid .json files given, aborting."
+msgstr "გადმოცემული .json ფაილები არასწორია. მუშაობა შეწყდება."
+
+#: lib/cmdline.c
+msgid "Using -D together with -c sh:clone is currently not possible. Sorry."
+msgstr ""
+"პარამეტრის -D პარამეტრთან -c sh:clone ერთად გამოყენება ამჟამად შეუძლებელია."
+
+#: lib/cmdline.c
+msgid "Either do not use -D, or attempt to run again with -Dj."
+msgstr "ან არ გამოიყენოთ -D, ან სცადეთ, გაუშვათ კიდევ ერთხელ პარამეტრით -Dj."
+
+#: lib/cmdline.c
+msgid "Not enough files for --equal (need at least two to compare)"
+msgstr ""
+"არასაკმარისი ფაილები პარამეტრისთვის --equal (შესადარებლად საჭიროა, სულ "
+"ცოტა, 2)"
+
+#: lib/config.h
+msgid "ERROR"
+msgstr "ERROR"
+
+#: lib/config.h
+msgid "WARNING"
+msgstr "გაფრთხილება"
+
+#: lib/config.h
+msgid "INFO"
+msgstr "ინფო"
+
+#: lib/config.h
+msgid "DEBUG"
+msgstr "გამართვა"
+
+#: lib/hash-utility.c
+msgid "bytes to hash at a time [4096]"
+msgstr "ბაიტები ერთდროულად დასაჰეშად [4096]"
+
+#: lib/hash-utility.c
+#, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"  Cryptographic:\n"
+"    %s\n"
+"\n"
+"  Non-cryptographic:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+"მრავალნაკადიანი ფაილის დაიჯესტის (ჰეშის) გამომთვლელი.\n"
+"\n"
+"  ხელმისაწვდომი დაიჯესტის ტიპებია:\n"
+"  კრიპტოგრაფიული\n"
+"     %s\n"
+"\n"
+"  არაკრიპტოგრაფიული:\n"
+"     %s\n"
+"\n"
+"  მხარდაჭერილია, მაგრამ არა სასარგებლო:\n"
+"     %s\n"
+
+#: lib/formats.c
+#, c-format
+msgid "Old result `%s` already exists."
+msgstr "ძველი შედეგი `%s` უკვე არსებობს."
+
+#: lib/formats.c
+#, c-format
+msgid "Moving old file to `%s`. Use --no-backup to disable this."
+msgstr ""
+"ძველი ფაილი გადატანილი იქნება '%s'-ში. ამის გამოსართავად გამოიყენეთ --no-"
+"backup."
+
+#: lib/formats.c
+msgid "failed to rename old result file"
+msgstr "ძველი შედეგების ფაილის სახელის გადარქმევა ჩავარდა"
+
+#: lib/session.c
+msgid "Usage: rmlint --dedupe [-r] [-v|V] source dest\n"
+msgstr "გამოყენება: rmlint --dedupe [-r] [-v|V] წყარო სამიზნე\n"
+
+#: lib/session.c
+#, c-format
+msgid "%s returned error: (%d)"
+msgstr "%s-მა დააბრუნა შეცდომა: (%d)"
+
+#: lib/session.c
+msgid "Files don't match - not deduped"
+msgstr "ფაილები არ ემთხვევა - დედუბლიკაცია არ მოხდება"
+
+#: lib/session.c
+msgid "Only first %"
+msgstr "მხოლოდ პირველი %s"
+
+#: lib/session.c
+msgid "rmlint was not compiled with file cloning support."
+msgstr "rmlint ფაილების კლონირების მხარდაჭერით არაა აგებული."
+
+#: lib/session.c
+msgid "Usage: rmlint --is-clone [-v|V] file1 file2\n"
+msgstr "გამოყენება: rmlint --is-clone [-v|V] ფაილი1 ფაილი2\n"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Only up to -%.*s or down to -%.*s flags allowed"
+msgstr "დაშვებულია ალმები %.*s-მდე მაქს., ან %.*s-მდე მინ"
+
+#: lib/cmdline.c
+msgid "Keep hardlink that are linked to any original"
+msgstr "მყარი ბმულების, რომლებიც ორიგინალთანაა დაკავშირებული, შენარჩუნება"
+
+#: lib/cmdline.c
+msgid "Read null-separated file list from stdin"
+msgstr "null-ით გამოყოფილის ფაილების სიის წაკითხვა stdin-იდან"
+
+#: lib/cmdline.c
+msgid "Do not create backups of previous result files"
+msgstr "წინა შედეგის ფაილების მარქაფები არ შეიქმნება"
+
+#: lib/cmdline.c
+msgid "Dedupe matching extents from source to dest (if filesystem supports)"
+msgstr ""
+"შესაბამისი ექსტენტების დედუბლიკაცია წყაროდან სამიზნემდე (თუ ამის მხარდაჭერა "
+"აქვს ფაილურ სისტემას)"
+
+#: lib/cmdline.c
+msgid "(--dedupe option) even dedupe read-only snapshots (needs root)"
+msgstr ""
+"(--dedupe option) მოხდება მხოლოდ წაკითხვადი სწრაფი ასლების დედუბლიკაციაც "
+"(სჭირდება root-ით გაშვება)"
+
+#: lib/cmdline.c
+msgid "Test if two files are reflinks (share same data extents)"
+msgstr ""
+"შემოწმება, არის, თუ არა ორი ფაილი reflink (იზიარებენ იგივე მონაცემების "
+"ექსტენტებს)"
+
+#: lib/cmdline.c
+msgid ""
+"-k and -M should not be specified at the same time (see also: https://"
+"github.com/sahib/rmlint/issues/244)"
+msgstr ""
+"-k და -M ერთდროულად არ უნდა მიუთითოთ (იხ: https://github.com/sahib/rmlint/"
+"issues/244)"
+
+#: lib/cmdline.c
+msgid ""
+"-K and -m should not be specified at the same time (see also: https://"
+"github.com/sahib/rmlint/issues/244)"
+msgstr ""
+"-K და -m ერთდროულად არ უნდა მიუთითოთ (იხ: https://github.com/sahib/rmlint/"
+"issues/244)"
+
+#: lib/cmdline.c
+msgid "Failed to complete setup for merging directories"
+msgstr "საქაღალდეების შერწყმისთვის მორგების დასრულება ჩავარდა"
+
+#: lib/treemerge.c
+msgid "Failed to allocate memory. Out of memory?"
+msgstr "მეხსიერების გამოყოფის შეცდომა. არასაკმარისი მეხსიერება?"
+
+#: lib/cmdline.c
+msgid "--replay (-Y) is incompatible with --dedupe or --is-reflink"
+msgstr "--replay (-Y) პარამეტრებთან --dedupe და --is-reflink თავსებადი არაა"
+
+#: lib/cmdline.c
+#, c-format
+msgid "No stamp file at `%s`, will create one after this run."
+msgstr ""
+"მისამართზე `%s` შტამპის ფაილი არ არსებობს. ის შეიქმნება ამ გავლის შემდეგ."
+
+#: lib/cmdline.c
+msgid "Enable xattr based caching"
+msgstr "xattr-ზე დაფუძნებული კეშირების ჩართვა"
+
+#: lib/cmdline.c
+msgid "Check extended attributes to see if the file is already deduplicated"
+msgstr ""
+"გაფართოებული ატრიბუტების შემოწმება იმის სანახავად, უკვე მოხდა, თუ არა "
+"ფაილის დედუბლიკაცია"
+
+#: lib/cmdline.c
+msgid ""
+"Note that not having duplicate directories enabled as lint type (e.g via -T "
+"df)"
+msgstr ""
+"გაითვალისწინეთ, რომ დუბლიკატი საქაღალდეების lint-ის ტიპით არქონა (მაგ: -T "
+"df-ით)"
+
+#: lib/cmdline.c
+msgid "will also disable --merge-directories and trigger this warning."
+msgstr ""
+"ასევე გამორთავს პარამეტრს --merge-directories და გამოიწვევს ამ გაფრთხილებას."
