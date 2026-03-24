@@ -46,8 +46,8 @@ CKSUM_TYPES = [
     'paranoid',
 ]
 
-_REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
-
+_REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2', 'zfs'}
+_DEDUPE_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
 
 def runs_as_root():
     return os.geteuid() == 0
@@ -473,6 +473,19 @@ def is_on_reflink_fs(path):
     return False
 
 
+def is_on_dedupe_fs(path):
+    parts = psutil.disk_partitions(all=True)
+
+    for up_path in _up(path):
+        for part in parts:
+            if up_path == part.mountpoint:
+                print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
+                return (part.fstype in _DEDUPE_CAPABLE_FILESYSTEMS)
+
+    print("No mountpoint found for {}".format(path))
+    return False
+
+
 @pytest.fixture
 # fixture for tests dependent on reflink-capable testdir
 def needs_reflink_fs():
@@ -481,6 +494,18 @@ def needs_reflink_fs():
     elif not is_on_reflink_fs(TESTDIR_NAME):
         pytest.skip("testdir is not on reflink-capable filesystem")
     yield
+
+
+@pytest.fixture
+# fixture for tests dependent on dedupe-capable testdir
+def needs_dedupe_fs():
+    # TODO: generalise the name to capability instead of a specific fs
+    if not has_feature('btrfs-support'):
+        pytest.skip("btrfs not supported")
+    elif not is_on_dedupe_fs(TESTDIR_NAME):
+        pytest.skip("testdir is not on dedupe-capable filesystem")
+    yield
+
 
 # count the number of line in a file which start with each pattern
 def pattern_count(path, patterns):
