@@ -775,12 +775,16 @@ OTHER STAND-ALONE COMMANDS
 
     Start the optional graphical frontend to ``rmlint`` called ``Shredder``.
 
-    This will only work when ``Shredder`` and its dependencies were installed.
-    See also: https://rmlint.readthedocs.io/en/latest/gui.html
+    This works when ``Shredder`` and its dependencies are installed. It can also
+    be used from an uninstalled source checkout after the GUI resources have
+    been generated, by running ``./rmlint --gui`` from the repository root: the
+    launcher prefers ``./gui/shredder`` and prepends the checkout root to
+    ``PATH`` when ``./rmlint`` exists.
 
     The GUI has its own set of options, see ``--gui --help`` for a list. These
-    should be placed at the end, i.e. ``rmlint --gui [options]`` when calling
-    it from the command line.
+    must be placed after ``--gui``, i.e. ``rmlint --gui [options] [paths...]``
+    when calling it from the command line. See also:
+    https://rmlint.readthedocs.io/en/latest/gui.html
 
 :``rmlint --hash [paths...]``:
 

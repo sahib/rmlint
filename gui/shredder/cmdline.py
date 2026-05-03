@@ -11,10 +11,10 @@ Some options are processed immediately however.
 import os
 import sys
 import logging
+import argparse
 
 # External:
 from gi.repository import Gio
-from gi.repository import GLib
 
 
 def show_version():
@@ -45,81 +45,58 @@ def adjust_loglevel(root_logger, count):
 
 
 def parse_arguments(root_logger):
-    """Parse the cmdline options using GOption."""
+    """Parse the cmdline options."""
     sys.argv[0] = 'shredder'
-    parser = GLib.option.OptionParser(
-        "PATHS ...",
+    parser = argparse.ArgumentParser(
+        prog='shredder',
+        usage='%(prog)s [options] PATHS ...',
         description="A gui frontend to rmlint.",
-        option_list=[
-            GLib.option.make_option(
-                "--add-location", "-a",
-                type="filename",
-                action="append",
-                dest="locations",
-                help="Add locations to locations view."
-            ),
-            GLib.option.make_option(
-                "--scan", "-s",
-                type="filename",
-                action="append",
-                dest="untagged",
-                help="Add location to scan (as untagged path)."
-            ),
-            GLib.option.make_option(
-                "--scan-tagged", "-S",
-                type="filename",
-                action="append",
-                dest="tagged",
-                help="Add location to scan (as tagged path)."
-            ),
-            GLib.option.make_option(
-                "--load-script", "-l",
-                type="filename",
-                action="store",
-                dest="script",
-                help="Show `script` in editor view."
-            ),
-            GLib.option.make_option(
-                "--verbose", "-v",
-                action="count",
-                dest='more_verbosity',
-                help="Be more verbose."
-            ),
-            GLib.option.make_option(
-                "--less-verbose", "-V",
-                action="count",
-                dest='less_verbosity',
-                help="Be less verbose."
-            ),
-            GLib.option.make_option(
-                "--show-settings", "-c",
-                action="store_true",
-                dest='show_settings',
-                help="Show the settings view."
-            ),
-            GLib.option.make_option(
-                "--version", "",
-                action="store_true",
-                dest="show_version",
-                help="Show the version of Shredder."
-            ),
-        ]
     )
+    parser.add_argument(
+        "--add-location", "-a", action="append", dest="locations",
+        help="Add locations to locations view."
+    )
+    parser.add_argument(
+        "--scan", "-s", action="append", dest="untagged",
+        help="Add location to scan (as untagged path)."
+    )
+    parser.add_argument(
+        "--scan-tagged", "-S", action="append", dest="tagged",
+        help="Add location to scan (as tagged path)."
+    )
+    parser.add_argument(
+        "--load-script", "-l", action="store", dest="script",
+        help="Show `script` in editor view."
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="count", default=0,
+        dest='more_verbosity', help="Be more verbose."
+    )
+    parser.add_argument(
+        "--less-verbose", "-V", action="count", default=0,
+        dest='less_verbosity', help="Be less verbose."
+    )
+    parser.add_argument(
+        "--show-settings", "-c", action="store_true",
+        dest='show_settings', help="Show the settings view."
+    )
+    parser.add_argument(
+        "--version", action="store_true", dest="show_version",
+        help="Show the version of Shredder."
+    )
+    parser.add_argument("paths", nargs="*")
 
-    try:
-        parser.parse_args()
-    except GLib.Error as err:
-        root_logger.error(str(err))
-        return None
-
-    vals = parser.values
-    if parser.values.show_version:
+    vals = parser.parse_args()
+    if vals.show_version:
         show_version()
+
+    if vals.paths:
+        vals.locations = (vals.locations or []) + vals.paths
 
     adjust_loglevel(
         root_logger,
-        (vals.more_verbosity or 0) +
-        (vals.less_verbosity or 0) +
+        vals.more_verbosity +
+        vals.less_verbosity +
         4  # Default loglevel: info.
     )
 

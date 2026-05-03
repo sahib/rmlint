@@ -12,6 +12,8 @@ import os
 import sys
 import gettext
 import logging
+import shutil
+import subprocess
 
 # External:
 from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
@@ -78,6 +80,7 @@ class Application(Gtk.Application):
         )
         self.cmd_opts = options
         self.settings = self.win = None
+        self._schema_cache_dir = None
 
         # Check compile time features of rmlint that we need later.
         if not have_feature('replay'):
@@ -114,7 +117,11 @@ class Application(Gtk.Application):
             LOGGER.warning("Failed to load css data: " + str(err))
 
         # Init the config system
-        self.settings = Gio.Settings.new('org.gnome.Shredder')
+        try:
+            self.settings = self._new_settings(rel_dir)
+        except RuntimeError as err:
+            LOGGER.error(str(err))
+            sys.exit(1)
 
         self.win = MainWindow(self)
 
@@ -176,3 +183,56 @@ class Application(Gtk.Application):
         # Set the default view visible at startup
         self.win.views.switch(initial_view)
         self.win.show_all()
+
+    def _new_settings(self, rel_dir):
+        schema_id = 'org.gnome.Shredder'
+        default_source = Gio.SettingsSchemaSource.get_default()
+        if default_source and default_source.lookup(schema_id, True):
+            return Gio.Settings.new(schema_id)
+
+        schema_dir = os.path.join(rel_dir, 'resources')
+        schema_source = self._new_schema_source(schema_dir, default_source)
+        if schema_source:
+            schema = schema_source.lookup(schema_id, False)
+            if schema:
+                return Gio.Settings.new_full(schema, None, None)
+
+        raise RuntimeError(
+            'Could not load GSettings schema org.gnome.Shredder. '
+            'Run `glib-compile-schemas gui/shredder/resources` or install the GUI.'
+        )
+
+    def _new_schema_source(self, schema_dir, default_source):
+        compiled_schema = os.path.join(schema_dir, 'gschemas.compiled')
+        if os.path.exists(compiled_schema):
+            return Gio.SettingsSchemaSource.new_from_directory(
+                schema_dir, default_source, False
+            )
+
+        schema_xml = os.path.join(schema_dir, 'org.gnome.Shredder.gschema.xml')
+        compiler = shutil.which('glib-compile-schemas')
+        if not os.path.exists(schema_xml) or not compiler:
+            return None
+
+        cache_dir = os.path.join(
+            os.path.expanduser('~'), '.cache', 'shredder', 'schemas'
+        )
+        os.makedirs(cache_dir, exist_ok=True)
+        shutil.copy2(schema_xml, cache_dir)
+
+        try:
+            subprocess.run(
+                [compiler, cache_dir],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True
+            )
+        except (OSError, subprocess.CalledProcessError) as err:
+            LOGGER.warning('Could not compile GSettings schema: %s', err)
+            return None
+
+        self._schema_cache_dir = cache_dir
+        return Gio.SettingsSchemaSource.new_from_directory(
+            cache_dir, default_source, False
+        )

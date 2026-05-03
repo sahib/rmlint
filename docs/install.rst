@@ -172,7 +172,9 @@ need an update. The commands above install the full dependencies, therefore
 some packages might be stripped if you do not need the feature
 they enable. Only hard requirement for the commandline is ``glib``.
 
-Also be aware that the GUI needs at least :math:`gtk \geq 3.12` to work!
+Also be aware that the GUI needs at least :math:`gtk \geq 3.14` and
+``PyGObject`` to work. Depending on the distribution packaging this includes
+the GIR packages for ``Gtk``, ``GtkSource`` 4, ``Rsvg`` and ``PangoCairo``.
 
 Compilation
 -----------
@@ -193,6 +195,37 @@ build the software from the potentially unstable ``develop`` branch:
 
 Done!
 
+Running the GUI from a source checkout
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An installed GUI is not required for a development checkout. After building the
+local ``rmlint`` binary, generate the GUI resource bundle and start the GUI
+from the repository root:
+
+.. code-block:: bash
+
+   $ scons DEBUG=1
+   $ make -C gui resources
+   $ ./rmlint --gui
+   $ ./rmlint --gui --help
+
+When ``--gui`` is seen, ``rmlint`` starts a short Python bootstrap script. If
+the current working directory contains ``gui/shredder/__init__.py``, that
+``gui`` directory is put first on ``sys.path`` so the checkout's ``Shredder``
+package is used. If the current working directory also contains the ``rmlint``
+binary, that directory is put first on ``PATH`` so scans and replays started by
+the GUI use the same local binary.
+
+The source-tree launcher still needs the normal GUI runtime dependencies. The
+application loads the generated
+``gui/shredder/resources/shredder.gresource`` bundle directly from the
+checkout. For settings, it first uses an installed ``org.gnome.Shredder``
+GSettings schema if one is available. Otherwise it uses
+``gui/shredder/resources/gschemas.compiled``; if that file is missing but
+``glib-compile-schemas`` is installed, it compiles
+``org.gnome.Shredder.gschema.xml`` into ``~/.cache/shredder/schemas``
+automatically.
+
 See Developer’s Guide for configuration options.
 
 You should be now able to see the manpage with ``rmlint --help`` or ``man 1
@@ -206,10 +239,54 @@ enough to figure out which targets need to be built beforehand.
 Troubleshooting
 ---------------
 
-On some distributions (especially Debian derived) ``rmlint --gui`` might fail
-with ``/usr/bin/python3: No module named shredder`` (or similar). This is due 
-some incompatible changes on Debian's side.
+Missing Shredder Python package
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-See `this thread`_ for a workaround using ``PYTHONPATH``.
+This usually appears as ``/usr/bin/python3: No module named shredder`` or
+``Failed to load shredder: ...``.
 
-.. _`this thread`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
+For an uninstalled checkout, run ``./rmlint --gui`` from the repository root.
+The source-tree bootstrap is based on the current working directory, not on the
+path of the binary. If you start the binary from another directory, Python will
+only find an installed ``Shredder`` package.
+
+If you are using an installed ``rmlint`` package, install the matching GUI
+package or reinstall with GUI support enabled. The bootstrap still adds common
+``site-packages`` and ``dist-packages`` locations for Debian-style layouts, but
+it cannot provide the Python package itself.
+
+``No module named gi`` or missing ``GtkSource`` / ``Rsvg`` namespace
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Install the GUI runtime dependencies for your distribution. The packages are
+listed in the dependency examples above; they usually provide ``PyGObject`` and
+the GIR bindings for ``Gtk`` 3, ``GtkSource`` 4, ``Rsvg`` and ``PangoCairo``.
+
+``Could not load GSettings schema org.gnome.Shredder``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Install the GUI, install ``glib-compile-schemas``, or compile the source-tree
+schema once:
+
+.. code-block:: bash
+
+   $ glib-compile-schemas gui/shredder/resources
+
+The GUI can also create ``~/.cache/shredder/schemas`` automatically when
+``glib-compile-schemas`` is available and the source XML schema exists.
+
+Missing ``shredder.gresource``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If startup fails while loading ``gui/shredder/resources/shredder.gresource``,
+generate the source-tree resource bundle:
+
+.. code-block:: bash
+
+   $ make -C gui resources
+
+``No support for +replay in rmlint binary``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The GUI needs ``rmlint --replay`` support. Install ``json-glib`` development
+headers and rebuild ``rmlint`` with that feature enabled.

@@ -27,11 +27,68 @@ Installation
 If you compiled ``rmlint`` from source, ``scons`` will try to build and install
 the GUI, except you pass ``--without-gui`` to it.
 
+The GUI can also be started from an uninstalled source checkout. Build the
+local binary, generate the GUI resource bundle and run it from the repository
+root:
+
+.. code-block:: bash
+
+   $ scons DEBUG=1
+   $ make -C gui resources
+   $ ./rmlint --gui
+
+In that case the launcher prefers ``gui/shredder`` from the current checkout
+over any installed Python package. It also prepends the checkout root to
+``PATH`` when ``./rmlint`` exists, so scans and ``--replay`` calls started by
+``Shredder`` use the same local binary.
+
 Usage
 -----
 
-The GUI can be started via ``rmlint --gui``.The application is divided into several
-views that guide you through the duplicate finding process.
+The GUI can be started via ``rmlint --gui``. The application is divided into
+several views that guide you through the duplicate finding process.
+
+``--gui`` switches from the normal ``rmlint`` command line to ``Shredder``.
+Place GUI options and initial paths after ``--gui``:
+
+.. code-block:: bash
+
+   $ rmlint --gui [shredder-options] [PATHS ...]
+   $ rmlint --gui --scan ~/Downloads
+   $ rmlint --gui --scan-tagged ~/Archive --scan ~/Incoming
+   $ rmlint --gui --load-script rmlint.sh
+   $ rmlint --gui --help
+
+Positional paths after ``--gui`` are added to the locations view. Normal
+``rmlint`` options before ``--gui`` are not passed to the GUI.
+
+Source-tree notes
+~~~~~~~~~~~~~~~~~
+
+For an uninstalled checkout, start the GUI as ``./rmlint --gui`` from the
+repository root. The source-tree lookup is based on the current working
+directory; starting the same binary from another directory will only find an
+installed ``Shredder`` package.
+
+``Shredder`` loads the generated
+``gui/shredder/resources/shredder.gresource`` bundle directly from the
+checkout. For settings it uses an installed ``org.gnome.Shredder`` schema when
+available, otherwise a compiled schema in ``gui/shredder/resources``. If only
+the source XML schema is present and ``glib-compile-schemas`` is installed, the
+GUI compiles a private copy in ``~/.cache/shredder/schemas``.
+
+If startup fails with ``Could not load GSettings schema org.gnome.Shredder``,
+install the GUI or run:
+
+.. code-block:: bash
+
+   $ glib-compile-schemas gui/shredder/resources
+
+If startup fails while loading ``shredder.gresource``, run:
+
+.. code-block:: bash
+
+   $ make -C gui resources
 
 Developers
 ----------

@@ -17,6 +17,7 @@ If you don't find it, that's good. If you do, blame @sahib.
 
 # Stdlib:
 import os
+import sys
 import time
 import logging
 
@@ -908,18 +909,18 @@ class PathTreeView(Gtk.TreeView):
         return self._menu
 
     def on_open_folder(self, _):
-        """Open the selected item or folder via xdg-open."""
+        """Open the selected item or folder with the platform opener."""
         node = self.get_selected_node()
         if node is None:
             return
 
+        opener = 'open' if sys.platform == 'darwin' else 'xdg-open'
+        path = node.build_path()
         try:
-            LOGGER.info('Calling xdg-open %s', node.build_path())
-            Gio.Subprocess.new(
-                ['xdg-open', node.build_path()], 0
-            )
+            LOGGER.info('Calling %s %s', opener, path)
+            Gio.Subprocess.new([opener, path], 0)
         except GLib.Error as err:
-            LOGGER.exception('Could not open directory via xdg-open')
+            LOGGER.exception('Could not open item via %s', opener)
 
     def on_copy_to_clipboard(self, _):
         """Copy the currently selected full path to the clipboard."""
