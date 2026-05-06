@@ -90,12 +90,39 @@ static void signal_handler(int signum) {
 
 static void i18n_init(void) {
 #if HAVE_LIBINTL
-    /* Tell gettext where to search for .mo files */
-    bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
-    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
-
     /* Make printing umlauts work */
     setlocale(LC_ALL, "");
+
+    char *cwd = g_get_current_dir();
+    char *source_locale_dir = g_build_filename(cwd, "po", NULL);
+    gboolean use_source_locale_dir = FALSE;
+
+    const gchar *const *language_names = g_get_language_names();
+    for(const gchar *const *language = language_names; *language; ++language) {
+        if(g_strcmp0(*language, "C") == 0) {
+            continue;
+        }
+
+        char *source_catalog = g_build_filename(
+            source_locale_dir, *language, "LC_MESSAGES", RM_GETTEXT_PACKAGE ".mo", NULL
+        );
+        use_source_locale_dir = g_file_test(source_catalog, G_FILE_TEST_IS_REGULAR);
+        g_free(source_catalog);
+
+        if(use_source_locale_dir) {
+            break;
+        }
+    }
+
+    /* Tell gettext where to search for .mo files */
+    bindtextdomain(
+        RM_GETTEXT_PACKAGE,
+        use_source_locale_dir ? source_locale_dir : INSTALL_PREFIX "/share/locale"
+    );
+    bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
+
+    g_free(source_locale_dir);
+    g_free(cwd);
 
     /* Say we're the textdomain "rmlint"
      * so gettext can find us in

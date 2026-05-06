@@ -34,6 +34,48 @@ from shredder.views.editor import EditorView
 LOGGER = logging.getLogger('application')
 
 
+def _language_catalogs():
+    """Return gettext catalog names requested by the current locale."""
+    for env_name in ('LANGUAGE', 'LC_ALL', 'LC_MESSAGES', 'LANG'):
+        env_value = os.environ.get(env_name)
+        if not env_value:
+            continue
+
+        catalogs = []
+        for lang in env_value.split(':'):
+            lang = lang.split('.', 1)[0].split('@', 1)[0]
+            if not lang or lang == 'C':
+                continue
+            catalogs.append(lang)
+            if '_' in lang:
+                catalogs.append(lang.split('_', 1)[0])
+
+        if catalogs:
+            return catalogs
+
+    return []
+
+
+def _install_gettext(rel_dir):
+    """Install gettext, preferring source-tree catalogs when available."""
+    po_dir = os.path.abspath(os.path.join(rel_dir, '..', '..', 'po'))
+
+    for lang in _language_catalogs():
+        try:
+            translation = gettext.translation(
+                'rmlint',
+                localedir=po_dir,
+                languages=[lang]
+            )
+        except FileNotFoundError:
+            continue
+        else:
+            translation.install()
+            return
+
+    gettext.install('rmlint')
+
+
 def have_feature(feature):
     """Execute rmlint --version to check for some feature.
 
@@ -98,9 +140,9 @@ class Application(Gtk.Application):
 
         # Make translating strings possible:
         # (We use the same message catalouge as rmlint)
-        gettext.install('rmlint')
-
         rel_dir = os.path.dirname(__file__)
+        _install_gettext(rel_dir)
+
         resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')
         LOGGER.info('Loading resources from: ' + resource_file)
         resource_bundle = Gio.Resource.load(resource_file)

@@ -9,6 +9,12 @@ Import('VERSION_PATCH')
 
 import os
 import subprocess
+import shutil
+
+
+def copy_source_catalog(target, source, env):
+    os.makedirs(os.path.dirname(str(target[0])), exist_ok=True)
+    shutil.copyfile(str(source[0]), str(target[0]))
 
 if env['HAVE_MSGFMT']:
     for src in env.Glob('*.po'):
@@ -18,6 +24,12 @@ if env['HAVE_MSGFMT']:
         cmd = env.AlwaysBuild(
             env.Command(dest, src, 'msgfmt $SOURCE -o $TARGET')
         )
+        source_catalog = env.Command(
+            os.path.join(lang, 'LC_MESSAGES', 'rmlint.mo'),
+            dest,
+            Action(copy_source_catalog, 'Preparing source-tree gettext catalog $TARGET')
+        )
+        env.Depends(source_catalog, cmd)
 
         path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lang
 
