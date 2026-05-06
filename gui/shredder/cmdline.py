@@ -96,8 +96,8 @@ def parse_arguments(root_logger):
     adjust_loglevel(
         root_logger,
         vals.more_verbosity +
-        vals.less_verbosity +
-        4  # Default loglevel: info.
+        -vals.less_verbosity +
+        4  # Default loglevel: debug.
     )
 
     # Check paths to be valid:
