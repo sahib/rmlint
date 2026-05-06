@@ -36,24 +36,25 @@ LOGGER = logging.getLogger('application')
 
 def _language_catalogs():
     """Return gettext catalog names requested by the current locale."""
+    catalogs = []
+    seen = set()
+
     for env_name in ('LANGUAGE', 'LC_ALL', 'LC_MESSAGES', 'LANG'):
         env_value = os.environ.get(env_name)
         if not env_value:
             continue
 
-        catalogs = []
         for lang in env_value.split(':'):
             lang = lang.split('.', 1)[0].split('@', 1)[0]
-            if not lang or lang == 'C':
+            if not lang or lang in ('C', 'POSIX'):
                 continue
-            catalogs.append(lang)
-            if '_' in lang:
-                catalogs.append(lang.split('_', 1)[0])
 
-        if catalogs:
-            return catalogs
+            for candidate in (lang, lang.split('_', 1)[0]):
+                if candidate and candidate not in seen:
+                    seen.add(candidate)
+                    catalogs.append(candidate)
 
-    return []
+    return catalogs
 
 
 def _install_gettext(rel_dir):

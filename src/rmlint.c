@@ -88,6 +88,75 @@ static void signal_handler(int signum) {
     }
 }
 
+#if HAVE_LIBINTL
+static gboolean rm_source_tree_catalog_exists(const char *source_locale_dir,
+                                              const char *language) {
+    if(language == NULL || language[0] == '\0') {
+        return FALSE;
+    }
+
+    char *normalized = g_strdup(language);
+    char *separator = strpbrk(normalized, ".@");
+    if(separator != NULL) {
+        *separator = '\0';
+    }
+
+    gboolean exists = FALSE;
+    for(char *candidate = normalized; candidate != NULL;) {
+        if(g_strcmp0(candidate, "C") != 0 && g_strcmp0(candidate, "POSIX") != 0) {
+            char *source_catalog = g_build_filename(
+                source_locale_dir, candidate, "LC_MESSAGES", RM_GETTEXT_PACKAGE ".mo", NULL
+            );
+            exists = g_file_test(source_catalog, G_FILE_TEST_IS_REGULAR);
+            g_free(source_catalog);
+        }
+
+        if(exists) {
+            break;
+        }
+
+        char *territory = strchr(candidate, '_');
+        if(territory == NULL) {
+            break;
+        }
+
+        *territory = '\0';
+    }
+
+    g_free(normalized);
+    return exists;
+}
+
+static gboolean rm_use_source_tree_locale_dir(const char *source_locale_dir) {
+    const char *env_names[] = {"LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG", NULL};
+
+    for(const char **env_name = env_names; *env_name != NULL; ++env_name) {
+        const char *env_value = g_getenv(*env_name);
+        if(env_value == NULL || env_value[0] == '\0') {
+            continue;
+        }
+
+        char **languages = g_strsplit(env_value, ":", -1);
+        for(char **language = languages; *language != NULL; ++language) {
+            if(rm_source_tree_catalog_exists(source_locale_dir, *language)) {
+                g_strfreev(languages);
+                return TRUE;
+            }
+        }
+        g_strfreev(languages);
+    }
+
+    const gchar *const *language_names = g_get_language_names();
+    for(const gchar *const *language = language_names; *language; ++language) {
+        if(rm_source_tree_catalog_exists(source_locale_dir, *language)) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+#endif
+
 static void i18n_init(void) {
 #if HAVE_LIBINTL
     /* Make printing umlauts work */
@@ -95,24 +164,7 @@ static void i18n_init(void) {
 
     char *cwd = g_get_current_dir();
     char *source_locale_dir = g_build_filename(cwd, "po", NULL);
-    gboolean use_source_locale_dir = FALSE;
-
-    const gchar *const *language_names = g_get_language_names();
-    for(const gchar *const *language = language_names; *language; ++language) {
-        if(g_strcmp0(*language, "C") == 0) {
-            continue;
-        }
-
-        char *source_catalog = g_build_filename(
-            source_locale_dir, *language, "LC_MESSAGES", RM_GETTEXT_PACKAGE ".mo", NULL
-        );
-        use_source_locale_dir = g_file_test(source_catalog, G_FILE_TEST_IS_REGULAR);
-        g_free(source_catalog);
-
-        if(use_source_locale_dir) {
-            break;
-        }
-    }
+    gboolean use_source_locale_dir = rm_use_source_tree_locale_dir(source_locale_dir);
 
     /* Tell gettext where to search for .mo files */
     bindtextdomain(
