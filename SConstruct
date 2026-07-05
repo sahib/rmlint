@@ -233,22 +233,10 @@ conf.check_btrfs_h()
 conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
-conf.check_cpu_extensions()
+conf.check_target_arch()
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
-
-if conf.env['HAVE_AVX2']:
-    conf.env.Append(CCFLAGS=['-mavx2'])
-
-if conf.env['HAVE_AVX512F'] and conf.env['HAVE_AVX512VL']:
-    conf.env.Append(CCFLAGS=['-mavx512f', '-mavx512vl'])
-
-if conf.env['HAVE_SSE4_1']:
-    conf.env.Append(CCFLAGS=['-msse4.1'])
-
-if conf.env['HAVE_SSE2']:
-    conf.env.Append(CCFLAGS=['-msse2'])
 
 # NB: After checks so they don't fail
 conf.env.Append(CCFLAGS=['-Werror=undef'])
@@ -427,10 +415,9 @@ if 'config' in COMMAND_LINE_TARGETS:
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Support for SHA512 (needs glib >= 2.31)               : {sha512}
-    AVX512F and AVX512VL cpu extensions                   : {avx512}
-    AVX2 cpu extensions                                   : {avx2}
-    SSE4.1 cpu extensions                                 : {sse41}
-    SSE2 cpu extensions                                   : {sse2}
+    blake3 uses x86 SIMD...
+        ...assembly (x86_64 only)                         : {blake3_simd_asm}
+        ...C intrinsics                                   : {blake3_simd_c}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
     Checking for proper support of big files >= 4GB       : {bigfiles}
@@ -471,10 +458,8 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
             sha512=yesno(env['HAVE_SHA512']),
-            avx512=yesno(env['HAVE_AVX512F'] and env['HAVE_AVX512VL']),
-            avx2=yesno(env['HAVE_AVX2']),
-            sse41=yesno(env['HAVE_SSE4_1']),
-            sse2=yesno(env['HAVE_SSE2']),
+            blake3_simd_asm=yesno(env['IS_X86_64']),
+            blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
             bigstat=yesno(env['HAVE_BIG_STAT']),
