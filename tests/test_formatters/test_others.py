@@ -27,3 +27,25 @@ def test_just_call_it(usual_setup_usual_teardown):
             pass
         else:
             assert False
+
+
+def test_fdups_and_traversed_dirs_in_summary(usual_setup_usual_teardown):
+    # Traversed directories should not be listed as lint by fdupes nor
+    # counted in the summary.
+
+    create_file('xxx', 'dir_a/1')
+    create_file('xxx', 'dir_b/1')
+    create_file('', 'empty')
+
+    head, *data, footer, fdupes, summary = run_rmlint(
+        '-S a', outputs=['fdupes', 'summary']
+    )
+
+    assert len(data) == 3
+
+    # this tree has no empty dirs, so nothing listed should be a directory
+    listed = [line.strip() for line in fdupes.splitlines() if line.strip()]
+    assert [path for path in listed if os.path.isdir(path)] == []
+
+    # the empty file is the only valid count, not the directories
+    assert '1 other suspicious item(s)' in summary

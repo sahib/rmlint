@@ -48,6 +48,11 @@ static void rm_fmt_elem(_UNUSED RmSession *session, _UNUSED RmFmtHandler *parent
         return;
     }
 
+    if(file->lint_type == RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+        /* traversed directories are no lint. */
+        return;
+    }
+
     char line[512 + 32];
     memset(line, 0, sizeof(line));
 

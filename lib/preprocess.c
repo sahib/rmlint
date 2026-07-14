@@ -72,7 +72,7 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
     RmOff num_handled = 0;
     RmFileTables *tables = session->tables;
 
-    for(RmOff type = 0; type < RM_LINT_TYPE_DUPE_CANDIDATE; ++type) {
+    for(RmOff type = 0; type < RM_LINT_TYPE_OTHER_LINT_SENTINEL; ++type) {
         if(type == RM_LINT_TYPE_EMPTY_DIR) {
             tables->other_lint[type] = g_list_sort(
                 tables->other_lint[type], (GCompareFunc)rm_pp_cmp_reverse_alphabetical);
@@ -85,7 +85,10 @@ static RmOff rm_pp_handler_other_lint(const RmSession *session) {
             g_assert(file);
             g_assert(type == file->lint_type);
 
-            num_handled++;
+            if(type != RM_LINT_TYPE_DUPE_DIR_CANDIDATE) {
+                /* traversed dirs are no lint. */
+                num_handled++;
+            }
 
             file->twin_count = -1;
             rm_fmt_write(file, session->formats);
