@@ -49,8 +49,14 @@ typedef enum RmLintType {
      */
     RM_LINT_TYPE_DUPE_DIR_CANDIDATE,
 
-    /* note: this needs to be after all non-duplicate lint type item in list */
-    RM_LINT_TYPE_DUPE_CANDIDATE,
+    /* Not a real lint type, but a marker at the end of other lints;
+     * this needs to be after all non-duplicate lint type item in list
+     * (we size an array with it).
+     */
+    RM_LINT_TYPE_OTHER_LINT_SENTINEL,
+
+    /* starts after other (non-duplicate) lints */
+    RM_LINT_TYPE_DUPE_CANDIDATE = RM_LINT_TYPE_OTHER_LINT_SENTINEL,
 
     /* confirmed duplicates */
     RM_LINT_TYPE_DUPE_DIR,
