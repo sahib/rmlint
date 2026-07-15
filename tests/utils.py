@@ -329,7 +329,7 @@ def run_rmlint_pedantic(*args, **kwargs):
         # TODO: end-to-end tests of algorithms
         compare_checksum = not any((option.startswith('--algorithm='), option.startswith('-P'), option.startswith('-p')))
 
-        if data_skip is not None and not 'directly_return_output' in kwargs and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
+        if data_skip and not 'directly_return_output' in kwargs and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
             pprint.pprint(data_skip)
             pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
