@@ -154,7 +154,7 @@ def test_replay_keep_cached_originals(usual_setup_usual_teardown):
     create_file('xxx', 'test_a/b')
     create_file('xxx', 'test_b/c')
 
-    replay_path = '/tmp/replay.json'
+    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
     head, *data, footer = run_rmlint('-o json:{p} -S fa'.format(
         p=replay_path
