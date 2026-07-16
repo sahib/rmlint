@@ -6,6 +6,7 @@
 #############
 
 import os
+import sys
 import json
 import time
 import pprint
@@ -103,26 +104,6 @@ def create_testdir(*extra_path):
 def cleanup_testdir():
     shutil.rmtree(TESTDIR_NAME, ignore_errors=True)
 
-
-def which(program):
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath and is_exe(program):
-        return program
-    else:
-        for path in (os.environ.get("PATH") or []).split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
-
-
-
-
 RMLINT_BINARY_DIR = os.getcwd()
 
 def has_known_leak(*args):
@@ -151,7 +132,7 @@ def has_known_leak(*args):
 def run_rmlint_once(*args,
                     dir_suffix=None,
                     use_default_dir=True,
-                    outputs=None,
+                    outputs=(),
                     with_json=True,
                     directly_return_output=False,
                     use_shell=False,
@@ -171,52 +152,55 @@ def run_rmlint_once(*args,
             'G_DEBUG': 'gc-friendly',
             'G_SLICE': 'always-malloc'
         }
-        cmd = [which('valgrind'), '--error-exitcode=1', '-q']
+        cmd = ['valgrind', '--error-exitcode=1', '-q']
         if get_env_flag('RM_TS_CHECK_LEAKS') and not has_known_leak(*args):
-            cmd.extend( ['--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite'] )
+            cmd += ('--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite')
     elif get_env_flag('RM_TS_USE_GDB'):
-        env, cmd = {}, ['/usr/bin/gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
+        env, cmd = {}, ['gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
 
-    cmd.extend( [os.path.join(RMLINT_BINARY_DIR, "rmlint"), verbosity] )
-    if target_dir:
-        cmd.append(target_dir)
+    cmd.append(os.path.join(RMLINT_BINARY_DIR, "rmlint"))
+    cmd.extend(arg for arg in (verbosity, target_dir) if arg)
 
-    cmd += shlex.split(' '.join(args))
+    cmd.extend(shlex.split(' '.join(args)))
+
     if with_json:
-        cmd += ['-o', 'json:' + os.path.join(TESTDIR_NAME, 'out.json'), '-c', 'json:oneline']
+        cmd.extend(('-o', 'json:' + os.path.join(TESTDIR_NAME, 'out.json'), '-c', 'json:oneline'))
 
-    for idx, output in enumerate(outputs or []):
-        cmd.append('-o')
-        cmd.append('{f}:{p}'.format(
-            f=output, p=os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)))
-        )
+    output_files = tuple((output, os.path.join(TESTDIR_NAME, f".{output}-{idx}"))
+                         for idx, output in enumerate(outputs))
 
-    # filter empty strings
-    cmd = list(filter(None, cmd))
+    for output, path in output_files:
+        cmd.extend(('-o', f'{output}:{path}'))
+
+    assert all(arg.strip() for arg in cmd), "empty argument in: " + repr(cmd)
+
+    run_args = {
+        'env': env,
+        'stdout': subprocess.PIPE,
+        'stderr': subprocess.PIPE,
+        'shell': use_shell,
+        'timeout': timeout,
+    }
+
+    if use_shell:
+        run_args['executable'] = "bash"
 
     if get_env_flag('RM_TS_PRINT_CMD'):
-        print('Running cmd from `{cwd}`: {cmd}'.format(
-            cwd=os.getcwd(),
-            cmd=' '.join(cmd)
-        ))
+        print(f"running{' in shell' if use_shell else ''} from `{os.getcwd()}`: {' '.join(cmd)}")
 
     if get_env_flag('RM_TS_SLEEP'):
         print('Waiting for 1000 seconds.')
         time.sleep(1000)
 
-    if use_shell is True:
-        # Use /bin/bash, not /bin/sh
-        cmd = ["/bin/bash", "-c", " ".join(cmd)]
-
-    result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
-    print(result.stderr.decode('utf-8'), end='')
+    result = subprocess.run(' '.join(cmd) if use_shell else cmd, **run_args)
+    sys.stdout.buffer.write(result.stderr)
 
     if get_env_flag('RM_TS_USE_GDB'):
-        print('==> START OF GDB OUTPUT <==')
-        print(result.stdout.decode('utf-8'), end='')
-        print('==> END OF GDB OUTPUT <==')
+        sys.stdout.buffer.write(b"\n==> START OF GDB OUTPUT <==\n")
+        sys.stdout.buffer.write(result.stdout)
+        sys.stdout.buffer.write(b"==> END OF GDB OUTPUT <==\n")
 
     if check:
         result.check_returncode()
@@ -230,12 +214,10 @@ def run_rmlint_once(*args,
     else:
         json_data = []
 
-    read_outputs = []
-    for idx, output in enumerate(outputs or []):
-        with open(os.path.join(TESTDIR_NAME, '.' + output + '-' + str(idx)), 'r', encoding='utf8') as handle:
-            read_outputs.append(handle.read())
-    if outputs:
-        json_data.extend(read_outputs)
+    for _, path in output_files:
+        with open(path, 'r', encoding='utf8') as handle:
+            json_data.append(handle.read())
+
     return json_data if check else (result, json_data)
 
 
