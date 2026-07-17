@@ -97,38 +97,25 @@ def parse_arguments(root_logger):
         dest="show_version",
         help="Show the version of Shredder."
     )
-    parser.add_argument(
-        "paths",
-        nargs="*",
-        metavar="PATH",
-        help=argparse.SUPPRESS
-    )
 
-    vals = parser.parse_args()
-    if vals.show_version:
+    args = parser.parse_args()
+    if args.show_version:
         show_version()
 
     adjust_loglevel(
         root_logger,
-        (vals.more_verbosity or 0) -
-        (vals.less_verbosity or 0) +
+        (args.more_verbosity or 0) -
+        (args.less_verbosity or 0) +
         4  # Default loglevel: info.
     )
 
-    for path in vals.paths:
-        root_logger.warning(
-            'argument %s ignored. Will be rejected in a future version.',
-            path
-        )
-
     # Check paths to be valid:
-    paths = (vals.tagged or []) + (vals.untagged or []) + [vals.script]
-    for path in (path for path in paths if path):
+    for path in filter(None, (args.tagged or []) + (args.untagged or []) + [args.script]):
         if not os.path.exists(path):
             root_logger.error('`%s` does not exist.', path)
             sys.exit(-1)
 
-    return vals
+    return args
 
 
 if __name__ == '__main__':
