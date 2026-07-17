@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """Location view.
 
 Give the users a list of directories he might want to scan.
@@ -10,21 +7,13 @@ Integrate with GtkRecentManager and detect mounted volumes.
 Also show the directory size alongside.
 """
 
-
-# Stdlib:
-import os
 import json
 import logging
+import os
 
-# External:
-from gi.repository import Gtk
-from gi.repository import Gio
-from gi.repository import GLib
-from gi.repository import GObject
+from gi.repository import Gio, GLib, GObject, Gtk
 
-# Internal:
-from shredder.util import View, IconButton, size_to_human_readable
-
+from shredder.util import IconButton, View, size_to_human_readable
 
 LOGGER = logging.getLogger('locations')
 
@@ -93,14 +82,14 @@ class LocationEntry(Gtk.ListBoxRow):
         self.path, self.name = path, name
 
         name_label = Gtk.Label(
-            '<b>{}</b>'.format(GLib.markup_escape_text(name))
+            f'<b>{GLib.markup_escape_text(name)}</b>'
         )
         name_label.set_use_markup(True)
         name_label.set_hexpand(True)
         name_label.set_halign(Gtk.Align.START)
 
         path_label = Gtk.Label(
-            '<small>{}</small>'.format(GLib.markup_escape_text(path))
+            f'<small>{GLib.markup_escape_text(path)}</small>'
         )
         path_label.set_use_markup(True)
         path_label.set_hexpand(True)
@@ -223,10 +212,10 @@ def cache_file_path():
 
 def load_saved_entries():
     try:
-        with open(cache_file_path(), "r") as fd:
+        with open(cache_file_path()) as fd:
             return json.loads(fd.read())
     except OSError as exc:
-        LOGGER.warning("Failed to get location entries: {}".format(exc))
+        LOGGER.warning(f"Failed to get location entries: {exc}")
     except Exception:
         LOGGER.exception("Failed to get location entries unexpected")
 

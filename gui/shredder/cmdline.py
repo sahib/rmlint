@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8
+#!/usr/bin/env python3
 
 """Commandline parsing facility for Shredder.
 
@@ -7,14 +6,11 @@ Produces an option dict that can be used by shredder.application.
 Some options are processed immediately however.
 """
 
-# Stdlib:
+import logging
 import os
 import sys
-import logging
 
-# External:
-from gi.repository import Gio
-from gi.repository import GLib
+from gi.repository import Gio, GLib
 
 
 def show_version():

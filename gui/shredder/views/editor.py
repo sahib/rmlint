@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 Editor view.
 
@@ -10,17 +7,11 @@ Once clicked, a counter will be shown, showing the total number
 of killed files in terms of size.
 """
 
-
-# Stdlib:
+import logging
 import os
 import time
-import logging
 
-# External:
-from gi.repository import Gtk
-from gi.repository import GLib
-from gi.repository import Pango
-from gi.repository import GObject
+from gi.repository import GLib, GObject, Gtk, Pango
 
 try:
     from gi.repository import Polkit
@@ -32,16 +23,14 @@ if Polkit is not None:
     import gi
     try:
         gi.require_version('Polkit', '1.0')
-    except:
+    except ValueError:
         print('Polkit version 1.0 required, got ', gi.get_version('Polkit'))
         print('running without Polkit')
         Polkit = None
 
 # Internal:
-from shredder.util import View, IconButton, scrolled, size_to_human_readable
-from shredder.util import MultipleChoiceButton, SuggestedButton
 from shredder.runner import Script
-
+from shredder.util import IconButton, MultipleChoiceButton, SuggestedButton, View, scrolled, size_to_human_readable
 
 LOGGER = logging.getLogger('editor')
 
@@ -305,7 +294,7 @@ def _create_icon_stack():
             Gtk.STYLE_CLASS_DIM_LABEL
         )
         icon_label.set_markup(
-            '<span font="65">{symbol}</span>'.format(symbol=symbol)
+            f'<span font="65">{symbol}</span>'
         )
         icon_stack.add_named(icon_label, name)
 

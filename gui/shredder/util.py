@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 Misc widgets used throughout the code.
 This code here is supposed to be drop-in able
@@ -10,20 +7,11 @@ Also included: Various specialised GtkCellRenderer implementation.
 Reason for special derivatives are given in the respective class.
 """
 
-# Stdlib:
 import math
-
 from datetime import datetime
 from operator import itemgetter
-from enum import Enum
 
-# External:
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import Gio
-from gi.repository import GObject
-from gi.repository import Pango, PangoCairo
-from gi.repository import GLib
+from gi.repository import Gdk, Gio, GLib, GObject, Gtk, Pango, PangoCairo
 
 
 def size_to_human_readable(size):
@@ -38,7 +26,7 @@ def size_to_human_readable(size):
 
             # Hack to split off the unneeded .0
             size = round(size, 1) if size % 1 else int(size)
-            human_readable = "{s} {f}B".format(s=size, f=unit)
+            human_readable = f"{size} {unit}B"
             break
     else:
         human_readable = '0 Byte'
@@ -503,10 +491,10 @@ class CellRendererCount(Gtk.CellRendererText):
 
         if count > 0:
             name = 'Objects' if is_plural else 'Object'
-            text = '{} {}'.format(count, name)
+            text = f'{count} {name}'
         elif count < 0:
             name = 'Twins' if is_plural else 'Twin'
-            text = '{} {}'.format(-count, name)
+            text = f'{-count} {name}'
         else:
             text = ''
 
@@ -563,7 +551,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
         xpad = self.get_property('xpad')
         ypad = self.get_property('ypad') - 10
 
-        fw, fh = [num / Pango.SCALE / 2 for num in layout.get_size()]
+        fw, fh = (num / Pango.SCALE / 2 for num in layout.get_size())
         ctx.move_to(cell.x - fw + xpad, cell.y + fh + ypad)
         PangoCairo.show_layout(ctx, layout)
 

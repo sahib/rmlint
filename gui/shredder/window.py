@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 Shredder's implementation og GtkApplicationWindow.
 Notable classes:
@@ -10,18 +7,13 @@ Notable classes:
     - MainWindow: Window with HeaderBar and View stack.
 """
 
-# Stdlib:
 import logging
 from functools import partial
 from gettext import gettext
 
-# External:
-from gi.repository import Gtk
-from gi.repository import Gio
+from gi.repository import Gio, Gtk
 
-# Internal:
 import shredder
-
 
 _ = gettext
 LOGGER = logging.getLogger('window')
@@ -180,7 +172,7 @@ class HeaderBar(Gtk.HeaderBar):
 def _create_item(name, action, icon, variant=None):
     """Create a GMenuItem from an action, optionally with an icon"""
     if variant is not None:
-        name = '{n} ({v})'.format(n=name, v=str(variant))
+        name = f'{name} ({str(variant)})'
 
     item = Gio.MenuItem.new(name, action)
     item.set_icon(Gio.ThemedIcon.new(icon))
@@ -282,7 +274,7 @@ class MainWindow(Gtk.ApplicationWindow):
         elif align is Gtk.Align.START:
             self.headerbar.pack_start(widget)
         else:
-            raise ValueError('{align} not supported here.'.format(align=align))
+            raise ValueError(f'{align} not supported here.')
 
         widget.show_all()
 

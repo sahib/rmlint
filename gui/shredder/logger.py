@@ -1,16 +1,10 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
+#!/usr/bin/env python3
 """
 General purpose logger, used in many python projects by @sahib.
 It has colors and symbols! Enough reasoning.
 """
-
-
-# Stdlib:
 import logging
 import logging.handlers
-
 
 COLORED_FORMAT = "%(asctime)s%(reset)s %(log_color)s[logsymbol] \
 %(levelname)-8s%(reset)s \

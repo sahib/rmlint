@@ -1,33 +1,24 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """Shredder's GtkApplication implementation.
 
 It loads all initially required resources and triggers
 the gui build by instancing the MainWindow.
 """
 
-# Stdlib:
-import os
-import sys
 import gettext
 import logging
+import os
 
-# External:
-from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
+from gi.repository import GdkPixbuf, Gio, Gtk, Rsvg
 
-# Internal
 from shredder import APP_TITLE
-from shredder.util import load_css_from_data
 from shredder.about import AboutDialog
 from shredder.runner import Script
-from shredder.window import MainWindow
-
-from shredder.views.settings import SettingsView
+from shredder.util import load_css_from_data
+from shredder.views.editor import EditorView
 from shredder.views.locations import LocationView
 from shredder.views.runner import RunnerView
-from shredder.views.editor import EditorView
-
+from shredder.views.settings import SettingsView
+from shredder.window import MainWindow
 
 LOGGER = logging.getLogger('application')
 
