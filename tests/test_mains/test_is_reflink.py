@@ -1,6 +1,15 @@
 import os
 import subprocess
-from tests.utils import *
+
+from tests.utils import (
+    TESTDIR_NAME,
+    assert_exit_code,
+    create_dirs,
+    create_file,
+    create_link,
+    run_rmlint,
+    run_rmlint_once,
+)
 
 
 def check_is_reflink_status(status_code, *paths):
@@ -107,7 +116,7 @@ def test_reflink_ends_with_hole(usual_setup_usual_teardown, needs_reflink_fs):
 def _copy_file_range(src, dst, count, offset_src, offset_dst):
     bytes_copied = os.copy_file_range(src, dst, count, offset_src, offset_dst)
     if bytes_copied < count:
-        raise RuntimeError('copy_file_range only copied {} bytes (expected {})'.format(bytes_copied, count))
+        raise RuntimeError(f'copy_file_range only copied {bytes_copied} bytes (expected {count})')
 
 
 def kb(n):

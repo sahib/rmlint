@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import os
+import subprocess
 
-from tests.utils import *
+import pytest
+
+from tests.utils import TESTDIR_NAME, create_file, has_feature, run_rmlint
 
 SOURCE = '''
 #include <stddef.h>
@@ -22,7 +25,7 @@ def create_binary(path, stripped=False):
     command = '{cc} -o {path} {option} -std=c99 -xc -'.format(
         cc=os.environ.get('CC', 'gcc'), path=full_path, option='-s' if stripped else '-ggdb3',
     )
-    subprocess.run(command, input=SOURCE, shell=True, universal_newlines=True, check=True)
+    subprocess.run(command, input=SOURCE, shell=True, text=True, check=True)
 
 
 def test_negative(usual_setup_usual_teardown):
@@ -31,7 +34,7 @@ def test_negative(usual_setup_usual_teardown):
 
     create_file(SOURCE, 'source.c')
     create_binary('source.c', stripped=True)
-    head, *data, footer = run_rmlint('-T "none +nonstripped"')
+    _, *data, footer = run_rmlint('-T "none +nonstripped"')
     assert footer['total_files'] == 2
     assert footer['total_lint_size'] == 0
     assert len(data) == 0
@@ -43,7 +46,7 @@ def test_positive(usual_setup_usual_teardown):
 
     create_file(SOURCE, 'source.c')
     create_binary('source.c', stripped=False)
-    head, *data, footer = run_rmlint('-T "none +nonstripped"')
+    _, *data, footer = run_rmlint('-T "none +nonstripped"')
     assert footer['total_files'] == 2
     assert footer['total_lint_size'] == 0  # We cannot determine exact lint size.
     assert data[0]['type'] == 'nonstripped'
@@ -59,7 +62,7 @@ def test_executable_fifo(usual_setup_usual_teardown):
     os.chmod(fifo_path, 0o755)
 
     # executable FIFO should not hang rmlint
-    head, *data, footer = run_rmlint('-T nonstripped', timeout=5)
+    _, *data, footer = run_rmlint('-T nonstripped', timeout=5)
     assert footer['total_files'] == 0
     assert footer['total_lint_size'] == 0
     assert not data

@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
-from tests.utils import *
-
+import os
 import shlex
+import shutil
 import subprocess
+
 import pytest
+
+from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, pattern_count, run_rmlint
 
 
 def run_shell_script(shell, sh_path, *args):
@@ -37,9 +39,8 @@ def test_basic(usual_setup_usual_teardown, shell):
     create_link('aaa', 'link_aaa', symlink=True)
     os.remove(os.path.join(TESTDIR_NAME, 'aaa'))
 
-    head, *data, footer = run_rmlint('-D -S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    _, *data, footer = run_rmlint(f'-D -S a -o sh:{TESTDIR_NAME}/rmlint.sh')
     data = filter_part_of_directory(data)
-    # subprocess.call('cat ' + os.path.join(TESTDIR_NAME, 'rmlint.sh'), shell=True)
 
     assert footer['duplicate_sets'] == 3
     assert footer['total_lint_size'] == 9
@@ -49,7 +50,7 @@ def test_basic(usual_setup_usual_teardown, shell):
     # Dry run first; check if it did not accidentally delete something.
     sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
     text = run_shell_script(shell, sh_path, "-dn")
-    head, *data, footer = run_rmlint('-D -S a')
+    _, *data, footer = run_rmlint('-D -S a')
     data = filter_part_of_directory(data)
     assert footer['duplicate_sets'] == 3
     assert footer['total_lint_size'] == 9
@@ -57,7 +58,7 @@ def test_basic(usual_setup_usual_teardown, shell):
     assert footer['duplicates'] == 3
 
     text = run_shell_script(shell, sh_path, "-d")
-    head, *data, footer = run_rmlint('-D -S a')
+    _, *data, footer = run_rmlint('-D -S a')
     data = filter_part_of_directory(data)
 
     assert footer['duplicate_sets'] == 0
@@ -75,9 +76,7 @@ def test_paranoia(usual_setup_usual_teardown, shell):
     create_file('xxx', 'c')
     create_link('a', 'hardlink_a', symlink=False)
 
-    head, *data, footer = run_rmlint(
-        '-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME)
-    )
+    _, *_, footer = run_rmlint(f'-S a -o sh:{TESTDIR_NAME}/rmlint.sh')
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 6
@@ -85,7 +84,7 @@ def test_paranoia(usual_setup_usual_teardown, shell):
     assert footer['duplicates'] == 3
 
     # Modify c after running rmlint:
-    with open(os.path.join(TESTDIR_NAME, 'c'), 'w') as handle:
+    with open(os.path.join(TESTDIR_NAME, 'c'), 'w', encoding='utf-8') as handle:
         handle.write('xxxx')
 
     sh_script = os.path.join(TESTDIR_NAME, 'rmlint.sh')
@@ -94,16 +93,14 @@ def test_paranoia(usual_setup_usual_teardown, shell):
     assert 'files no longer identical' in text
 
     # Check that file contents of c are still intact
-    with open(os.path.join(TESTDIR_NAME, 'c'), 'r') as handle:
+    with open(os.path.join(TESTDIR_NAME, 'c'), encoding='utf-8') as handle:
         assert handle.read() == 'xxxx'
 
     # Change back 'c':
-    with open(os.path.join(TESTDIR_NAME, 'c'), 'w') as handle:
+    with open(os.path.join(TESTDIR_NAME, 'c'), 'w', encoding='utf-8') as handle:
         handle.write('xxx')
 
-    head, *data, footer = run_rmlint(
-        '-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME)
-    )
+    _, *_, footer = run_rmlint(f'-S a -o sh:{TESTDIR_NAME}/rmlint.sh')
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3
@@ -115,7 +112,7 @@ def test_paranoia(usual_setup_usual_teardown, shell):
     os.remove(os.path.join(TESTDIR_NAME, 'a'))
 
     text = run_shell_script(shell, sh_script, '-d', '-p')
-    head, *data, footer = run_rmlint('-S a -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    _, *_, footer = run_rmlint(f'-S a -o sh:{TESTDIR_NAME}/rmlint.sh')
 
     assert 'original has disappeared' in text
 
@@ -145,9 +142,7 @@ def test_hardlink_duplicate_directories(usual_setup_usual_teardown, shell):
     create_file('xxx', 'dir_b/x')
 
     sh_path = os.path.join(TESTDIR_NAME, "result.sh")
-    header, *data, footer = run_rmlint(
-        "-D -S a -c sh:hardlink -o sh:{}".format(sh_path),
-    )
+    _, *data, _ = run_rmlint(f"-D -S a -c sh:hardlink -o sh:{sh_path}")
     data = filter_part_of_directory(data)
     assert len(data) == 2
     assert data[0]["path"].endswith("dir_a")
@@ -178,12 +173,7 @@ def test_remove_empty_dirs(usual_setup_usual_teardown, shell, inverse_order):
     create_file('xxx', 'deep/x/2')
 
     sh_path = os.path.join(TESTDIR_NAME, "result.sh")
-    header, *data, footer = run_rmlint(
-        "-S {} -o sh:{}".format(
-            "A" if inverse_order else "a",
-            sh_path
-        ),
-    )
+    _, *data, _ = run_rmlint(f"-S {'A' if inverse_order else 'a'} -o sh:{sh_path}")
 
     assert len(data) == 2
 
@@ -207,12 +197,7 @@ def test_remove_empty_dirs_with_dupe_dirs(usual_setup_usual_teardown, shell, inv
     create_file('xxx', 'deep/x/1')
 
     sh_path = os.path.join(TESTDIR_NAME, "result.sh")
-    header, *data, footer = run_rmlint(
-        "-S {} -Dj -o sh:{}".format(
-            "A" if inverse_order else "a",
-            sh_path
-        ),
-    )
+    _, *data, _ = run_rmlint(f"-S {'A' if inverse_order else 'a'} -Dj -o sh:{sh_path}")
     data = filter_part_of_directory(data)
 
     assert len(data) == 2
@@ -230,18 +215,20 @@ def test_remove_empty_dirs_with_dupe_dirs(usual_setup_usual_teardown, shell, inv
 
     _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
 
+
 def test_cleanup_emptydirs(usual_setup_usual_teardown, shell):
     create_file('xxx', 'dir1/a')
 
     # create some ugly dir names
-    names = [ 'escape me [please?]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона',
-            'let\'s nest',
-            'let\'s nest/a level',
-            'let\'s nest/a level/[or two]' ]
+    names = ('escape me [please?]', '上野洋子, 吉野裕司, 浅井裕子 & 河越重義', '天谷大輔', 'Аркона',
+             "let's nest",
+             "let's nest/a level",
+             "let's nest/a level/[or two]",
+             )
     for dirname in names:
-        create_file('xxx', '{}/b'.format(dirname))
+        create_file('xxx', f'{dirname}/b')
 
-    head, *data, footer = run_rmlint('-S a -T df -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    _, *_, footer = run_rmlint(f'-S a -T df -o sh:{TESTDIR_NAME}/rmlint.sh')
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3 * len(names)
@@ -250,13 +237,12 @@ def test_cleanup_emptydirs(usual_setup_usual_teardown, shell):
 
     # run rmlint.sh with -c option (should clean up empty dirs after deleting 'b' files).
     sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
-    text = run_shell_script(shell, sh_path, "-dc")
+    _ = run_shell_script(shell, sh_path, "-dc")
 
     assert os.path.exists(os.path.join(TESTDIR_NAME, 'dir1/a'))
 
     for dirname in names:
         assert (not os.path.exists(os.path.join(TESTDIR_NAME, dirname)))
-
 
 
 def test_keep_parent_timestamps(usual_setup_usual_teardown, shell):
@@ -266,7 +252,7 @@ def test_keep_parent_timestamps(usual_setup_usual_teardown, shell):
     dir_path = os.path.join(TESTDIR_NAME, 'dir')
     stat_before = os.stat(dir_path)
 
-    head, *data, footer = run_rmlint('-S a -T df -o sh:{t}/rmlint.sh'.format(t=TESTDIR_NAME))
+    _, *_, footer = run_rmlint(f'-S a -T df -o sh:{TESTDIR_NAME}/rmlint.sh')
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3
     assert footer['total_files'] == 2
@@ -290,8 +276,10 @@ def test_skip_hardlinks(usual_setup_usual_teardown, tm_opt):
 
     sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
     run_rmlint(
-        '-S a -o sh:{p} -c sh:hardlink'.format(p=shlex.quote(sh_path)),
-        tm_opt, dir_a, dir_b,
+        f'-S a -o sh:{shlex.quote(sh_path)} -c sh:hardlink',
+        tm_opt,
+        dir_a,
+        dir_b,
         use_default_dir=False,
     )
 

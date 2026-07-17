@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-
 import subprocess
 
+from tests.utils import TESTDIR_NAME, create_file, run_rmlint, runs_as_root
 
 RMLINT_DUMMY_GROUP = '__rmlint_dummy_group'
 RMLINT_DUMMY_USER = '__rmlint_dummy_user'
@@ -48,7 +45,7 @@ def test_bad_ids(usual_setup_usual_teardown):
             'groupdel {g}'
         ])
 
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, footer = run_rmlint('-S a')
 
     x, y, z = data
     assert x['path'].endswith('1_bad_uid')

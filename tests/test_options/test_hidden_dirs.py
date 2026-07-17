@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
+from tests.utils import create_file, run_rmlint
 
 
 def filter_part_of_directory(data):
@@ -12,7 +10,7 @@ def test_simple(usual_setup_usual_teardown):
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
 
-    head, *data, footer = run_rmlint('--hidden')
+    _, *_, footer = run_rmlint('--hidden')
 
     assert footer['duplicates'] == 2
     assert footer['ignored_folders'] == 0
@@ -24,7 +22,8 @@ def test_hidden(usual_setup_usual_teardown):
     create_file('xxx', '.a/1')
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
-    head, *data, footer = run_rmlint('--no-hidden')
+
+    _, *_, footer = run_rmlint('--no-hidden')
 
     assert footer['duplicates'] == 0
     assert footer['ignored_folders'] == 2
@@ -35,7 +34,8 @@ def test_hidden(usual_setup_usual_teardown):
 def test_explicit(usual_setup_usual_teardown):
     create_file('xxx', '.a/1')
     create_file('xxx', '.a/2')
-    head, *data, footer = run_rmlint('--no-hidden', dir_suffix='.a')
+
+    _, *_, footer = run_rmlint('--no-hidden', dir_suffix='.a')
 
     assert footer['duplicates'] == 1
     assert footer['ignored_folders'] == 0
@@ -48,23 +48,23 @@ def test_partial_hidden(usual_setup_usual_teardown):
     create_file('1', 'b/.hidden')
     create_file('1', '.hidden')
 
-    head, *data, footer = run_rmlint('--no-hidden')
+    _, *data, _ = run_rmlint('--no-hidden')
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('--partial-hidden')
+    _, *data, _ = run_rmlint('--partial-hidden')
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('--hidden')
+    _, *data, _ = run_rmlint('--hidden')
     assert len(data) == 3
     assert all(p['path'].endswith('.hidden') for p in data)
 
-    head, *data, footer = run_rmlint('--partial-hidden -D -S a')
+    _, *data, _ = run_rmlint('--partial-hidden -D -S a')
     data = filter_part_of_directory(data)
     assert len(data) == 2
     assert data[0]['path'].endswith('a')
     assert data[0]['type'] == 'duplicate_dir'
     assert data[1]['path'].endswith('b')
 
-    head, *data, footer = run_rmlint('-D --no-partial-hidden -S a')
+    _, *data, _ = run_rmlint('-D --no-partial-hidden -S a')
     data = filter_part_of_directory(data)
     assert len(data) == 0

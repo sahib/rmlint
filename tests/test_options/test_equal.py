@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 import os
 
-from tests.utils import *
+from tests.utils import TESTDIR_NAME, assert_exit_code, create_file, run_rmlint
 
 
 def test_equal_files(usual_setup_usual_teardown):
@@ -9,13 +8,13 @@ def test_equal_files(usual_setup_usual_teardown):
     path_b = create_file('1234', 'b')
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        _, *data, _ = run_rmlint(
             '--equal', path_a, path_b,
             use_default_dir=False
         )
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        _, *data, _ = run_rmlint(
             '-p', '--equal', path_a, path_b,
             use_default_dir=False
         )
@@ -28,14 +27,14 @@ def test_equal_files(usual_setup_usual_teardown):
 
     path_c = create_file('1234', 'c')
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        _, *data, _ = run_rmlint(
             '--equal', path_a, path_b, path_c,
             use_default_dir=False
         )
 
     path_d = create_file('diff', 'd')
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        _, *data, _ = run_rmlint(
             '--equal', path_a, path_b, path_d, path_c,
             use_default_dir=False
         )
@@ -43,7 +42,7 @@ def test_equal_files(usual_setup_usual_teardown):
 
 def test_no_arguments(usual_setup_usual_teardown):
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal',
             use_default_dir=False
         )
@@ -52,19 +51,19 @@ def test_no_arguments(usual_setup_usual_teardown):
 def test_one_arguments(usual_setup_usual_teardown):
     path = create_file('1234', 'a')
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', path,
             use_default_dir=False
         )
 
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', path, "//",
             use_default_dir=False
         )
 
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', "//", path,
             use_default_dir=False
         )
@@ -75,13 +74,13 @@ def test_equal_directories(usual_setup_usual_teardown):
     path_b = os.path.dirname(create_file('xxx', 'dir_b/x'))
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', path_a, path_b,
             use_default_dir=False
         )
 
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '-p', '--equal', path_a, path_b,
             use_default_dir=False
         )
@@ -94,7 +93,7 @@ def test_dir_and_file(usual_setup_usual_teardown):
     # This should fail since we should not mix directories with files,
     # even if they have the same content.
     with assert_exit_code(1):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', path_a, path_b,
             use_default_dir=False,
         )
@@ -108,7 +107,7 @@ def test_equal_hidden_dirs(usual_setup_usual_teardown):
     # This should fail since we should not mix directories with files,
     # even if they have the same content.
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', path_a, path_b,
             use_default_dir=False,
         )
@@ -122,7 +121,7 @@ def test_equal_empty_files_or_other_lint(usual_setup_usual_teardown):
     # This should fail since we should not mix directories with files,
     # even if they have the same content.
     with assert_exit_code(0):
-        head, *data, footer = run_rmlint(
+        run_rmlint(
             '--equal', path_a, path_b,
             use_default_dir=False,
         )

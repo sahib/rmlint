@@ -1,19 +1,15 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
 import os
+import pprint
 import re
+import subprocess
 import sys
 import time
-import json
-import pprint
-import hashlib
-import argparse
-import subprocess
-
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple, Counter
-
+from collections import Counter, namedtuple
 
 CFG = namedtuple('Config', [
     # How often to run the program on the dataset.
@@ -33,20 +29,20 @@ CFG = namedtuple('Config', [
 def flush_fs_caches():
     os.sync()
     try:
-        with open('/proc/sys/vm/drop_caches', 'w') as handle:
-            handle.write('3\n')
+        with open('/proc/sys/vm/drop_caches', 'wb') as handle:
+            handle.write(b'3\n')
         print('-- Flushed fs cache.')
-    except IOError:
+    except OSError:
         print('!! You need to be root to flush the fs cache.')
         sys.exit(-1)
 
 
 def read_time_info():
     try:
-        with open('/tmp/.cpu_usage', 'r') as handle:
+        with open('/tmp/.cpu_usage', encoding='ascii') as handle:
             cpu_usage, peak_mem = handle.read().strip().split(' ', 1)
             return int(cpu_usage[:-1]), int(peak_mem)
-    except IOError:
+    except OSError:
         return 0
 
 
@@ -69,7 +65,7 @@ class Program:
 
     def get_install(self):
         if self.script:
-            with open(self.build_path, 'r') as fd:
+            with open(self.build_path) as fd:
                 return fd.read()
 
     ####################
@@ -119,6 +115,9 @@ class Program:
         else:
             return 'https://www.google.de/search?q=' + self.get_name()
 
+    def parse_statistics(self, _):
+        raise NotImplementedError
+
     def run(self, dataset):
         """Run the program on a given dataset
         """
@@ -128,7 +127,7 @@ class Program:
         paths = dataset.get_paths()
         bin_cmd = self.binary_path + ' ' + self.get_options(paths)
 
-        print('== Executing: {c}'.format(c=bin_cmd))
+        print(f'== Executing: {bin_cmd}')
 
         time_cmd = '/bin/time --format "%P %M" \
             --output /tmp/.cpu_usage -- ' + bin_cmd
@@ -167,18 +166,14 @@ class Program:
                             run_benchmarks[run_idx][4] = stats['sets']
 
         except subprocess.CalledProcessError as err:
-            print('!! Execution of {n} failed: {err}'.format(
-                n=self.binary_path, err=err
-            ))
+            print(f'!! Execution of {self.binary_path} failed: {err}')
 
         avg_point = [0] * 5
         for idx in range(5):
             avg_point[idx] = sum([v[idx] for v in run_benchmarks.values()])
             avg_point[idx] /= CFG.n_runs
 
-        print('== Took avg time of {t}s / {c}% cpu'.format(
-            t=avg_point[0], c=avg_point[1]
-        ))
+        print(f'== Took avg time of {avg_point[0]}s / {avg_point[1]}% cpu')
         run_benchmarks['average'] = avg_point
 
         return run_benchmarks, memory_usage
@@ -244,7 +239,7 @@ class Rmlint(Program):
             self.get_binary() + ' --version', shell=True, stderr=subprocess.STDOUT
         )
 
-        match = re.search('(\d.\d.\d) .*(rev [0-9a-f]{7})', str(version_text))
+        match = re.search(r'(\d.\d.\d) .*(rev [0-9a-f]{7})', str(version_text))
         if match is not None:
             return ' '.join(match.groups())
 
@@ -252,7 +247,7 @@ class Rmlint(Program):
 
     def parse_statistics(self, _):
         try:
-            with open('/tmp/rmlint.json', 'r') as fd:
+            with open('/tmp/rmlint.json') as fd:
                 stats = json.loads(fd.read())
 
             return {
@@ -393,7 +388,7 @@ class OldRmlint(Program):
             'rmlint/rmlint-old --version', shell=True, stderr=subprocess.STDOUT
         ).decode('utf-8')
 
-        match = re.search('Version (\d.\d.\d)', str(version_text))
+        match = re.search(r'Version (\d.\d.\d)', str(version_text))
         if match is not None:
             return ' '.join(match.groups()).strip()
 
@@ -441,7 +436,7 @@ class Dupd(Program):
         stats = {}
 
         try:
-            with open(self.stats_file, 'r') as fd:
+            with open(self.stats_file) as fd:
                 for line in fd:
                     line = line.strip()
                     if line:
@@ -480,7 +475,7 @@ class Rdfind(Program):
     def parse_statistics(self, _):
         try:
             stats = Counter()
-            with open(self.result_file, 'r') as fd:
+            with open(self.result_file) as fd:
                 for line in fd:
                     line = line.strip()
                     if line:
@@ -509,7 +504,7 @@ class Fdupes(Program):
     def parse_statistics(self, dump):
         dump = dump.decode('utf-8')
         match = re.match(
-            '(\d+) duplicate files \(in (\d+) sets\)', dump
+            r'(\d+) duplicate files \(in (\d+) sets\)', dump
         )
 
         if match:
@@ -668,7 +663,7 @@ def main():
 
     if options.do_generate or options.datasets:
         for dataset in datasets:
-            if dataset in options.datasets or len(options.datasets) is 0:
+            if dataset in options.datasets or len(options.datasets) == 0:
                 dataset.generate()
 
     programs = [

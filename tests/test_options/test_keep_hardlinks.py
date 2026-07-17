@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
+from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, run_rmlint
 
 
 def test_keep_hardlinks(usual_setup_usual_teardown):
@@ -8,13 +6,13 @@ def test_keep_hardlinks(usual_setup_usual_teardown):
     create_link('file_a', 'file_b')
     create_file('xxx', 'file_z')
 
-    head, *data, footer = run_rmlint('--no-hardlinked -S a')
+    _, *data, _ = run_rmlint('--no-hardlinked -S a')
     assert data[0]["path"].endswith("file_a")
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("file_z")
     assert data[1]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--hardlinked -S a')
+    _, *data, _ = run_rmlint('--hardlinked -S a')
     assert data[0]["path"].endswith("file_a")
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("file_b")
@@ -22,7 +20,7 @@ def test_keep_hardlinks(usual_setup_usual_teardown):
     assert data[2]["path"].endswith("file_z")
     assert data[2]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--keep-hardlinked -S a')
+    _, *data, _ = run_rmlint('--keep-hardlinked -S a')
     assert data[0]["path"].endswith("file_a")
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("file_b")
@@ -30,7 +28,7 @@ def test_keep_hardlinks(usual_setup_usual_teardown):
     assert data[2]["path"].endswith("file_z")
     assert data[2]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--keep-hardlinked -S A')
+    _, *data, _ = run_rmlint('--keep-hardlinked -S A')
     assert data[0]["path"].endswith("file_z")
     assert data[0]["is_original"] is True
     assert data[1]["path"].endswith("file_b")
@@ -48,7 +46,7 @@ def test_keep_hardlinks_multiple_originals():
 
     search_paths = TESTDIR_NAME + '/b // ' + TESTDIR_NAME + '/a'
 
-    head, *data, footer = run_rmlint('--no-hardlinked -S a ' + search_paths, use_default_dir=False)
+    _, *data, _ = run_rmlint('--no-hardlinked -S a ' + search_paths, use_default_dir=False)
     # hardlinks file_b and file_z should be ignored
     assert len(data)==2
     assert data[0]["path"].endswith("file_a")
@@ -56,7 +54,7 @@ def test_keep_hardlinks_multiple_originals():
     assert data[1]["path"].endswith("file_y")
     assert data[1]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--hardlinked -k -m -S a ' + search_paths, use_default_dir=False)
+    _, *data, _ = run_rmlint('--hardlinked -k -m -S a ' + search_paths, use_default_dir=False)
     # files in folder a should both be originals because tagged
     assert len(data)==4
     assert data[0]["path"].endswith("file_a")
@@ -68,7 +66,7 @@ def test_keep_hardlinks_multiple_originals():
     assert data[3]["path"].endswith("file_z")
     assert data[3]["is_original"] is False
 
-    head, *data, footer = run_rmlint('--keep-hardlinked -k -m -S a ' + search_paths, use_default_dir=False)
+    _, *data, _ = run_rmlint('--keep-hardlinked -k -m -S a ' + search_paths, use_default_dir=False)
     # files in folder a are tagged so should both be preserved;
     # files in folder b are hardlinks of the two originals so should also be preserved
     # therefore all files are originals and so don't get reported

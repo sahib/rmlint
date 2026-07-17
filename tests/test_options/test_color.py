@@ -1,4 +1,4 @@
-from tests.utils import *
+from tests.utils import run_rmlint, run_rmlint_once
 
 
 def test_color(usual_setup_usual_teardown):

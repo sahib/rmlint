@@ -1,25 +1,18 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-
-#############
-# UTILITIES #
-#############
-
-import os
-import sys
+"""Utilities"""
+import contextlib
 import json
-import time
+import os
 import pprint
-import psutil
 import re
-import shutil
 import shlex
+import shutil
 import struct
 import subprocess
-import contextlib
-import xattr
-import pytest
+import sys
+import time
 
+import psutil
+import xattr
 
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
@@ -56,7 +49,7 @@ CKSUM_TYPES = [
 ]
 
 def has_feature(feature):
-    return ('+' + feature) in subprocess.check_output(
+    return '+' + feature in subprocess.check_output(
         ['./rmlint', '--version'], stderr=subprocess.STDOUT
     ).decode('utf-8')
 
@@ -80,7 +73,8 @@ def get_env_flag(name):
     try:
         return int(os.environ.get(name) or 0)
     except ValueError:
-        print('{n} should be an integer.'.format(n=name))
+        print(f'{name} should be an integer.')
+    return 0
 
 
 def use_valgrind():
@@ -123,8 +117,8 @@ def has_known_leak(*args):
                     return True
         if split_args[i] in LINT_TYPE_SWITCHES:
             i += 1
-            for type in KNOWN_LEAK_LINT_TYPES:
-                if type in split_args[i]:
+            for lint_type in KNOWN_LEAK_LINT_TYPES:
+                if lint_type in split_args[i]:
                     return True
         i += 1
 
@@ -168,8 +162,8 @@ def run_rmlint_once(*args,
     if with_json:
         cmd.extend(('-o', 'json:' + os.path.join(TESTDIR_NAME, 'out.json'), '-c', 'json:oneline'))
 
-    output_files = tuple((output, os.path.join(TESTDIR_NAME, f".{output}-{idx}"))
-                         for idx, output in enumerate(outputs))
+    output_files = [(output, os.path.join(TESTDIR_NAME, f".{output}-{idx}"))
+                    for idx, output in enumerate(outputs)]
 
     for output, path in output_files:
         cmd.extend(('-o', f'{output}:{path}'))
@@ -209,13 +203,13 @@ def run_rmlint_once(*args,
         return result.stdout if check else (result, result.stdout)
 
     if with_json:
-        with open(os.path.join(TESTDIR_NAME, 'out.json'), 'r') as f:
+        with open(os.path.join(TESTDIR_NAME, 'out.json'), encoding='utf8') as f:
             json_data = json.loads(f.read())
     else:
         json_data = []
 
     for _, path in output_files:
-        with open(path, 'r', encoding='utf8') as handle:
+        with open(path, encoding='utf8') as handle:
             json_data.append(handle.read())
 
     return json_data if check else (result, json_data)
@@ -309,9 +303,12 @@ def run_rmlint_pedantic(*args, **kwargs):
         # We cannot compare checksum in all cases.
         # XXX: algorithm options must be grouped at the end of the options list.
         # TODO: end-to-end tests of algorithms
-        compare_checksum = not any((option.startswith('--algorithm='), option.startswith('-P'), option.startswith('-p')))
+        compare_checksum = not any((option.startswith('--algorithm='), 
+                                    option.startswith('-P'), option.startswith('-p')))
 
-        if data_skip and not 'directly_return_output' in kwargs and not compare_json_docs(data_skip, new_data_skip, compare_checksum):
+        if (data_skip and 'directly_return_output' not in kwargs
+            and not compare_json_docs(data_skip, new_data_skip, compare_checksum)
+            ):
             pprint.pprint(data_skip)
             pprint.pprint(new_data_skip)
             raise AssertionError("Optimisation too optimized: " + option)
@@ -324,8 +321,8 @@ def run_rmlint_pedantic(*args, **kwargs):
 def run_rmlint(*args, force_no_pedantic=False, **kwargs):
     if get_env_flag('RM_TS_PEDANTIC') and force_no_pedantic is False:
         return run_rmlint_pedantic(*args, **kwargs)
-    else:
-        return run_rmlint_once(*args, **kwargs)
+
+    return run_rmlint_once(*args, **kwargs)
 
 
 def create_dirs(path):
@@ -356,7 +353,7 @@ def create_file(data, name, mtime=None, write_binary=False, sparse_bytes_before 
             pass
 
     with open(full_path, 'wb' if write_binary else 'w') as handle:
-        if(sparse_bytes_before > 0):
+        if sparse_bytes_before > 0:
             handle.truncate(sparse_bytes_before)
         if write_binary:
             if isinstance(data, int):
@@ -365,10 +362,10 @@ def create_file(data, name, mtime=None, write_binary=False, sparse_bytes_before 
                 assert False, "Unhandled data type for binary write: " + data
         else:
             handle.write(data)
-        if(sparse_bytes_total > 0):
+        if sparse_bytes_total > 0:
             handle.truncate(sparse_bytes_total)
 
-    if not mtime is None:
+    if mtime is not None:
         subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
 
     return full_path
@@ -376,7 +373,7 @@ def create_file(data, name, mtime=None, write_binary=False, sparse_bytes_before 
 
 def warp_file_to_future(name, seconds):
     now = time.time()
-    os.utime(os.path.join(TESTDIR_NAME, name), (now + 2, now + 2))
+    os.utime(os.path.join(TESTDIR_NAME, name), (now + seconds, now + seconds))
 
 
 def usual_setup_func():
@@ -396,9 +393,7 @@ def usual_teardown_func():
 def mount_bind_teardown_func():
     if runs_as_root():
         subprocess.call(
-            'umount {dst}'.format(
-                dst=os.path.join(TESTDIR_NAME, 'a/b')
-            ),
+            f'umount {os.path.join(TESTDIR_NAME, 'a/b')}',
             shell=True
         )
 
@@ -418,10 +413,10 @@ def create_special_fs(name, fs_type='ext4'):
     device_path = mount_path + ".device"
 
     commands = [
-        "dd if=/dev/zero of={} bs=1M count=20".format(device_path),
-        "mkdir -p {}".format(mount_path),
-        "mkfs.{} {}".format(fs_type, device_path),
-        "mount -o loop {} {}".format(device_path, mount_path),
+        f"dd if=/dev/zero of={device_path} bs=1M count=20",
+        f"mkdir -p {mount_path}",
+        f"mkfs.{fs_type} {device_path}",
+        f"mount -o loop {device_path} {mount_path}",
     ]
 
     for command in commands:
@@ -438,7 +433,7 @@ def create_special_fs(name, fs_type='ext4'):
     finally:
         # whatever happens: unmount it again.
         # we'll get test errors in the next tests otherwise.
-        unmount_command = "umount {}".format(mount_path)
+        unmount_command = f"umount {mount_path}"
         subprocess.run(unmount_command, shell=True, check=True)
 
 
@@ -483,26 +478,17 @@ def is_on_reflink_fs(path):
     for up_path in _up(path):
         for part in parts:
             if up_path == part.mountpoint:
-                print("{0} is {1} mounted at {2}".format(path, part.fstype, part.mountpoint))
-                return (part.fstype in _REFLINK_CAPABLE_FILESYSTEMS)
+                print(f"{path} is {part.fstype} mounted at {part.mountpoint}")
+                return part.fstype in _REFLINK_CAPABLE_FILESYSTEMS
 
-    print("No mountpoint found for {}".format(path))
+    print(f"No mountpoint found for {path}")
     return False
 
 
-@pytest.fixture
-# fixture for tests dependent on reflink-capable testdir
-def needs_reflink_fs():
-    if not has_feature('btrfs-support'):
-        pytest.skip("btrfs not supported")
-    elif not is_on_reflink_fs(TESTDIR_NAME):
-        pytest.skip("testdir is not on reflink-capable filesystem")
-    yield
-
-# count the number of line in a file which start with each pattern
 def pattern_count(path, patterns):
+    """count the number of line in a file which start with each pattern"""
     counts = [0] * len(patterns)
-    with open(path, 'r') as f:
+    with open(path, encoding='utf-8') as f:
         for line in f:
             for i, pattern in enumerate(patterns):
                 if re.match(pattern, line):

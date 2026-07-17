@@ -1,9 +1,18 @@
-#!/usr/bin/env python3
+import hashlib
 import os
 import subprocess
+
 import pytest
 
-from tests.utils import *
+from tests.utils import (
+    TESTDIR_NAME,
+    create_file,
+    create_special_fs,
+    must_read_xattr,
+    run_rmlint,
+    run_rmlint_once,
+    runs_as_root,
+)
 
 
 def create_files():
@@ -69,13 +78,13 @@ def test_xattr_basic(usual_setup_usual_teardown):
     for _ in range(2):
         for write_cache in True, False:
             if write_cache:
-                head, *data, footer = run_rmlint_once('--hash-uniques -D -S pa --xattr-write')
+                _, *data, _ = run_rmlint_once('--hash-uniques -D -S pa --xattr-write')
             else:
-                head, *data, footer = run_rmlint_once('-D -S pa --xattr-read')
+                _, *data, _ = run_rmlint_once('-D -S pa --xattr-read')
 
             check(data, write_cache)
 
-        head, *data, footer = run_rmlint_once('-D -S pa --xattr-clear')
+        _, *data, _ = run_rmlint_once('-D -S pa --xattr-clear')
 
 
 @pytest.mark.parametrize("extra_opts", ["", "-D"])
@@ -100,7 +109,7 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
         create_file("def", path_3)
         create_file("longer", path_4)
 
-        head, *data, footer = run_rmlint_once(base_options + ' --xattr-write')
+        _, *data, _ = run_rmlint_once(base_options + ' --xattr-write')
         assert len(data) == 2
 
         xattr_1 = must_read_xattr(path_1)
@@ -119,7 +128,7 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
 
         # Run several times with --hash-unmatched.
         for _ in range(10):
-            head, *data, footer = run_rmlint_once(base_options + ' --xattr --hash-unmatched')
+            _, *data, _ = run_rmlint_once(base_options + ' --xattr --hash-unmatched')
             # one more due to the size twin
             assert len(data) == 3
 
@@ -140,7 +149,7 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
             assert xattr_4 == {}
 
         # Try clearing the attributes:
-        head, *data, footer = run_rmlint_once(base_options + '--xattr-clear')
+        _, *data, _ = run_rmlint_once(base_options + '--xattr-clear')
         assert len(data) == 2
         assert must_read_xattr(path_1) == {}
         assert must_read_xattr(path_2) == {}
@@ -149,7 +158,7 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
 
         # Run several times with --hash-uniques.
         for _ in range(10):
-            head, *data, footer = run_rmlint_once(base_options + ' --xattr --hash-uniques')
+            _, *data, _ = run_rmlint_once(base_options + ' --xattr --hash-uniques')
             # two more due to the 'longer' file and also the device image
             assert len(data) == 5
 
@@ -172,7 +181,7 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
                     b'b8c25c0482c3323cd3fc544cd9e0fb05eee191aedce56e307d1ea1af96f96fe63d2ac82b0a3ba5c42b7b58da92cd438065b25a51170f183889651419a242d24f\x00'
 
         # Try clearing the attributes:
-        head, *data, footer = run_rmlint(base_options + '--xattr-clear')
+        _, *data, _ = run_rmlint(base_options + '--xattr-clear')
         assert len(data) == 2
         assert must_read_xattr(path_1) == {}
         assert must_read_xattr(path_2) == {}
@@ -189,14 +198,14 @@ def test_treemerge_xattr_hardlink(usual_setup_usual_teardown):
     create_file('yyy', 'b/y')
 
     sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
-    head, *data, foot = run_rmlint('--xattr-write -o sh:{p} -c sh:hardlink'.format(p=sh_path))
+    _, *data, _ = run_rmlint(f'--xattr-write -o sh:{sh_path} -c sh:hardlink')
     assert len(data) == 4
 
     # run script to hardlink files
     subprocess.check_output([sh_path, '-d'])
 
     # This used to fail with 'rm_shred_group_free: assertion failed: (self->num_pending == 0)'
-    head, *data, foot = run_rmlint('-D --xattr-read')
+    _, *data, _ = run_rmlint('-D --xattr-read')
     assert len(data) == 6
 
 
@@ -207,17 +216,17 @@ def test_clamp_xattr_false_negative(usual_setup_usual_teardown, clamp):
     create_file('yyy', 'b')
 
     # we used to write xattrs even when clamping is used
-    head, *data, foot = run_rmlint('--xattr', clamp)
+    _, *data, _ = run_rmlint('--xattr', clamp)
     assert all(e['type'] == 'unique_file' for e in data)
 
     create_file('xxx', 'c')
 
     # the first run after creating 'c' is ok...
-    head, *data, foot = run_rmlint('--xattr', force_no_pedantic=True)
+    _, *data, _ = run_rmlint('--xattr', force_no_pedantic=True)
     assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # 'a' matches 'c'
 
     # but we would get a false negative here, as the xattrs didn't match
-    head, *data, foot = run_rmlint('--xattr', force_no_pedantic=True)
+    _, *data, _ = run_rmlint('--xattr', force_no_pedantic=True)
     assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # do they still match?
 
 
@@ -232,13 +241,13 @@ def test_clamp_xattr_false_positive(usual_setup_usual_teardown, clamp):
     create_file('x', 'b/2')
 
     # we used to write xattrs even when clamping is used
-    head, *data, foot = run_rmlint('--xattr --size 3', clamp)
+    _, *data, _ = run_rmlint('--xattr --size 3', clamp)
     assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # '1' matches 'a/1'
 
     # fill in other xattrs
-    head, *data, foot = run_rmlint('--xattr', force_no_pedantic=True)
+    _, *data, _ = run_rmlint('--xattr', force_no_pedantic=True)
     assert len([e for e in data if e['type'] == 'duplicate_file']) == 4  # '1' matches 'a/1', '2' matches 'b/2'
 
     # we would get a false positive here, as the xattrs matched
-    head, *data, foot = run_rmlint('--xattr -T dd', force_no_pedantic=True)
+    _, *data, _ = run_rmlint('--xattr -T dd', force_no_pedantic=True)
     assert not any(e['type'] == 'duplicate_dir' for e in data)  # do 'a' and 'b' match?

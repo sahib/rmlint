@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
 import json
 import os
-import pytest
-
-from tests.utils import *
+import subprocess
 
 import pytest
+
+from tests.utils import TESTDIR_NAME, create_file
+
 
 def test_stdin_read(usual_setup_usual_teardown):
     path_a = create_file('1234', 'a') + '\n'
@@ -22,7 +22,7 @@ def test_stdin_read(usual_setup_usual_teardown):
         stdout=subprocess.PIPE
     )
     data, _ = proc.communicate((path_a + path_b + path_c).encode('utf-8'))
-    head, *data, footer = json.loads(data.decode('utf-8'))
+    _, *data, footer = json.loads(data.decode('utf-8'))
 
     assert data[0]['path'].endswith('.hidden')
     assert data[1]['path'].endswith('a')
@@ -45,7 +45,7 @@ def test_stdin_read_newlines(usual_setup_usual_teardown):
         stdout=subprocess.PIPE
     )
     data, _ = proc.communicate((path_a + path_b + path_c).encode('utf-8'))
-    head, *data, footer = json.loads(data.decode('utf-8'))
+    _, *data, footer = json.loads(data.decode('utf-8'))
 
     assert data[0]['path'].endswith('.hidden')
     assert data[1]['path'].endswith('a')
@@ -68,7 +68,7 @@ def test_path_starting_with_dash(usual_setup_usual_teardown):
             stdout=subprocess.PIPE
         )
         data, _ = proc.communicate("")
-        head, *data, footer = json.loads(data.decode('utf-8'))
+        _, *data, footer = json.loads(data.decode('utf-8'))
     finally:
         os.chdir(cwd)
 
@@ -95,7 +95,7 @@ def test_stdin_empty(usual_setup_usual_teardown, opts):
             stdout=subprocess.PIPE
         )
         data, _ = proc.communicate("")
-        head, *data, footer = json.loads(data.decode('utf-8'))
+        _, *data, _ = json.loads(data.decode('utf-8'))
     finally:
         os.chdir(cwd)
 

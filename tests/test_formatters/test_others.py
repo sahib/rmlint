@@ -1,5 +1,7 @@
-#!/usr/bin/env python3
-from tests.utils import *
+import os
+import subprocess
+
+from tests.utils import TESTDIR_NAME, create_file, run_rmlint
 
 
 def test_just_call_it(usual_setup_usual_teardown):
@@ -37,7 +39,7 @@ def test_fdups_and_traversed_dirs_in_summary(usual_setup_usual_teardown):
     create_file('xxx', 'dir_b/1')
     create_file('', 'empty')
 
-    head, *data, footer, fdupes, summary = run_rmlint(
+    _, *data, _, fdupes, summary = run_rmlint(
         '-S a', outputs=['fdupes', 'summary']
     )
 

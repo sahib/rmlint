@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-import pytest
-from tests.utils import *
-
+import os
 import time
+from itertools import combinations, permutations
 
-from itertools import permutations, combinations
+import pytest
 
+from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint
 
 PATHS = ['b_dir/', 'a_dir/', 'c_dir/']
 
@@ -69,34 +67,26 @@ def test_replay_match_basename(usual_setup_usual_teardown):
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'-o json:{replay_path}')
 
     assert len(data) == 3
 
-    head, *data, footer = run_rmlint('--replay {p}'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'--replay {replay_path}')
 
     assert len(data) == 3
 
-    head, *data, footer = run_rmlint('--replay {p} --match-basename'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} --match-basename')
 
     assert len(data) == 2
-    paths = set([p['path'] for p in data])
+    paths = {p['path'] for p in data}
     assert os.path.join(TESTDIR_NAME, 'test1/a') in paths
     assert os.path.join(TESTDIR_NAME, 'test2/a') in paths
 
-    head, *data, footer = run_rmlint('--replay {p} --unmatched-basename'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} --unmatched-basename')
 
     # second 'a' file should be kicked out
     assert len(data) == 2
-    paths = set([p['path'] for p in data])
+    paths = {p['path'] for p in data}
     assert os.path.join(TESTDIR_NAME, 'test1/b') in paths
 
 
@@ -106,22 +96,13 @@ def test_replay_hidden(usual_setup_usual_teardown):
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('--hidden -o json:{p}'.format(
-        p=replay_path
-    ))
-
+    _, *data, _ = run_rmlint(f'--hidden -o json:{replay_path}')
     assert len(data) == 2
 
-    head, *data, footer = run_rmlint('--replay {p}'.format(
-        p=replay_path
-    ))
-
+    _, *data, _ = run_rmlint(f'--replay {replay_path}')
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('--replay {p} --hidden'.format(
-        p=replay_path
-    ))
-
+    _, *data, _ = run_rmlint(f'--replay {replay_path} --hidden')
     assert len(data) == 2
 
 
@@ -131,19 +112,17 @@ def test_replay_must_match_tagged(usual_setup_usual_teardown):
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'-o json:{replay_path}')
 
     assert len(data) == 2
 
-    head, *data, footer = run_rmlint('--replay {p} {b} // {a} -m'.format(
+    _, *data, _ = run_rmlint('--replay {p} {b} // {a} -m'.format(
         p=replay_path,
         a=os.path.join(TESTDIR_NAME, 'test_a'),
         b=os.path.join(TESTDIR_NAME, 'test_b')
     ))
 
-    paths = set([(p['path'], p['is_original']) for p in data])
+    paths = {(p['path'], p['is_original']) for p in data}
     assert (os.path.join(TESTDIR_NAME, 'test_b/a'), False) in paths
     assert (os.path.join(TESTDIR_NAME, 'test_a/a'), True) in paths
 
@@ -156,29 +135,23 @@ def test_replay_keep_cached_originals(usual_setup_usual_teardown):
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p} -S fa'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'-o json:{replay_path} -S fa')
     assert len(data) == 4
     assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_a/a')
 
     # reverse the sort order but respect tagged originals from first run
-    head, *data, footer = run_rmlint('--replay {p} -S FA --keep-cached-originals'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} -S FA --keep-cached-originals')
     assert len(data) == 4
     assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_a/a')
     assert data[1]['path'] == os.path.join(TESTDIR_NAME, 'test_b/c')
 
     # reverse the sort order, without --keep-cached-originals
-    head, *data, footer = run_rmlint('--replay {p} -S FA'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} -S FA')
     assert len(data) == 4
     assert data[0]['path'] == os.path.join(TESTDIR_NAME, 'test_b/c')
 
     # cached originals vs -k: cached originals should be first original but -k should still be respected
-    head, *data, footer = run_rmlint('--replay {p} {a} // {b} -k -S fa --keep-cached-originals'.format(
+    _, *data, _ = run_rmlint('--replay {p} {a} // {b} -k -S fa --keep-cached-originals'.format(
         p=replay_path,
         a=os.path.join(TESTDIR_NAME, 'test_a'),
         b=os.path.join(TESTDIR_NAME, 'test_b')
@@ -212,7 +185,8 @@ def test_sorting(usual_setup_usual_teardown):
     all_opts = opts + opts.upper()
 
     combos = []
-    def is_legal_combo(x): return len(x) == len(set(x.lower()))
+    def is_legal_combo(x):
+        return len(x) == len(set(x.lower()))
 
     # Limit to 3-tuple combinations. 4-5-tuple combinations (just do +1)
     # are possible if you have enough time (=> ~(10! / 2) tests).
@@ -226,15 +200,15 @@ def test_sorting(usual_setup_usual_teardown):
 
     for combo in combos:
         combo_str = '-y ' + combo
-        head, *data, footer = run_rmlint(
-            combo_str + search_paths, '-o json:{p}'.format(p=replay_path),
+        _, *data, _ = run_rmlint(
+            combo_str + search_paths, f'-o json:{replay_path}',
             use_default_dir=False
         )
         assert len(data) == 7
 
         validate_order(data, combo)
 
-        head, *data, footer = run_rmlint(
+        _, *data, _ = run_rmlint(
             combo_str + search_paths, ' --replay ' + replay_path,
             use_default_dir=False
         )
@@ -258,14 +232,14 @@ def test_replay_no_dir(usual_setup_usual_teardown):
     try:
         os.chdir(TESTDIR_NAME)
         replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-        head, *data, footer = run_rmlint(
-            '-o json:{p}'.format(p=replay_path),
+        _, *data, _ = run_rmlint(
+            f'-o json:{replay_path}',
             use_default_dir=False,
         )
         assert len(data) == 3
 
-        head, *data, footer = run_rmlint(
-            '--replay {}'.format(replay_path),
+        _, *data, _ = run_rmlint(
+            f'--replay {replay_path}',
             use_default_dir=False,
         )
         assert len(data) == 3
@@ -282,13 +256,13 @@ def test_replay_unicode_fuckup(usual_setup_usual_teardown):
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p}'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'-o json:{replay_path}')
     assert len(data) == 3
-    assert set([os.path.basename(e['path']) for e in data]) == set(names)
+    assert {os.path.basename(e['path']) for e in data} == set(names)
 
-    head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'--replay {replay_path}')
     assert len(data) == 3
-    assert set([os.path.basename(e['path']) for e in data]) == set(names)
+    assert {os.path.basename(e['path']) for e in data} == set(names)
 
 
 def test_replay_tagged_order(usual_setup_usual_teardown):
@@ -301,8 +275,8 @@ def test_replay_tagged_order(usual_setup_usual_teardown):
     replay_path_b = os.path.join(TESTDIR_NAME, 'replay-b.json')
 
     # Create replay-a.json
-    head, *data, footer = run_rmlint(
-        '-S a {r} -o json:{p}'.format(r=TESTDIR_NAME + '/a', p=replay_path_a),
+    _, *data, _ = run_rmlint(
+        f'-S a {TESTDIR_NAME}/a -o json:{replay_path_a}',
         use_default_dir=False
     )
 
@@ -311,8 +285,8 @@ def test_replay_tagged_order(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('a/2')
 
     # Create replay-b.json
-    head, *data, footer = run_rmlint(
-        '{r} -o json:{p}'.format(r=TESTDIR_NAME + '/b', p=replay_path_b),
+    _, *data, _ = run_rmlint(
+        f'{TESTDIR_NAME}/b -o json:{replay_path_b}',
         use_default_dir=False
     )
 
@@ -321,8 +295,8 @@ def test_replay_tagged_order(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('b/2')
 
     # Check if b.json is preferred over a.json
-    head, *data, footer = run_rmlint(
-        '-S a --replay {a} // {b}'.format(a=replay_path_a, b=replay_path_b)
+    _, *data, _ = run_rmlint(
+        f'-S a --replay {replay_path_a} // {replay_path_b}'
     )
     assert len(data) == 4
     assert [p['is_original'] for p in data] == [True, False, False, False]
@@ -333,8 +307,8 @@ def test_replay_tagged_order(usual_setup_usual_teardown):
     assert data[3]['path'].endswith('a/2')
 
     # Check if a.json is preferred over b.json
-    head, *data, footer = run_rmlint(
-        '-S a --replay {b} // {a}'.format(a=replay_path_a, b=replay_path_b)
+    _, *data, _ = run_rmlint(
+        f'-S a --replay {replay_path_b} // {replay_path_a}'
     )
 
     assert len(data) == 4
@@ -345,8 +319,8 @@ def test_replay_tagged_order(usual_setup_usual_teardown):
     assert data[2]['path'].endswith('b/1')
     assert data[3]['path'].endswith('b/2')
 
-    head, *data, footer = run_rmlint(
-        '-S a --replay {a} // {b} -k'.format(a=replay_path_a, b=replay_path_b)
+    _, *data, _ = run_rmlint(
+        f'-S a --replay {replay_path_a} // {replay_path_b} -k'
     )
 
     assert len(data) == 4
@@ -363,10 +337,10 @@ def test_replay_duplicate_directory_size(usual_setup_usual_teardown):
     create_file('xxx', 'b/xxx')
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, footer = run_rmlint('-o json:{p} -S a'.format(p=replay_path))
+    _, *data, footer = run_rmlint(f'-o json:{replay_path} -S a')
     assert len(data) == 2
 
-    head, *data, footer = run_rmlint('--replay {p}'.format(p=replay_path))
+    _, *data, footer = run_rmlint(f'--replay {replay_path}')
     assert len(data) == 2
     assert footer['total_lint_size'] == 3
 
@@ -487,13 +461,10 @@ EXPECTED_WITH_TRAVERSED = {
     }
 }
 
-EXPECTED_LEN_WITH_TREEMERGE = sum(
-    [len(EXPECTED_WITH_TREEMERGE[key]) for key in EXPECTED_WITH_TREEMERGE])
-EXPECTED_LEN_WITHOUT_TREEMERGE = sum(
-    [len(EXPECTED_WITHOUT_TREEMERGE[key]) for key in EXPECTED_WITHOUT_TREEMERGE])
-EXPECTED_LEN_WITH_TRAVERSED = sum(
-    [len(EXPECTED_WITH_TRAVERSED[key]) for key in EXPECTED_WITH_TRAVERSED])
 
+EXPECTED_LEN_WITH_TREEMERGE = sum(map(len, EXPECTED_WITH_TREEMERGE.values()))
+EXPECTED_LEN_WITHOUT_TREEMERGE = sum(map(len, EXPECTED_WITHOUT_TREEMERGE.values()))
+EXPECTED_LEN_WITH_TRAVERSED = sum(map(len, EXPECTED_WITH_TRAVERSED.values()))
 
 def test_replay_pack_directories(usual_setup_usual_teardown):
     create_pack_and_unpack_scenario()
@@ -501,17 +472,17 @@ def test_replay_pack_directories(usual_setup_usual_teardown):
     # Do a run without -D and pack it later during --replay.
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p} -S ahD -c json:traversed'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'-o json:{replay_path} -S ahD -c json:traversed')
     assert len(data) == EXPECTED_LEN_WITH_TRAVERSED
     assert data_by_type(data) == EXPECTED_WITH_TRAVERSED
 
     # Do the run without any packing first (it should yield the same result)
-    head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} -S ahD')
     assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
     # Do the run with packing dupes into directories now:
-    head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} -S ahD -D')
     assert len(data) == EXPECTED_LEN_WITH_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
@@ -521,18 +492,18 @@ def test_replay_unpack_directories(usual_setup_usual_teardown):
 
     # Do a run with -D and pack it later during --replay.
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, footer = run_rmlint('-o json:{p} -S ahD -D'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'-o json:{replay_path} -S ahD -D')
 
     assert len(data) == EXPECTED_LEN_WITH_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
     # Do a normal --replay run first without any unpacking:
-    head, *data, footer = run_rmlint('--replay {p} -S ahD -D'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} -S ahD -D')
     assert len(data) == EXPECTED_LEN_WITH_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITH_TREEMERGE
 
     # # Do the run with unpacking the directories:
-    head, *data, footer = run_rmlint('--replay {p} -S ahD'.format(p=replay_path))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} -S ahD')
     assert len(data) == EXPECTED_LEN_WITHOUT_TREEMERGE
     assert data_by_type(data) == EXPECTED_WITHOUT_TREEMERGE
 
@@ -545,15 +516,11 @@ def test_replay_hardlink(usual_setup_usual_teardown):
 
     replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
 
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    _, *data, footer = run_rmlint(f'-o json:{replay_path}')
 
     assert len(data) == 4
 
-    head, *data, footer = run_rmlint('--replay {p}'.format(
-        p=replay_path
-    ))
+    _, *data, footer = run_rmlint(f'--replay {replay_path}')
 
     assert len(data) == 4
     assert footer['duplicates'] == 2

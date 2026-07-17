@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 import errno
+
 import pytest
 
-from tests.utils import *
+from tests.utils import create_dirs, create_file, create_link, run_rmlint
 
 NUMPAIRS = 1024+1
 
@@ -34,5 +34,5 @@ def test_manylongpathfiles(usual_setup_usual_teardown):
             pytest.skip('not enough space in testdir')
         raise
 
-    head, *data, footer = run_rmlint('-c json:no_body')
+    _, *_, footer = run_rmlint('-c json:no_body')
     assert footer['duplicates'] + footer['duplicate_sets'] == NUMPAIRS * 2 ** max_depth * 8

@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
+import subprocess
 
 import pytest
+
+from tests.utils import CKSUM_TYPES, create_file
 
 INCREMENTS = [4096, 1024, 1, 20000]
 
@@ -23,22 +23,21 @@ def streaming_compliance_check(patterns):
         for increment in INCREMENTS[1:]:
             command = cmd.format(increment=increment, algo=algo, path=a)
             output = subprocess.check_output(command.split())
-            if(output!=output0):
-                assert False, "{} fails streaming test with increment {}".format(algo, increment)
-                break
+            if(output != output0):
+                assert False, f"{algo} fails streaming test with increment {increment}"
 
-@pytest.mark.parametrize("pat", [
+
+@pytest.mark.parametrize("pat", (
         'murmur',
         'metro',
-        ['glib:', 'md5', 'sha1', 'sha256', 'sha512'],
+        ('glib:', 'md5', 'sha1', 'sha256', 'sha512'),
         'sha3',
         'blake',
         'xxhash',
         'highway'
-        ])
+        ))
 def test_hash_function(usual_setup_usual_teardown, pat):
     if(len(pat)==1):
         streaming_compliance_check(pat)
     else:
         streaming_compliance_check(pat[1:])
-

@@ -1,5 +1,17 @@
-#!/usr/bin/env python3
-from tests.utils import *
+import os
+
+import pytest
+
+from tests.utils import (
+    TESTDIR_NAME,
+    assert_exit_code,
+    create_dirs,
+    create_file,
+    create_link,
+    pattern_count,
+    run_rmlint_once,
+)
+
 
 def test_equal_files(usual_setup_usual_teardown, needs_reflink_fs):
     # test files need to be larger than btrfs node size to prevent inline extents
@@ -121,7 +133,7 @@ def test_clone_handler(usual_setup_usual_teardown, needs_reflink_fs):
     # generate rmlint.sh and check that it correctly selects files for cloning
     with assert_exit_code(0):
         run_rmlint_once(
-            '-S a -o sh:{p} -c sh:clone'.format(p=sh_path),
+            f'-S a -o sh:{sh_path} -c sh:clone',
             path_a, path_b,
             use_default_dir=False,
             with_json=False
@@ -146,7 +158,7 @@ def test_clone_handler(usual_setup_usual_teardown, needs_reflink_fs):
         )
     with assert_exit_code(0):
         run_rmlint_once(
-            '-S a -o sh:{p} -c sh:clone'.format(p=sh_path),
+            f'-S a -o sh:{sh_path} -c sh:clone',
             path_a, path_b,
             use_default_dir=False,
             with_json=False

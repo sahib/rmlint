@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
-# encoding: utf-8
 import pytest
-from tests.utils import *
+
+from tests.utils import create_dirs, create_file, run_rmlint
+
 
 @pytest.mark.slow
 def test_manylongpathfiles(usual_setup_usual_teardown):
@@ -21,5 +21,5 @@ def test_manylongpathfiles(usual_setup_usual_teardown):
         create_file(str(i), longpath + 'a' + str(i).zfill(7))
         create_file(str(i), longpath + 'b' + str(i).zfill(7))
 
-    head, *data, footer = run_rmlint('')
+    _, *data, _ = run_rmlint('')
     assert len(data) == numfiles + numpairs * 2
