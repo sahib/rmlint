@@ -39,41 +39,32 @@ def create_files():
     create_file('x', 'dir_b/1')
 
 
-def check(data, write_cache):
-    unique = [p['path'] for p in data if p['type'] == 'unique_file']
-    dupe_files = [p['path'] for p in data if p['type'] == 'duplicate_file']
-    dupe_trees = [p['path'] for p in data if p['type'] == 'duplicate_dir']
-    files_in_dupe_dirs = [p['path'] for p in data if p['type'] == 'part_of_directory']
-
-    path_in = lambda name, paths: os.path.join(TESTDIR_NAME, name) in paths
-
-    if write_cache:
-        assert len(unique) == 3
-        assert path_in('3.a', unique)
-        assert path_in('3.a_', unique)
-        assert path_in('1.b', unique)
-
-        assert len(files_in_dupe_dirs) == 2
-        assert path_in('dir_a/1', files_in_dupe_dirs)
-        assert path_in('dir_b/1', files_in_dupe_dirs)
-
-
-    assert len(dupe_trees) == 2
-    assert path_in('dir_a', dupe_trees)
-    assert path_in('dir_b', dupe_trees)
-
-    assert len(dupe_files) == 7
-    assert path_in('2.a', dupe_files)
-    assert path_in('2.a_', dupe_files)
-    assert path_in('1.a', dupe_files)
-    assert path_in('4.a', dupe_files)
-    assert path_in('4.b', dupe_files)
-    assert path_in('4.c', dupe_files)
-    assert path_in('4.d', dupe_files)
-
-
 def test_xattr_basic(usual_setup_usual_teardown):
     create_files()
+
+    def check(data, write_cache):
+        unique = [p['path'] for p in data if p['type'] == 'unique_file']
+        dupe_files = [p['path'] for p in data if p['type'] == 'duplicate_file']
+        dupe_trees = [p['path'] for p in data if p['type'] == 'duplicate_dir']
+        files_in_dupe_dirs = {p['path'] for p in data if p['type'] == 'part_of_directory'}
+
+        def assert_paths(actual, *expected):
+            expected = {os.path.join(TESTDIR_NAME, p) for p in expected}
+            assert set(actual) == expected
+
+        if write_cache:
+            assert len(unique) == 3
+            assert_paths(unique, '3.a', '3.a_', '1.b')
+
+            assert len(files_in_dupe_dirs) == 2
+            assert_paths(files_in_dupe_dirs, 'dir_a/1', 'dir_b/1')
+
+        assert len(dupe_trees) == 2
+        assert_paths(dupe_trees, 'dir_a', 'dir_b')
+
+        assert len(dupe_files) == 7
+        assert_paths(dupe_files, '2.a', '2.a_', '1.a', '4.a', '4.b', '4.c', '4.d')
+
 
     for _ in range(2):
         for write_cache in True, False:
@@ -85,6 +76,12 @@ def test_xattr_basic(usual_setup_usual_teardown):
             check(data, write_cache)
 
         _, *data, _ = run_rmlint_once('-D -S pa --xattr-clear')
+
+
+BLAKE2B = {
+    s: hashlib.blake2b(s).hexdigest().encode("ascii") + b'\0'
+    for s in (b'abc', b'def', b'longer')
+}
 
 
 @pytest.mark.parametrize("extra_opts", ["", "-D"])
@@ -116,15 +113,14 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
         xattr_2 = must_read_xattr(path_2)
         xattr_3 = must_read_xattr(path_3)
         xattr_4 = must_read_xattr(path_4)
-        assert xattr_1["user.rmlint.blake2b.cksum"] == \
-                b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
+        assert xattr_1["user.rmlint.blake2b.cksum"] == BLAKE2B[b'abc']
         assert xattr_1 == xattr_2
 
         # no --hash-unatched given.
-        assert xattr_3 == {}
+        assert not xattr_3
 
         # no --hash-uniques given.
-        assert xattr_4 == {}
+        assert not xattr_4
 
         # Run several times with --hash-unmatched.
         for _ in range(10):
@@ -136,25 +132,21 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
             xattr_2 = must_read_xattr(path_2)
             xattr_3 = must_read_xattr(path_3)
             xattr_4 = must_read_xattr(path_4)
-            assert xattr_1["user.rmlint.blake2b.cksum"] == \
-                    b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
+            assert xattr_1["user.rmlint.blake2b.cksum"] == BLAKE2B[b'abc']
             assert xattr_1 == xattr_2
 
             # size-twin with --hash-unmatched.
             xattr_3 = must_read_xattr(path_3)
-            assert xattr_3["user.rmlint.blake2b.cksum"] == \
-                    b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
+            assert xattr_3["user.rmlint.blake2b.cksum"] == BLAKE2B[b'def']
 
             # unique-length file which was not hashed -> does not need to be touched.
-            assert xattr_4 == {}
+            assert not xattr_4
 
         # Try clearing the attributes:
         _, *data, _ = run_rmlint_once(base_options + '--xattr-clear')
         assert len(data) == 2
-        assert must_read_xattr(path_1) == {}
-        assert must_read_xattr(path_2) == {}
-        assert must_read_xattr(path_3) == {}
-        assert must_read_xattr(path_4) == {}
+        for path in (path_1, path_2, path_3, path_4):
+            assert not must_read_xattr(path), path
 
         # Run several times with --hash-uniques.
         for _ in range(10):
@@ -166,27 +158,22 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
             xattr_2 = must_read_xattr(path_2)
             xattr_3 = must_read_xattr(path_3)
             xattr_4 = must_read_xattr(path_4)
-            assert xattr_1["user.rmlint.blake2b.cksum"] == \
-                    b'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923\x00'
+            assert xattr_1["user.rmlint.blake2b.cksum"] == BLAKE2B[b'abc']
             assert xattr_1 == xattr_2
 
             # size-twin with --hash-unmatched.
             xattr_3 = must_read_xattr(path_3)
-            assert xattr_3["user.rmlint.blake2b.cksum"] == \
-                    b'36badf2227521b798b78d1bd43c62520a35b9b541547ff223f35f74b1168da2cd3c8d102aaee1a0cc217b601258d80151067cdee3a6352517b8fc7f7106902d3\x00'
+            assert xattr_3["user.rmlint.blake2b.cksum"] == BLAKE2B[b'def']
 
             # unique file which was not hashed -> does not need to be touched.
             xattr_4 = must_read_xattr(path_4)
-            assert xattr_4["user.rmlint.blake2b.cksum"] == \
-                    b'b8c25c0482c3323cd3fc544cd9e0fb05eee191aedce56e307d1ea1af96f96fe63d2ac82b0a3ba5c42b7b58da92cd438065b25a51170f183889651419a242d24f\x00'
+            assert xattr_4["user.rmlint.blake2b.cksum"] == BLAKE2B[b'longer']
 
         # Try clearing the attributes:
         _, *data, _ = run_rmlint(base_options + '--xattr-clear')
         assert len(data) == 2
-        assert must_read_xattr(path_1) == {}
-        assert must_read_xattr(path_2) == {}
-        assert must_read_xattr(path_3) == {}
-        assert must_read_xattr(path_4) == {}
+        for path in (path_1, path_2, path_3, path_4):
+            assert not must_read_xattr(path), path
 
 
 # regression test for GitHub issue #475
