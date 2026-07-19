@@ -36,9 +36,7 @@
 #include "../lib/hash-utility.h"
 #include "../lib/reflink.h"
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
 #include <glib-object.h>
-#endif
 
 static void signal_handler(int signum) {
     switch(signum) {
@@ -96,11 +94,6 @@ static void maybe_run_alt_main(int argc, const char **argv, char *match_first,
 }
 
 int main(int argc, const char **argv) {
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-    /* Very old glib. Debian, Im looking at you. */
-    g_type_init();
-#endif
-
     int exit_state = EXIT_FAILURE;
 
     RM_LOG_INIT;
