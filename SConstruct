@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import os
+import re
 import sys
 import glob
+import shlex
+import shutil
 import subprocess
 import platform
 
@@ -12,8 +15,12 @@ from SCons.Script.SConscript import SConsEnvironment
 
 pkg_config = os.getenv('PKG_CONFIG', 'pkg-config')
 
-DEFAULT_PREFIX = '/usr/bin'
+DEFAULT_PREFIX = '/usr'
 PREFIX_RECORD_FILE = '.prefix.txt'
+
+# Features that can be toggled with --with-<name>/--without-<name>:
+OPTIONAL_FLAGS = ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-schemas']
+
 
 def read_version():
     with open('.version', 'r') as handle:
@@ -23,9 +30,9 @@ def read_version():
     version_numbers, release_name = version_string.split(' ', 1)
     if '@' in release_name:
         release_name, static_git_rev = release_name.split('@', 1)
-        static_git_rev.strip()
+        static_git_rev = static_git_rev.strip()
 
-    major, minor, patch = [int(v) for v in version_numbers.split('.')]
+    major, minor, patch = (int(v) for v in version_numbers.split('.'))
     return major, minor, patch, release_name.strip(), static_git_rev
 
 
@@ -35,31 +42,6 @@ Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
 ###########################################################################
 #                                Utilities                                #
 ###########################################################################
-
-def check_gcc_version(context):
-    context.Message('Checking for GCC version... ')
-
-    try:
-        v = subprocess.check_output(
-            '{cc} -E -P -'.format(cc=conf.env['CC']),
-            shell=True, input=b'__GNUC__\n',
-        )
-        try:
-            v = int(v)
-            context.Result(str(v))
-        except ValueError:
-            print('Expected a number, but got: ' + v)
-            v = 0
-    except subprocess.CalledProcessError:
-        print('Unable to find GCC version.')
-        v = 0
-    except AttributeError:
-        print('Not allowed.')
-        v = 0
-
-    conf.env['__GNUC__'] = v
-    return v
-
 
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
@@ -72,16 +54,14 @@ def check_pkgconfig(context, version):
 def check_pkg(context, name, varname, required=True):
     rc, text = 1, ''
 
-    try:
-        if GetOption('with_' + name.split()[0]) is False:
-            context.Message('Explicitly disabling %s...' % name)
-            rc = 0
-    except AttributeError:
-        pass
+    package = name.split()[0]
+    if package in OPTIONAL_FLAGS and GetOption('with_' + package) is False:
+        context.Message(f'Explicitly disabling {name}...')
+        rc = 0
 
     if rc != 0:
-        context.Message('Checking for %s... ' % name)
-        rc, text = context.TryAction('%s --exists \'%s\'' % (pkg_config, name))
+        context.Message(f'Checking for {name}... ')
+        rc, text = context.TryAction(f"{pkg_config} --exists '{name}'")
 
     # 0 is defined as error by TryAction
     if rc == 0 and required:
@@ -99,16 +79,14 @@ def check_git_rev(context):
     rev = STATIC_GIT_REV
 
     try:
-        rev = subprocess.check_output('git log --pretty=format:"%h" -n 1', shell=True)
-    except subprocess.CalledProcessError:
+        rev = subprocess.check_output(
+            ['git', 'log', '--pretty=format:%h', '-n', '1'],
+            stderr=subprocess.DEVNULL,
+        ).decode('ascii').strip()
+    except (OSError, subprocess.CalledProcessError):
+        # Not a git checkout (e.g. building from a release tarball, where
+        # STATIC_GIT_REV from .version takes over) or git is unavailable.
         print('Unable to find git revision.')
-    except AttributeError:
-        # Patch for some special sandbox permission problems.
-        # See https://github.com/sahib/rmlint/issues/143#issuecomment-139929733
-        print('Not allowed.')
-
-    if hasattr(rev, 'decode'):
-       rev = rev.decode('ascii')
 
     rev = rev or 'unknown'
     conf.env['gitrev'] = rev
@@ -311,24 +289,6 @@ def check_sha512(context):
     return rc
 
 
-def check_c11(context):
-    rc = 1
-
-    context.Message('Checking for -std=c11 support...')
-    try:
-        cmd = 'echo "#if __STDC_VERSION__ < 201112L\n#error \"No C11 support!\"\n#endif" | {cc} -xc - -std=c11 -c -o /dev/null'
-        subprocess.check_call(
-            cmd.format(cc=conf.env['CC']),
-            shell=True
-        )
-    except subprocess.CalledProcessError:
-        rc = 0  # Oops.
-
-    conf.env['HAVE_C11'] = rc
-    context.Result(rc)
-    return rc
-
-
 def check_btrfs_h(context):
     rc = 1
     if tests.CheckHeader(
@@ -403,28 +363,42 @@ def check_builtin_cpu_supports(context):
     return rc
 
 
+def read_cpu_flags():
+    try:
+        from cpuinfo import get_cpu_info
+        return set(get_cpu_info().get('flags', []))
+    except Exception:
+        pass
+
+    # No py-cpuinfo; /proc/cpuinfo uses the same flag names.
+    try:
+        with open('/proc/cpuinfo') as handle:
+            for line in handle:
+                key, _, value = line.partition(':')
+                if key.strip() == 'flags':
+                    return set(value.split())
+    except OSError:
+        pass
+
+    print('   Unable to detect CPU flags (tried py-cpuinfo and /proc/cpuinfo)')
+    return set()
+
+
 def check_cpu_extensions(context):
-	l_cpuInfo = {'flags' : []}
-	print('==> Checking CPU checksum and vector extensions...')
-	rc = 1
-	if ARGUMENTS.get('CPU_EXTENSIONS') != '0':
-		try:
-			import sys
-			sys.path.append('submodules/py-cpuinfo')
-			from cpuinfo import get_cpu_info
-			l_cpuInfo = get_cpu_info()
-		except:
-			print('   Unable to get cpuinfo, maybe install py-cpuinfo')
-			rc = 0
+    print('==> Checking CPU checksum and vector extensions...')
 
-	for ext in ['AVX512F', 'AVX512VL', 'AVX2', 'SSE4_1', 'SSE2']:
-		have_ext = 1 if ext.lower() in l_cpuInfo['flags'] else 0
-		conf.env['HAVE_' + ext] = have_ext
-		print('    {}: {}'.format(ext, have_ext))
+    cpu_flags = set()
+    if ARGUMENTS.get('CPU_EXTENSIONS') != '0':
+        cpu_flags = read_cpu_flags()
 
-	context.did_show_result = True
-	context.Result(rc)
-	return rc
+    for ext in ['AVX512F', 'AVX512VL', 'AVX2', 'SSE4_1', 'SSE2']:
+        have_ext = int(ext.lower() in cpu_flags)
+        conf.env['HAVE_' + ext] = have_ext
+        print(f'    {ext}: {have_ext}')
+
+    context.did_show_result = True
+    context.Result(1)
+    return 1
 
 def create_uninstall_target(env, path):
     env.Command("uninstall-" + path, path, [
@@ -437,24 +411,27 @@ Export('create_uninstall_target')
 
 
 def find_sphinx_binary():
-    PATH = os.getenv('PATH')
-    binaries = []
-    for path in PATH.split(os.pathsep):
-        binaries.extend(glob.glob(os.path.join(path, 'sphinx-build*')))
+    binary = shutil.which('sphinx-build')
+    if binary:
+        return binary
 
+    # Fall back to versioned names like sphinx-build-8.1, newest first.
     def version_key(binary):
-        splitted = binary.rsplit('-', 1)
-        if len(splitted) < 3:
-            return 0
-        return float(splitted[-1])
+        match = re.search(r'(\d+(?:\.\d+)?)$', binary)
+        return float(match.group(1)) if match else 0.0
 
-    binaries = sorted(binaries, key=version_key, reverse=True)
+    binaries = []
+    for path in os.environ.get('PATH', '').split(os.pathsep):
+        binaries.extend(glob.glob(os.path.join(path, 'sphinx-build-*')))
+
+    binaries.sort(key=version_key, reverse=True)
     if binaries:
-        print('Using sphinx-build binary: {}'.format(binaries[0]))
+        print(f'Using sphinx-build binary: {binaries[0]}')
         return binaries[0]
-    else:
-        print('Unable to find sphinx binary in PATH')
-        print('Will be unable to build manpage or html docs')
+
+    print('Unable to find sphinx binary in PATH')
+    print('Will be unable to build manpage or html docs')
+    return None
 
 
 Export('find_sphinx_binary')
@@ -463,52 +440,38 @@ Export('find_sphinx_binary')
 #                                 Colors!                                 #
 ###########################################################################
 
-if sys.stdout.isatty():
-    COLORS = {
-        'cyan': '\033[96m',
-        'purple': '\033[95m',
-        'blue': '\033[94m',
-        'green': '\033[92m',
-        'yellow': '\033[93m',
-        'red': '\033[91m',
-        'grey': '\x1b[30;1m',
-        'end': '\033[0m'
-    }
-else:
-    COLORS = {
-        'cyan': '',
-        'purple': '',
-        'blue': '',
-        'green': '',
-        'yellow': '',
-        'red': '',
-        'grey': '',
-        'end': ''
-    }
+COLORS = {
+    'cyan': '\033[96m',
+    'purple': '\033[95m',
+    'blue': '\033[94m',
+    'green': '\033[92m',
+    'yellow': '\033[93m',
+    'red': '\033[91m',
+    'grey': '\x1b[30;1m',
+    'end': '\033[0m'
+}
 
-# If the output is not a terminal, remove the COLORS
 if not sys.stdout.isatty():
-    for key, value in COLORS.items():
-        COLORS[key] = ''
+    COLORS = dict.fromkeys(COLORS, '')
 
 # Configure the actual colors to our liking:
-compile_source_message = '%sCompiling %s==> %s$SOURCE%s' % \
-    (COLORS['blue'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+compile_source_message = \
+    f"{COLORS['blue']}Compiling {COLORS['purple']}==> {COLORS['yellow']}$SOURCE{COLORS['end']}"
 
-compile_shared_source_message = '%sCompiling shared %s==> %s$SOURCE%s' % \
-    (COLORS['blue'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+compile_shared_source_message = \
+    f"{COLORS['blue']}Compiling shared {COLORS['purple']}==> {COLORS['yellow']}$SOURCE{COLORS['end']}"
 
-link_program_message = '%sLinking Program %s==> %s$TARGET%s' % \
-    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+link_program_message = \
+    f"{COLORS['red']}Linking Program {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
 
-link_library_message = '%sLinking Static Library %s==> %s$TARGET%s' % \
-    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+link_library_message = \
+    f"{COLORS['red']}Linking Static Library {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
 
-ranlib_library_message = '%sRanlib Library %s==> %s$TARGET%s' % \
-    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+ranlib_library_message = \
+    f"{COLORS['red']}Ranlib Library {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
 
-link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
-    (COLORS['red'], COLORS['purple'], COLORS['yellow'], COLORS['end'])
+link_shared_library_message = \
+    f"{COLORS['red']}Linking Shared Library {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
 
 ###########################################################################
 #                            Option Parsing                               #
@@ -517,15 +480,13 @@ link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
 def get_default_prefix():
     if 'uninstall' in COMMAND_LINE_TARGETS:
         try:
-            with open(PREFIX_RECORD_FILE, 'r') as f:
-                PREFIX = f.read()
-                print('===> Using cached installation prefix "{}"'
-                        .format(PREFIX))
-                return PREFIX
-        except Exception as err:
-            print('===> Failed to get cached installation prefix: {}'
-                    .format(err))
-        return DEFAULT_PREFIX
+            with open(PREFIX_RECORD_FILE, 'r') as handle:
+                prefix = handle.read()
+            print(f'===> Using cached installation prefix "{prefix}"')
+            return prefix
+        except OSError as err:
+            print(f'===> Failed to get cached installation prefix: {err}')
+    return DEFAULT_PREFIX
 
 
 AddOption(
@@ -546,7 +507,7 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
-for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-schemas']:
+for suffix in OPTIONAL_FLAGS:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
         dest='with_' + suffix
@@ -555,8 +516,6 @@ for suffix in ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-sche
         '--with-' + suffix, action='store_const', default=True, const=True,
         dest='with_' + suffix
     )
-
-env = Environment(PREFIX = GetOption('prefix'))
 
 if 'install' in COMMAND_LINE_TARGETS:
     # record the installation prefix for later uninstall
@@ -595,7 +554,6 @@ Export('env')
 
 # Configuration:
 conf = Configure(env, custom_tests={
-    'check_gcc_version': check_gcc_version,
     'check_pkgconfig': check_pkgconfig,
     'check_pkg': check_pkg,
     'check_git_rev': check_git_rev,
@@ -608,7 +566,6 @@ conf = Configure(env, custom_tests={
     'check_posix_fadvise': check_posix_fadvise,
     'check_sys_block': check_sys_block,
     'check_bigfiles': check_bigfiles,
-    'check_c11': check_c11,
     'check_gettext': check_gettext,
     'check_linux_limits': check_linux_limits,
     'check_btrfs_h': check_btrfs_h,
@@ -680,17 +637,9 @@ if conf.env['HAVE_BLKID']:
 if conf.env['HAVE_GIO_UNIX']:
     packages.append('gio-unix-2.0')
 
-# Support museums or other debian flavours:
-conf.check_c11()
-if conf.env['HAVE_C11']:
-    c_standard = ['-std=c11']
-else:
-    c_standard = ['-std=c99', '-fms-extensions']
-
-conf.env.Append(CCFLAGS=c_standard)
-
+# C11 is assumed on all supported platforms (Debian 13 / RHEL 10 floors):
 conf.env.Append(CCFLAGS=[
-    '-pipe', '-D_GNU_SOURCE'
+    '-std=c11', '-pipe', '-D_GNU_SOURCE'
 ])
 
 # Support cygwin:
@@ -708,9 +657,7 @@ if any(cc in os.path.basename(conf.env['CC']) for cc in ('clang', 'include-what-
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
 else:
-    gcc_version = conf.check_gcc_version()
-    if gcc_version >= 8:
-        conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
+    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CCFLAGS=[
@@ -751,16 +698,16 @@ if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
 if conf.env['HAVE_AVX2']:
-	conf.env.Append(CCFLAGS=['-mavx2'])
+    conf.env.Append(CCFLAGS=['-mavx2'])
 
 if conf.env['HAVE_AVX512F'] and conf.env['HAVE_AVX512VL']:
-	conf.env.Append(CCFLAGS=['-mavx512f', '-mavx512vl'])
+    conf.env.Append(CCFLAGS=['-mavx512f', '-mavx512vl'])
 
 if conf.env['HAVE_SSE4_1']:
-	conf.env.Append(CCFLAGS=['-msse4.1'])
+    conf.env.Append(CCFLAGS=['-msse4.1'])
 
 if conf.env['HAVE_SSE2']:
-	conf.env.Append(CCFLAGS=['-msse2'])
+    conf.env.Append(CCFLAGS=['-msse2'])
 
 # NB: After checks so they don't fail
 conf.env.Append(CCFLAGS=['-Werror=undef'])
@@ -799,20 +746,14 @@ if ARGUMENTS.get('SYMBOLS') == '1':
 
 value = ARGUMENTS.get('CCFLAGS')
 if value:
-    import shlex
     print("Appending custom build flags provided on command line: " + value)
     conf.env.Append(CCFLAGS=shlex.split(value))
-
-SConsEnvironment.Chmod = SCons.Action.ActionFactory(
-    os.chmod,
-    lambda dest, mode: 'Chmod("%s", 0%o)' % (dest, mode)
-)
 
 
 def InstallPerm(env, dest, files, perm):
     obj = env.Install(dest, files)
     for i in obj:
-        env.AddPostAction(i, env.Chmod(str(i), perm))
+        env.AddPostAction(i, Chmod(str(i), perm))
     return dest
 
 # put this function "in" scons
@@ -822,28 +763,9 @@ SConsEnvironment.InstallPerm = InstallPerm
 env = conf.Finish()
 
 def get_cpu_count():
-    # priority: environ('NUM_CPU'), else try to read actual cpu count, else fallback
-    fallback = 4
-
     if 'NUM_CPU' in os.environ:
-        return int(os.environ.get('NUM_CPU'))
-
-    # try multiprocessing.cpu_count() (Python 2.6+)
-    try:
-        import multiprocessing
-        return multiprocessing.cpu_count()
-    except (ImportError, NotImplementedError):
-        pass
-
-   # try psutil.cpu_count()
-    try:
-        import psutil
-        return psutil.cpu_count()
-    except (ImportError, AttributeError):
-        pass
-
-    # default value
-    return fallback
+        return int(os.environ['NUM_CPU'])
+    return os.cpu_count() or 4
 
 
 # set number of parallel jobs during build
@@ -852,7 +774,7 @@ def get_cpu_count():
 # or `scons --jobs=<n>`
 SetOption('num_jobs', get_cpu_count())
 
-print ("Running with --jobs=" + repr(GetOption('num_jobs')))
+print(f"Running with --jobs={GetOption('num_jobs')}")
 
 library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')
@@ -865,15 +787,8 @@ SConscript('gui/SConscript')
 
 
 def build_tar_gz(target=None, source=None, env=None):
-    tarball = 'rmlint-{a}.{b}.{c}.tar.gz'.format(
-        a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
-    )
-
-    subprocess.call(
-        'git archive HEAD -9 --format tar.gz -o ' + tarball,
-        shell=True
-    )
-
+    tarball = f'rmlint-{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}.tar.gz'
+    subprocess.call(['git', 'archive', 'HEAD', '-9', '--format', 'tar.gz', '-o', tarball])
     print('Wrote tarball to ./' + tarball)
 
 
@@ -883,48 +798,33 @@ if 'dist' in COMMAND_LINE_TARGETS:
 
 if 'release' in COMMAND_LINE_TARGETS:
     def replace_version_strings(target=None, source=None, env=None):
-        new_version = '{a}.{b}.{c}'.format(
-            a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH
-        )
+        print('Patching .version file...')
+        with open('.version', 'r') as handle:
+            text = handle.read().strip()
 
-        cmds = [
-            r'sed -i "s/2\.8\.0/{v}/g" po/rmlint.pot',
-            r'sed -i "s/^Version:\(\s*\)2\.8\.0/Version:\\1{v}/g" pkg/fedora/rmlint.spec'
-        ]
+        if '@' not in text:
+            with open('.version', 'w') as handle:
+                handle.write(f"{text}@{conf.env['gitrev']}\n")
 
-        for cmd in cmds:
-            print('Running: ' + cmd)
-            subprocess.check_call(cmd.format(v=new_version), shell=True)
+            # Commit the .version change, so git archive can see it.
+            subprocess.check_call(
+                'git add .version && git commit -m ".version bump; you should not see this commit."',
+                shell=True
+            )
 
-        if conf.env['gitrev'] is not None:
-            print('Patching .version file...')
-            with open('.version', 'r') as handle:
-                text = handle.read().strip()
-
-            if '@' not in text:
-                with open('.version', 'w') as handle:
-                    handle.write(text + '@' + conf.env['gitrev'] + '\n')
-
-                # Commit the .version change, so git archive can see it.
-                subprocess.check_call(
-                    'git add .version && git commit -m \".version bump; you should not see this commit.\"',
-                    shell=True
-                )
-
-            # Build the .tgz on the current state
-            build_tar_gz()
-
-            # We do not want lots of temp commits, so revert the latest one.
-            if '@' not in text:
-                subprocess.check_call('git reset --hard HEAD^', shell=True)
-                with open('.version', 'w') as handle:
-                    handle.write(text + '\n')
-
-            return
-
+        # Build the .tgz on the current state
         build_tar_gz()
 
-    env.Command('release', None, Action(replace_version_strings, "Bumping version..."))
+        # We do not want lots of temp commits, so revert the latest one.
+        if '@' not in text:
+            subprocess.check_call('git reset --hard HEAD^', shell=True)
+            with open('.version', 'w') as handle:
+                handle.write(text + '\n')
+
+    release = env.Command(
+        'release', None, Action(replace_version_strings, "Bumping version...")
+    )
+    env.Depends(release, env.Alias('gettext'))
 
 
 if 'config' in COMMAND_LINE_TARGETS:
