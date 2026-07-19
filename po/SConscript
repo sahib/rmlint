@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 Import('env')
 Import('create_uninstall_target')
 Import('VERSION_MAJOR')
@@ -12,19 +9,13 @@ import subprocess
 
 if env['HAVE_MSGFMT']:
     for src in env.Glob('*.po'):
-        lang = os.path.basename(src.get_abspath()[:-3])
-        dest = lang + '.mo'
+        lang = os.path.basename(src.get_abspath())[:-3]
+        mo = env.Command(f'{lang}.mo', src, 'msgfmt $SOURCE -o $TARGET')
 
-        cmd = env.AlwaysBuild(
-            env.Command(dest, src, 'msgfmt $SOURCE -o $TARGET')
-        )
-
-        path = '$PREFIX/share/locale/%s/LC_MESSAGES/rmlint.mo' % lang
+        path = f'$PREFIX/share/locale/{lang}/LC_MESSAGES/rmlint.mo'
 
         if 'install' in COMMAND_LINE_TARGETS:
-            target = env.InstallAs(path, dest)
-            env.Depends(target, cmd)
-            env.Alias('install', [target])
+            env.Alias('install', env.InstallAs(path, mo))
 
         if 'uninstall' in COMMAND_LINE_TARGETS:
             create_uninstall_target(env, path)
@@ -32,18 +23,15 @@ if env['HAVE_MSGFMT']:
 
 def xgettext():
     return subprocess.call(
-        'xgettext --package-name rmlint -k_ -kN_ ' \
-        '--package-version {}.{}.{} --default-domain rmlint ' \
-        '--add-location=file ' \
-        '--join-existing ' \
-        '--output po/rmlint.pot ' \
-        '--from-code UTF-8 ' \
-        '$(find src lib -iname "*.[ch]") &&' \
-        'sed -i "s/CHARSET/UTF-8/g" po/rmlint.pot'.format(
-            VERSION_MAJOR,
-            VERSION_MINOR,
-            VERSION_PATCH
-        ),
+        'xgettext --package-name rmlint -k_ -kN_ '
+        f'--package-version {VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
+        '--default-domain rmlint '
+        '--add-location=file '
+        '--join-existing '
+        '--output po/rmlint.pot '
+        '--from-code UTF-8 '
+        '$(find src lib -iname "*.[ch]") && '
+        'sed -i "s/CHARSET/UTF-8/g" po/rmlint.pot',
         shell=True
     )
 
@@ -55,11 +43,11 @@ def xgettext_action(target=None, source=None, env=None):
         Exit(status)
 
 
-def msgmerge(target=None, source=None, env=None):
+def msgmerge():
     return subprocess.call(
-        'set -e;' \
-        'for p in po/*.po; do' \
-        '  msgmerge --update --backup=none "$p" po/rmlint.pot;' \
+        'set -e; '
+        'for p in po/*.po; do '
+        '  msgmerge --update --backup=none "$p" po/rmlint.pot; '
         'done',
         shell=True
     )
@@ -75,7 +63,7 @@ def msgmerge_action(target=None, source=None, env=None):
 def gettext_action(target=None, source=None, env=None):
     status = xgettext()
     if status:
-        ('Error: gettext failed while running xgettext')
+        print('Error: gettext failed while running xgettext')
         Exit(status)
     status = msgmerge()
     if status:
@@ -83,20 +71,15 @@ def gettext_action(target=None, source=None, env=None):
         Exit(status)
 
 
-if 'xgettext' in COMMAND_LINE_TARGETS:
-    env.Alias(
-        'xgettext',
-        env.Command('xgettext', None, Action(xgettext_action, "Running xgettext"))
-    )
-
-if 'msgmerge' in COMMAND_LINE_TARGETS:
-    env.Alias(
-        'msgmerge',
-        env.Command('msgmerge', None, Action(msgmerge_action, "Running msgmerge"))
-    )
-
-if 'gettext' in COMMAND_LINE_TARGETS:
-    env.Alias(
-        'gettext',
-        env.Command('gettext', None, Action(gettext_action, "Running gettext"))
-    )
+env.Alias(
+    'xgettext',
+    env.Command('xgettext', None, Action(xgettext_action, "Running xgettext"))
+)
+env.Alias(
+    'msgmerge',
+    env.Command('msgmerge', None, Action(msgmerge_action, "Running msgmerge"))
+)
+env.Alias(
+    'gettext',
+    env.Command('gettext', None, Action(gettext_action, "Running gettext"))
+)

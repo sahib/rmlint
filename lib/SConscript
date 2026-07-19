@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 Import('env')
 Import('VERSION_MAJOR')
 Import('VERSION_MINOR')
@@ -9,47 +6,45 @@ Import('VERSION_NAME')
 Import('create_uninstall_target')
 
 import os
-import codecs
+
+CONFIG_VALUES = dict(
+    INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
+    HAVE_LIBINTL=env['HAVE_GETTEXT'],
+    HAVE_LIBELF=env['HAVE_LIBELF'],
+    HAVE_GIO_UNIX=env['HAVE_GIO_UNIX'],
+    HAVE_FIEMAP=env['HAVE_FIEMAP'],
+    HAVE_XATTR=env['HAVE_XATTR'],
+    HAVE_LXATTR=env['HAVE_LXATTR'],
+    HAVE_SHA512=env['HAVE_SHA512'],
+    HAVE_BIGFILES=env['HAVE_BIGFILES'],
+    HAVE_STAT64=env['HAVE_BIG_STAT'],
+    HAVE_POSIX_FADVISE=env['HAVE_POSIX_FADVISE'],
+    HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
+    HAVE_BLKID=env['HAVE_BLKID'],
+    HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
+    HAVE_LINUX_LIMITS=env['HAVE_LINUX_LIMITS'],
+    HAVE_LINUX_FS_H=env['HAVE_LINUX_FS_H'],
+    HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
+    HAVE_MM_CRC32_U64=env['HAVE_MM_CRC32_U64'],
+    HAVE_AVX2=env['HAVE_AVX2'],
+    HAVE_AVX512F=env['HAVE_AVX512F'],
+    HAVE_AVX512VL=env['HAVE_AVX512VL'],
+    HAVE_SSE4_1=env['HAVE_SSE4_1'],
+    HAVE_BUILTIN_CPU_SUPPORTS=env['HAVE_BUILTIN_CPU_SUPPORTS'],
+    HAVE_UNAME=env['HAVE_UNAME'],
+    HAVE_SYSMACROS_H=env['HAVE_SYSMACROS_H'],
+    VERSION_MAJOR=VERSION_MAJOR,
+    VERSION_MINOR=VERSION_MINOR,
+    VERSION_PATCH=VERSION_PATCH,
+    VERSION_NAME=VERSION_NAME,
+    VERSION_GIT_REVISION=env['gitrev'].strip(),
+)
 
 
 def build_config_template(target, source, env):
-    text = source[0].get_text_contents()
-
-    with codecs.open(target[0].get_abspath(), 'w') as handle:
-        config_h = text.format(
-            INSTALL_PREFIX=GetOption('actual_prefix') or GetOption('prefix'),
-            HAVE_LIBINTL=env['HAVE_GETTEXT'],
-            HAVE_LIBELF=env['HAVE_LIBELF'],
-            HAVE_GIO_UNIX=env['HAVE_GIO_UNIX'],
-            HAVE_FIEMAP=env['HAVE_FIEMAP'],
-            HAVE_XATTR=env['HAVE_XATTR'],
-            HAVE_LXATTR=env['HAVE_LXATTR'],
-            HAVE_SHA512=env['HAVE_SHA512'],
-            HAVE_BIGFILES=env['HAVE_BIGFILES'],
-            HAVE_STAT64=env['HAVE_BIG_STAT'],
-            HAVE_POSIX_FADVISE=env['HAVE_POSIX_FADVISE'],
-            HAVE_BIG_OFF_T=env['HAVE_BIG_OFF_T'],
-            HAVE_BLKID=env['HAVE_BLKID'],
-            HAVE_SYSBLOCK=env['HAVE_SYSBLOCK'],
-            HAVE_LINUX_LIMITS=env['HAVE_LINUX_LIMITS'],
-            HAVE_LINUX_FS_H=env['HAVE_LINUX_FS_H'],
-            HAVE_BTRFS_H=env['HAVE_BTRFS_H'],
-            HAVE_MM_CRC32_U64=env['HAVE_MM_CRC32_U64'],
-            HAVE_AVX2=env['HAVE_AVX2'],
-            HAVE_AVX512F=env['HAVE_AVX512F'],
-            HAVE_AVX512VL=env['HAVE_AVX512VL'],
-            HAVE_SSE4_1=env['HAVE_SSE4_1'],
-            HAVE_BUILTIN_CPU_SUPPORTS=env['HAVE_BUILTIN_CPU_SUPPORTS'],
-            HAVE_UNAME=env['HAVE_UNAME'],
-            HAVE_SYSMACROS_H=env['HAVE_SYSMACROS_H'],
-            VERSION_MAJOR=VERSION_MAJOR,
-            VERSION_MINOR=VERSION_MINOR,
-            VERSION_PATCH=VERSION_PATCH,
-            VERSION_NAME=VERSION_NAME,
-            VERSION_GIT_REVISION=env['gitrev'].strip()
-        )
-
-        handle.write(config_h)
+    template = source[0].get_text_contents()
+    with open(target[0].get_abspath(), 'w') as handle:
+        handle.write(template.format(**source[1].read()))
 
 
 def prepare_c_source(text):
@@ -61,59 +56,55 @@ def prepare_c_source(text):
     return text
 
 
+def embed_formatter_payload(target, source, placeholder):
+    """Embed source[1] into the C template source[0]."""
+    template = source[0].get_text_contents()
+    payload = prepare_c_source(source[1].get_text_contents())
+
+    with open(target[0].get_abspath(), 'w') as handle:
+        handle.write(template.replace(placeholder, payload))
+
+
 def build_python_formatter(target, source, env):
-    text = source[0].get_text_contents()
-
-    with codecs.open('lib/formats/py.py', 'r') as handle:
-        py_source = prepare_c_source(handle.read())
-
-    with codecs.open(target[0].get_abspath(), 'w') as handle:
-        handle.write(text.replace('<<PYTHON_SOURCE>>', py_source))
+    embed_formatter_payload(target, source, '<<PYTHON_SOURCE>>')
 
 
 def build_sh_formatter(target, source, env):
-    text = source[0].get_text_contents()
-
-    with codecs.open('lib/formats/sh.sh', 'r') as handle:
-        sh_source = prepare_c_source(handle.read())
-
-    with codecs.open(target[0].get_abspath(), 'w') as handle:
-        handle.write(text.replace('<<SH_SOURCE>>', sh_source))
+    embed_formatter_payload(target, source, '<<SH_SOURCE>>')
 
 
 config = env.Command(
-    'config.h', 'config.h.in', build_config_template
+    'config.h', ['config.h.in', env.Value(CONFIG_VALUES)], build_config_template
 )
 
 py_formatter = env.Command(
-    'formats/py.c', 'formats/py.c.in', build_python_formatter
+    'formats/py.c', ['formats/py.c.in', 'formats/py.py'], build_python_formatter
 )
 
 sh_formatter = env.Command(
-    'formats/sh.c', 'formats/sh.c.in', build_sh_formatter
+    'formats/sh.c', ['formats/sh.c.in', 'formats/sh.sh'], build_sh_formatter
 )
 
 blake3 = Glob('checksums/blake3/*.[cS]')
 if not env['HAVE_AVX2']:
-	print('Not compiling blake3 avx2 options')
-	blake3 = [f for f in blake3 if 'avx2' not in f.path]
-	env.Append(CCFLAGS=['-DBLAKE3_NO_AVX2'])
+    print('Not compiling blake3 avx2 options')
+    blake3 = [f for f in blake3 if 'avx2' not in f.path]
+    env.Append(CCFLAGS=['-DBLAKE3_NO_AVX2'])
 
-
-if not env['HAVE_AVX512F'] or not  env['HAVE_AVX512VL']:
-	print('Not compiling blake3 avx512 options')
-	blake3 = [f for f in blake3 if 'avx512' not in f.path]
-	env.Append(CCFLAGS=['-DBLAKE3_NO_AVX512'])
+if not env['HAVE_AVX512F'] or not env['HAVE_AVX512VL']:
+    print('Not compiling blake3 avx512 options')
+    blake3 = [f for f in blake3 if 'avx512' not in f.path]
+    env.Append(CCFLAGS=['-DBLAKE3_NO_AVX512'])
 
 if not env['HAVE_SSE4_1']:
-	print('Not compiling blake3 sse41 options')
-	blake3 = [f for f in blake3 if 'sse41' not in f.path]
-	env.Append(CCFLAGS=['-DBLAKE3_NO_SSE41'])
+    print('Not compiling blake3 sse41 options')
+    blake3 = [f for f in blake3 if 'sse41' not in f.path]
+    env.Append(CCFLAGS=['-DBLAKE3_NO_SSE41'])
 
 if not env['HAVE_SSE2']:
-	print('Not compiling blake3 sse2 options')
-	blake3 = [f for f in blake3 if 'sse2' not in f.path]
-	env.Append(CCFLAGS=['-DBLAKE3_NO_SSE2'])
+    print('Not compiling blake3 sse2 options')
+    blake3 = [f for f in blake3 if 'sse2' not in f.path]
+    env.Append(CCFLAGS=['-DBLAKE3_NO_SSE2'])
 
 library = env.Library(
     '../rmlint',
@@ -129,9 +120,6 @@ library = env.Library(
 
 headers = Glob('*.h')
 env.Depends(library, [config, py_formatter, sh_formatter])
-env.AlwaysBuild(config)
-env.AlwaysBuild(py_formatter)
-env.AlwaysBuild(sh_formatter)
 
 # Disable this for now until someone
 # announces interest in this.
@@ -143,12 +131,12 @@ if 'install' in COMMAND_LINE_TARGETS and INSTALL_LIBRARY:
         env.Alias('install', env.Install('$PREFIX/include/rmlint', [header]))
 
 if 'uninstall' in COMMAND_LINE_TARGETS and INSTALL_LIBRARY:
-    create_uninstall_target(env, "$PREFIX/{}/{}".format(
+    create_uninstall_target(env, '$PREFIX/{}/{}'.format(
         GetOption('libdir'),
         os.path.basename(str(library[0]))
     ))
 
     for header in headers:
-        create_uninstall_target(env, "$PREFIX/include/rmlint/" + str(header))
+        create_uninstall_target(env, '$PREFIX/include/rmlint/' + str(header))
 
 Return('library')

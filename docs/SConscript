@@ -1,39 +1,26 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 Import('env')
-Import('VERSION_MAJOR')
-Import('VERSION_MINOR')
-Import('VERSION_PATCH')
 Import('create_uninstall_target')
 Import('find_sphinx_binary')
 
-
 import os
-import time
-import subprocess
 import glob
+import subprocess
 from functools import partial
+
+SPHINX_BINARY = find_sphinx_binary()
 
 
 def run_sphinx_binary(builder, **kwargs):
-    sphinx_binary = find_sphinx_binary()
-
-    if sphinx_binary is None:
-        return
-
     # SCons passes list of source files but sphinx wants dir name
     source_dir = os.path.dirname(str(kwargs['source'][0]))
     build_dir = os.path.dirname(str(kwargs['target'][0]))
+    os.makedirs(build_dir, exist_ok=True)
 
-    try:
-        os.makedirs(build_dir)
-    except OSError:
-        pass
+    subprocess.check_call([
+        SPHINX_BINARY, '-Q', '-D', 'man_make_section_directory=0',
+        '-b', builder, source_dir, build_dir
+    ])
 
-    subprocess.check_call(
-        [sphinx_binary, '-Q', '-D', 'man_make_section_directory=0', '-b', builder, source_dir, build_dir]
-    )
 
 # Do not use partial(), but a real function.
 # Scons uses this to check if the previous action
@@ -43,35 +30,37 @@ def run_sphinx_binary_man(**kwargs):
     run_sphinx_binary('man', **kwargs)
 
 
-manpage = env.Command(
-    '_build/man/rmlint.1', 'rmlint.1.rst',
-    env.Action(run_sphinx_binary_man, "Building manpage from rst...")
-)
-
-env.Default(manpage)
-
-env.Alias('man', manpage)
-
-
-if 'install' in COMMAND_LINE_TARGETS:
-    man_install = env.InstallPerm(
-        '$PREFIX/share/man/man1',
-        [manpage],
-        int("644", 8),
+if SPHINX_BINARY:
+    manpage = env.Command(
+        '_build/man/rmlint.1', 'rmlint.1.rst',
+        env.Action(run_sphinx_binary_man, "Building manpage from rst...")
     )
-    target = env.Alias('install', [manpage, man_install])
+
+    env.Default(manpage)
+    env.Alias('man', manpage)
+
+    if 'install' in COMMAND_LINE_TARGETS:
+        man_install = env.InstallPerm(
+            '$PREFIX/share/man/man1',
+            [manpage],
+            0o644,
+        )
+        env.Alias('install', [manpage, man_install])
+
+    if 'docs' in COMMAND_LINE_TARGETS:
+        sources = glob.glob('*.rst')
+        sources.remove('rmlint.1.rst')
+        targets = ['_build/html/' + os.path.splitext(s)[0] + '.html' for s in sources]
+        env.Alias('docs',
+            env.Command(
+                targets, sources,
+                Action(partial(run_sphinx_binary, 'html'), "Building online docs...")
+            ),
+        )
+elif {'man', 'docs'} & set(COMMAND_LINE_TARGETS):
+    print('!! sphinx-build not found: cannot build the man/docs targets.')
+    Exit(1)
 
 
 if 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1')
-
-if 'docs' in COMMAND_LINE_TARGETS:
-    sources = glob.glob('*.rst')
-    sources.remove('rmlint.1.rst')
-    targets = ['_build/html/' + os.path.splitext(s)[0] + '.html' for s in sources]
-    env.Alias('docs',
-        env.Command(
-            targets, sources,
-            Action(partial(run_sphinx_binary, 'html'), "Building online docs...")
-        ),
-    )
