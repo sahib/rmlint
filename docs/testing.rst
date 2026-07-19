@@ -5,7 +5,7 @@ Testsuite
 complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
-The tests are based on ``pytest`` and are written in ``python>=3.0``.
+The tests are based on ``pytest`` and are written in ``python>=3.6``.
 Every testcase just runs the (previously built) ``rmlint`` binary a
 and parses its json output. So they are technically blackbox-tests.
 
@@ -13,7 +13,7 @@ To ensure required test dependencies are present:
 
 .. code-block:: bash
 
-   $ pip3 install -r test-requirements.txt
+   $ pip3 install -r test/requirements.txt
 
 On every commit, those tests are additionally run on `TravisCI`_.
 
@@ -40,7 +40,7 @@ variables which are:
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 - ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
 
-Additionally slow tests can be omitted with by appending ``-k 'not slow'`` to
+Additionally slow tests can be omitted with by appending ``-m 'not slow'`` to
 the commandline. More information on this syntax can be found on the `pytest
 documentation`_.
 
@@ -50,7 +50,7 @@ Before each release we call the testsuite (at least) like this:
 
 .. code-block:: bash
 
-   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'not slow and not known_issue'
+   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -m 'not slow'
 
 The ``sudo`` here is there for executing some tests that need root access (like
 the creating of bad user and group ids). Most tests will work without.
@@ -91,7 +91,7 @@ A template for a testcase looks like this:
 
 .. code-block:: python
 
-    from tests.utils import *
+    from tests.utils import create_file
 
     def test_basic(usual_setup_usual_teardown):
         create_file('xxx', 'a')
@@ -149,4 +149,4 @@ running the test suite:
 
 .. code-block:: bash
 
-   $ PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH" nosetests ...
+   $ PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH" pytest ...
