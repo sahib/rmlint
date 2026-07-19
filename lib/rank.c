@@ -179,8 +179,8 @@ static int rm_rank_criterion(unsigned char criterion, const RmFile *a, const RmF
  * Used for --match-extension option.
  */
 gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b) {
-    char *ext_a = rm_util_path_extension(file_a->node->basename);
-    char *ext_b = rm_util_path_extension(file_b->node->basename);
+    const char *ext_a = rm_util_path_extension(file_a->node->basename);
+    const char *ext_b = rm_util_path_extension(file_b->node->basename);
 
     if(ext_a && ext_b) {
         return g_ascii_strcasecmp(ext_a, ext_b);
@@ -197,8 +197,8 @@ gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b) {
     const char *basename_a = file_a->node->basename;
     const char *basename_b = file_b->node->basename;
 
-    char *ext_a = rm_util_path_extension(basename_a);
-    char *ext_b = rm_util_path_extension(basename_b);
+    const char *ext_a = rm_util_path_extension(basename_a);
+    const char *ext_b = rm_util_path_extension(basename_b);
 
     /* Check length till extension, or full length if none present */
     size_t a_len = (ext_a) ? (ext_a - basename_a) : (int)strlen(basename_a);

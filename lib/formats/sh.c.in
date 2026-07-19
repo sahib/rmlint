@@ -493,7 +493,7 @@ static void rm_fmt_foot(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
     fprintf(out, SH_SCRIPT_TEMPLATE_FOOT, "rm -f", escaped_path);
 
     const char progress_marker_text[] = "PROGRESS_TOTAL=";
-    char *progress_marker = strstr(SH_SCRIPT_TEMPLATE_HEAD, progress_marker_text);
+    const char *progress_marker = strstr(SH_SCRIPT_TEMPLATE_HEAD, progress_marker_text);
     if(progress_marker != NULL) {
         gsize offset = (progress_marker - SH_SCRIPT_TEMPLATE_HEAD) +
                        sizeof(progress_marker_text) - 1;

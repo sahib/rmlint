@@ -205,20 +205,20 @@ static bool rm_cmd_parse_output_pair(RmSession *session, const char *pair,
     g_assert(session);
     g_assert(pair);
 
-    char *separator = strchr(pair, ':');
-    char *full_path = NULL;
+    const char *separator = strchr(pair, ':');
+    const char *full_path = NULL;
     char format_name[100];
     memset(format_name, 0, sizeof(format_name));
 
     if(separator == NULL) {
         /* default to stdout */
-        char *extension = strchr(pair, '.');
+        const char *extension = strchr(pair, '.');
         if(extension == NULL) {
             full_path = "stdout";
             strncpy(format_name, pair, sizeof(format_name) - 1);
         } else {
             extension += 1;
-            full_path = (char *)pair;
+            full_path = pair;
             strncpy(format_name, extension, sizeof(format_name) - 1);
         }
     } else {
@@ -239,13 +239,13 @@ static gboolean rm_cmd_parse_config(_UNUSED const char *option_name,
                                     RmSession *session,
                                     _UNUSED GError **error) {
     const char *const syntax = "<formatter>:<key>[=<val>][/<key>[=<val>]...]";
-    char *separator = strchr(config, ':');
+    const char *separator = strchr(config, ':');
     if(separator == NULL) {
         g_set_error(error, RM_ERROR_QUARK, 0,
                     _("No formatter (expect %s) specified in '%s'"), syntax, config);
         return false;
     }
-    char *configs = separator + 1;
+    const char *configs = separator + 1;
 
     /* split on spaces unless they are quoted */
     char *split_regex =
