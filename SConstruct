@@ -1,481 +1,38 @@
-#!/usr/bin/env python3
 import os
-import re
-import sys
-import glob
 import shlex
-import shutil
 import subprocess
-import platform
 
-import SCons
-import SCons.Conftest as tests
 from SCons.Script import *
 from SCons.Script.SConscript import SConsEnvironment
 
-pkg_config = os.getenv('PKG_CONFIG', 'pkg-config')
+from rm_build_checks import CUSTOM_TESTS
+from rm_build_support import (
+    COLORS,
+    OPTIONAL_FLAGS,
+    PKG_CONFIG,
+    InstallPerm,
+    compile_shared_source_message,
+    compile_source_message,
+    create_uninstall_target,
+    find_sphinx_binary,
+    get_cpu_count,
+    link_library_message,
+    link_program_message,
+    link_shared_library_message,
+    ranlib_library_message,
+    read_version,
+)
 
 DEFAULT_PREFIX = '/usr'
 PREFIX_RECORD_FILE = '.prefix.txt'
 
-# Features that can be toggled with --with-<name>/--without-<name>:
-OPTIONAL_FLAGS = ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-schemas']
-
-
-def read_version():
-    with open('.version', 'r') as handle:
-        version_string = handle.read()
-
-    static_git_rev = None
-    version_numbers, release_name = version_string.split(' ', 1)
-    if '@' in release_name:
-        release_name, static_git_rev = release_name.split('@', 1)
-        static_git_rev = static_git_rev.strip()
-
-    major, minor, patch = (int(v) for v in version_numbers.split('.'))
-    return major, minor, patch, release_name.strip(), static_git_rev
-
-
-VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME, STATIC_GIT_REV = read_version()
+VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME, _ = read_version()
 Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
-
-###########################################################################
-#                                Utilities                                #
-###########################################################################
-
-def check_pkgconfig(context, version):
-    context.Message('Checking for pkg-config... ')
-    command = pkg_config + ' --atleast-pkgconfig-version=' + version
-    ret = context.TryAction(command)[0]
-    context.Result(ret)
-    return ret
-
-
-def check_pkg(context, name, varname, required=True):
-    rc, text = 1, ''
-
-    package = name.split()[0]
-    if package in OPTIONAL_FLAGS and GetOption('with_' + package) is False:
-        context.Message(f'Explicitly disabling {name}...')
-        rc = 0
-
-    if rc != 0:
-        context.Message(f'Checking for {name}... ')
-        rc, text = context.TryAction(f"{pkg_config} --exists '{name}'")
-
-    # 0 is defined as error by TryAction
-    if rc == 0 and required:
-        print('Error: ' + name + ' not found.')
-        Exit(1)
-
-    # Remember we have it:
-    conf.env[varname] = rc
-    context.Result(rc)
-    return rc, text
-
-
-def check_git_rev(context):
-    context.Message('Checking for git revision... ')
-    rev = STATIC_GIT_REV
-
-    try:
-        rev = subprocess.check_output(
-            ['git', 'log', '--pretty=format:%h', '-n', '1'],
-            stderr=subprocess.DEVNULL,
-        ).decode('ascii').strip()
-    except AttributeError:
-        # Patch for some special sandbox permission problems.
-        # See https://github.com/sahib/rmlint/issues/143#issuecomment-139929733
-        print('Not allowed.')
-    except (OSError, subprocess.CalledProcessError):
-        # Not a git checkout or git unavailable.
-        # Will use STATIC_GIT_REV from read_version().
-        print('Unable to call git.')
-
-    rev = rev or 'unknown'
-    conf.env['gitrev'] = rev
-    context.Result(rev)
-    return rev
-
-
-def check_sysmacro_h(context):
-    rc = 1
-    if rc and tests.CheckHeader(context, 'sys/sysmacros.h'):
-        rc = 0
-
-    conf.env['HAVE_SYSMACROS_H'] = rc
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_libelf(context):
-    rc = 1
-
-    if GetOption('with_libelf') is False:
-        rc = 0
-
-    if rc and tests.CheckHeader(context, 'libelf.h', header="#include <stdlib.h>"):
-        rc = 0
-
-    if rc and tests.CheckLib(context, ['libelf']):
-        rc = 0
-
-    conf.env['HAVE_LIBELF'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_uname(context):
-    rc = 1
-
-    if rc and tests.CheckHeader(context, 'sys/utsname.h', header=""):
-        rc = 0
-
-    conf.env['HAVE_UNAME'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_gettext(context):
-    rc = 1
-
-    if GetOption('with_gettext') is False:
-        rc = 0
-
-    if rc and tests.CheckHeader(context, 'locale.h'):
-        rc = 0
-
-    conf.env['HAVE_LIBINTL'] = rc
-    conf.env['HAVE_MSGFMT'] = int(WhereIs('msgfmt') is not None)
-    conf.env['HAVE_GETTEXT'] = conf.env['HAVE_MSGFMT'] and conf.env['HAVE_LIBINTL']
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_fiemap(context):
-    rc = 1
-
-    if GetOption('with_fiemap') is False:
-        rc = 0
-
-    if rc and tests.CheckType(context, 'struct fiemap', header='#include <linux/fiemap.h>\n'):
-        rc = 0
-
-    conf.env['HAVE_FIEMAP'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_bigfiles(context):
-    off_t_is_big_enough = True
-
-    if tests.CheckTypeSize(context, 'off_t', header='#include <sys/types.h>\n') < 8:
-        off_t_is_big_enough = False
-
-    have_stat64 = True
-    if tests.CheckFunc(
-        context, 'stat64'
-    ):
-        have_stat64 = False
-
-    rc = int(off_t_is_big_enough or have_stat64)
-    conf.env['HAVE_BIG_OFF_T'] = int(off_t_is_big_enough)
-    conf.env['HAVE_BIG_STAT'] = int(have_stat64)
-    conf.env['HAVE_BIGFILES'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_blkid(context):
-    rc = 1
-
-    if GetOption('with_blkid') is False:
-        rc = 0
-
-    if rc == 1 and tests.CheckDeclaration(
-        context,
-        symbol='blkid_devno_to_wholedisk',
-        includes='#include <blkid.h>\n'
-    ):
-        rc = 0
-
-    conf.env['HAVE_BLKID'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_sys_block(context):
-    rc = 1
-
-    context.Message('Checking for existence of /sys/block... ')
-    if not os.access('/sys/block', os.R_OK):
-        rc = 0
-
-    conf.env['HAVE_SYSBLOCK'] = rc
-
-    context.Result(rc)
-    return rc
-
-
-def check_posix_fadvise(context):
-    rc = 1
-
-    if tests.CheckDeclaration(
-        context, 'posix_fadvise',
-        includes='#include <fcntl.h>'
-    ):
-        rc = 0
-
-    conf.env['HAVE_POSIX_FADVISE'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_xattr(context):
-    rc = 1
-
-    for func in ['getxattr', 'setxattr', 'removexattr', 'listxattr']:
-        if tests.CheckFunc(
-            context, func
-        ):
-            rc = 0
-            break
-
-    conf.env['HAVE_XATTR'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-
-def check_lxattr(context):
-    rc = 1
-
-    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr']:
-        if tests.CheckFunc(
-            context, func
-        ):
-            rc = 0
-            break
-
-    conf.env['HAVE_LXATTR'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_sha512(context):
-    rc = 1
-    if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>\n'):
-        rc = 0
-
-    conf.env['HAVE_SHA512'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def check_btrfs_h(context):
-    rc = 1
-    if tests.CheckHeader(
-        context, 'linux/btrfs.h',
-        header='#include <stdlib.h>\n#include <sys/ioctl.h>'
-    ):
-        rc = 0
-
-    conf.env['HAVE_BTRFS_H'] = rc
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-def check_linux_fs_h(context):
-    rc = 1
-    if tests.CheckHeader(context, 'linux/fs.h'):
-        rc = 0
-
-    conf.env['HAVE_LINUX_FS_H'] = rc
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-def check_linux_limits(context):
-    rc = 1
-    if tests.CheckHeader(context, 'linux/limits.h'):
-        rc = 0
-
-    conf.env['HAVE_LINUX_LIMITS'] = rc
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-def check_cygwin(context):
-    rc = 0
-
-    context.Message('Checking for cygwin environment...')
-    try:
-        uname = platform.uname()
-        context.Message('/'.join(uname))
-        rc = (uname[0].upper().startswith("CYGWIN"))
-    except subprocess.CalledProcessError:
-        rc = 0  # Oops.
-        context.Message("platform.uname() failed")
-
-    conf.env['IS_CYGWIN'] = rc
-    context.Result(rc)
-    return rc
-
-def check_mm_crc32_u64(context):
-
-    rc = 0 if tests.CheckDeclaration(
-            context,
-            symbol='_mm_crc32_u64',
-            includes='#include <nmmintrin.h>\n'
-            ) else 1
-
-    conf.env['HAVE_MM_CRC32_U64'] = rc
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-def check_builtin_cpu_supports(context):
-    rc = 0 if tests.CheckDeclaration(
-            context,
-            symbol='__builtin_cpu_supports'
-            ) else 1
-
-    conf.env['HAVE_BUILTIN_CPU_SUPPORTS'] = rc
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-def read_cpu_flags():
-    try:
-        from cpuinfo import get_cpu_info
-        return set(get_cpu_info().get('flags', []))
-    except Exception:
-        pass
-
-    # No py-cpuinfo; /proc/cpuinfo uses the same flag names.
-    try:
-        with open('/proc/cpuinfo') as handle:
-            for line in handle:
-                key, _, value = line.partition(':')
-                if key.strip() == 'flags':
-                    return set(value.split())
-    except OSError:
-        pass
-
-    print('   Unable to detect CPU flags (tried py-cpuinfo and /proc/cpuinfo)')
-    return set()
-
-
-def check_cpu_extensions(context):
-    print('==> Checking CPU checksum and vector extensions...')
-
-    cpu_flags = set()
-    if ARGUMENTS.get('CPU_EXTENSIONS') != '0':
-        cpu_flags = read_cpu_flags()
-
-    for ext in ['AVX512F', 'AVX512VL', 'AVX2', 'SSE4_1', 'SSE2']:
-        have_ext = int(ext.lower() in cpu_flags)
-        conf.env['HAVE_' + ext] = have_ext
-        print(f'    {ext}: {have_ext}')
-
-    context.did_show_result = True
-    context.Result(1)
-    return 1
-
-def create_uninstall_target(env, path):
-    env.Command("uninstall-" + path, path, [
-        Delete("$SOURCE"),
-    ])
-    env.Alias("uninstall", "uninstall-" + path)
-
-
 Export('create_uninstall_target')
-
-
-def find_sphinx_binary():
-    binary = shutil.which('sphinx-build')
-    if binary:
-        return binary
-
-    # Fall back to versioned names like sphinx-build-8.1, newest first.
-    def version_key(binary):
-        match = re.search(r'(\d+(?:\.\d+)?)$', binary)
-        return float(match.group(1)) if match else 0.0
-
-    binaries = []
-    for path in os.environ.get('PATH', '').split(os.pathsep):
-        binaries.extend(glob.glob(os.path.join(path, 'sphinx-build-*')))
-
-    binaries.sort(key=version_key, reverse=True)
-    if binaries:
-        print(f'Using sphinx-build binary: {binaries[0]}')
-        return binaries[0]
-
-    print('Unable to find sphinx binary in PATH')
-    print('Will be unable to build manpage or html docs')
-    return None
-
-
 Export('find_sphinx_binary')
 
-###########################################################################
-#                                 Colors!                                 #
-###########################################################################
-
-COLORS = {
-    'cyan': '\033[96m',
-    'purple': '\033[95m',
-    'blue': '\033[94m',
-    'green': '\033[92m',
-    'yellow': '\033[93m',
-    'red': '\033[91m',
-    'grey': '\x1b[30;1m',
-    'end': '\033[0m'
-}
-
-if not sys.stdout.isatty():
-    COLORS = dict.fromkeys(COLORS, '')
-
-# Configure the actual colors to our liking:
-compile_source_message = \
-    f"{COLORS['blue']}Compiling {COLORS['purple']}==> {COLORS['yellow']}$SOURCE{COLORS['end']}"
-
-compile_shared_source_message = \
-    f"{COLORS['blue']}Compiling shared {COLORS['purple']}==> {COLORS['yellow']}$SOURCE{COLORS['end']}"
-
-link_program_message = \
-    f"{COLORS['red']}Linking Program {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
-
-link_library_message = \
-    f"{COLORS['red']}Linking Static Library {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
-
-ranlib_library_message = \
-    f"{COLORS['red']}Ranlib Library {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
-
-link_shared_library_message = \
-    f"{COLORS['red']}Linking Shared Library {COLORS['purple']}==> {COLORS['yellow']}$TARGET{COLORS['end']}"
+# put this function "in" scons
+SConsEnvironment.InstallPerm = InstallPerm
 
 ###########################################################################
 #                            Option Parsing                               #
@@ -557,30 +114,7 @@ Export('env')
 ###########################################################################
 
 # Configuration:
-conf = Configure(env, custom_tests={
-    'check_pkgconfig': check_pkgconfig,
-    'check_pkg': check_pkg,
-    'check_git_rev': check_git_rev,
-    'check_libelf': check_libelf,
-    'check_fiemap': check_fiemap,
-    'check_xattr': check_xattr,
-    'check_lxattr': check_lxattr,
-    'check_sha512': check_sha512,
-    'check_blkid': check_blkid,
-    'check_posix_fadvise': check_posix_fadvise,
-    'check_sys_block': check_sys_block,
-    'check_bigfiles': check_bigfiles,
-    'check_gettext': check_gettext,
-    'check_linux_limits': check_linux_limits,
-    'check_btrfs_h': check_btrfs_h,
-    'check_linux_fs_h': check_linux_fs_h,
-    'check_uname': check_uname,
-    'check_cygwin': check_cygwin,
-    'check_mm_crc32_u64': check_mm_crc32_u64,
-    'check_cpu_extensions': check_cpu_extensions,
-    'check_builtin_cpu_supports': check_builtin_cpu_supports,
-    'check_sysmacro_h': check_sysmacro_h
-})
+conf = Configure(env, custom_tests=CUSTOM_TESTS)
 
 #######################################################################
 #                      Compiler Checks and Flags                      #
@@ -674,7 +208,7 @@ conf.env.Append(CCFLAGS=[
 ])
 
 
-env.ParseConfig(pkg_config + ' --cflags --libs ' + ' '.join(packages))
+env.ParseConfig(PKG_CONFIG + ' --cflags --libs ' + ' '.join(packages))
 
 
 conf.env.Append(_LIBFLAGS=['-lm'])
@@ -740,7 +274,7 @@ elif O_value == 'release':
 
 cc_O_option = '-O' + O_value
 
-print("Using compiler optimisation {} (to change, run scons with O=[0|1|2|3|s|fast])".format(cc_O_option))
+print(f"Using compiler optimisation {cc_O_option} (to change, run scons with O=[0|1|2|3|s|fast])")
 conf.env.Append(CCFLAGS=[cc_O_option])
 
 if ARGUMENTS.get('SYMBOLS') == '1':
@@ -752,24 +286,8 @@ if value:
     print("Appending custom build flags provided on command line: " + value)
     conf.env.Append(CCFLAGS=shlex.split(value))
 
-
-def InstallPerm(env, dest, files, perm):
-    obj = env.Install(dest, files)
-    for i in obj:
-        env.AddPostAction(i, Chmod(str(i), perm))
-    return dest
-
-# put this function "in" scons
-SConsEnvironment.InstallPerm = InstallPerm
-
 # Your extra checks here
 env = conf.Finish()
-
-def get_cpu_count():
-    if 'NUM_CPU' in os.environ:
-        return int(os.environ['NUM_CPU'])
-    return os.cpu_count() or 4
-
 
 # set number of parallel jobs during build
 # note: while not particularly intuitive or obvious from the documentation,
@@ -899,10 +417,8 @@ Type 'scons' to actually compile rmlint now. Good luck.
             verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
             debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
             symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
-            version='{a}.{b}.{c} "{n}" (rev {r})'.format(
-                a=VERSION_MAJOR, b=VERSION_MINOR, c=VERSION_PATCH,
-                n=VERSION_NAME, r=env.get('gitrev', 'unknown')
-            )
+            version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
+                    f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})'
         ))
 
     env.Command('config', None, Action(print_config, "Printing configuration..."))
