@@ -23,22 +23,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            scons python3-sphinx gettext python3-setuptools \
-            libblkid-dev libelf-dev libglib2.0-dev libjson-glib-dev \
-            clang python3-pip python3-cffi python3-dev libffi-dev \
+            scons gettext python3-setuptools libblkid-dev \
+            libelf-dev libglib2.0-dev libjson-glib-dev \
+            python3-pip python3-cffi python3-dev libffi-dev \
             py-cpuinfo
-          pip3 install -r tests/requirements.txt
-          pip3 install -r docs/requirements.txt
+          pip3 install -r tests/requirements.txt -r docs/requirements.txt
 
       - name: "Build"
-        # Todo: eventually run tests with valgrind (RM_TS_USE_VALGRIND)
-        # Todo enable slow tests in pytest
         run: |
           scons config $scons_ARGS
           scons $scons_ARGS
 
       - name: "Check need for testing"
-        # TODO also include skipping build but allow docs to be processed
+        # TODO: also include skipping build but allow docs to be processed
         run: |
           if git diff --exit-code --name-only origin/$GITHUB_BASE_REF...$GITHUB_SHA ':!.gitignore' ':!docs' ':!*.md' ':!*.txt' ':!*.rst'; then
             echo "RUN_TEST=false" >> "$GITHUB_ENV"
@@ -49,7 +46,6 @@ jobs:
           fi
 
       - name: "Prepare test environment"
-        # TODO Ignore linter warning. See https://github.com/github/vscode-github-actions/issues/222
         if: ${{ env.RUN_TEST == 'true' }}
         # The test suite is seriously disk-intensive. Given that linux
         #  instances hosted in GitHub have 16G of RAM available we will
