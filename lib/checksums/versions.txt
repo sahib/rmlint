@@ -1,0 +1,9 @@
+Vendored checksum implementations
+=================================
+
+blake2/
+	Upstream: https://github.com/BLAKE2/BLAKE2
+	Version: commit fb4b09b (2023-02-07)
+	Imported: - all in /ref/* but genkat-c.c,genkat-json.c and the makefile
+	          - /COPYING
+	Modified: no
