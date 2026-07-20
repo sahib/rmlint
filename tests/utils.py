@@ -485,6 +485,14 @@ def is_on_reflink_fs(path):
     return False
 
 
+def check_reflink_capable() -> str | None:
+    if not has_feature('btrfs-support'):
+        return "btrfs not supported"
+    if not is_on_reflink_fs(TESTDIR_NAME):
+        return "testdir is not on reflink-capable filesystem"
+    return None
+
+
 def pattern_count(path, patterns):
     """count the number of line in a file which start with each pattern"""
     counts = [0] * len(patterns)

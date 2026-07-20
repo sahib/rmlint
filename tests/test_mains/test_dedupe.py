@@ -5,12 +5,17 @@ import pytest
 from tests.utils import (
     TESTDIR_NAME,
     assert_exit_code,
+    check_reflink_capable,
     create_dirs,
     create_file,
     create_link,
     pattern_count,
     run_rmlint_once,
 )
+
+
+if skip_msg := check_reflink_capable():
+    pytest.skip(skip_msg, allow_module_level=True)
 
 
 def test_equal_files(usual_setup_usual_teardown, needs_reflink_fs):

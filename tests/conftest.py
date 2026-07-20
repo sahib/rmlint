@@ -28,11 +28,13 @@ def usual_setup_mount_bind_teardown():
     utils.mount_bind_teardown_func()
 
 
-@pytest.fixture
+def skip_if_no_reflink_fs():
+    if err_msg := utils.check_reflink_capable():
+        pytest.skip(err_msg)
+
+
+@pytest.fixture(scope="session")
 def needs_reflink_fs():
     """fixture for tests dependent on reflink-capable testdir"""
-    if not utils.has_feature('btrfs-support'):
-        pytest.skip("btrfs not supported")
-    elif not utils.is_on_reflink_fs(utils.TESTDIR_NAME):
-        pytest.skip("testdir is not on reflink-capable filesystem")
-    yield
+    if skip_msg := utils.check_reflink_capable():
+        pytest.skip(skip_msg)
