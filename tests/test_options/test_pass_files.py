@@ -1,7 +1,7 @@
 from tests.utils import create_file, run_rmlint
 
 
-def test_stdin_read(usual_setup_usual_teardown):
+def test_stdin_read():
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
     path_c = create_file('1234', '.hidden')

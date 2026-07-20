@@ -28,7 +28,7 @@ def create_binary(path, stripped=False):
     subprocess.run(command, input=SOURCE, shell=True, text=True, check=True)
 
 
-def test_negative(usual_setup_usual_teardown):
+def test_negative():
     if has_feature('nonstripped') is False:
         return
 
@@ -40,7 +40,7 @@ def test_negative(usual_setup_usual_teardown):
     assert len(data) == 0
 
 
-def test_positive(usual_setup_usual_teardown):
+def test_positive():
     if has_feature('nonstripped') is False:
         return
 
@@ -53,7 +53,7 @@ def test_positive(usual_setup_usual_teardown):
 
 
 # regression test for GitHub issue #555
-def test_executable_fifo(usual_setup_usual_teardown):
+def test_executable_fifo():
     if has_feature('nonstripped') is False:
         pytest.skip("needs 'nonstripped' feature")
 

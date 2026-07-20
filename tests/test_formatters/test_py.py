@@ -15,7 +15,7 @@ def _check_interpreter(interpreter):
 
 
 @pytest.mark.parametrize("interpreter", ["python2", "python3"])
-def test_paranoia(usual_setup_usual_teardown, interpreter):
+def test_paranoia(interpreter):
     if not _check_interpreter(interpreter):
         pytest.skip(f"Interpreter {interpreter} does not seem to be working, skipping test")
 

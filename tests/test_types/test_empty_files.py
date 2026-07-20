@@ -1,7 +1,7 @@
 from tests.utils import create_file, run_rmlint
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_file('xxx', 'not_empty')
     create_file('', 'very_empty')
     _, *data, footer = run_rmlint('-T "none +ef"')

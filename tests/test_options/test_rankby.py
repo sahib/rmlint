@@ -7,7 +7,7 @@ def filter_part_of_directory(data):
     return [e for e in data if e['type'] != 'part_of_directory']
 
 
-def test_rankby_simple(usual_setup_usual_teardown):
+def test_rankby_simple():
     create_file('x', 'ax')
     create_file('x', 'ay')
     create_file('yyy', 'bx')
@@ -22,7 +22,7 @@ def test_rankby_simple(usual_setup_usual_teardown):
     assert paths == ['by', 'bx', 'ay', 'ax']
 
 
-def test_rankby_dirs(usual_setup_usual_teardown):
+def test_rankby_dirs():
     create_file('x', 'ax')
     create_file('x', 'ay')
     create_file('yyy', 'b/x')
@@ -38,7 +38,7 @@ def test_rankby_dirs(usual_setup_usual_teardown):
     assert paths == ['b', 'c', 'ax', 'ay', 'x', 'y', 'dx', 'dy']
 
 
-def test_rankby_dir_path(usual_setup_usual_teardown):
+def test_rankby_dir_path():
     create_file('x', 'b/x')
     create_file('x', 'a/y')
     create_file('yyy', 'a/v')

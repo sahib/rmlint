@@ -14,14 +14,14 @@ import time
 import psutil
 import xattr
 
-TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
-TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
 
+TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 # Some systems use a symbolic link for /tmp
 # For example macOS will have a /tmp -> /private/tmp link.
 # Some tests might fail if we use the unresolved version,
 # so fix it here.
 TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
+RMLINT_BINARY_DIR = os.getcwd()
 
 CKSUM_TYPES = [
     'murmur',
@@ -30,6 +30,7 @@ CKSUM_TYPES = [
     'md5',
     'sha1',
     'sha256',
+    'sha512',
     'sha3-256',
     'sha3-384',
     'sha3-512',
@@ -48,26 +49,6 @@ CKSUM_TYPES = [
     'paranoid',
 ]
 
-def has_feature(feature):
-    return '+' + feature in subprocess.check_output(
-        ['./rmlint', '--version'], stderr=subprocess.STDOUT
-    ).decode('utf-8')
-
-# Note: sha512 is supported on all system which have
-#       no recent enough glib with. God forsaken debian people.
-if has_feature('sha512'):
-    CKSUM_TYPES.append('sha512')
-
-if has_feature('sse4'):
-    CKSUM_TYPES.append('metrocrc')
-    CKSUM_TYPES.append('metrocrc256')
-
-_REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
-
-
-def runs_as_root():
-    return os.geteuid() == 0
-
 
 def get_env_flag(name):
     try:
@@ -77,12 +58,33 @@ def get_env_flag(name):
     return 0
 
 
-def use_valgrind():
-    return get_env_flag('RM_TS_USE_VALGRIND')
+_KEEP_TESTDIR = get_env_flag('RM_TS_KEEP_TESTDIR')
+_USE_VALGRIND = get_env_flag('RM_TS_USE_VALGRIND')
+_PRINT_CMD = get_env_flag('RM_TS_PRINT_CMD')
+_SLEEP = get_env_flag('RM_TS_SLEEP')
+_FEATURES = subprocess.check_output(
+    ['./rmlint', '--version'], stderr=subprocess.STDOUT).decode('utf-8')
 
 
 def keep_testdir():
-    return get_env_flag('RM_TS_KEEP_TESTDIR')
+    return _KEEP_TESTDIR
+
+
+def use_valgrind():
+    return _USE_VALGRIND
+
+
+def has_feature(feature):
+    return '+' + feature in _FEATURES
+
+
+if has_feature('sse4'):
+    CKSUM_TYPES.append('metrocrc')
+    CKSUM_TYPES.append('metrocrc256')
+
+
+def runs_as_root():
+    return os.geteuid() == 0
 
 
 def create_testdir(*extra_path):
@@ -94,11 +96,6 @@ def create_testdir(*extra_path):
     except OSError:
         pass
 
-
-def cleanup_testdir():
-    shutil.rmtree(TESTDIR_NAME, ignore_errors=True)
-
-RMLINT_BINARY_DIR = os.getcwd()
 
 def has_known_leak(*args):
     KNOWN_LEAK_OPTIONS = {}
@@ -181,10 +178,10 @@ def run_rmlint_once(*args,
     if use_shell:
         run_args['executable'] = "bash"
 
-    if get_env_flag('RM_TS_PRINT_CMD'):
+    if _PRINT_CMD:
         print(f"running{' in shell' if use_shell else ''} from `{os.getcwd()}`: {' '.join(cmd)}")
 
-    if get_env_flag('RM_TS_SLEEP'):
+    if _SLEEP:
         print('Waiting for 1000 seconds.')
         time.sleep(1000)
 
@@ -377,17 +374,12 @@ def warp_file_to_future(name, seconds):
 
 
 def usual_setup_func():
-    shutil.rmtree(path=TESTDIR_NAME, ignore_errors=True)
     create_testdir()
 
 
 def usual_teardown_func():
     if not keep_testdir():
-        # Allow teardown to be called more than once:
-        try:
-            shutil.rmtree(path=TESTDIR_NAME)
-        except OSError:
-            pass
+        shutil.rmtree(path=TESTDIR_NAME, ignore_errors=True)
 
 
 def mount_bind_teardown_func():
@@ -471,6 +463,7 @@ def _up(path):
         path = os.path.dirname(path)
 
 
+_REFLINK_CAPABLE_FILESYSTEMS = {'btrfs', 'xfs', 'ocfs2'}
 def is_on_reflink_fs(path):
     parts = psutil.disk_partitions(all=True)
 

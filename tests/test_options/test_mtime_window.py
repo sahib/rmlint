@@ -9,7 +9,7 @@ def set_mtime(path, mtime):
     subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
 
 
-def test_consider_mtime(usual_setup_usual_teardown):
+def test_consider_mtime():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     create_file('xxx', 'c')
@@ -49,7 +49,7 @@ def test_consider_mtime(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 1
 
 
-def test_consider_mtime_subsecond(usual_setup_usual_teardown):
+def test_consider_mtime_subsecond():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
@@ -68,7 +68,7 @@ def test_consider_mtime_subsecond(usual_setup_usual_teardown):
     _, *data, _ = run_rmlint('--mtime-window=0')
     assert len(data) == 0
 
-def test_consider_mtime_fail_by_association(usual_setup_usual_teardown):
+def test_consider_mtime_fail_by_association():
     create_file('xxx', 'a')
     create_file('yyy', 'b')
     create_file('xxx', 'c')
@@ -85,7 +85,7 @@ def test_consider_mtime_fail_by_association(usual_setup_usual_teardown):
     assert footer['duplicates'] == 0
     assert footer['duplicate_sets'] == 0
 
-def test_mtime_and_unmatched_basenames(usual_setup_usual_teardown):
+def test_mtime_and_unmatched_basenames():
     create_file('xxx', 'dir1/a')
     create_file('xxx', 'dir1/c')
     create_file('xxx', 'dir2/a')

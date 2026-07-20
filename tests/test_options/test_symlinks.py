@@ -4,7 +4,7 @@ import os
 from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint
 
 
-def test_default(usual_setup_usual_teardown):
+def test_default():
     # --see-symlinks should be on by default.
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
@@ -23,7 +23,7 @@ def test_default(usual_setup_usual_teardown):
     assert {e["path"] for e in data} == expected
 
 
-def test_merge_directories_with_ignored_symlinks(usual_setup_usual_teardown):
+def test_merge_directories_with_ignored_symlinks():
     # Badlinks should not forbid finding duplicate directories
     # when being filtered out during traversing with -T dd,df.
     create_file('xxx', 'a/z')
@@ -38,7 +38,7 @@ def test_merge_directories_with_ignored_symlinks(usual_setup_usual_teardown):
     }
 
 
-def test_order(usual_setup_usual_teardown):
+def test_order():
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
     create_file('xxx', 'b/z')
@@ -81,7 +81,7 @@ def test_order(usual_setup_usual_teardown):
     assert data[file_idx + 1]['path'].endswith('z')
 
 
-def test_symlink_matches_file(usual_setup_usual_teardown):
+def test_symlink_matches_file():
     create_file('xxx', 'foo')
     create_file('foo', 'file')
     os.symlink('foo', os.path.join(TESTDIR_NAME, 'link'))

@@ -8,7 +8,7 @@ FILE_SIZE = 256 * 1024 * 1024
 MIDDLE = FILE_SIZE // 2
 
 @pytest.mark.slow
-def test_1000_files(usual_setup_usual_teardown):
+def test_1000_files():
     """this is really a test of mem limiter for paranoid hashing"""
     for c in string.ascii_lowercase:
         for d in string.ascii_lowercase:

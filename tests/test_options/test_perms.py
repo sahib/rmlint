@@ -20,7 +20,7 @@ def create_file_with_perms(content, path, permissions):
     os.chmod(os.path.join(TESTDIR_NAME, path), perms)
 
 
-def test_combinations(usual_setup_usual_teardown):
+def test_combinations():
     # This test does not work when run as root.
     # root can read the files anyways.
     if runs_as_root():

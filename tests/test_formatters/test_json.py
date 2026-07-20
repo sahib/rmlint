@@ -3,7 +3,7 @@ import os
 from tests.utils import create_file, run_rmlint
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     full_path_a = create_file('x', '\t\r\"\b\f\\')
     full_path_b = create_file('x', '\"\t\n2134124')
     _, *data, footer = run_rmlint('-S a')

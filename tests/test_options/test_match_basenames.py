@@ -1,7 +1,7 @@
 from tests.utils import create_file, run_rmlint
 
 
-def test_negative_with_basename(usual_setup_usual_teardown):
+def test_negative_with_basename():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     _, *_, footer = run_rmlint('-b')
@@ -10,7 +10,7 @@ def test_negative_with_basename(usual_setup_usual_teardown):
     assert footer['duplicates'] == 0
 
 
-def test_positive_with_basename(usual_setup_usual_teardown):
+def test_positive_with_basename():
     create_file('xxx', 'a/test')
     create_file('xxx', 'b/test')
     _, *_, footer = run_rmlint('-b')
@@ -19,7 +19,7 @@ def test_positive_with_basename(usual_setup_usual_teardown):
     assert footer['duplicates'] == 1
 
 
-def test_negative_without_basename(usual_setup_usual_teardown):
+def test_negative_without_basename():
     create_file('xxx', 'a/test')
     create_file('xxx', 'b/test')
     _, *_, footer = run_rmlint('-B')
@@ -28,7 +28,7 @@ def test_negative_without_basename(usual_setup_usual_teardown):
     assert footer['duplicates'] == 0
 
 
-def test_positive_without_basename(usual_setup_usual_teardown):
+def test_positive_without_basename():
     create_file('xxx', 'a/test1')
     create_file('xxx', 'b/test2')
     _, *_, footer = run_rmlint('-B')

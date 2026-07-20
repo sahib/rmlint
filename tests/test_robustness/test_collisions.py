@@ -11,7 +11,7 @@ from tests.utils import CKSUM_TYPES, create_file, run_rmlint_once
 BLACKLIST = ['paranoid']
 
 @pytest.mark.slow
-def test_collision_resistance(usual_setup_usual_teardown):
+def test_collision_resistance():
     """Test for at least 20 bits of collision resistance,
     this should detect gross errors in checksum encoding...
     """

@@ -25,7 +25,7 @@ def branch_tree(current_path, remaining_depth):
 
 
 @pytest.mark.slow
-def test_manylongpathfiles(usual_setup_usual_teardown):
+def test_manylongpathfiles():
     max_depth = 10 # will give 8M files total if NUMPAIRS = 1024+1
     try:
         branch_tree ("", max_depth)

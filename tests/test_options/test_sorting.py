@@ -54,7 +54,7 @@ def validate_order(data, tests):
 
 
 @pytest.mark.slow
-def test_sorting(usual_setup_usual_teardown):
+def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
     create_file('xxx', PATHS[1] + 'a', mtime='2004-02-29  16:21:42.4')
     create_file('xxx', PATHS[0] + 'c', mtime='2004-02-29  16:21:42.6')
@@ -88,7 +88,7 @@ def test_sorting(usual_setup_usual_teardown):
 
         validate_order(data, combo)
 
-def test_sort_by_outlyer(usual_setup_usual_teardown):
+def test_sort_by_outlyer():
     create_file('xxx', 'a/foo')
     create_file('xxx', 'b/foo')
 
@@ -109,7 +109,7 @@ def test_sort_by_outlyer(usual_setup_usual_teardown):
 # https://github.com/sahib/rmlint/issues/196
 #
 # Testsetup by "Awerick"
-def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
+def test_sort_by_outlyer_hardcore():
     for suffix in 'ABCD':
         create_file('xxx', 'inside/foo' + suffix)
 
@@ -148,7 +148,7 @@ def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
 
 
 
-def test_sort_by_regex(usual_setup_usual_teardown):
+def test_sort_by_regex():
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
     create_file('xxx', 'b')
@@ -168,7 +168,7 @@ def test_sort_by_regex(usual_setup_usual_teardown):
     assert paths[5].endswith('c')
 
 
-def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
+def test_sort_by_regex_bad_input():
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
 
@@ -198,7 +198,7 @@ def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
 
 
 # regression test for GitHub issue #484
-def test_regex_multiple_matches(usual_setup_usual_teardown):
+def test_regex_multiple_matches():
     paths = [os.path.join(dname, bname)
              for dname in ['unique_1', 'unique_2']
              for bname in ['a', 'a2', 'b']]

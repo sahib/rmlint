@@ -1,7 +1,7 @@
 from tests.utils import create_file, run_rmlint, run_rmlint_pedantic
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_file('1234567890', 'a10')
     create_file('x23456789x', 'b10')
 
@@ -15,7 +15,7 @@ def test_simple(usual_setup_usual_teardown):
         assert len(data) == 2
 
 
-def test_almost_empty(usual_setup_usual_teardown):
+def test_almost_empty():
     create_file('x', 'a1')
     create_file('x', 'b1')
 
@@ -28,7 +28,7 @@ def test_almost_empty(usual_setup_usual_teardown):
     assert footer['total_files'] == 0
 
 
-def test_absolute(usual_setup_usual_teardown):
+def test_absolute():
     data1 = ['x'] * 2048
     data2 = ['x'] * 2048
     data2[1023] = 'y'
@@ -53,7 +53,7 @@ def test_absolute(usual_setup_usual_teardown):
     assert len(data) == 0
 
 
-def test_clamped_to_empty(usual_setup_usual_teardown):
+def test_clamped_to_empty():
     create_file('x', 'empties/a')
     create_file('x', 'empties/b')
 

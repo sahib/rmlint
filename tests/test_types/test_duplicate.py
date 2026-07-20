@@ -1,7 +1,7 @@
 from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, run_rmlint, use_valgrind
 
 
-def test_small_diffs(usual_setup_usual_teardown):
+def test_small_diffs():
     def create_data(length, flips=()):
         data = ['0'] * length
         for flip in flips:
@@ -40,7 +40,7 @@ def test_small_diffs(usual_setup_usual_teardown):
         assert len(data) == (2 if i in (size - i, 0) else 0)
 
 
-def test_one_byte_file_negative(usual_setup_usual_teardown):
+def test_one_byte_file_negative():
     create_file('1', 'one')
     create_file('2', 'two')
     _, *data, _ = run_rmlint('-S a')
@@ -48,7 +48,7 @@ def test_one_byte_file_negative(usual_setup_usual_teardown):
     assert len(data) == 0
 
 
-def test_one_byte_file_positive(usual_setup_usual_teardown):
+def test_one_byte_file_positive():
     create_file('1', 'one')
     create_file('1', 'two')
     _, *data, _ = run_rmlint('-S a')
@@ -56,7 +56,7 @@ def test_one_byte_file_positive(usual_setup_usual_teardown):
     assert len(data) == 2
 
 
-def test_two_hardlinks(usual_setup_usual_teardown):
+def test_two_hardlinks():
     create_file('xxx', 'a')
     create_link('a', 'b')
     _, *data, footer = run_rmlint('-S a')
@@ -65,7 +65,7 @@ def test_two_hardlinks(usual_setup_usual_teardown):
     assert footer['total_lint_size'] == 0
 
 
-def test_two_external_hardlinks(usual_setup_usual_teardown):
+def test_two_external_hardlinks():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     create_dirs('sub')

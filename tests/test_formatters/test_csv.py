@@ -9,7 +9,7 @@ def csv_string_to_data(csv_dump):
     return list(csv.DictReader(io.StringIO(csv_dump, newline='')))
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_file('1234', 'a')
     create_file('1234', 'b')
     create_file('1234', 'stupid\'file,name')
@@ -29,7 +29,7 @@ def test_simple(usual_setup_usual_teardown):
 
 
 # regression test for GitHub issue #496
-def test_no_checksum(usual_setup_usual_teardown):
+def test_no_checksum():
     # rmlint will not (normally) hash files with no same-sized siblings
     create_file('x', 'a')
     create_file('yy', 'b')

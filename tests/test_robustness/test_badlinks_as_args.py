@@ -3,7 +3,7 @@ import os
 from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint
 
 
-def test_bad_symlinks_as_direct_args(usual_setup_usual_teardown):
+def test_bad_symlinks_as_direct_args():
     """
     Regression test for directly passing broken symbolic links
     to the command line. See https://github.com/sahib/rmlint/pull/444

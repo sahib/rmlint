@@ -1,7 +1,7 @@
 from tests.utils import TESTDIR_NAME, create_file, run_rmlint
 
 
-def test_km(usual_setup_usual_teardown):
+def test_km():
     # create some dupes with different paths, names and mtimes:
     create_file('xxx', 'stuff/a')
     create_file('yyy', 'stuff/b')

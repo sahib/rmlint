@@ -3,7 +3,7 @@ import os
 from tests.utils import TESTDIR_NAME, assert_exit_code, create_file, run_rmlint
 
 
-def test_equal_files(usual_setup_usual_teardown):
+def test_equal_files():
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
 
@@ -40,7 +40,7 @@ def test_equal_files(usual_setup_usual_teardown):
         )
 
 
-def test_no_arguments(usual_setup_usual_teardown):
+def test_no_arguments():
     with assert_exit_code(1):
         run_rmlint(
             '--equal',
@@ -48,7 +48,7 @@ def test_no_arguments(usual_setup_usual_teardown):
         )
 
 
-def test_one_arguments(usual_setup_usual_teardown):
+def test_one_arguments():
     path = create_file('1234', 'a')
     with assert_exit_code(1):
         run_rmlint(
@@ -69,7 +69,7 @@ def test_one_arguments(usual_setup_usual_teardown):
         )
 
 
-def test_equal_directories(usual_setup_usual_teardown):
+def test_equal_directories():
     path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
     path_b = os.path.dirname(create_file('xxx', 'dir_b/x'))
 
@@ -86,7 +86,7 @@ def test_equal_directories(usual_setup_usual_teardown):
         )
 
 
-def test_dir_and_file(usual_setup_usual_teardown):
+def test_dir_and_file():
     path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
     path_b = create_file('xxx', 'x')
 
@@ -99,8 +99,8 @@ def test_dir_and_file(usual_setup_usual_teardown):
         )
 
 
-# Regression test for Issue #233
-def test_equal_hidden_dirs(usual_setup_usual_teardown):
+def test_equal_hidden_dirs():
+    """regression test for GitHub issue #233"""
     path_a = os.path.dirname(create_file('xxx', 'dir_a/x'))
     path_b = os.path.dirname(create_file('xxx', '.dir_b/.x'))
 
@@ -113,8 +113,8 @@ def test_equal_hidden_dirs(usual_setup_usual_teardown):
         )
 
 
-# Regression test for Issue #234
-def test_equal_empty_files_or_other_lint(usual_setup_usual_teardown):
+def test_equal_empty_files_or_other_lint():
+    """regression test for GitHub issue #234"""
     path_a = create_file('', 'x')
     path_b = create_file('', 'y')
 
@@ -127,8 +127,8 @@ def test_equal_empty_files_or_other_lint(usual_setup_usual_teardown):
         )
 
 
-# regression test for GitHub issue #552
-def test_default_outputs_disabled(usual_setup_usual_teardown):
+def test_default_outputs_disabled():
+    """regression test for GitHub issue #552"""
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 

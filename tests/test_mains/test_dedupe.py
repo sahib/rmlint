@@ -18,7 +18,8 @@ if skip_msg := check_reflink_capable():
     pytest.skip(skip_msg, allow_module_level=True)
 
 
-def test_equal_files(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_equal_files():
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = create_file('1234' * 4096, 'b')
@@ -33,7 +34,8 @@ def test_equal_files(usual_setup_usual_teardown, needs_reflink_fs):
 
 
 @pytest.mark.skip(reason="valgrind issue, see #492")
-def test_hardlinks(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_hardlinks():
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = path_a + '_hardlink'
@@ -48,7 +50,8 @@ def test_hardlinks(usual_setup_usual_teardown, needs_reflink_fs):
             verbosity="")
 
 
-def test_different_files(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_different_files():
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = create_file('4321' * 4096, 'b')
@@ -62,7 +65,8 @@ def test_different_files(usual_setup_usual_teardown, needs_reflink_fs):
             verbosity="")
 
 
-def test_bad_arguments(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_bad_arguments():
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1234' * 4096, 'a')
     path_b = create_file('1234' * 4096, 'b')
@@ -81,7 +85,8 @@ def test_bad_arguments(usual_setup_usual_teardown, needs_reflink_fs):
                 verbosity="")
 
 
-def test_directories(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_directories():
     path_a = os.path.dirname(create_dirs('dir_a'))
     path_b = os.path.dirname(create_dirs('dir_b'))
 
@@ -94,8 +99,8 @@ def test_directories(usual_setup_usual_teardown, needs_reflink_fs):
             verbosity="")
 
 
-def test_dedupe_works(usual_setup_usual_teardown, needs_reflink_fs):
-
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_dedupe_works():
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1' * 100000, 'a')
     path_b = create_file('1' * 100000, 'b')
@@ -128,7 +133,8 @@ def test_dedupe_works(usual_setup_usual_teardown, needs_reflink_fs):
         )
 
 
-def test_clone_handler(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_clone_handler():
     # test files need to be larger than btrfs node size to prevent inline extents
     path_a = create_file('1' * 100000, 'a')
     path_b = create_file('1' * 100000, 'b')

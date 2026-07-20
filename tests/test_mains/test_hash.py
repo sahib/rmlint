@@ -36,7 +36,7 @@ def streaming_compliance_check(patterns):
         'xxhash',
         'highway'
         ))
-def test_hash_function(usual_setup_usual_teardown, pat):
+def test_hash_function(pat):
     if(len(pat)==1):
         streaming_compliance_check(pat)
     else:

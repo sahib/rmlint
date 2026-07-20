@@ -7,7 +7,7 @@ import pytest
 from tests.utils import TESTDIR_NAME, create_file
 
 
-def test_stdin_read(usual_setup_usual_teardown):
+def test_stdin_read():
     path_a = create_file('1234', 'a') + '\n'
     path_b = create_file('1234', 'b') + '\n'
     path_c = create_file('1234', '.hidden') + '\n'
@@ -30,7 +30,7 @@ def test_stdin_read(usual_setup_usual_teardown):
     assert data[3]['path'].endswith('c')
     assert footer['total_lint_size'] == 12
 
-def test_stdin_read_newlines(usual_setup_usual_teardown):
+def test_stdin_read_newlines():
     path_a = create_file('1234', 'a') + '\0'
     path_b = create_file('1234', 'name\nwith\nnewlines') + '\0'
     path_c = create_file('1234', '.hidden') + '\0'
@@ -53,7 +53,7 @@ def test_stdin_read_newlines(usual_setup_usual_teardown):
     assert data[3]['path'].endswith('newlines')
     assert footer['total_lint_size'] == 12
 
-def test_path_starting_with_dash(usual_setup_usual_teardown):
+def test_path_starting_with_dash():
     subdir = '-look-in-here'
     create_file('1234', subdir + '/a')
     create_file('1234', subdir + '/b')
@@ -77,11 +77,12 @@ def test_path_starting_with_dash(usual_setup_usual_teardown):
     assert footer['total_lint_size'] == 4
 
 
-# Regression test for https://github.com/sahib/rmlint/issues/400
-# Do not search in current directory when piped empty input.
-# Also, treemerge should not fail if given zero paths.
 @pytest.mark.parametrize("opts", (('-',), ('-0',), ('-D', '-')))
-def test_stdin_empty(usual_setup_usual_teardown, opts):
+def test_stdin_empty(opts):
+    """regression test for GitHub issue #400
+    Do not search in current directory when piped empty input.
+    Also, treemerge should not fail if given zero paths.
+    """
     create_file('1234', 'a')
     create_file('1234', 'b')
 

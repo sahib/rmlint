@@ -1,7 +1,7 @@
 from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, run_rmlint
 
 
-def test_keep_hardlinks(usual_setup_usual_teardown):
+def test_keep_hardlinks():
     create_file('xxx', 'file_a')
     create_link('file_a', 'file_b')
     create_file('xxx', 'file_z')

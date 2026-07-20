@@ -1,0 +1,9 @@
+[pytest]
+strict = true
+minversion = "9.0"
+addopts = ["-s", "-v"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+	"slow: slow tests",
+]

@@ -39,7 +39,7 @@ def create_files():
     create_file('x', 'dir_b/1')
 
 
-def test_xattr_basic(usual_setup_usual_teardown):
+def test_xattr_basic():
     create_files()
 
     def check(data, write_cache):
@@ -85,7 +85,7 @@ BLAKE2B = {
 
 
 @pytest.mark.parametrize("extra_opts", ["", "-D"])
-def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
+def test_xattr_detail(extra_opts):
     if not runs_as_root():
         # This tests need a ext4 fs which is created during the test.
         # The mount step sadly needs root privileges.
@@ -176,9 +176,9 @@ def test_xattr_detail(usual_setup_usual_teardown, extra_opts):
             assert not must_read_xattr(path), path
 
 
-# regression test for GitHub issue #475
-# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
-def test_treemerge_xattr_hardlink(usual_setup_usual_teardown):
+@pytest.mark.usefixtures("needs_xattr_fs")
+def test_treemerge_xattr_hardlink():
+    """regression test for GitHub issue #475"""
     create_file('xxx', 'a/x')
     create_file('yyy', 'a/y')
     create_file('xxx', 'b/x')
@@ -196,9 +196,9 @@ def test_treemerge_xattr_hardlink(usual_setup_usual_teardown):
     assert len(data) == 6
 
 
-# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@pytest.mark.usefixtures("needs_xattr_fs")
 @pytest.mark.parametrize("clamp", ['-q 1', '-Q 1', '-q 50%', '-Q 50%'])
-def test_clamp_xattr_false_negative(usual_setup_usual_teardown, clamp):
+def test_clamp_xattr_false_negative(clamp):
     create_file('xxx', 'a')
     create_file('yyy', 'b')
 
@@ -217,9 +217,9 @@ def test_clamp_xattr_false_negative(usual_setup_usual_teardown, clamp):
     assert len([e for e in data if e['type'] == 'duplicate_file']) == 2  # do they still match?
 
 
-# NB: this test is only effective if RM_TS_DIR is on an xattr-capable filesystem
+@pytest.mark.usefixtures("needs_xattr_fs")
 @pytest.mark.parametrize("clamp", ['-q 2', '-Q 1', '-q 70%', '-Q 50%'])
-def test_clamp_xattr_false_positive(usual_setup_usual_teardown, clamp):
+def test_clamp_xattr_false_positive(clamp):
     # directories 'a' and 'b' obviously do not match
     # extra files are needed to satisfy preprocessing, which compares file size
     create_file('xxx', '1')

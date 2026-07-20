@@ -4,7 +4,7 @@ from tests.utils import create_dirs, create_file, run_rmlint
 
 
 @pytest.mark.slow
-def test_manylongpathfiles(usual_setup_usual_teardown):
+def test_manylongpathfiles():
 
 	#create ~1000 character path, 4 dirs deep
     longpath = ("long" * (1000//4//4) + "/") * 4

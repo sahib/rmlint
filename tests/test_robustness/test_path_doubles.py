@@ -1,10 +1,12 @@
 import os
 import subprocess
 
+import pytest
+
 from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint, runs_as_root
 
 
-def test_cmdline(usual_setup_usual_teardown):
+def test_cmdline():
     create_file('xxx', '1/a')
     # feed rmlint the same file twice via command line
     _, *data, _ = run_rmlint('{t}/1 {t}/1'.format(t=TESTDIR_NAME), use_default_dir=False)
@@ -17,7 +19,7 @@ def test_cmdline(usual_setup_usual_teardown):
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
 
-def test_symlink_noloop(usual_setup_usual_teardown):
+def test_symlink_noloop():
     create_file('xxx', '1/a')
     create_link('1/a', '1/link', symlink=True)
 
@@ -33,7 +35,7 @@ def test_symlink_noloop(usual_setup_usual_teardown):
     _, *data, _ = run_rmlint('{t}/1/a {t}/1/link'.format(t=TESTDIR_NAME), use_default_dir=False)
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
-def test_symlink_loop(usual_setup_usual_teardown):
+def test_symlink_loop():
     create_file('xxx', '1/a')
     create_link('1', '1/link', symlink=True)
 
@@ -43,8 +45,8 @@ def test_symlink_loop(usual_setup_usual_teardown):
     _, *data, _ = run_rmlint('{t}/1 {t}/1/link'.format(t=TESTDIR_NAME), use_default_dir=False)
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
-
-def test_mount_binds(usual_setup_mount_bind_teardown):
+@pytest.mark.usefixtures("usual_setup_mount_bind_teardown")
+def test_mount_binds():
     if not runs_as_root():
         return
 

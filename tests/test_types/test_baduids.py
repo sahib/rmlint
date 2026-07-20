@@ -20,7 +20,7 @@ def exec_cmds(cmds):
             print(cmd, 'failed:', err)
 
 
-def test_bad_ids(usual_setup_usual_teardown):
+def test_bad_ids():
     if not runs_as_root():
         return
 

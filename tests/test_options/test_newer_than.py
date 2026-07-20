@@ -28,7 +28,7 @@ def create_set(create_stamp, iso8601=False):
     warp_file_to_future('c', 2)
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_set(False)
     now = time.time()
     _, *data, _ = run_rmlint_once('-S a -N ' + str(time.time()))
@@ -46,7 +46,7 @@ def test_simple(usual_setup_usual_teardown):
         assert len(data) == expect
 
 
-def test_stamp_file(usual_setup_usual_teardown):
+def test_stamp_file():
     create_set(True, False)
 
     # Wait 3 seconds, so the new stamp file (written by -n)
@@ -61,7 +61,7 @@ def test_stamp_file(usual_setup_usual_teardown):
     assert len(data) == 0
 
 
-def test_stamp_file_iso8601(usual_setup_usual_teardown):
+def test_stamp_file_iso8601():
     create_set(True, True)
 
     _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))

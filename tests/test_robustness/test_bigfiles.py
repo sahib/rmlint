@@ -12,7 +12,7 @@ KBYTES_FROM_END = 10
 LARGE_FILE_SIZE = 5 * 1024**3  # 5 GiB
 
 
-def test_bigfiles(usual_setup_usual_teardown):
+def test_bigfiles():
     """test on two identical files and a third one which differs near the end"""
 
     create_file('x' * FILE_SIZE_KB * 1024, 'file1')
@@ -52,7 +52,7 @@ def _setup_large_file_offset():
     return path_a, path_b, path_c
 
 
-def test_hash_utility(usual_setup_usual_teardown):
+def test_hash_utility():
     path_a, path_b, path_c = _setup_large_file_offset()
 
     # only files 'b' and 'c' should match

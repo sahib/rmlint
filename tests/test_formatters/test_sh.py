@@ -23,7 +23,7 @@ def filter_part_of_directory(data):
     return [e for e in data if e['type'] != 'part_of_directory']
 
 
-def test_basic(usual_setup_usual_teardown, shell):
+def test_basic(shell):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
@@ -70,7 +70,7 @@ def test_basic(usual_setup_usual_teardown, shell):
     assert '/a' in text
 
 
-def test_paranoia(usual_setup_usual_teardown, shell):
+def test_paranoia(shell):
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     create_file('xxx', 'c')
@@ -122,7 +122,7 @@ def test_paranoia(usual_setup_usual_teardown, shell):
     assert footer['duplicates'] == 0
 
 
-def test_anon_pipe(usual_setup_usual_teardown):
+def test_anon_pipe():
     create_file('xxx', 'long-dummy-file-1')
     create_file('xxx', 'long-dummy-file-2')
 
@@ -137,7 +137,7 @@ def test_anon_pipe(usual_setup_usual_teardown):
     assert b'/long-dummy-file-2' in data
 
 
-def test_hardlink_duplicate_directories(usual_setup_usual_teardown, shell):
+def test_hardlink_duplicate_directories(shell):
     create_file('xxx', 'dir_a/x')
     create_file('xxx', 'dir_b/x')
 
@@ -168,7 +168,7 @@ def _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data):
 
 
 @pytest.mark.parametrize("inverse_order", [False, True])
-def test_remove_empty_dirs(usual_setup_usual_teardown, shell, inverse_order):
+def test_remove_empty_dirs(shell, inverse_order):
     create_file('xxx', 'deep/a/b/c/d/e/1')
     create_file('xxx', 'deep/x/2')
 
@@ -192,7 +192,7 @@ def test_remove_empty_dirs(usual_setup_usual_teardown, shell, inverse_order):
 
 
 @pytest.mark.parametrize("inverse_order", [False, True])
-def test_remove_empty_dirs_with_dupe_dirs(usual_setup_usual_teardown, shell, inverse_order):
+def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
     create_file('xxx', 'deep/a/b/c/d/e/1')
     create_file('xxx', 'deep/x/1')
 
@@ -216,7 +216,7 @@ def test_remove_empty_dirs_with_dupe_dirs(usual_setup_usual_teardown, shell, inv
     _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data)
 
 
-def test_cleanup_emptydirs(usual_setup_usual_teardown, shell):
+def test_cleanup_emptydirs(shell):
     create_file('xxx', 'dir1/a')
 
     # create some ugly dir names
@@ -245,7 +245,7 @@ def test_cleanup_emptydirs(usual_setup_usual_teardown, shell):
         assert (not os.path.exists(os.path.join(TESTDIR_NAME, dirname)))
 
 
-def test_keep_parent_timestamps(usual_setup_usual_teardown, shell):
+def test_keep_parent_timestamps(shell):
     create_file('xxx', 'dir/a')
     create_file('xxx', 'dir/b')
 
@@ -265,9 +265,9 @@ def test_keep_parent_timestamps(usual_setup_usual_teardown, shell):
     assert stat_before.st_mtime == stat_after.st_mtime
 
 
-# regression test for GitHub issue #545
 @pytest.mark.parametrize("tm_opt", ('', '-D'))
-def test_skip_hardlinks(usual_setup_usual_teardown, tm_opt):
+def test_skip_hardlinks(tm_opt):
+    """regression test for GitHub issue #545"""
     dir_a = create_dirs('a')
     create_file('xxx', 'a/1')
     create_file('yyy', 'a/2')

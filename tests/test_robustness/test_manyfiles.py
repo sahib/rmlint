@@ -4,7 +4,7 @@ from tests.utils import create_file, run_rmlint
 
 
 @pytest.mark.slow
-def test_manyfiles(usual_setup_usual_teardown):
+def test_manyfiles():
     # create heaps of identical files:
     numfiles = 1024 * 32 + 1
     for i in range(numfiles):

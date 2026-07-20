@@ -5,7 +5,7 @@ def filter_part_of_directory(data):
     return [e for e in data if e['type'] != 'part_of_directory']
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_file('xxx', '.a/1')
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
@@ -18,7 +18,7 @@ def test_simple(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 1
 
 
-def test_hidden(usual_setup_usual_teardown):
+def test_hidden():
     create_file('xxx', '.a/1')
     create_file('xxx', '.b/1')
     create_file('xxx', '.1')
@@ -31,7 +31,7 @@ def test_hidden(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 0
 
 
-def test_explicit(usual_setup_usual_teardown):
+def test_explicit():
     create_file('xxx', '.a/1')
     create_file('xxx', '.a/2')
 
@@ -43,7 +43,7 @@ def test_explicit(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 1
 
 
-def test_partial_hidden(usual_setup_usual_teardown):
+def test_partial_hidden():
     create_file('1', 'a/.hidden')
     create_file('1', 'b/.hidden')
     create_file('1', '.hidden')

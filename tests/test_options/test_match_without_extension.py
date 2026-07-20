@@ -1,7 +1,7 @@
 from tests.utils import create_file, run_rmlint
 
 
-def test_negative(usual_setup_usual_teardown):
+def test_negative():
     create_file('xxx', 'b.png')
     create_file('xxx', 'a.png')
     create_file('xxx', 'a')
@@ -11,7 +11,7 @@ def test_negative(usual_setup_usual_teardown):
     assert footer['duplicates'] == 0
 
 
-def test_positive(usual_setup_usual_teardown):
+def test_positive():
     create_file('xxx', 'a.png')
     create_file('xxx', 'a.jpg')
     _, *_, footer = run_rmlint('-i')

@@ -15,7 +15,7 @@ def create_bad_link(link_name):
         os.remove(fake_target)
 
 
-def test_basic(usual_setup_usual_teardown):
+def test_basic():
     create_bad_link('imbad')
 
     for option in ('-f', '-F', '--see-symlinks'):

@@ -11,7 +11,7 @@ def create_set():
         create_file('x' * 512, 'small' + suffix)
 
 
-def test_valid(usual_setup_usual_teardown):
+def test_valid():
     create_set()
 
     # Scalar:
@@ -50,7 +50,7 @@ def test_valid(usual_setup_usual_teardown):
     assert footer['duplicates'] == 6
 
 
-def test_invalid(usual_setup_usual_teardown):
+def test_invalid():
     create_set()
 
     def trigger(*args):
@@ -82,7 +82,7 @@ def test_invalid(usual_setup_usual_teardown):
 
 
 
-def test_replay_size(usual_setup_usual_teardown):
+def test_replay_size():
     create_file('', 'empty1')
     create_file('', 'empty2')
     create_file('xxx', 'a/xxx')

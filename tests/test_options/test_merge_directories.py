@@ -15,7 +15,7 @@ def filter_part_of_directory(data):
 # --write-unfinished variant is a regression test for GitHub issue #562;
 # --hash-unmatched covers its successor
 @pytest.mark.parametrize('extra_opts', [(), ('--write-unfinished',), ('--hash-unmatched',)])
-def test_simple(usual_setup_usual_teardown, extra_opts):
+def test_simple(extra_opts):
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
@@ -37,7 +37,7 @@ def test_simple(usual_setup_usual_teardown, extra_opts):
     assert data[1]['path'].endswith('1')
 
 
-def test_diff(usual_setup_usual_teardown):
+def test_diff():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '3/a')
@@ -55,7 +55,7 @@ def test_diff(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('1')
 
 
-def test_same_but_not_dupe(usual_setup_usual_teardown):
+def test_same_but_not_dupe():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
@@ -66,7 +66,7 @@ def test_same_but_not_dupe(usual_setup_usual_teardown):
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert 3 == sum(find['type'] == 'duplicate_file' for find in data)
 
-def test_hardlinks(usual_setup_usual_teardown):
+def test_hardlinks():
     create_file('xxx', '1/a')
     create_link('1/a', '1/link1')
     create_link('1/a', '1/link2')
@@ -102,7 +102,7 @@ def test_hardlinks(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('a')
 
 
-def test_deep_simple(usual_setup_usual_teardown):
+def test_deep_simple():
     create_file('xxx', 'deep/a/b/c/d/1')
     create_file('xxx', 'deep/e/f/g/h/1')
     _, *data, _ = run_rmlint('-D -S a')
@@ -115,7 +115,7 @@ def test_deep_simple(usual_setup_usual_teardown):
     assert len(data) == 2
 
 
-def test_deep_simple_paranoid(usual_setup_usual_teardown):
+def test_deep_simple_paranoid():
     create_file('xxx', 'd/a/1')
     create_file('xxx', 'd/b/empty')
     create_file('xxx', 'd/a/1')
@@ -128,7 +128,7 @@ def test_deep_simple_paranoid(usual_setup_usual_teardown):
     assert len(data) == 2
 
 
-def test_dirs_with_empty_files_only(usual_setup_usual_teardown):
+def test_dirs_with_empty_files_only():
     create_file('', 'a/empty')
     create_file('', 'b/empty')
     _, *data, _ = run_rmlint('-p -D -S a -T df,dd --size 0')
@@ -163,7 +163,7 @@ def create_nested(root, letters):
         create_file('xxx', path)
 
 
-def test_deep_full(usual_setup_usual_teardown):
+def test_deep_full():
     create_nested('deep', 'abcd')
     create_nested('deep', 'efgh')
 
@@ -185,7 +185,7 @@ def test_deep_full(usual_setup_usual_teardown):
         assert data[idx + 2]['is_original'] == (idx == 0)
 
 
-def test_deep_full_twice(usual_setup_usual_teardown):
+def test_deep_full_twice():
     create_nested('deep_a', 'abcd')
     create_nested('deep_a', 'efgh')
     create_nested('deep_b', 'abcd')
@@ -230,7 +230,7 @@ def test_deep_full_twice(usual_setup_usual_teardown):
     assert not data[3]['is_original']
 
 
-def test_symlinks(usual_setup_usual_teardown):
+def test_symlinks():
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
     create_file('xxx', 'b/z')
@@ -254,8 +254,8 @@ def test_symlinks(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
 
-
-def test_mount_binds(usual_setup_mount_bind_teardown):
+@pytest.mark.usefixtures("usual_setup_mount_bind_teardown")
+def test_mount_binds():
     if not runs_as_root():
         return
 
@@ -277,12 +277,11 @@ def test_mount_binds(usual_setup_mount_bind_teardown):
     assert len(data) == 2
 
 
-def test_keepall_tagged(usual_setup_usual_teardown):
-    # Test for Issue #141:
-    # https://github.com/sahib/rmlint/issues/141
-    #
-    # Make sure -k protects duplicate directories too,
-    # when they're in a pref'd path.
+def test_keepall_tagged():
+    """test for GitHub issue #141
+    Make sure -k protects duplicate directories too,
+    when they're in a pref'd path.
+    """
     create_file('test', 'origs/folder/subfolder/file')
     create_file('test', 'origs/samefolder/subfolder/file')
     create_file('test', 'dups/folder/subfolder/file')
@@ -404,7 +403,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 0
 
 
-def test_equal_content_different_layout(usual_setup_usual_teardown):
+def test_equal_content_different_layout():
     # Different duplicates in different subdirs.
     create_file('xxx', "tree-a/sub2/x")
     create_file('yyy', "tree-a/sub1/y")
@@ -436,7 +435,7 @@ def test_equal_content_different_layout(usual_setup_usual_teardown):
         assert point["type"] == "duplicate_file"
 
 
-def test_nested_content_with_same_layout(usual_setup_usual_teardown):
+def test_nested_content_with_same_layout():
     create_nested('deep', 'xyzabc')
     create_nested('deep', 'uvwabc')
 

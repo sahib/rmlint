@@ -1,7 +1,7 @@
 from tests.utils import create_dirs, create_file, run_rmlint
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_file('xxx', 'not_empty/a')
     create_file('', 'empty_but_with_file/a')
     create_dirs('really_empty')
@@ -17,7 +17,7 @@ def test_simple(usual_setup_usual_teardown):
     assert data[1]['type'] == "emptyfile"
 
 
-def test_deep(usual_setup_usual_teardown):
+def test_deep():
     create_dirs('1/2/3/4/5')
     create_dirs('1/2/C/D/E')
     _, *data, _ = run_rmlint('-T "none +ed"')
@@ -41,7 +41,7 @@ def test_deep(usual_setup_usual_teardown):
     assert data[4]['path'].endswith('4')
 
 
-def test_hidden(usual_setup_usual_teardown):
+def test_hidden():
     create_file('xxx', 'not_empty/.hidden')
     _, *data, footer = run_rmlint('-T "none +ed"')
 

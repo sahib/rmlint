@@ -4,7 +4,7 @@ import subprocess
 from tests.utils import TESTDIR_NAME, create_file, run_rmlint
 
 
-def test_just_call_it(usual_setup_usual_teardown):
+def test_just_call_it():
     create_file('1234', 'a')
     create_file('1234', 'b')
 
@@ -31,7 +31,7 @@ def test_just_call_it(usual_setup_usual_teardown):
             assert False
 
 
-def test_fdups_and_traversed_dirs_in_summary(usual_setup_usual_teardown):
+def test_fdups_and_traversed_dirs_in_summary():
     # Traversed directories should not be listed as lint by fdupes nor
     # counted in the summary.
 
