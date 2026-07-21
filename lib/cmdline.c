@@ -963,7 +963,7 @@ static gboolean rm_cmd_parse_btrfs_clone(_UNUSED const char *option_name,
                                          _UNUSED const gchar *x,
                                          _UNUSED RmSession *session,
                                          _UNUSED GError **error) {
-    rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
+    rm_log_error_line("option --btrfs-clone is removed, use --dedupe");
     return false;
 }
 
@@ -971,7 +971,7 @@ static gboolean rm_cmd_parse_btrfs_readonly(_UNUSED const char *option_name,
                                             _UNUSED const gchar *x,
                                             _UNUSED RmSession *session,
                                             _UNUSED GError **error) {
-    rm_log_error_line("option --btrfs-clone is deprecated, use --dedupe");
+    rm_log_error_line("option --btrfs-readonly is removed, use --dedupe --readonly");
     return false;
 }
 
@@ -979,7 +979,7 @@ static gboolean rm_cmd_parse_dedupe_xattr(_UNUSED const char *option_name,
                                           _UNUSED const gchar *x,
                                           _UNUSED RmSession *session,
                                           _UNUSED GError **error) {
-    rm_log_error_line("option --dedupe-xattr is deprecated, use --dedupe --xattr");
+    rm_log_error_line("option --dedupe-xattr is removed, use --dedupe --xattr");
     return false;
 }
 
@@ -987,7 +987,7 @@ static gboolean rm_cmd_parse_dedupe_readonly(_UNUSED const char *option_name,
                                              _UNUSED const gchar *x,
                                              _UNUSED RmSession *session,
                                              _UNUSED GError **error) {
-    rm_log_error_line("option --dedupe-readonly is deprecated, use --dedupe --readonly");
+    rm_log_error_line("option --dedupe-readonly is removed, use --dedupe --readonly");
     return false;
 }
 
@@ -1221,9 +1221,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
     };
 
-    const GOptionEntry deprecated_option_entries[] = {
-        {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Deprecated, use --dedupe instead"                  , NULL},
-        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Deprecated, use --dedupe --readonly instead"       , NULL},
+    const GOptionEntry removed_option_entries[] = {
+        {"btrfs-clone"              , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_clone)         , "Removed, use --dedupe instead"                  , NULL},
+        {"btrfs-readonly"           , 0    , EMPTY | HIDDEN      , G_OPTION_ARG_CALLBACK      , FUNC(btrfs_readonly)      , "Removed, use --dedupe --readonly instead"       , NULL},
         {NULL                       , 0    , HIDDEN              , 0                          , NULL                      , NULL                                                , NULL}
     };
 
@@ -1260,17 +1260,17 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         "inversed", "inverted", "Options that enable defaults", session, NULL);
     GOptionGroup *unusual_group =
         g_option_group_new("unusual", "unusual", "Unusual options", session, NULL);
-    GOptionGroup *deprecated_group = g_option_group_new(
-        "deprecated", "deprecated", "Deprecated options", session, NULL);
+    GOptionGroup *old_group = g_option_group_new(
+        "old", "old", "Old options", session, NULL);
 
     g_option_group_add_entries(main_group, main_option_entries);
     g_option_group_add_entries(main_group, inversed_option_entries);
     g_option_group_add_entries(main_group, unusual_option_entries);
-    g_option_group_add_entries(deprecated_group, deprecated_option_entries);
+    g_option_group_add_entries(old_group, removed_option_entries);
 
     g_option_context_add_group(option_parser, inversion_group);
     g_option_context_add_group(option_parser, unusual_group);
-    g_option_context_add_group(option_parser, deprecated_group);
+    g_option_context_add_group(option_parser, old_group);
     g_option_context_set_main_group(option_parser, main_group);
     g_option_context_set_summary(option_parser,
                                  _("rmlint finds space waste and other broken things on "
