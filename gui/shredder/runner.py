@@ -290,8 +290,8 @@ class Runner(GObject.Object):
             self.process = None
             return
 
-        line = line.strip(', ')
-        if line in ['[', ']']:
+        line = line.strip('[], ')
+        if not line:
             self._queue_read()
             return
 
