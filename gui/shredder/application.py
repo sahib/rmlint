@@ -8,7 +8,7 @@ import gettext
 import logging
 import os
 
-from gi.repository import GdkPixbuf, Gio, Gtk, Rsvg
+from gi.repository import GdkPixbuf, GLib, Gio, Gtk, Rsvg
 
 from shredder import APP_TITLE
 from shredder.about import AboutDialog
@@ -62,11 +62,13 @@ def _load_app_icon():
 class Application(Gtk.Application):
     """GtkApplication implementation of Shredder."""
     def __init__(self, options):
-        Gtk.Application.__init__(
-            self,
+        GLib.set_application_name(APP_TITLE)
+
+        super().__init__(
             application_id='org.gnome.Shredder',
             flags=Gio.ApplicationFlags.FLAGS_NONE
         )
+
         self.cmd_opts = options
         self.settings = self.win = None
 
@@ -121,10 +123,6 @@ class Application(Gtk.Application):
         self.set_accels_for_action('app.quit', ['<Ctrl>Q'])
         self.set_accels_for_action('app.search', ['<Ctrl>F'])
         self.set_accels_for_action('app.activate', ['<Ctrl>Return'])
-
-        # Set the fallback window title.
-        # This is only used if no .desktop file is provided.
-        self.win.set_wmclass(APP_TITLE, APP_TITLE)
 
         # Load the application icon
         self.win.set_default_icon(_load_app_icon())
