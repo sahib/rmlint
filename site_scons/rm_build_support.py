@@ -115,3 +115,52 @@ def get_cpu_count():
     if 'NUM_CPU' in os.environ:
         return int(os.environ['NUM_CPU'])
     return os.cpu_count() or 4
+
+
+###########################################################################
+#                     clang tooling (clangd / clang-tidy)                 #
+###########################################################################
+
+# others flags might be irrelevant. TODO: refine
+CLANG_FLAG_KEEP_PREFIXES = ('-std=', '-D', '-U', '-I', '-m', '-pthread', '-fPIC')
+
+
+def collect_clang_flags(env):
+    """Compile flags for clang tooling"""
+    flags = ['-I.', '-Ilib']  # resolve "config.h" + lib-root quote includes
+    for flag in env['CCFLAGS']:
+        flag = str(flag)
+        if flag.startswith(CLANG_FLAG_KEEP_PREFIXES):
+            flags.append(flag)
+    for path in env.get('CPPPATH', []):
+        flags.append('-I' + env.subst(str(path)))
+    for define in env.get('CPPDEFINES', []):
+        if isinstance(define, (list, tuple)):
+            name = str(define[0])
+            value = define[1] if len(define) > 1 else None
+        else:
+            name = str(define)
+            value = None
+        flags.append(f'-D{name}={value}' if value is not None else f'-D{name}')
+
+    seen, unique = set(), []  # de-dup, keep order
+    for flag in flags:
+        if flag not in seen:
+            seen.add(flag)
+            unique.append(flag)
+    return unique
+
+
+def write_compile_flags(target, source, env):
+    """Write compile_flags.txt and .clang_complete link"""
+    flags = source[0].read()
+    with open(target[0].get_abspath(), 'w', encoding='utf-8') as handle:
+        handle.write('\n'.join(flags) + '\n')
+
+    link = os.path.join(os.path.dirname(target[0].get_abspath()), '.clang_complete')
+    try:
+        if os.path.lexists(link):
+            os.remove(link)
+        os.symlink(os.path.basename(target[0].get_abspath()), link)  # relative
+    except OSError as err:
+        print('Warning: could not create .clang_complete symlink: ' + str(err))

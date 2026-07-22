@@ -11,6 +11,7 @@ from rm_build_support import (
     OPTIONAL_FLAGS,
     PKG_CONFIG,
     InstallPerm,
+    collect_clang_flags,
     compile_shared_source_message,
     compile_source_message,
     create_uninstall_target,
@@ -21,6 +22,7 @@ from rm_build_support import (
     link_shared_library_message,
     ranlib_library_message,
     read_version,
+    write_compile_flags,
 )
 
 DEFAULT_PREFIX = '/usr'
@@ -341,6 +343,10 @@ if value:
 # Your extra checks here
 env = conf.Finish()
 
+# snapshot the compile flags before we add host-specific flags
+# for vendored libraries.
+CLANG_FLAGS = collect_clang_flags(env)
+
 # set number of parallel jobs during build
 # note: while not particularly intuitive or obvious from the documentation,
 # SetOption() will *not* over-ride commandline option passed by `scons -j<n>`
@@ -357,6 +363,15 @@ SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
 SConscript('gui/SConscript')
+
+
+# clang tooling
+compile_flags = env.Command(
+    'compile_flags.txt', env.Value(CLANG_FLAGS),
+    Action(write_compile_flags, "Generating $TARGET and .clang_complete")
+)
+env.Depends(compile_flags, 'lib/config.h')
+env.Alias('compile-flags', compile_flags)
 
 
 def build_tar_gz(target=None, source=None, env=None):
