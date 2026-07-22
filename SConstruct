@@ -296,8 +296,6 @@ if ARGUMENTS.get('DEBUG') == "1":
     O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
-    if not sanitisers:                    # -s strips symbols; keep them when
-        conf.env.Append(LINKFLAGS=['-s']) # sanitising so reports resolve
     O_value = ARGUMENTS.get('O', O_RELEASE)
 
 if O_value == 'debug':
@@ -321,6 +319,19 @@ if sanitisers:
     conf.env.Append(LINKFLAGS=[fsan])
     if ARGUMENTS.get('SYMBOLS') != '1':   # SYMBOLS=1 already added -g3
         conf.env.Append(CCFLAGS=['-g'])
+
+# symbol stripping
+# Release strips by default, use STRIP=0 to ship a separate debuginfo package.
+if (strip_arg := ARGUMENTS.get('STRIP')) is not None:
+    if strip_arg not in ('0', '1'):
+        print(f"Error: STRIP must be 0 or 1, got '{strip_arg}'.")
+        Exit(1)
+    strip = strip_arg == '1'
+else:
+    strip = ARGUMENTS.get('DEBUG') != '1' and not sanitisers
+
+if strip:
+    conf.env.Append(LINKFLAGS=['-s'])
 
 value = ARGUMENTS.get('CCFLAGS')
 if value:
@@ -429,6 +440,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
     Active sanitisers    : {sanitisers}
+    Stripping symbols    : {strip}
     Compile Glib schemas : {compile_glib_schemas}
 
 Type 'scons' to actually compile rmlint now. Good luck.
@@ -461,6 +473,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
             sanitisers=(COLORS['green'] + ', '.join(sanitisers) + COLORS['end'])
                        if sanitisers else (COLORS['red'] + 'none' + COLORS['end']),
+            strip=yesno(strip),
             version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
                     f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})'
         ))
