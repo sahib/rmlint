@@ -191,7 +191,7 @@ else:
 # check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
 
-if any(cc in os.path.basename(conf.env['CC']) for cc in ('clang', 'include-what-you-use')):
+if IS_CLANG := any(cc in os.path.basename(conf.env['CC']) for cc in ('clang', 'include-what-you-use')):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
@@ -257,6 +257,35 @@ if ARGUMENTS.get('GDB') == '1':
     ARGUMENTS['DEBUG'] = '1'
     ARGUMENTS['SYMBOLS'] = '1'
 
+# sanitisers
+SANITISERS_EXCLUSIVE  = ['address', 'thread', 'memory']
+SANITISERS_CLANG_ONLY = ['memory']
+
+sanitise_arg = ARGUMENTS.get('SANITISE', '')
+if sanitise_arg == '1':
+    sanitisers = ['address', 'undefined']
+else:
+    sanitisers = [t.strip().lower()
+                  for t in sanitise_arg.replace(',', ' ').split() if t.strip()]
+
+deduped = []
+for s in sanitisers:
+    if s not in deduped:
+        deduped.append(s)
+sanitisers = deduped
+
+needs_clang = [s for s in sanitisers if s in SANITISERS_CLANG_ONLY]
+if needs_clang and not IS_CLANG:
+    print(f"Error: sanitiser(s) {', '.join(needs_clang)} require clang; "
+          f"re-run with CC=clang.")
+    Exit(1)
+
+exclusive = [s for s in sanitisers if s in SANITISERS_EXCLUSIVE]
+if len(exclusive) > 1:
+    print(f"Error: sanitisers {', '.join(exclusive)} cannot be combined; "
+          f"pick one of address/thread/memory.")
+    Exit(1)
+
 O_DEBUG   = 'g' # The optimisation level for a debug   build
 O_RELEASE = '2' # The optimisation level for a release build
 
@@ -267,7 +296,8 @@ if ARGUMENTS.get('DEBUG') == "1":
     O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
-    conf.env.Append(LINKFLAGS=['-s'])
+    if not sanitisers:                    # -s strips symbols; keep them when
+        conf.env.Append(LINKFLAGS=['-s']) # sanitising so reports resolve
     O_value = ARGUMENTS.get('O', O_RELEASE)
 
 if O_value == 'debug':
@@ -283,6 +313,14 @@ conf.env.Append(CCFLAGS=[cc_O_option])
 if ARGUMENTS.get('SYMBOLS') == '1':
     print("Compiling with debugging symbols")
     conf.env.Append(CCFLAGS='-g3')
+
+if sanitisers:
+    fsan = '-fsanitize=' + ','.join(sanitisers)
+    print('Compiling with sanitisers: ' + ', '.join(sanitisers))
+    conf.env.Append(CCFLAGS=[fsan, '-fno-omit-frame-pointer'])
+    conf.env.Append(LINKFLAGS=[fsan])
+    if ARGUMENTS.get('SYMBOLS') != '1':   # SYMBOLS=1 already added -g3
+        conf.env.Append(CCFLAGS=['-g'])
 
 value = ARGUMENTS.get('CCFLAGS')
 if value:
@@ -390,6 +428,7 @@ if 'config' in COMMAND_LINE_TARGETS:
     Verbose building     : {verbose}
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
+    Active sanitisers    : {sanitisers}
     Compile Glib schemas : {compile_glib_schemas}
 
 Type 'scons' to actually compile rmlint now. Good luck.
@@ -420,6 +459,8 @@ Type 'scons' to actually compile rmlint now. Good luck.
             verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
             debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
             symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
+            sanitisers=(COLORS['green'] + ', '.join(sanitisers) + COLORS['end'])
+                       if sanitisers else (COLORS['red'] + 'none' + COLORS['end']),
             version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
                     f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})'
         ))
