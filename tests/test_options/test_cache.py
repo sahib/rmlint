@@ -79,7 +79,7 @@ def test_xattr_basic():
 
 
 BLAKE2B = {
-    s: hashlib.blake2b(s).hexdigest().encode("ascii") + b'\0'
+    s: hashlib.blake2b(s).hexdigest().encode("ascii")
     for s in (b'abc', b'def', b'longer')
 }
 
