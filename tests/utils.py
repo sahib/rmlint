@@ -486,7 +486,12 @@ def check_xattr_capable() -> str | None:
     if not has_feature('xattr'):
         return "xattr not supported"
 
-    # TODO: probe
+    with tempfile.NamedTemporaryFile(dir=TESTDIR_BASE) as probe:
+        try:
+            xattr.xattr(probe.name).set('user.rmlint_probe', b'1')
+        except OSError as exc:
+            return f"testdir does not support xattr: {exc}"
+
     return None
 
 
