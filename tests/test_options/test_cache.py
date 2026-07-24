@@ -106,6 +106,11 @@ def test_xattr_detail(extra_opts):
         create_file("def", path_3)
         create_file("longer", path_4)
 
+        # ensure path_1 and path_2 have the same mtime, even on a filesystem
+        # with sub-second mtime granularity, otherwise xattrs would differ.
+        mtime_ns = os.stat(path_1).st_mtime_ns
+        os.utime(path_2, ns=(mtime_ns, mtime_ns))
+
         _, *data, _ = run_rmlint_once(base_options + ' --xattr-write')
         assert len(data) == 2
 
