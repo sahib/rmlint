@@ -39,4 +39,6 @@ def needs_reflink_fs():
 
 @pytest.fixture(scope="session")
 def needs_xattr_fs():
-    '''TODO'''
+    """fixture for tests dependent on an xattr-capable testdir"""
+    if skip_msg := utils.check_xattr_capable():
+        pytest.skip(skip_msg)

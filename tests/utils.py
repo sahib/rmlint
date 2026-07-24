@@ -14,7 +14,6 @@ import time
 import psutil
 import xattr
 
-
 TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 # Some systems use a symbolic link for /tmp
 # For example macOS will have a /tmp -> /private/tmp link.
@@ -392,12 +391,14 @@ def mount_bind_teardown_func():
     usual_teardown_func()
 
 
+# XXX: now unused, but might be handy.
 @contextlib.contextmanager
 def create_special_fs(name, fs_type='ext4'):
     """
     Used to create a special filesystem container in TESTDIR_NAME
-    under »name«. The type of the filesystem will be »fs_type« (as long
-    we have a »mkfs.xyz« binary for that.) This method needs root privileges.
+    under «name». The type of the filesystem will be «fs_type» (as long
+    we have a «mkfs.fs_type» binary for that).
+    This method needs root privileges.
 
     Returns: The path of the created directory.
     """
@@ -483,6 +484,14 @@ def check_reflink_capable() -> str | None:
         return "btrfs not supported"
     if not is_on_reflink_fs(TESTDIR_NAME):
         return "testdir is not on reflink-capable filesystem"
+    return None
+
+
+def check_xattr_capable() -> str | None:
+    if not has_feature('xattr'):
+        return "xattr not supported"
+
+    # TODO: probe
     return None
 
 
