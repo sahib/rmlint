@@ -1,9 +1,7 @@
 import os
-import subprocess
 
 import pytest
-
-from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint, runs_as_root
+from tests.utils import TESTDIR_NAME, bind_mount_a_b, create_file, create_link, run_rmlint, runs_as_root
 
 
 def test_cmdline():
@@ -35,6 +33,7 @@ def test_symlink_noloop():
     _, *data, _ = run_rmlint('{t}/1/a {t}/1/link'.format(t=TESTDIR_NAME), use_default_dir=False)
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
+
 def test_symlink_loop():
     create_file('xxx', '1/a')
     create_link('1', '1/link', symlink=True)
@@ -45,30 +44,27 @@ def test_symlink_loop():
     _, *data, _ = run_rmlint('{t}/1 {t}/1/link'.format(t=TESTDIR_NAME), use_default_dir=False)
     assert 0 == sum(find['type'] == 'duplicate_file' for find in data)
 
-@pytest.mark.usefixtures("usual_setup_mount_bind_teardown")
+
 def test_mount_binds():
     if not runs_as_root():
-        return
+        pytest.skip("must be run as root (bind-mount)")
 
-    create_file('xxx', 'a/b/1')
-    create_file('xxx', 'c/2')
+    # use a subdirectory as the second run would scan out.json (different path)
+    _mnt = 'mnt'
+    mnt_root = os.path.join(TESTDIR_NAME, _mnt)
 
-    subprocess.call(
-        'mount --rbind {src} {dst}'.format(
-            src=TESTDIR_NAME,
-            dst=os.path.join(TESTDIR_NAME, 'a/b')
-        ),
-        shell=True
-    )
-    create_file('xxx', 'a/3')
+    create_file('xxx', f'{_mnt}/a/b/1')
+    create_file('xxx', f'{_mnt}/c/2')
 
-    _, *data, _ = run_rmlint('{t} {t}/a/b -S pa'.format(t=TESTDIR_NAME), use_default_dir=False)
+    with bind_mount_a_b(mnt_root):
+        create_file('xxx', f'{_mnt}/a/3')
+        _, *data, _ = run_rmlint('{r} {r}/a/b -S pa'.format(r=mnt_root), use_default_dir=False)
 
     assert 3 == sum(find['type'] == 'duplicate_file' for find in data)
 
     # the actual order is a bit difficult to pin down since files 2
     # and 3 can be reached 2 different ways:
-    # /tmp/rmlint-unit-testdir
+    # <TESTDIR_NAME>/mnt
     # ├── a
     # │   ├── 3*
     # │   └── b

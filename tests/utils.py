@@ -382,16 +382,6 @@ def usual_teardown_func():
         shutil.rmtree(path=TESTDIR_NAME, ignore_errors=True)
 
 
-def mount_bind_teardown_func():
-    if runs_as_root():
-        subprocess.call(
-            f'umount {os.path.join(TESTDIR_NAME, 'a/b')}',
-            shell=True
-        )
-
-    usual_teardown_func()
-
-
 # XXX: now unused, but might be handy.
 @contextlib.contextmanager
 def create_special_fs(name, fs_type='ext4'):
@@ -429,6 +419,22 @@ def create_special_fs(name, fs_type='ext4'):
         # we'll get test errors in the next tests otherwise.
         unmount_command = f"umount {mount_path}"
         subprocess.run(unmount_command, shell=True, check=True)
+
+
+@contextlib.contextmanager
+def bind_mount_a_b(mnt_root):
+    mnt_dir = os.path.join(mnt_root, 'a/b')
+    subprocess.call(
+        f'mount --rbind {mnt_root} {mnt_dir}',
+        shell=True
+    )
+    try:
+        yield
+    finally:
+        subprocess.call(
+            f'umount {mnt_dir}',
+            shell=True
+        )
 
 
 def must_read_xattr(path):

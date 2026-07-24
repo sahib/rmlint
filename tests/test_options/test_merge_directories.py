@@ -1,9 +1,16 @@
 import os
-import subprocess
 
 import pytest
-
-from tests.utils import CKSUM_TYPES, TESTDIR_NAME, create_file, create_link, get_env_flag, run_rmlint, runs_as_root
+from tests.utils import (
+    CKSUM_TYPES,
+    TESTDIR_NAME,
+    bind_mount_a_b,
+    create_file,
+    create_link,
+    get_env_flag,
+    run_rmlint,
+    runs_as_root,
+)
 
 
 def filter_part_of_directory(data):
@@ -254,24 +261,18 @@ def test_symlinks():
     assert data[1]['path'].endswith('/b')
     assert not data[1]['is_original']
 
-@pytest.mark.usefixtures("usual_setup_mount_bind_teardown")
+
 def test_mount_binds():
     if not runs_as_root():
-        return
+        pytest.skip("must be run as root (bind-mount)")
 
     create_file('xxx', 'a/b/1')
     create_file('xxx', 'c/2')
 
-    subprocess.call(
-        'mount --rbind {src} {dst}'.format(
-            src=TESTDIR_NAME,
-            dst=os.path.join(TESTDIR_NAME, 'a/b')
-        ),
-        shell=True
-    )
-    create_file('xxx', 'a/3')
+    with bind_mount_a_b(TESTDIR_NAME):
+        create_file('xxx', 'a/3')
+        _, *data, _ = run_rmlint('-S a')
 
-    _, *data, _ = run_rmlint('-S a')
     assert data[0]['path'].endswith('c/2')
     assert data[1]['path'].endswith('a/3')
     assert len(data) == 2

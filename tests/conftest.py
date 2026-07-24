@@ -23,13 +23,6 @@ def usual_setup_usual_teardown(request):
     utils.usual_teardown_func()
 
 
-@pytest.fixture
-def usual_setup_mount_bind_teardown(no_setup_teardown):
-    utils.usual_setup_func()
-    yield
-    utils.mount_bind_teardown_func()
-
-
 @pytest.fixture(scope="session")
 def needs_reflink_fs():
     """fixture for tests dependent on reflink-capable testdir"""
