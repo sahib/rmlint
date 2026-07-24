@@ -13,11 +13,9 @@ To ensure required test dependencies are present:
 
 .. code-block:: bash
 
-   $ pip3 install -r test/requirements.txt
+   $ pip3 install -r tests/requirements.txt
 
-On every commit, those tests are additionally run on `TravisCI`_.
-
-.. _`TravisCI`: https://travis-ci.com/sahib/rmlint
+On every commit, those tests are additionally run on GitHub Actions.
 
 Control Variables
 ~~~~~~~~~~~~~~~~~
@@ -26,8 +24,8 @@ The behaviour of the testsuite can be controlled by certain environment
 variables which are:
 
 - ``RM_TS_DIR``: Testdir to create files in. Can be very large with some tests,
-  sometimes ``tmpfs`` might therefore slow down your computer. By default
-  ``/tmp`` will be used.
+  sometimes ``tmpfs`` might therefore slow down your computer. The directory
+  must already exist. By default, a temporary directory will be used.
 - ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
 - ``RM_TS_CHECK_LEAKS``: Fail test if valgrind indicates (definite) memory leak.
 - ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger a
@@ -39,11 +37,25 @@ variables which are:
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
 
+The files of a failing test are kept for inspection, those of a passing one are
+removed as the run goes along. Pass ``-o tmp_path_retention_policy=all`` to keep
+everything, or ``=none`` to keep nothing.
+
 Additionally slow tests can be omitted with by appending ``-m 'not slow'`` to
 the commandline. More information on this syntax can be found on the `pytest
 documentation`_.
 
 .. _`pytest documentation`: https://docs.pytest.org/en/stable/example/markers.html
+
+The suite can be run in parallel with `pytest-xdist`_:
+
+.. code-block:: bash
+
+   $ pytest -n auto --capture=fd
+
+Use ``--capture=fd`` if the default ``-s`` does not work.
+
+.. _`pytest-xdist`: https://pytest-xdist.readthedocs.io/
 
 Before each release we call the testsuite (at least) like this:
 

@@ -1,3 +1,4 @@
 psutil==7.*
 xattr==1.*
 pytest==9.*
+pytest-xdist==3.*
