@@ -21,6 +21,7 @@ TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
 # so fix it here.
 TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
 RMLINT_BINARY_DIR = os.getcwd()
+RMLINT_BINARY = os.path.join(RMLINT_BINARY_DIR, 'rmlint')
 
 CKSUM_TYPES = [
     'murmur',
@@ -62,7 +63,7 @@ _USE_VALGRIND = get_env_flag('RM_TS_USE_VALGRIND')
 _PRINT_CMD = get_env_flag('RM_TS_PRINT_CMD')
 _SLEEP = get_env_flag('RM_TS_SLEEP')
 _FEATURES = subprocess.check_output(
-    ['./rmlint', '--version'], stderr=subprocess.STDOUT).decode('utf-8')
+    [RMLINT_BINARY, '--version'], stderr=subprocess.STDOUT).decode('utf-8')
 
 
 def keep_testdir():
@@ -150,7 +151,7 @@ def run_rmlint_once(*args,
     else:
         env, cmd = {}, []
 
-    cmd.append(os.path.join(RMLINT_BINARY_DIR, "rmlint"))
+    cmd.append(RMLINT_BINARY)
     cmd.extend(arg for arg in (verbosity, target_dir) if arg)
 
     cmd.extend(shlex.split(' '.join(args)))

@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from tests.utils import TESTDIR_NAME, create_file
+from tests.utils import RMLINT_BINARY, TESTDIR_NAME, create_file
 
 
 def test_stdin_read():
@@ -17,7 +17,7 @@ def test_stdin_read():
     subdir_path = os.path.join(TESTDIR_NAME, subdir)
 
     proc = subprocess.Popen(
-        ['./rmlint', '-', subdir_path, '-o', 'json', '-S', 'a', '--hidden'],
+        [RMLINT_BINARY, '-', subdir_path, '-o', 'json', '-S', 'a', '--hidden'],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE
     )
@@ -40,7 +40,7 @@ def test_stdin_read_newlines():
     subdir_path = os.path.join(TESTDIR_NAME, subdir)
 
     proc = subprocess.Popen(
-        ['./rmlint', '-0', subdir_path, '-o', 'json', '-S', 'a', '--hidden'],
+        [RMLINT_BINARY, '-0', subdir_path, '-o', 'json', '-S', 'a', '--hidden'],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE
     )
@@ -63,7 +63,7 @@ def test_path_starting_with_dash():
     try:
         os.chdir(TESTDIR_NAME)
         proc = subprocess.Popen(
-            [cwd + '/rmlint', '-o', 'json', '-S', 'a', '--', subdir],
+            [RMLINT_BINARY, '-o', 'json', '-S', 'a', '--', subdir],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
         )
@@ -91,7 +91,7 @@ def test_stdin_empty(opts):
     try:
         os.chdir(TESTDIR_NAME)
         proc = subprocess.Popen(
-            [cwd + '/rmlint', *opts, '-o', 'json'],
+            [RMLINT_BINARY, *opts, '-o', 'json'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE
         )

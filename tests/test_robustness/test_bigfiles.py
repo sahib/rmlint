@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from tests.utils import create_file, has_feature, run_rmlint
+from tests.utils import RMLINT_BINARY, create_file, has_feature, run_rmlint
 
 FILE_SIZE_KB = 10000
 DIFFERENT_BYTES = 1
@@ -58,7 +58,7 @@ def test_hash_utility():
     # only files 'b' and 'c' should match
     # metro is chosen because it's faster
     output = subprocess.check_output([
-        *'./rmlint --hash -a metro'.split(),
+        RMLINT_BINARY, '--hash', '-a', 'metro',
         path_a, path_b, path_c,
     ])
     hashes = [l.split()[0] for l in output.splitlines()]

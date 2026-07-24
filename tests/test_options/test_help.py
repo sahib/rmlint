@@ -6,11 +6,13 @@ import subprocess
 
 import pytest
 
+from tests.utils import RMLINT_BINARY
+
 
 @pytest.mark.usefixtures("no_setup_teardown")
 def test_help():
     yelp = subprocess.check_output(
-        ['./rmlint', '--help'], stderr=subprocess.STDOUT
+        [RMLINT_BINARY, '--help'], stderr=subprocess.STDOUT
     ).decode('utf-8')
     assert 'man 1 rmlint' in yelp
     assert '--show-man' in yelp
@@ -19,7 +21,7 @@ def test_help():
 @pytest.mark.usefixtures("no_setup_teardown")
 def test_man():
     yelp = subprocess.check_output(
-        ['./rmlint', '--show-man'], stderr=subprocess.STDOUT
+        [RMLINT_BINARY, '--show-man'], stderr=subprocess.STDOUT
     ).decode('utf-8')
     assert 'Pahl' in yelp
     assert 'Thomas' in yelp

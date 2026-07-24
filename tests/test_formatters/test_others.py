@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from tests.utils import TESTDIR_NAME, create_file, run_rmlint
+from tests.utils import RMLINT_BINARY, TESTDIR_NAME, create_file, run_rmlint
 
 
 def test_just_call_it():
@@ -17,14 +17,14 @@ def test_just_call_it():
     )
 
     # Check if the -g option does weird things. (i.e. segfault)
-    subprocess.check_output(['./rmlint', '-g', '-c', 'progressbar:ascii', TESTDIR_NAME])
-    subprocess.check_output(['./rmlint', '-g', '-c', 'progressbar:fancy', TESTDIR_NAME])
-    subprocess.check_output(['./rmlint', '-g',  '-O' , 'fdupes', TESTDIR_NAME])
-    subprocess.check_output(['./rmlint', '-g', TESTDIR_NAME])
+    subprocess.check_output([RMLINT_BINARY, '-g', '-c', 'progressbar:ascii', TESTDIR_NAME])
+    subprocess.check_output([RMLINT_BINARY, '-g', '-c', 'progressbar:fancy', TESTDIR_NAME])
+    subprocess.check_output([RMLINT_BINARY, '-g', '-O', 'fdupes', TESTDIR_NAME])
+    subprocess.check_output([RMLINT_BINARY, '-g', TESTDIR_NAME])
 
     for silly_option in ['-ppp', '-PPPP']:
         try:
-            subprocess.check_output(['./rmlint', '-VV', silly_option, TESTDIR_NAME])
+            subprocess.check_output([RMLINT_BINARY, '-VV', silly_option, TESTDIR_NAME])
         except subprocess.CalledProcessError:
             pass
         else:
