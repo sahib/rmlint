@@ -57,7 +57,7 @@ jobs:
       - name: "Test it"
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
-          RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 python -m pytest -s -v
+          RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
 
       - name: CoW tests
         if: ${{ env.RUN_TEST == 'true' }}
@@ -82,7 +82,7 @@ jobs:
               config.hook.pytest_deselected(items=deselected_items)
               items[:] = selected_items
           EOF
-          RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 python -m pytest -s -v
+          RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
 
       - name: "Cleanup"
         if: ${{ env.RUN_TEST == 'true' }}
