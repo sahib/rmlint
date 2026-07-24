@@ -19,5 +19,5 @@ RUN scons DEBUG=1 -j4  # For releases you can omit DEBUG=1
 # Install test dependencies:
 RUN apk add python3-dev py3-pip
 RUN pip install wheel
-RUN pip3 install -r test-requirements.txt
+RUN pip3 install -r tests/requirements.txt
 CMD ["/bin/sh"]
