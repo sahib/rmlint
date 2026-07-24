@@ -28,7 +28,21 @@ def pytest_configure(config):
 
     # a subdirectory, never RM_TS_DIR itself: pytest remove basetemp
     # before recreating it, which fails on a mountpoint.
-    config.option.basetemp = os.path.join(utils.TESTDIR_BASE, 'pytest')
+    basetemp = os.path.join(utils.TESTDIR_BASE, 'pytest')
+
+    # test if there are leftovers of a root invocation
+    if not os.access(utils.TESTDIR_BASE, os.W_OK | os.X_OK):
+        raise pytest.UsageError(
+            f"RM_TS_DIR={utils.TESTDIR_BASE} is not writable."
+        )
+
+    if os.path.exists(basetemp) and not os.access(basetemp, os.W_OK | os.X_OK):
+        raise pytest.UsageError(
+            f"{basetemp} exists but cannot be removed. "
+            "Possibly left behind by a previous sudo pytest."
+        )
+
+    config.option.basetemp = basetemp
 
 
 @pytest.fixture(scope="session", autouse=True)
