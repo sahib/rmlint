@@ -32,7 +32,9 @@ def test_paranoia(interpreter):
     create_file('xxx', 'd')
     create_link('a', 'hardlink_a', symlink=False)
 
-    _, *_, footer = run_rmlint(f'-S a -o py:{get_testdir()}/rmlint.py')
+    _, *_, footer = run_rmlint(
+        f'-S a -o py:{get_testdir()}/rmlint.py', uses_py_formatter=True
+    )
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 9
@@ -48,7 +50,9 @@ def test_paranoia(interpreter):
     text = run_py_script(interpreter)
 
     os.remove(os.path.join(get_testdir(), "rmlint.py"))
-    _, *_, footer = run_rmlint(f'-S a -o py:{get_testdir()}/rmlint.py')
+    _, *_, footer = run_rmlint(
+        f'-S a -o py:{get_testdir()}/rmlint.py', uses_py_formatter=True
+    )
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 0
@@ -61,7 +65,9 @@ def test_paranoia(interpreter):
 
     run_py_script(interpreter)
     os.remove(os.path.join(get_testdir(), "rmlint.py"))
-    _, *_, footer = run_rmlint(f'-S a -o py:{get_testdir()}/rmlint.py')
+    _, *_, footer = run_rmlint(
+        f'-S a -o py:{get_testdir()}/rmlint.py', uses_py_formatter=True
+    )
 
     # Nothing should change.
     assert footer['duplicate_sets'] == 1

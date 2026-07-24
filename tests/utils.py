@@ -133,6 +133,7 @@ def run_rmlint_once(*args,
                     with_json=True,
                     directly_return_output=False,
                     use_shell=False,
+                    uses_py_formatter=False,
                     verbosity="-V",
                     check=True,
                     timeout=None):
@@ -181,6 +182,13 @@ def run_rmlint_once(*args,
 
     if use_shell:
         run_args['executable'] = "bash"
+
+    if uses_py_formatter:
+        # The py formatter writes its JSON document to `.rmlint.json` in
+        # rmlint's CWD and only once the traversal is over.If present from
+        # the previousrun remove it so it does not get in the way on this run.
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(os.path.join(get_testdir(), '.rmlint.json'))
 
     if _PRINT_CMD:
         print(f"running{' in shell' if use_shell else ''} from `{get_testdir()}`: {' '.join(cmd)}")
