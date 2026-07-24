@@ -665,13 +665,13 @@ conf.env.Append(CCFLAGS=[
 ])
 
 conf.env['HAVE_GIO_UNIX'] = 0
-conf.check_pkg('gio-unix-2.0', 'HAVE_GIO_UNIX', required=False)
+conf.check_pkg('gio-unix-2.0 >= 2.0', 'HAVE_GIO_UNIX', required=False)
 
 conf.env['HAVE_BLKID'] = 0
-conf.check_pkg('blkid', 'HAVE_BLKID', required=False)
+conf.check_pkg('blkid >= 2.0', 'HAVE_BLKID', required=False)
 
 conf.env['HAVE_JSON_GLIB'] = 0
-conf.check_pkg('json-glib-1.0', 'HAVE_JSON_GLIB', required=True)
+conf.check_pkg('json-glib-1.0 >= 1.0', 'HAVE_JSON_GLIB', required=True)
 
 packages = ['glib-2.0', 'json-glib-1.0']
 if conf.env['HAVE_BLKID']:
