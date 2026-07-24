@@ -5,23 +5,39 @@ import os
 import pprint
 import re
 import shlex
-import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 import time
 
 import psutil
 import xattr
 
-TESTDIR_NAME = os.getenv('RM_TS_DIR') or '/tmp/rmlint-unit-testdir'
-# Some systems use a symbolic link for /tmp
-# For example macOS will have a /tmp -> /private/tmp link.
-# Some tests might fail if we use the unresolved version,
-# so fix it here.
-TESTDIR_NAME = os.path.realpath(TESTDIR_NAME)
+# TESTDIR_BASE holds every test directory. It is not created automatically.
+# Note that some systems use a symbolic link for /tmp (e.g. macOS with /private/tmp),
+# and some tests might fail if we use the unresolved version.
+TESTDIR_BASE = os.path.realpath(os.getenv('RM_TS_DIR') or tempfile.gettempdir())
+
 RMLINT_BINARY_DIR = os.getcwd()
 RMLINT_BINARY = os.path.join(RMLINT_BINARY_DIR, 'rmlint')
+
+# Directory of the currently running test, set from `tmp_path` by the autouse
+# `rmlint_testdir` fixture in conftest.py.
+_TESTDIR = None
+
+
+def set_testdir(path):
+    global _TESTDIR
+    _TESTDIR = path
+
+
+def get_testdir():
+    """Directory of the currently running test."""
+    if _TESTDIR is None:
+        raise RuntimeError('get_testdir() is only available inside a test.')
+    return _TESTDIR
+
 
 CKSUM_TYPES = [
     'murmur',
@@ -58,16 +74,11 @@ def get_env_flag(name):
     return 0
 
 
-_KEEP_TESTDIR = get_env_flag('RM_TS_KEEP_TESTDIR')
 _USE_VALGRIND = get_env_flag('RM_TS_USE_VALGRIND')
 _PRINT_CMD = get_env_flag('RM_TS_PRINT_CMD')
 _SLEEP = get_env_flag('RM_TS_SLEEP')
 _FEATURES = subprocess.check_output(
     [RMLINT_BINARY, '--version'], stderr=subprocess.STDOUT).decode('utf-8')
-
-
-def keep_testdir():
-    return _KEEP_TESTDIR
 
 
 def use_valgrind():
@@ -87,14 +98,9 @@ def runs_as_root():
     return os.geteuid() == 0
 
 
+# XXX: unrelated to _TESTDIR !
 def create_testdir(*extra_path):
-    try:
-        path = TESTDIR_NAME
-        if extra_path:
-            path = os.path.join(TESTDIR_NAME, *extra_path)
-        os.makedirs(path)
-    except OSError:
-        pass
+    os.makedirs(os.path.join(get_testdir(), *extra_path), exist_ok=True)
 
 
 def has_known_leak(*args):
@@ -131,10 +137,7 @@ def run_rmlint_once(*args,
                     check=True,
                     timeout=None):
     if use_default_dir:
-        if dir_suffix:
-            target_dir = os.path.join(TESTDIR_NAME, dir_suffix)
-        else:
-            target_dir = TESTDIR_NAME
+        target_dir = os.path.join(get_testdir(), dir_suffix) if dir_suffix else get_testdir()
     else:
         target_dir = ""
 
@@ -157,9 +160,9 @@ def run_rmlint_once(*args,
     cmd.extend(shlex.split(' '.join(args)))
 
     if with_json:
-        cmd.extend(('-o', 'json:' + os.path.join(TESTDIR_NAME, 'out.json'), '-c', 'json:oneline'))
+        cmd.extend(('-o', 'json:' + os.path.join(get_testdir(), 'out.json'), '-c', 'json:oneline'))
 
-    output_files = [(output, os.path.join(TESTDIR_NAME, f".{output}-{idx}"))
+    output_files = [(output, os.path.join(get_testdir(), f".{output}-{idx}"))
                     for idx, output in enumerate(outputs)]
 
     for output, path in output_files:
@@ -169,6 +172,7 @@ def run_rmlint_once(*args,
 
     run_args = {
         'env': env,
+        'cwd': get_testdir(),
         'stdout': subprocess.PIPE,
         'stderr': subprocess.PIPE,
         'shell': use_shell,
@@ -179,7 +183,7 @@ def run_rmlint_once(*args,
         run_args['executable'] = "bash"
 
     if _PRINT_CMD:
-        print(f"running{' in shell' if use_shell else ''} from `{os.getcwd()}`: {' '.join(cmd)}")
+        print(f"running{' in shell' if use_shell else ''} from `{get_testdir()}`: {' '.join(cmd)}")
 
     if _SLEEP:
         print('Waiting for 1000 seconds.')
@@ -200,7 +204,7 @@ def run_rmlint_once(*args,
         return result.stdout if check else (result, result.stdout)
 
     if with_json:
-        with open(os.path.join(TESTDIR_NAME, 'out.json'), encoding='utf8') as f:
+        with open(os.path.join(get_testdir(), 'out.json'), encoding='utf8') as f:
             json_data = json.loads(f.read())
     else:
         json_data = []
@@ -323,31 +327,23 @@ def run_rmlint(*args, force_no_pedantic=False, **kwargs):
 
 
 def create_dirs(path):
-    full_path = os.path.join(TESTDIR_NAME, path)
-
-    try:
-        os.makedirs(full_path)
-    except OSError:
-        pass
-
+    full_path = os.path.join(get_testdir(), path)
+    os.makedirs(full_path, exist_ok=True)
     return full_path
 
 
 def create_link(path, target, symlink=False):
     f = os.symlink if symlink else os.link
     f(
-        os.path.join(TESTDIR_NAME, path),
-        os.path.join(TESTDIR_NAME, target)
+        os.path.join(get_testdir(), path),
+        os.path.join(get_testdir(), target)
     )
 
 
 def create_file(data, name, mtime=None, write_binary=False, sparse_bytes_before = 0, sparse_bytes_total = 0):
-    full_path = os.path.join(TESTDIR_NAME, name)
+    full_path = os.path.join(get_testdir(), name)
     if '/' in name:
-        try:
-            os.makedirs(os.path.dirname(full_path))
-        except OSError:
-            pass
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
     with open(full_path, 'wb' if write_binary else 'w') as handle:
         if sparse_bytes_before > 0:
@@ -370,16 +366,7 @@ def create_file(data, name, mtime=None, write_binary=False, sparse_bytes_before 
 
 def warp_file_to_future(name, seconds):
     now = time.time()
-    os.utime(os.path.join(TESTDIR_NAME, name), (now + seconds, now + seconds))
-
-
-def usual_setup_func():
-    create_testdir()
-
-
-def usual_teardown_func():
-    if not keep_testdir():
-        shutil.rmtree(path=TESTDIR_NAME, ignore_errors=True)
+    os.utime(os.path.join(get_testdir(), name), (now + seconds, now + seconds))
 
 
 # XXX: now unused, but might be handy.
@@ -393,7 +380,7 @@ def create_special_fs(name, fs_type='ext4'):
 
     Returns: The path of the created directory.
     """
-    mount_path = os.path.join(TESTDIR_NAME, name)
+    mount_path = os.path.join(get_testdir(), name)
     device_path = mount_path + ".device"
 
     commands = [
@@ -444,7 +431,7 @@ def must_read_xattr(path):
     NOTE: This will only work on non-tmpfs mounts.
           See create_special_fs for a workaround.
     """
-    return dict(xattr.xattr(os.path.join(TESTDIR_NAME, path)).items())
+    return dict(xattr.xattr(os.path.join(get_testdir(), path)).items())
 
 
 @contextlib.contextmanager
@@ -489,7 +476,8 @@ def is_on_reflink_fs(path):
 def check_reflink_capable() -> str | None:
     if not has_feature('btrfs-support'):
         return "btrfs not supported"
-    if not is_on_reflink_fs(TESTDIR_NAME):
+    # Probing the base so that it works also at collection time.
+    if not is_on_reflink_fs(TESTDIR_BASE):
         return "testdir is not on reflink-capable filesystem"
     return None
 

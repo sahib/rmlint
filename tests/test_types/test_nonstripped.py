@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from tests.utils import TESTDIR_NAME, create_file, has_feature, run_rmlint
+from tests.utils import create_file, get_testdir, has_feature, run_rmlint
 
 SOURCE = '''
 #include <stddef.h>
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 
 def create_binary(path, stripped=False):
     path = path + '.stripped' if stripped else path + '.nonstripped'
-    full_path = os.path.join(TESTDIR_NAME, path)
+    full_path = os.path.join(get_testdir(), path)
 
     command = '{cc} -o {path} {option} -std=c99 -xc -'.format(
         cc=os.environ.get('CC', 'gcc'), path=full_path, option='-s' if stripped else '-ggdb3',
@@ -57,7 +57,7 @@ def test_executable_fifo():
     if has_feature('nonstripped') is False:
         pytest.skip("needs 'nonstripped' feature")
 
-    fifo_path = os.path.join(TESTDIR_NAME, 'fifo')
+    fifo_path = os.path.join(get_testdir(), 'fifo')
     os.mkfifo(fifo_path)
     os.chmod(fifo_path, 0o755)
 

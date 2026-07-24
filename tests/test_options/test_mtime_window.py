@@ -1,11 +1,11 @@
 import os
 import subprocess
 
-from tests.utils import TESTDIR_NAME, create_file, run_rmlint
+from tests.utils import create_file, get_testdir, run_rmlint
 
 
 def set_mtime(path, mtime):
-    full_path = os.path.join(TESTDIR_NAME, path)
+    full_path = os.path.join(get_testdir(), path)
     subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
 
 

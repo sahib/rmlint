@@ -1,7 +1,7 @@
 import os
 import time
 
-from tests.utils import TESTDIR_NAME, create_file, run_rmlint_once, warp_file_to_future
+from tests.utils import create_file, get_testdir, run_rmlint_once, warp_file_to_future
 
 # Note: This test has the assumpption that it runs fast enough.
 #       The threshold should be 1 second, so rather hard to reach.
@@ -54,15 +54,15 @@ def test_stamp_file():
     # in the third run.
     time.sleep(3)
 
-    _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))
+    _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(get_testdir(), '.stamp-0'))
     assert len(data) == 3
 
-    _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))
+    _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(get_testdir(), '.stamp-0'))
     assert len(data) == 0
 
 
 def test_stamp_file_iso8601():
     create_set(True, True)
 
-    _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(TESTDIR_NAME, '.stamp-0'))
+    _, *data, _ = run_rmlint_once('-S a -n ' + os.path.join(get_testdir(), '.stamp-0'))
     assert len(data) == 3

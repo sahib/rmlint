@@ -1,4 +1,4 @@
-from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, run_rmlint
+from tests.utils import create_dirs, create_file, create_link, get_testdir, run_rmlint
 
 
 def test_keep_hardlinks():
@@ -44,7 +44,7 @@ def test_keep_hardlinks_multiple_originals():
     create_link('a/file_a', 'b/file_b')
     create_link('a/file_y', 'b/file_z')
 
-    search_paths = TESTDIR_NAME + '/b // ' + TESTDIR_NAME + '/a'
+    search_paths = get_testdir() + '/b // ' + get_testdir() + '/a'
 
     _, *data, _ = run_rmlint('--no-hardlinked -S a ' + search_paths, use_default_dir=False)
     # hardlinks file_b and file_z should be ignored

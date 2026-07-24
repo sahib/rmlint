@@ -4,11 +4,11 @@ import subprocess
 import pytest
 
 from tests.utils import (
-    TESTDIR_NAME,
     assert_exit_code,
     create_dirs,
     create_file,
     create_link,
+    get_testdir,
     run_rmlint,
     run_rmlint_once,
 )
@@ -56,7 +56,7 @@ def test_same_path():
 def test_path_double():
     path_a = create_file('xxx', 'dir/a')
     create_link('dir', 'dir_symlink', symlink=True)
-    path_b = os.path.join(TESTDIR_NAME, 'dir_symlink/a')
+    path_b = os.path.join(get_testdir(), 'dir_symlink/a')
     check_is_reflink_status(7, path_a, path_b)  # RM_LINK_PATH_DOUBLE
 
 
@@ -83,8 +83,8 @@ def _run_dd_urandom(outfile, blocksize, count, extra=''):
 
 
 def _make_reflink_testcase(extents, hole_extents=None, break_link=False):
-    path_a = os.path.join(TESTDIR_NAME, 'a')
-    path_b = os.path.join(TESTDIR_NAME, 'b')
+    path_a = os.path.join(get_testdir(), 'a')
+    path_b = os.path.join(get_testdir(), 'b')
 
     _run_dd_urandom(path_a, '4K', extents)
 
@@ -129,8 +129,8 @@ def kb(n):
 
 
 def _hole_testcase_inner(extents):
-    path_a = os.path.join(TESTDIR_NAME, 'a')
-    path_b = os.path.join(TESTDIR_NAME, 'b')
+    path_a = os.path.join(get_testdir(), 'a')
+    path_b = os.path.join(get_testdir(), 'b')
 
     _run_dd_urandom(path_a, kb(16) // extents, extents)
     with open(path_b, 'wb') as f:
@@ -170,16 +170,11 @@ def test_default_outputs_disabled():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
-    cwd = os.getcwd()
     try:
-        os.chdir(TESTDIR_NAME)
-        try:
-            run_rmlint('--is-reflink a b', use_default_dir=False, with_json=False)
-        except subprocess.CalledProcessError:
-            pass  # nonzero exit status is expected
+        run_rmlint('--is-reflink a b', use_default_dir=False, with_json=False)
+    except subprocess.CalledProcessError:
+        pass  # nonzero exit status is expected
 
-        # --is-reflink should not create or overwrite rmlint.sh or rmlint.json
-        assert not os.path.exists('rmlint.sh')
-        assert not os.path.exists('rmlint.json')
-    finally:
-        os.chdir(cwd)
+    # --is-reflink should not create or overwrite rmlint.sh or rmlint.json
+    assert not os.path.exists(os.path.join(get_testdir(), 'rmlint.sh'))
+    assert not os.path.exists(os.path.join(get_testdir(), 'rmlint.json'))

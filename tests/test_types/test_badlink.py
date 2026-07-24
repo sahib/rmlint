@@ -1,10 +1,10 @@
 import os
 
-from tests.utils import TESTDIR_NAME, run_rmlint
+from tests.utils import get_testdir, run_rmlint
 
 
 def create_bad_link(link_name):
-    link_name = os.path.join(TESTDIR_NAME, link_name)
+    link_name = os.path.join(get_testdir(), link_name)
     fake_target = link_name + '.target'
     with open(fake_target, 'w', encoding='ascii') as h:
         h.write('xxx')

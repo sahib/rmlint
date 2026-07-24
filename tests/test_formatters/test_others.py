@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from tests.utils import RMLINT_BINARY, TESTDIR_NAME, create_file, run_rmlint
+from tests.utils import RMLINT_BINARY, create_file, get_testdir, run_rmlint
 
 
 def test_just_call_it():
@@ -16,15 +16,20 @@ def test_just_call_it():
         '-S a', outputs=['fdupes', 'stamp', 'progressbar', 'summary', 'pretty', 'py']
     )
 
+    def call(*args):
+        return subprocess.check_output(
+            [RMLINT_BINARY, *args, get_testdir()], cwd=get_testdir()
+        )
+
     # Check if the -g option does weird things. (i.e. segfault)
-    subprocess.check_output([RMLINT_BINARY, '-g', '-c', 'progressbar:ascii', TESTDIR_NAME])
-    subprocess.check_output([RMLINT_BINARY, '-g', '-c', 'progressbar:fancy', TESTDIR_NAME])
-    subprocess.check_output([RMLINT_BINARY, '-g', '-O', 'fdupes', TESTDIR_NAME])
-    subprocess.check_output([RMLINT_BINARY, '-g', TESTDIR_NAME])
+    call('-g', '-c', 'progressbar:ascii')
+    call('-g', '-c', 'progressbar:fancy')
+    call('-g', '-O', 'fdupes')
+    call('-g')
 
     for silly_option in ['-ppp', '-PPPP']:
         try:
-            subprocess.check_output([RMLINT_BINARY, '-VV', silly_option, TESTDIR_NAME])
+            call('-VV', silly_option)
         except subprocess.CalledProcessError:
             pass
         else:

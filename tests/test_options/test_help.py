@@ -4,12 +4,9 @@ Well, actually it's to increase coverage to be honest.
 """
 import subprocess
 
-import pytest
-
 from tests.utils import RMLINT_BINARY
 
 
-@pytest.mark.usefixtures("no_setup_teardown")
 def test_help():
     yelp = subprocess.check_output(
         [RMLINT_BINARY, '--help'], stderr=subprocess.STDOUT
@@ -18,7 +15,6 @@ def test_help():
     assert '--show-man' in yelp
 
 
-@pytest.mark.usefixtures("no_setup_teardown")
 def test_man():
     yelp = subprocess.check_output(
         [RMLINT_BINARY, '--show-man'], stderr=subprocess.STDOUT

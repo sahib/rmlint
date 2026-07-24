@@ -3,16 +3,15 @@ import os
 import pytest
 
 from tests.utils import (
-    TESTDIR_NAME,
     assert_exit_code,
     check_reflink_capable,
     create_dirs,
     create_file,
     create_link,
+    get_testdir,
     pattern_count,
     run_rmlint_once,
 )
-
 
 if skip_msg := check_reflink_capable():
     pytest.skip(skip_msg, allow_module_level=True)
@@ -139,7 +138,7 @@ def test_clone_handler():
     path_a = create_file('1' * 100000, 'a')
     path_b = create_file('1' * 100000, 'b')
 
-    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
 
     # generate rmlint.sh and check that it correctly selects files for cloning
     with assert_exit_code(0):

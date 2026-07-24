@@ -1,6 +1,6 @@
 import os
 
-from tests.utils import TESTDIR_NAME, create_file, run_rmlint
+from tests.utils import create_file, get_testdir, run_rmlint
 
 
 def filter_part_of_directory(data):
@@ -45,9 +45,9 @@ def test_rankby_dir_path():
     create_file('yyy', 'b/w')
 
     _, *data, _ = run_rmlint('--sort-by a -S f')
-    relpaths = [os.path.relpath(p['path'], TESTDIR_NAME) for p in data]
+    relpaths = [os.path.relpath(p['path'], get_testdir()) for p in data]
     assert relpaths == ['a/v', 'b/w', 'a/y', 'b/x']
 
     _, *data, _ = run_rmlint('--sort-by S -S F')
-    relpaths = [os.path.relpath(p['path'], TESTDIR_NAME) for p in data]
+    relpaths = [os.path.relpath(p['path'], get_testdir()) for p in data]
     assert relpaths == ['b/w', 'a/v', 'b/x', 'a/y']

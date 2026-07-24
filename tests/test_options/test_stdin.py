@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from tests.utils import RMLINT_BINARY, TESTDIR_NAME, create_file
+from tests.utils import RMLINT_BINARY, create_file, get_testdir
 
 
 def test_stdin_read():
@@ -14,7 +14,7 @@ def test_stdin_read():
 
     subdir = 'look-in-here'
     create_file('1234', subdir + '/c')
-    subdir_path = os.path.join(TESTDIR_NAME, subdir)
+    subdir_path = os.path.join(get_testdir(), subdir)
 
     proc = subprocess.Popen(
         [RMLINT_BINARY, '-', subdir_path, '-o', 'json', '-S', 'a', '--hidden'],
@@ -37,7 +37,7 @@ def test_stdin_read_newlines():
 
     subdir = 'look-in-here'
     create_file('1234', subdir + '/c')
-    subdir_path = os.path.join(TESTDIR_NAME, subdir)
+    subdir_path = os.path.join(get_testdir(), subdir)
 
     proc = subprocess.Popen(
         [RMLINT_BINARY, '-0', subdir_path, '-o', 'json', '-S', 'a', '--hidden'],
@@ -58,19 +58,14 @@ def test_path_starting_with_dash():
     create_file('1234', subdir + '/a')
     create_file('1234', subdir + '/b')
 
-    cwd = os.getcwd()
-
-    try:
-        os.chdir(TESTDIR_NAME)
-        proc = subprocess.Popen(
-            [RMLINT_BINARY, '-o', 'json', '-S', 'a', '--', subdir],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-        data, _ = proc.communicate("")
-        _, *data, footer = json.loads(data.decode('utf-8'))
-    finally:
-        os.chdir(cwd)
+    proc = subprocess.Popen(
+        [RMLINT_BINARY, '-o', 'json', '-S', 'a', '--', subdir],
+        cwd=get_testdir(),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE
+    )
+    data, _ = proc.communicate("")
+    _, *data, footer = json.loads(data.decode('utf-8'))
 
     assert data[0]['path'].endswith('a')
     assert data[1]['path'].endswith('b')
@@ -86,18 +81,13 @@ def test_stdin_empty(opts):
     create_file('1234', 'a')
     create_file('1234', 'b')
 
-    cwd = os.getcwd()
-
-    try:
-        os.chdir(TESTDIR_NAME)
-        proc = subprocess.Popen(
-            [RMLINT_BINARY, *opts, '-o', 'json'],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-        data, _ = proc.communicate("")
-        _, *data, _ = json.loads(data.decode('utf-8'))
-    finally:
-        os.chdir(cwd)
+    proc = subprocess.Popen(
+        [RMLINT_BINARY, *opts, '-o', 'json'],
+        cwd=get_testdir(),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE
+    )
+    data, _ = proc.communicate("")
+    _, *data, _ = json.loads(data.decode('utf-8'))
 
     assert len(data) == 0

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint
+from tests.utils import create_file, create_link, get_testdir, run_rmlint
 
 
 def test_default():
@@ -14,10 +14,10 @@ def test_default():
 
     _, *data, _ = run_rmlint()
     expected = {
-        os.path.join(TESTDIR_NAME, 'b/x'),
-        os.path.join(TESTDIR_NAME, 'b/y'),
-        os.path.join(TESTDIR_NAME, 'b/z'),
-        os.path.join(TESTDIR_NAME, 'a/z'),
+        os.path.join(get_testdir(), 'b/x'),
+        os.path.join(get_testdir(), 'b/y'),
+        os.path.join(get_testdir(), 'b/z'),
+        os.path.join(get_testdir(), 'a/z'),
     }
 
     assert {e["path"] for e in data} == expected
@@ -33,8 +33,8 @@ def test_merge_directories_with_ignored_symlinks():
 
     _, *data, _ = run_rmlint('-T df,dd')
     assert {e["path"] for e in data if e["type"] == "duplicate_dir"} == {
-        os.path.join(TESTDIR_NAME, 'a'),
-        os.path.join(TESTDIR_NAME, 'b'),
+        os.path.join(get_testdir(), 'a'),
+        os.path.join(get_testdir(), 'b'),
     }
 
 
@@ -84,7 +84,7 @@ def test_order():
 def test_symlink_matches_file():
     create_file('xxx', 'foo')
     create_file('foo', 'file')
-    os.symlink('foo', os.path.join(TESTDIR_NAME, 'link'))
+    os.symlink('foo', os.path.join(get_testdir(), 'link'))
 
     # --see-symlinks should not generate false positives between unrelated files and links.
     _, *data, _ = run_rmlint()

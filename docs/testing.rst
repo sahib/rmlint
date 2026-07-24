@@ -38,7 +38,6 @@ variables which are:
   starting the testcase and manually running ``rmlint`` on the priorly generated
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
-- ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
 
 Additionally slow tests can be omitted with by appending ``-m 'not slow'`` to
 the commandline. More information on this syntax can be found on the `pytest
@@ -65,7 +64,7 @@ were executed (and how often) by the testsuite. Here's a short quickstart using
 .. code-block:: bash
 
     $ CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-fprofile-arcs -ftest-coverage" scons -j4 DEBUG=1
-    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'slow and not known_issue'
+    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -m 'slow and not known_issue'
     $ lcov --capture --directory . --output-file coverage.info
     $ genhtml coverage.info --output-directory out
 
@@ -93,7 +92,7 @@ A template for a testcase looks like this:
 
     from tests.utils import create_file
 
-    def test_basic(usual_setup_usual_teardown):
+    def test_basic():
         create_file('xxx', 'a')
         create_file('xxx', 'b')
 
@@ -112,8 +111,11 @@ Rules
 
   .. code-block:: python
 
+    import pytest
+
+    def test_root_only_case():
       if not runs_as_root():
-          return
+          pytest.skip("reason")
 
 * Regressions in ``rmlint`` should get their own testcase so they do not
   appear again. 
@@ -124,7 +126,7 @@ Rules
     import pytest
 
     @pytest.mark.slow
-    def test_debian_support(usual_setup_usual_teardown):
+    def test_debian_support():
         assert random.choice([True, False]):
 
 * Unresolved issues can be marked with the ``known_issue`` attribute to avoid

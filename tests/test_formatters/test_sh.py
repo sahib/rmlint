@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, pattern_count, run_rmlint
+from tests.utils import create_dirs, create_file, create_link, get_testdir, pattern_count, run_rmlint
 
 
 def run_shell_script(shell, sh_path, *args):
@@ -37,9 +37,9 @@ def test_basic(shell):
 
     create_file('aaa', 'aaa')
     create_link('aaa', 'link_aaa', symlink=True)
-    os.remove(os.path.join(TESTDIR_NAME, 'aaa'))
+    os.remove(os.path.join(get_testdir(), 'aaa'))
 
-    _, *data, footer = run_rmlint(f'-D -S a -o sh:{TESTDIR_NAME}/rmlint.sh')
+    _, *data, footer = run_rmlint(f'-D -S a -o sh:{get_testdir()}/rmlint.sh')
     data = filter_part_of_directory(data)
 
     assert footer['duplicate_sets'] == 3
@@ -48,7 +48,7 @@ def test_basic(shell):
     assert footer['duplicates'] == 3
 
     # Dry run first; check if it did not accidentally delete something.
-    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
     text = run_shell_script(shell, sh_path, "-dn")
     _, *data, footer = run_rmlint('-D -S a')
     data = filter_part_of_directory(data)
@@ -76,7 +76,7 @@ def test_paranoia(shell):
     create_file('xxx', 'c')
     create_link('a', 'hardlink_a', symlink=False)
 
-    _, *_, footer = run_rmlint(f'-S a -o sh:{TESTDIR_NAME}/rmlint.sh')
+    _, *_, footer = run_rmlint(f'-S a -o sh:{get_testdir()}/rmlint.sh')
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 6
@@ -84,23 +84,23 @@ def test_paranoia(shell):
     assert footer['duplicates'] == 3
 
     # Modify c after running rmlint:
-    with open(os.path.join(TESTDIR_NAME, 'c'), 'w', encoding='utf-8') as handle:
+    with open(os.path.join(get_testdir(), 'c'), 'w', encoding='utf-8') as handle:
         handle.write('xxxx')
 
-    sh_script = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_script = os.path.join(get_testdir(), 'rmlint.sh')
     text = run_shell_script(shell, sh_script, '-d', '-p', '-x')
 
     assert 'files no longer identical' in text
 
     # Check that file contents of c are still intact
-    with open(os.path.join(TESTDIR_NAME, 'c'), encoding='utf-8') as handle:
+    with open(os.path.join(get_testdir(), 'c'), encoding='utf-8') as handle:
         assert handle.read() == 'xxxx'
 
     # Change back 'c':
-    with open(os.path.join(TESTDIR_NAME, 'c'), 'w', encoding='utf-8') as handle:
+    with open(os.path.join(get_testdir(), 'c'), 'w', encoding='utf-8') as handle:
         handle.write('xxx')
 
-    _, *_, footer = run_rmlint(f'-S a -o sh:{TESTDIR_NAME}/rmlint.sh')
+    _, *_, footer = run_rmlint(f'-S a -o sh:{get_testdir()}/rmlint.sh')
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3
@@ -109,10 +109,10 @@ def test_paranoia(shell):
 
 
     # Remove original:
-    os.remove(os.path.join(TESTDIR_NAME, 'a'))
+    os.remove(os.path.join(get_testdir(), 'a'))
 
     text = run_shell_script(shell, sh_script, '-d', '-p')
-    _, *_, footer = run_rmlint(f'-S a -o sh:{TESTDIR_NAME}/rmlint.sh')
+    _, *_, footer = run_rmlint(f'-S a -o sh:{get_testdir()}/rmlint.sh')
 
     assert 'original has disappeared' in text
 
@@ -141,7 +141,7 @@ def test_hardlink_duplicate_directories(shell):
     create_file('xxx', 'dir_a/x')
     create_file('xxx', 'dir_b/x')
 
-    sh_path = os.path.join(TESTDIR_NAME, "result.sh")
+    sh_path = os.path.join(get_testdir(), "result.sh")
     _, *data, _ = run_rmlint(f"-D -S a -c sh:hardlink -o sh:{sh_path}")
     data = filter_part_of_directory(data)
     assert len(data) == 2
@@ -150,8 +150,8 @@ def test_hardlink_duplicate_directories(shell):
 
     run_shell_script(shell, sh_path, "-d")
 
-    full_dupe_a = os.path.join(TESTDIR_NAME, "dir_a/x")
-    full_dupe_b = os.path.join(TESTDIR_NAME, "dir_b/x")
+    full_dupe_a = os.path.join(get_testdir(), "dir_a/x")
+    full_dupe_b = os.path.join(get_testdir(), "dir_b/x")
     assert os.stat(full_dupe_a).st_ino == os.stat(full_dupe_b).st_ino
 
 
@@ -160,7 +160,7 @@ def _check_if_empty_dirs_deleted(shell, inverse_order, sh_path, data):
 
     if inverse_order:
         assert not os.path.exists(data[1]["path"])
-        assert not os.path.exists(os.path.join(TESTDIR_NAME, "deep/a"))
+        assert not os.path.exists(os.path.join(get_testdir(), "deep/a"))
         assert os.path.exists(data[0]["path"])
     else:
         assert os.path.exists(data[0]["path"])
@@ -172,7 +172,7 @@ def test_remove_empty_dirs(shell, inverse_order):
     create_file('xxx', 'deep/a/b/c/d/e/1')
     create_file('xxx', 'deep/x/2')
 
-    sh_path = os.path.join(TESTDIR_NAME, "result.sh")
+    sh_path = os.path.join(get_testdir(), "result.sh")
     _, *data, _ = run_rmlint(f"-S {'A' if inverse_order else 'a'} -o sh:{sh_path}")
 
     assert len(data) == 2
@@ -196,7 +196,7 @@ def test_remove_empty_dirs_with_dupe_dirs(shell, inverse_order):
     create_file('xxx', 'deep/a/b/c/d/e/1')
     create_file('xxx', 'deep/x/1')
 
-    sh_path = os.path.join(TESTDIR_NAME, "result.sh")
+    sh_path = os.path.join(get_testdir(), "result.sh")
     _, *data, _ = run_rmlint(f"-S {'A' if inverse_order else 'a'} -Dj -o sh:{sh_path}")
     data = filter_part_of_directory(data)
 
@@ -228,7 +228,7 @@ def test_cleanup_emptydirs(shell):
     for dirname in names:
         create_file('xxx', f'{dirname}/b')
 
-    _, *_, footer = run_rmlint(f'-S a -T df -o sh:{TESTDIR_NAME}/rmlint.sh')
+    _, *_, footer = run_rmlint(f'-S a -T df -o sh:{get_testdir()}/rmlint.sh')
 
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3 * len(names)
@@ -236,29 +236,29 @@ def test_cleanup_emptydirs(shell):
     assert footer['duplicates'] == len(names)
 
     # run rmlint.sh with -c option (should clean up empty dirs after deleting 'b' files).
-    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
     _ = run_shell_script(shell, sh_path, "-dc")
 
-    assert os.path.exists(os.path.join(TESTDIR_NAME, 'dir1/a'))
+    assert os.path.exists(os.path.join(get_testdir(), 'dir1/a'))
 
     for dirname in names:
-        assert (not os.path.exists(os.path.join(TESTDIR_NAME, dirname)))
+        assert (not os.path.exists(os.path.join(get_testdir(), dirname)))
 
 
 def test_keep_parent_timestamps(shell):
     create_file('xxx', 'dir/a')
     create_file('xxx', 'dir/b')
 
-    dir_path = os.path.join(TESTDIR_NAME, 'dir')
+    dir_path = os.path.join(get_testdir(), 'dir')
     stat_before = os.stat(dir_path)
 
-    _, *_, footer = run_rmlint(f'-S a -T df -o sh:{TESTDIR_NAME}/rmlint.sh')
+    _, *_, footer = run_rmlint(f'-S a -T df -o sh:{get_testdir()}/rmlint.sh')
     assert footer['duplicate_sets'] == 1
     assert footer['total_lint_size'] == 3
     assert footer['total_files'] == 2
     assert footer['duplicates'] == 1
 
-    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
     run_shell_script(shell, sh_path, "-dck")
     stat_after = os.stat(dir_path)
 
@@ -274,7 +274,7 @@ def test_skip_hardlinks(tm_opt):
     dir_b = create_dirs('b')
     create_link('a/2', 'b/2')
 
-    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
     run_rmlint(
         f'-S a -o sh:{shlex.quote(sh_path)} -c sh:hardlink',
         tm_opt,

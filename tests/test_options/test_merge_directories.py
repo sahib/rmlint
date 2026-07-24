@@ -1,13 +1,14 @@
 import os
 
 import pytest
+
 from tests.utils import (
     CKSUM_TYPES,
-    TESTDIR_NAME,
     bind_mount_a_b,
     create_file,
     create_link,
     get_env_flag,
+    get_testdir,
     run_rmlint,
     runs_as_root,
 )
@@ -200,7 +201,7 @@ def test_deep_full_twice():
 
     _, *data, _ = run_rmlint(
         '-D -S a {t}/deep_a {t}/deep_b'.format(
-            t=TESTDIR_NAME
+            t=get_testdir()
         ),
         use_default_dir=False
     )
@@ -269,7 +270,7 @@ def test_mount_binds():
     create_file('xxx', 'a/b/1')
     create_file('xxx', 'c/2')
 
-    with bind_mount_a_b(TESTDIR_NAME):
+    with bind_mount_a_b(get_testdir()):
         create_file('xxx', 'a/3')
         _, *data, _ = run_rmlint('-S a')
 
@@ -290,11 +291,11 @@ def test_keepall_tagged():
     create_file('abcd', 'unmatched/folder/subfolder/file')
     create_file('abcd', 'unmatched/samefolder/subfolder/unmatched')
 
-    parentdir = TESTDIR_NAME
-    dupedir = os.path.join(TESTDIR_NAME, 'dups')
-    origdir = os.path.join(TESTDIR_NAME, 'origs')
+    parentdir = get_testdir()
+    dupedir = os.path.join(get_testdir(), 'dups')
+    origdir = os.path.join(get_testdir(), 'origs')
     origsubdir = os.path.join(origdir, 'folder')
-    unmatcheddir = os.path.join(TESTDIR_NAME, 'unmatched')
+    unmatcheddir = os.path.join(get_testdir(), 'unmatched')
 
     def do_test(km_opts, untagged_path, tagged_path):
         options = f'-D -S Ap {km_opts} {untagged_path} // {tagged_path}'

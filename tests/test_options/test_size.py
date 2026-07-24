@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from tests.utils import TESTDIR_NAME, create_file, create_testdir, run_rmlint
+from tests.utils import create_file, create_testdir, get_testdir, run_rmlint
 
 
 def create_set():
@@ -91,7 +91,7 @@ def test_replay_size():
     create_file('yyy', 'b/yyy')
     create_testdir('empty_dir')
 
-    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
+    replay_path = os.path.join(get_testdir(), 'replay.json')
     _, *data, _ = run_rmlint(f'-o json:{replay_path}')
 
     assert len(data) == 7

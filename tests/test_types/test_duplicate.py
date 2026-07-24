@@ -1,4 +1,4 @@
-from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, run_rmlint, use_valgrind
+from tests.utils import create_dirs, create_file, create_link, get_testdir, run_rmlint, use_valgrind
 
 
 def test_small_diffs():
@@ -77,7 +77,7 @@ def test_two_external_hardlinks():
     assert footer['total_lint_size'] == 3
 
     _, *data, footer = run_rmlint(
-        f"{TESTDIR_NAME}/sub",
+        f"{get_testdir()}/sub",
         use_default_dir=False
     )
 

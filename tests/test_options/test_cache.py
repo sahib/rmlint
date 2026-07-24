@@ -5,10 +5,10 @@ import subprocess
 import pytest
 
 from tests.utils import (
-    TESTDIR_NAME,
     check_xattr_capable,
     create_dirs,
     create_file,
+    get_testdir,
     must_read_xattr,
     run_rmlint,
     run_rmlint_once,
@@ -53,7 +53,7 @@ def test_xattr_basic():
         files_in_dupe_dirs = {p['path'] for p in data if p['type'] == 'part_of_directory'}
 
         def assert_paths(actual, *expected):
-            expected = {os.path.join(TESTDIR_NAME, p) for p in expected}
+            expected = {os.path.join(get_testdir(), p) for p in expected}
             assert set(actual) == expected
 
         if write_cache:
@@ -190,7 +190,7 @@ def test_treemerge_xattr_hardlink():
     create_file('xxx', 'b/x')
     create_file('yyy', 'b/y')
 
-    sh_path = os.path.join(TESTDIR_NAME, 'rmlint.sh')
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
     _, *data, _ = run_rmlint(f'--xattr-write -o sh:{sh_path} -c sh:hardlink')
     assert len(data) == 4
 

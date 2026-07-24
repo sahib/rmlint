@@ -1,6 +1,6 @@
 import os
 
-from tests.utils import TESTDIR_NAME, create_file, create_link, run_rmlint
+from tests.utils import create_file, create_link, get_testdir, run_rmlint
 
 
 def test_bad_symlinks_as_direct_args():
@@ -15,12 +15,12 @@ def test_bad_symlinks_as_direct_args():
     create_link('a', 'link_a', symlink=True)
     create_link('b', 'link_b', symlink=True)
 
-    link_a_path = os.path.join(TESTDIR_NAME, 'link_a')
-    link_b_path = os.path.join(TESTDIR_NAME, 'link_b')
+    link_a_path = os.path.join(get_testdir(), 'link_a')
+    link_b_path = os.path.join(get_testdir(), 'link_b')
 
     # Remove original files:
-    os.remove(os.path.join(TESTDIR_NAME, 'a'))
-    os.remove(os.path.join(TESTDIR_NAME, 'b'))
+    os.remove(os.path.join(get_testdir(), 'a'))
+    os.remove(os.path.join(get_testdir(), 'b'))
 
     # Directly point rmlint to symlinks, should result
     # in directly finding them.

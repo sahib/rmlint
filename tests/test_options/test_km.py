@@ -1,4 +1,4 @@
-from tests.utils import TESTDIR_NAME, create_file, run_rmlint
+from tests.utils import create_file, get_testdir, run_rmlint
 
 
 def test_km():
@@ -15,7 +15,7 @@ def test_km():
     create_file('zzz', 'backup/d_copy')
 
     # search path with backup folder tagged
-    search_paths = TESTDIR_NAME + ' // ' + TESTDIR_NAME + '/backup'
+    search_paths = get_testdir() + ' // ' + get_testdir() + '/backup'
 
     # 1. normal case - should find all dupes
     _, *data, footer = run_rmlint(search_paths, use_default_dir=False)

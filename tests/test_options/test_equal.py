@@ -1,6 +1,6 @@
 import os
 
-from tests.utils import TESTDIR_NAME, assert_exit_code, create_file, run_rmlint
+from tests.utils import assert_exit_code, create_file, get_testdir, run_rmlint
 
 
 def test_equal_files():
@@ -132,14 +132,9 @@ def test_default_outputs_disabled():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
-    cwd = os.getcwd()
-    try:
-        os.chdir(TESTDIR_NAME)
-        run_rmlint('--equal a b', use_default_dir=False, with_json=False)
+    run_rmlint('--equal a b', use_default_dir=False, with_json=False)
 
-        # Users of --equal, including our own sh format, do not expect to
-        # create or overwrite rmlint.sh or rmlint.json.
-        assert not os.path.exists('rmlint.sh')
-        assert not os.path.exists('rmlint.json')
-    finally:
-        os.chdir(cwd)
+    # Users of --equal, including our own sh format, do not expect to
+    # create or overwrite rmlint.sh or rmlint.json.
+    assert not os.path.exists(os.path.join(get_testdir(), 'rmlint.sh'))
+    assert not os.path.exists(os.path.join(get_testdir(), 'rmlint.json'))

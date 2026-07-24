@@ -4,7 +4,7 @@ from itertools import combinations, permutations
 
 import pytest
 
-from tests.utils import TESTDIR_NAME, create_dirs, create_file, create_link, run_rmlint
+from tests.utils import create_dirs, create_file, create_link, get_testdir, run_rmlint
 
 PATHS = ('b_dir/', 'a_dir/', 'c_dir/')
 
@@ -63,7 +63,7 @@ def test_sorting():
     create_file('xxx', PATHS[1] + 'c', mtime='2004-02-29  16:21:41.5')
     create_file('xxx', PATHS[2] + 'c', mtime='2004-02-29  16:21:41.0')
 
-    joiner = ' ' + TESTDIR_NAME + '/'
+    joiner = ' ' + get_testdir() + '/'
     search_paths = joiner + joiner.join(PATHS)
 
     opts = 'ampdl'
@@ -97,7 +97,7 @@ def test_sort_by_outlyer():
     create_link('b/foo', 'b/foo-copy-2')
 
     _, *data, _ = run_rmlint(
-        f"-S O {TESTDIR_NAME}/b", use_default_dir=False
+        f"-S O {get_testdir()}/b", use_default_dir=False
     )
     assert data[0]['path'].endswith('b/foo-from-a')
 
@@ -135,7 +135,7 @@ def test_sort_by_outlyer_hardcore():
 
     def run_inside_job(crit):
         _, *data, _ = run_rmlint(
-            f"-S {crit} {TESTDIR_NAME}/inside",
+            f"-S {crit} {get_testdir()}/inside",
             use_default_dir=False
         )
 
@@ -211,4 +211,4 @@ def test_regex_multiple_matches():
     for _ in range(3):
         _, *data, _ = run_rmlint("-S 'r<unique_1>x<a>l'")
         assert len(data) == len(paths)
-        assert [e['path'] for e in data] == [os.path.join(TESTDIR_NAME, p) for p in paths]
+        assert [e['path'] for e in data] == [os.path.join(get_testdir(), p) for p in paths]

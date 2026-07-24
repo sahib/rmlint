@@ -2,7 +2,7 @@ import os
 import stat
 from itertools import chain, combinations
 
-from tests.utils import TESTDIR_NAME, create_file, run_rmlint, runs_as_root
+from tests.utils import create_file, get_testdir, run_rmlint, runs_as_root
 
 
 def create_file_with_perms(content, path, permissions):
@@ -17,7 +17,7 @@ def create_file_with_perms(content, path, permissions):
         perms |= stat.S_IXUSR
 
     create_file(content, path)
-    os.chmod(os.path.join(TESTDIR_NAME, path), perms)
+    os.chmod(os.path.join(get_testdir(), path), perms)
 
 
 def test_combinations():
