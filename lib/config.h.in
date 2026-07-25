@@ -100,7 +100,7 @@ typedef guint64 RmOff;
     #endif
     #ifdef __GNUC__
         #define INLINE inline __attribute__((__always_inline__))
-    #elif defined(__CLANG__)
+    #elif defined(__clang__)
         #if __has_attribute(__always_inline__)
             #define INLINE inline __attribute__((__always_inline__))
         #endif
@@ -115,7 +115,7 @@ typedef guint64 RmOff;
 
 #ifdef __GNUC__
     #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#elif defined(__CLANG__)
+#elif defined(__clang__)
     #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
     /* give up */
