@@ -52,10 +52,6 @@ def check_git_rev(context):
             ['git', 'log', '--pretty=format:%h', '-n', '1'],
             stderr=subprocess.DEVNULL,
         ).decode('ascii').strip()
-    except AttributeError:
-        # Patch for some special sandbox permission problems.
-        # See https://github.com/sahib/rmlint/issues/143#issuecomment-139929733
-        print('Not allowed.')
     except (OSError, subprocess.CalledProcessError):
         # Not a git checkout or git unavailable.
         # Will use STATIC_GIT_REV from read_version().
