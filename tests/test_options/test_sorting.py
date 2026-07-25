@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
+import os
+import subprocess
+from itertools import combinations, permutations
+
 import pytest
-from itertools import permutations, combinations
 
-from tests.utils import *
+from tests.utils import create_dirs, create_file, create_link, get_testdir, run_rmlint
 
-
-PATHS = ['b_dir/', 'a_dir/', 'c_dir/']
+PATHS = ('b_dir/', 'a_dir/', 'c_dir/')
 
 
 def path_index(file_path):
@@ -15,14 +16,15 @@ def path_index(file_path):
     assert False
 
 
-def path_depth(file_path):
-    return len([c for c in file_path if c == '/'])
-
-def in_order(a, b, increasing):
-    return (a < b) if increasing else (b < a)
-
-# dispatcher for comparison tests
 def validate_order(data, tests):
+    """dispatcher for comparison tests"""
+
+    def path_depth(file_path):
+        return len([c for c in file_path if c == '/'])
+
+    def in_order(a, b, increasing):
+        return (a < b) if increasing else (b < a)
+
     testfuncs = {
         'a': lambda p: os.path.basename(p['path']).lower(),
         'm': lambda p: p['mtime'],
@@ -52,7 +54,7 @@ def validate_order(data, tests):
 
 
 @pytest.mark.slow
-def test_sorting(usual_setup_usual_teardown):
+def test_sorting():
     # create some dupes with different PATHS, names and mtimes:
     create_file('xxx', PATHS[1] + 'a', mtime='2004-02-29  16:21:42.4')
     create_file('xxx', PATHS[0] + 'c', mtime='2004-02-29  16:21:42.6')
@@ -61,14 +63,15 @@ def test_sorting(usual_setup_usual_teardown):
     create_file('xxx', PATHS[1] + 'c', mtime='2004-02-29  16:21:41.5')
     create_file('xxx', PATHS[2] + 'c', mtime='2004-02-29  16:21:41.0')
 
-    joiner = ' ' + TESTDIR_NAME + '/'
+    joiner = ' ' + get_testdir() + '/'
     search_paths = joiner + joiner.join(PATHS)
 
     opts = 'ampdl'
     all_opts = opts + opts.upper()
 
     combos = []
-    is_legal_combo = lambda x: len(x) == len(set(x.lower()))
+    def is_legal_combo(x):
+        return len(x) == len(set(x.lower()))
 
     # Limit to 3-tuple combinations. 4-5-tuple combinations (just do +1)
     # are possible if you have enough time (=> ~(10! / 2) tests).
@@ -80,12 +83,12 @@ def test_sorting(usual_setup_usual_teardown):
 
     for combo in combos:
         combo_str = '-S ' + combo
-        head, *data, footer = run_rmlint(combo_str + search_paths, use_default_dir=False)
+        _, *data, _ = run_rmlint(combo_str + search_paths, use_default_dir=False)
         assert len(data) == 6
 
         validate_order(data, combo)
 
-def test_sort_by_outlyer(usual_setup_usual_teardown):
+def test_sort_by_outlyer():
     create_file('xxx', 'a/foo')
     create_file('xxx', 'b/foo')
 
@@ -93,12 +96,12 @@ def test_sort_by_outlyer(usual_setup_usual_teardown):
     create_link('b/foo', 'b/foo-copy-1')
     create_link('b/foo', 'b/foo-copy-2')
 
-    head, *data, footer = run_rmlint(
-        "-S O {t}/b".format(t=TESTDIR_NAME), use_default_dir=False
+    _, *data, _ = run_rmlint(
+        f"-S O {get_testdir()}/b", use_default_dir=False
     )
     assert data[0]['path'].endswith('b/foo-from-a')
 
-    head, *data, footer = run_rmlint('-S OHa')
+    _, *data, _ = run_rmlint('-S OHa')
     assert data[0]['path'].endswith('b/foo')
 
 
@@ -106,7 +109,7 @@ def test_sort_by_outlyer(usual_setup_usual_teardown):
 # https://github.com/sahib/rmlint/issues/196
 #
 # Testsetup by "Awerick"
-def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
+def test_sort_by_outlyer_hardcore():
     for suffix in 'ABCD':
         create_file('xxx', 'inside/foo' + suffix)
 
@@ -131,11 +134,9 @@ def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
     create_link('inside/fooD', 'outside/fooD_link_3')
 
     def run_inside_job(crit):
-        head, *data, footer = run_rmlint(
-            "-S {c} {t}/inside".format(
-                c=crit,
-                t=TESTDIR_NAME,
-            ), use_default_dir=False
+        _, *data, _ = run_rmlint(
+            f"-S {crit} {get_testdir()}/inside",
+            use_default_dir=False
         )
 
         return data[0]['path']
@@ -147,7 +148,7 @@ def test_sort_by_outlyer_hardcore(usual_setup_usual_teardown):
 
 
 
-def test_sort_by_regex(usual_setup_usual_teardown):
+def test_sort_by_regex():
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
     create_file('xxx', 'b')
@@ -155,7 +156,7 @@ def test_sort_by_regex(usual_setup_usual_teardown):
     create_file('xxx', 'd/e')
     create_file('xxx', 'f')
 
-    head, *data, footer = run_rmlint("-S 'r<d/e>x<f$>a'")
+    _, *data, _ = run_rmlint("-S 'r<d/e>x<f$>a'")
 
     paths = [p['path'] for p in data]
 
@@ -167,7 +168,7 @@ def test_sort_by_regex(usual_setup_usual_teardown):
     assert paths[5].endswith('c')
 
 
-def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
+def test_sort_by_regex_bad_input():
     create_file('xxx', 'aaaa')
     create_file('xxx', 'aaab')
 
@@ -197,7 +198,7 @@ def test_sort_by_regex_bad_input(usual_setup_usual_teardown):
 
 
 # regression test for GitHub issue #484
-def test_regex_multiple_matches(usual_setup_usual_teardown):
+def test_regex_multiple_matches():
     paths = [os.path.join(dname, bname)
              for dname in ['unique_1', 'unique_2']
              for bname in ['a', 'a2', 'b']]
@@ -208,6 +209,6 @@ def test_regex_multiple_matches(usual_setup_usual_teardown):
     # when multiple paths matched a regex, rmlint would not try the next criterion
     # check multiple times because sort order was inconsistent before the fix
     for _ in range(3):
-        head, *data, foot = run_rmlint("-S 'r<unique_1>x<a>l'")
+        _, *data, _ = run_rmlint("-S 'r<unique_1>x<a>l'")
         assert len(data) == len(paths)
-        assert [e['path'] for e in data] == [os.path.join(TESTDIR_NAME, p) for p in paths]
+        assert [e['path'] for e in data] == [os.path.join(get_testdir(), p) for p in paths]

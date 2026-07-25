@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-
 import subprocess
 
+from tests.utils import create_file, get_testdir, run_rmlint, runs_as_root
 
 RMLINT_DUMMY_GROUP = '__rmlint_dummy_group'
 RMLINT_DUMMY_USER = '__rmlint_dummy_user'
@@ -14,7 +11,7 @@ def exec_cmds(cmds):
         fmt_cmd = cmd.format(
             u=RMLINT_DUMMY_USER,
             g=RMLINT_DUMMY_GROUP,
-            t=TESTDIR_NAME
+            t=get_testdir()
         )
 
         try:
@@ -23,7 +20,7 @@ def exec_cmds(cmds):
             print(cmd, 'failed:', err)
 
 
-def test_bad_ids(usual_setup_usual_teardown):
+def test_bad_ids():
     if not runs_as_root():
         return
 
@@ -48,7 +45,7 @@ def test_bad_ids(usual_setup_usual_teardown):
             'groupdel {g}'
         ])
 
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, footer = run_rmlint('-S a')
 
     x, y, z = data
     assert x['path'].endswith('1_bad_uid')

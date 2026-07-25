@@ -1,13 +1,12 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
 import os
+
+from tests.utils import get_testdir, run_rmlint
 
 
 def create_bad_link(link_name):
-    link_name = os.path.join(TESTDIR_NAME, link_name)
+    link_name = os.path.join(get_testdir(), link_name)
     fake_target = link_name + '.target'
-    with open(fake_target, 'w') as h:
+    with open(fake_target, 'w', encoding='ascii') as h:
         h.write('xxx')
 
     try:
@@ -16,11 +15,11 @@ def create_bad_link(link_name):
         os.remove(fake_target)
 
 
-def test_basic(usual_setup_usual_teardown):
+def test_basic():
     create_bad_link('imbad')
 
     for option in ('-f', '-F', '--see-symlinks'):
-        head, *data, footer = run_rmlint(option)
+        _, *data, _ = run_rmlint(option)
 
         assert len(data) == 1
         assert data[0]['type'] == 'badlink'

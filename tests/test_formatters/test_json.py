@@ -1,16 +1,17 @@
-#!/usr/bin/env python3
-from tests.utils import *
+import os
+
+from tests.utils import create_file, run_rmlint
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     full_path_a = create_file('x', '\t\r\"\b\f\\')
     full_path_b = create_file('x', '\"\t\n2134124')
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, footer = run_rmlint('-S a')
 
     assert len(data) == 2
 
     for i in range(2):
-        with open(data[i]['path']) as f:
+        with open(data[i]['path'], encoding='utf-8') as f:
             assert len(f.read()) == 1
 
     assert os.stat(full_path_a).st_size ==  data[0]['size']

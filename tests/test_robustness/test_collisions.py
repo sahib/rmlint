@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 import errno
-import pytest
-from tests.utils import *
 
+import pytest
+
+from tests.utils import CKSUM_TYPES, create_file, run_rmlint_once
 
 # current shredder algorithm does not handle large size-groups at all
 # well, due to pre-matching "optimisation"
@@ -11,9 +11,10 @@ from tests.utils import *
 BLACKLIST = ['paranoid']
 
 @pytest.mark.slow
-def test_collision_resistance(usual_setup_usual_teardown):
-    # test for at least 20 bits of collision resistancel
-    # this should detect gross errors in checksum encoding...
+def test_collision_resistance():
+    """Test for at least 20 bits of collision resistance,
+    this should detect gross errors in checksum encoding...
+    """
 
     numfiles = 1024*1024
     try:
@@ -26,5 +27,5 @@ def test_collision_resistance(usual_setup_usual_teardown):
 
     for algo in CKSUM_TYPES:
         if algo not in BLACKLIST:
-            *_, footer = run_rmlint_once('--read-buffer-len=4 -a {}'.format(algo))
-            assert footer['duplicates'] == 0, 'Unexpected hash collision for hash type {}'.format(algo)
+            *_, footer = run_rmlint_once(f'--read-buffer-len=4 -a {algo}')
+            assert footer['duplicates'] == 0, f'Unexpected hash collision for hash type {algo}'

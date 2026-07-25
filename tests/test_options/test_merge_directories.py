@@ -1,5 +1,17 @@
-#!/usr/bin/env python3
-from tests.utils import *
+import os
+
+import pytest
+
+from tests.utils import (
+    CKSUM_TYPES,
+    bind_mount_a_b,
+    create_file,
+    create_link,
+    get_env_flag,
+    get_testdir,
+    run_rmlint,
+    runs_as_root,
+)
 
 
 def filter_part_of_directory(data):
@@ -11,12 +23,12 @@ def filter_part_of_directory(data):
 # --write-unfinished variant is a regression test for GitHub issue #562;
 # --hash-unmatched covers its successor
 @pytest.mark.parametrize('extra_opts', [(), ('--write-unfinished',), ('--hash-unmatched',)])
-def test_simple(usual_setup_usual_teardown, extra_opts):
+def test_simple(extra_opts):
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', 'a')
 
-    head, *data, footer = run_rmlint('-p -D --rank-by A', *extra_opts)
+    _, *data, _ = run_rmlint('-p -D --rank-by A', *extra_opts)
     data = filter_part_of_directory(data)
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -33,12 +45,12 @@ def test_simple(usual_setup_usual_teardown, extra_opts):
     assert data[1]['path'].endswith('1')
 
 
-def test_diff(usual_setup_usual_teardown):
+def test_diff():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '3/a')
     create_file('yyy', '3/b')
-    head, *data, footer = run_rmlint('-p -D --rank-by A')
+    _, *data, _ = run_rmlint('-p -D --rank-by A')
     data = filter_part_of_directory(data)
 
     assert 2 == sum(find['type'] == 'duplicate_dir' for find in data)
@@ -51,18 +63,18 @@ def test_diff(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('1')
 
 
-def test_same_but_not_dupe(usual_setup_usual_teardown):
+def test_same_but_not_dupe():
     create_file('xxx', '1/a')
     create_file('xxx', '2/a')
     create_file('xxx', '2/b')
-    head, *data, footer = run_rmlint('-p -D --rank-by A')
+    _, *data, _ = run_rmlint('-p -D --rank-by A')
     data = filter_part_of_directory(data)
 
     # No duplicate dirs, but 3 duplicate files should be found.
     assert 0 == sum(find['type'] == 'duplicate_dir' for find in data)
     assert 3 == sum(find['type'] == 'duplicate_file' for find in data)
 
-def test_hardlinks(usual_setup_usual_teardown):
+def test_hardlinks():
     create_file('xxx', '1/a')
     create_link('1/a', '1/link1')
     create_link('1/a', '1/link2')
@@ -70,7 +82,7 @@ def test_hardlinks(usual_setup_usual_teardown):
     create_link('2/a', '2/link1')
     create_link('2/a', '2/link2')
 
-    head, *data, footer = run_rmlint('-p -D -l -S a')
+    _, *data, _ = run_rmlint('-p -D -l -S a')
     data = filter_part_of_directory(data)
     assert len(data) == 5
     assert data[0]['type'] == 'duplicate_dir'
@@ -89,7 +101,7 @@ def test_hardlinks(usual_setup_usual_teardown):
     assert data[4]['path'].endswith('1/link2')
     assert not data[4]['is_original']
 
-    head, *data, footer = run_rmlint('-D -S a -L')
+    _, *data, _ = run_rmlint('-D -S a -L')
     data = filter_part_of_directory(data)
     assert len(data) == 2
     assert data[0]['type'] == 'duplicate_file'
@@ -98,10 +110,10 @@ def test_hardlinks(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('a')
 
 
-def test_deep_simple(usual_setup_usual_teardown):
+def test_deep_simple():
     create_file('xxx', 'deep/a/b/c/d/1')
     create_file('xxx', 'deep/e/f/g/h/1')
-    head, *data, footer = run_rmlint('-D -S a')
+    _, *data, _ = run_rmlint('-D -S a')
     data = filter_part_of_directory(data)
 
     assert data[0]['path'].endswith('deep/a')
@@ -111,12 +123,12 @@ def test_deep_simple(usual_setup_usual_teardown):
     assert len(data) == 2
 
 
-def test_deep_simple(usual_setup_usual_teardown):
+def test_deep_simple_paranoid():
     create_file('xxx', 'd/a/1')
     create_file('xxx', 'd/b/empty')
     create_file('xxx', 'd/a/1')
     create_file('xxx', 'd/b/empty')
-    head, *data, footer = run_rmlint('-p -D -S a')
+    _, *data, _ = run_rmlint('-p -D -S a')
     data = filter_part_of_directory(data)
 
     assert data[0]['path'].endswith('d/a')
@@ -124,10 +136,10 @@ def test_deep_simple(usual_setup_usual_teardown):
     assert len(data) == 2
 
 
-def test_dirs_with_empty_files_only(usual_setup_usual_teardown):
+def test_dirs_with_empty_files_only():
     create_file('', 'a/empty')
     create_file('', 'b/empty')
-    head, *data, footer = run_rmlint('-p -D -S a -T df,dd --size 0')
+    _, *data, _ = run_rmlint('-p -D -S a -T df,dd --size 0')
     data = filter_part_of_directory(data)
 
     assert len(data) == 2
@@ -136,11 +148,11 @@ def test_dirs_with_empty_files_only(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('b')
     assert data[1]['type'] == "duplicate_dir"
 
-    head, *data, footer = run_rmlint('-p -D -S a -T df,dd')
+    _, *data, _ = run_rmlint('-p -D -S a -T df,dd')
     data = filter_part_of_directory(data)
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('-p -D -S a --size 0')
+    _, *data, _ = run_rmlint('-p -D -S a --size 0')
     data = filter_part_of_directory(data)
     assert len(data) == 2
 
@@ -159,13 +171,11 @@ def create_nested(root, letters):
         create_file('xxx', path)
 
 
-def test_deep_full(usual_setup_usual_teardown):
+def test_deep_full():
     create_nested('deep', 'abcd')
     create_nested('deep', 'efgh')
 
-    # subprocess.call('tree ' + TESTDIR_NAME, shell=True)
-    # subprocess.call('./rmlint -p -S a -D ' + TESTDIR_NAME, shell=True)
-    head, *data, footer = run_rmlint('-p -D -S a')
+    _, *data, _ = run_rmlint('-p -D -S a')
     data = filter_part_of_directory(data)
 
     assert len(data) == 6
@@ -183,15 +193,15 @@ def test_deep_full(usual_setup_usual_teardown):
         assert data[idx + 2]['is_original'] == (idx == 0)
 
 
-def test_deep_full_twice(usual_setup_usual_teardown):
+def test_deep_full_twice():
     create_nested('deep_a', 'abcd')
     create_nested('deep_a', 'efgh')
     create_nested('deep_b', 'abcd')
     create_nested('deep_b', 'efgh')
 
-    head, *data, footer = run_rmlint(
+    _, *data, _ = run_rmlint(
         '-D -S a {t}/deep_a {t}/deep_b'.format(
-            t=TESTDIR_NAME
+            t=get_testdir()
         ),
         use_default_dir=False
     )
@@ -228,13 +238,13 @@ def test_deep_full_twice(usual_setup_usual_teardown):
     assert not data[3]['is_original']
 
 
-def test_symlinks(usual_setup_usual_teardown):
+def test_symlinks():
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
 
-    head, *data, footer = run_rmlint('-p -D -S a -F')
+    _, *data, _ = run_rmlint('-p -D -S a -F')
     data = filter_part_of_directory(data)
 
     assert len(data) == 2
@@ -243,7 +253,7 @@ def test_symlinks(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('z')
     assert not data[1]['is_original']
 
-    head, *data, footer = run_rmlint('-p -D -S a -f')
+    _, *data, _ = run_rmlint('-p -D -S a -f')
     data = filter_part_of_directory(data)
 
     assert len(data) == 2
@@ -253,34 +263,27 @@ def test_symlinks(usual_setup_usual_teardown):
     assert not data[1]['is_original']
 
 
-def test_mount_binds(usual_setup_mount_bind_teardown):
+def test_mount_binds():
     if not runs_as_root():
-        return
+        pytest.skip("must be run as root (bind-mount)")
 
     create_file('xxx', 'a/b/1')
     create_file('xxx', 'c/2')
 
-    subprocess.call(
-        'mount --rbind {src} {dst}'.format(
-            src=TESTDIR_NAME,
-            dst=os.path.join(TESTDIR_NAME, 'a/b')
-        ),
-        shell=True
-    )
-    create_file('xxx', 'a/3')
+    with bind_mount_a_b(get_testdir()):
+        create_file('xxx', 'a/3')
+        _, *data, _ = run_rmlint('-S a')
 
-    head, *data, footer = run_rmlint('-S a')
     assert data[0]['path'].endswith('c/2')
     assert data[1]['path'].endswith('a/3')
     assert len(data) == 2
 
 
-def test_keepall_tagged(usual_setup_usual_teardown):
-    # Test for Issue #141:
-    # https://github.com/sahib/rmlint/issues/141
-    #
-    # Make sure -k protects duplicate directories too,
-    # when they're in a pref'd path.
+def test_keepall_tagged():
+    """test for GitHub issue #141
+    Make sure -k protects duplicate directories too,
+    when they're in a pref'd path.
+    """
     create_file('test', 'origs/folder/subfolder/file')
     create_file('test', 'origs/samefolder/subfolder/file')
     create_file('test', 'dups/folder/subfolder/file')
@@ -288,24 +291,19 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     create_file('abcd', 'unmatched/folder/subfolder/file')
     create_file('abcd', 'unmatched/samefolder/subfolder/unmatched')
 
-    parentdir = TESTDIR_NAME
-    dupedir = os.path.join(TESTDIR_NAME, 'dups')
-    origdir = os.path.join(TESTDIR_NAME, 'origs')
+    parentdir = get_testdir()
+    dupedir = os.path.join(get_testdir(), 'dups')
+    origdir = os.path.join(get_testdir(), 'origs')
     origsubdir = os.path.join(origdir, 'folder')
-    unmatcheddir = os.path.join(TESTDIR_NAME, 'unmatched')
+    unmatcheddir = os.path.join(get_testdir(), 'unmatched')
 
     def do_test(km_opts, untagged_path, tagged_path):
-        options = '-D -S Ap {maybe_km} {untagged} // {tagged}'.format(
-                maybe_km = km_opts,
-                untagged = untagged_path,
-                tagged = tagged_path)
-        head, *data, footer = run_rmlint(options, use_default_dir=False)
-        data = filter_part_of_directory(data)
-        return [head, *data, footer]
-
+        options = f'-D -S Ap {km_opts} {untagged_path} // {tagged_path}'
+        _, *data, footer = run_rmlint(options, use_default_dir=False)
+        return filter_part_of_directory(data), footer
 
     ### test 1: simple -km test
-    head, *data, footer = do_test('-k -m', dupedir, origdir)
+    data, footer = do_test('-k -m', dupedir, origdir)
 
     assert len(data) >= 2
     assert footer['total_files'] == 4
@@ -323,7 +321,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     # tagged (as origdir) but the tagged traversal should take precedence
     # during preprocessing path double removal.  Therefore should give same
     # result as previous, except for total file count.
-    head, *data, footer = do_test('-k -m', parentdir, origdir)
+    data, footer = do_test('-k -m', parentdir, origdir)
 
     assert len(data) >= 2
     assert footer['duplicates'] == 2
@@ -336,13 +334,13 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     assert not data[1]['is_original']
 
     ### test 3: tag just part of a nested originals dir
-    head, *data, footer = do_test('-k -m', parentdir, origsubdir)
+    data, footer = do_test('-k -m', parentdir, origsubdir)
     assert len(data) == 4
     assert footer['duplicates'] == 3
     assert footer['duplicate_sets'] == 1
 
     ###  test 4: test that tagging takes precedence over -S Ap option
-    head, *data, footer = do_test('', dupedir, origdir)
+    data, footer = do_test('', dupedir, origdir)
     assert len(data) == 4
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 3
@@ -355,7 +353,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     assert not data[1]['is_original']
 
     ### test 5: test self-duplicates in untagged dir are preserved by -m option
-    head, *data, footer = do_test('-k -m', unmatcheddir, origdir)
+    data, footer = do_test('-k -m', unmatcheddir, origdir)
     # unmatcheddir contains self-duplicates but is protected by -m
     # -o pretty (partial) output as at rmlint 82f433a:
     # ==> In total 4 files, whereof 0 are duplicates in 0 groups.
@@ -366,7 +364,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 0
 
     ### test 6: simple -KM test
-    head, *data, footer = do_test('-K -M', origdir, dupedir)
+    data, footer = do_test('-K -M', origdir, dupedir)
     assert len(data) >= 2
     assert footer['total_files'] == 4
     assert footer['duplicates'] == 2
@@ -384,7 +382,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     # during preprocessing path double removal.  Therefore should give same
     # result as previous, except for total file count.
 
-    head, *data, footer = do_test('-K -M', parentdir, dupedir)
+    data, footer = do_test('-K -M', parentdir, dupedir)
     assert len(data) >= 2
     assert footer['duplicates'] == 2
     assert footer['duplicate_sets'] == 1
@@ -399,7 +397,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     # unmatcheddir contains self-duplicates but is protected by -M
     # -o pretty (partial) output as at rmlint 82f433a:
     # ==> In total 4 files, whereof 0 are duplicates in 0 groups.
-    head, *data, footer = do_test('-K -M', origdir, unmatcheddir)
+    data, footer = do_test('-K -M', origdir, unmatcheddir)
 
     assert len(data) == 0
     assert footer['total_files'] == 4
@@ -407,7 +405,7 @@ def test_keepall_tagged(usual_setup_usual_teardown):
     assert footer['duplicate_sets'] == 0
 
 
-def test_equal_content_different_layout(usual_setup_usual_teardown):
+def test_equal_content_different_layout():
     # Different duplicates in different subdirs.
     create_file('xxx', "tree-a/sub2/x")
     create_file('yyy', "tree-a/sub1/y")
@@ -424,7 +422,7 @@ def test_equal_content_different_layout(usual_setup_usual_teardown):
             options.append('--algorithm=' + cksum_type)
 
     for option in options:
-        head, *data, footer = run_rmlint('-D --rank-by a', option)
+        _, *data, _ = run_rmlint('-D --rank-by a', option)
         data = filter_part_of_directory(data)
 
         assert data[0]["path"].endswith("tree-a")
@@ -433,17 +431,17 @@ def test_equal_content_different_layout(usual_setup_usual_teardown):
         assert data[1]["is_original"] is False
 
     # Now, try to honour the layout
-    head, *data, footer = run_rmlint('-p -Dj --rank-by a')
+    _, *data, _ = run_rmlint('-p -Dj --rank-by a')
     data = filter_part_of_directory(data)
     for point in data:
         assert point["type"] == "duplicate_file"
 
 
-def test_nested_content_with_same_layout(usual_setup_usual_teardown):
+def test_nested_content_with_same_layout():
     create_nested('deep', 'xyzabc')
     create_nested('deep', 'uvwabc')
 
-    head, *data, footer = run_rmlint('-Dj --rank-by a')
+    _, *data, _ = run_rmlint('-Dj --rank-by a')
     data = filter_part_of_directory(data)
 
     assert len(data) == 10

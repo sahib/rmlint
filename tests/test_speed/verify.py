@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-import sys
-import json
 import hashlib
-
+import json
+import sys
 from collections import defaultdict
 
 
@@ -34,11 +32,11 @@ if __name__ == '__main__':
             checksum_set.add(sha1)
             if len(checksum_set) > 1:
                 print('The following path differs:')
-                print('    {c}={p}'.format(p=path, c=sha1))
+                print(f'    {sha1}={path}')
                 print('It was in a group with this checksum')
 
                 checksum_set.remove(sha1)
-                print('    {c}={p}'.format(p=group, c=checksum_set.pop()))
+                print(f'    {checksum_set.pop()}={group}')
                 sys.exit(-1)
 
     print('Everything fine.')

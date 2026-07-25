@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import os
 
-from tests.utils import *
+from tests.utils import create_file, create_link, get_testdir, run_rmlint
 
 
-def test_default(usual_setup_usual_teardown):
+def test_default():
     # --see-symlinks should be on by default.
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
@@ -12,18 +12,18 @@ def test_default(usual_setup_usual_teardown):
     create_link('b/z', 'b/x', symlink=True)
     create_link('b/z', 'b/y', symlink=True)
 
-    head, *data, footer = run_rmlint()
+    _, *data, _ = run_rmlint()
     expected = {
-        os.path.join(TESTDIR_NAME, 'b/x'),
-        os.path.join(TESTDIR_NAME, 'b/y'),
-        os.path.join(TESTDIR_NAME, 'b/z'),
-        os.path.join(TESTDIR_NAME, 'a/z'),
+        os.path.join(get_testdir(), 'b/x'),
+        os.path.join(get_testdir(), 'b/y'),
+        os.path.join(get_testdir(), 'b/z'),
+        os.path.join(get_testdir(), 'a/z'),
     }
 
     assert {e["path"] for e in data} == expected
 
 
-def test_merge_directories_with_ignored_symlinks(usual_setup_usual_teardown):
+def test_merge_directories_with_ignored_symlinks():
     # Badlinks should not forbid finding duplicate directories
     # when being filtered out during traversing with -T dd,df.
     create_file('xxx', 'a/z')
@@ -31,27 +31,27 @@ def test_merge_directories_with_ignored_symlinks(usual_setup_usual_teardown):
     create_file('xxx', 'b/z')
     create_link('bogus', 'b/link', symlink=True)
 
-    head, *data, footer = run_rmlint('-T df,dd')
+    _, *data, _ = run_rmlint('-T df,dd')
     assert {e["path"] for e in data if e["type"] == "duplicate_dir"} == {
-        os.path.join(TESTDIR_NAME, 'a'),
-        os.path.join(TESTDIR_NAME, 'b'),
+        os.path.join(get_testdir(), 'a'),
+        os.path.join(get_testdir(), 'b'),
     }
 
 
-def test_order(usual_setup_usual_teardown):
+def test_order():
     create_file('xxx', 'a/z')
     create_link('a/z', 'a/x', symlink=True)
     create_file('xxx', 'b/z')
     create_link('b/z', 'b/x', symlink=True)
     create_link('b/z', 'b/y', symlink=True)
 
-    head, *data, footer = run_rmlint('-F')
+    _, *data, _ = run_rmlint('-F')
     assert len(data) == 2
     assert data[0]['path'].endswith('z')
     assert data[0]['is_original']
     assert data[1]['path'].endswith('z')
 
-    head, *data, footer = run_rmlint('-f -S a')
+    _, *data, _ = run_rmlint('-f -S a')
     assert sum(p['is_original'] for p in data) == 1
 
     assert len(data) == 2
@@ -61,7 +61,7 @@ def test_order(usual_setup_usual_teardown):
     assert data[1]['path'].endswith('z')
     assert not data[1]['is_original']
 
-    head, *data, footer = run_rmlint('-@ -S a')
+    _, *data, _ = run_rmlint('-@ -S a')
     assert sum(p['is_original'] for p in data) == 2
     assert len(data) == 4
 
@@ -81,11 +81,11 @@ def test_order(usual_setup_usual_teardown):
     assert data[file_idx + 1]['path'].endswith('z')
 
 
-def test_symlink_matches_file(usual_setup_usual_teardown):
+def test_symlink_matches_file():
     create_file('xxx', 'foo')
     create_file('foo', 'file')
-    os.symlink('foo', os.path.join(TESTDIR_NAME, 'link'))
+    os.symlink('foo', os.path.join(get_testdir(), 'link'))
 
     # --see-symlinks should not generate false positives between unrelated files and links.
-    head, *data, footer = run_rmlint()
+    _, *data, _ = run_rmlint()
     assert not data

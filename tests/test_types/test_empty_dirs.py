@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
+from tests.utils import create_dirs, create_file, run_rmlint
 
-def test_simple(usual_setup_usual_teardown):
+
+def test_simple():
     create_file('xxx', 'not_empty/a')
     create_file('', 'empty_but_with_file/a')
     create_dirs('really_empty')
-    head, *data, footer = run_rmlint('-T "none +ed +ef" -S a')
+    _, *data, footer = run_rmlint('-T "none +ed +ef" -S a')
 
     assert footer['total_files'] == 3
     assert footer['duplicates'] == 0
@@ -18,10 +17,10 @@ def test_simple(usual_setup_usual_teardown):
     assert data[1]['type'] == "emptyfile"
 
 
-def test_deep(usual_setup_usual_teardown):
+def test_deep():
     create_dirs('1/2/3/4/5')
     create_dirs('1/2/C/D/E')
-    head, *data, footer = run_rmlint('-T "none +ed"')
+    _, *data, _ = run_rmlint('-T "none +ed"')
 
     assert data[0]['path'].endswith('E')
     assert data[1]['path'].endswith('D')
@@ -33,7 +32,7 @@ def test_deep(usual_setup_usual_teardown):
     assert data[7]['path'].endswith('1')
 
     create_file('', '1/2/3/showstopper')
-    head, *data, footer = run_rmlint('-T "none +ed"')
+    _, *data, _ = run_rmlint('-T "none +ed"')
 
     assert data[0]['path'].endswith('E')
     assert data[1]['path'].endswith('D')
@@ -42,13 +41,13 @@ def test_deep(usual_setup_usual_teardown):
     assert data[4]['path'].endswith('4')
 
 
-def test_hidden(usual_setup_usual_teardown):
+def test_hidden():
     create_file('xxx', 'not_empty/.hidden')
-    head, *data, footer = run_rmlint('-T "none +ed"')
+    _, *data, footer = run_rmlint('-T "none +ed"')
 
     assert footer['total_files'] == 0
     assert len(data) == 0
 
-    head, *data, footer = run_rmlint('-T "none +ed" --hidden')
+    _, *data, footer = run_rmlint('-T "none +ed" --hidden')
     assert footer['total_files'] == 1
     assert len(data) == 0

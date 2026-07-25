@@ -45,6 +45,8 @@ Here's a list of readily prepared commands for known operating systems:
     $ sudo dnf install python3-sphinx
     # Optional dependencies for the GUI:
     $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 librsvg2 hicolor-icon-theme
+    # Optional dependencies for tests:
+    $ sudo dnf install python3-pytest-xdist+psutil python3-xattr
 
   There are also pre-built packages on `Fedora Copr`_:
 
@@ -79,7 +81,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for the GUI:
     $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg
     # Optional dependencies for tests:
-    $ sudo pacman -S python-pytest python-xattr python-psutil btrfs-progs
+    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil btrfs-progs
 
   There is also git packages in AUR, from the ``master`` branch: `rmlint-git`_, `rmlint-shredder-git`_ ; and the ``develop`` branch: `rmlint-develop-git`_, `rmlint-shredder-develop-git`_.
 
@@ -111,7 +113,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for the GUI:
     $ sudo apt install python3-setuptools python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
     # Optional dependencies for tests:
-    $ sudo apt install python3-pytest python3-psutil python3-xattr
+    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr
 
 .. _Debian: https://packages.debian.org/rmlint
 .. _Ubuntu: https://packages.ubuntu.com/rmlint

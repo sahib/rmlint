@@ -1,52 +1,42 @@
-#!/usr/bin/env python3
 import csv
+import io
+import os
 
-from tests.utils import *
+from tests.utils import create_file, run_rmlint
 
 
 def csv_string_to_data(csv_dump):
-    data = list(csv.reader(csv_dump.splitlines()))
-    return data[1:]
+    return list(csv.DictReader(io.StringIO(csv_dump, newline='')))
 
 
-def test_simple(usual_setup_usual_teardown):
+def test_simple():
     create_file('1234', 'a')
     create_file('1234', 'b')
     create_file('1234', 'stupid\'file,name')
-    head, *data, footer, csv = run_rmlint('-S a', outputs=['csv'])
 
-    (type_1, path_1, size_1, cksum_1),  \
-    (type_2, path_2, size_2, cksum_2),  \
-    (type_3, path_3, size_3, cksum_3) = \
-        csv_string_to_data(csv)
+    _, *_, _, csv_out = run_rmlint('-S a', outputs=('csv',))
+    rows = csv_string_to_data(csv_out)
 
-    assert int(size_1) == 4
-    assert int(size_2) == 4
-    assert int(size_3) == 4
+    assert [int(row['size']) for row in rows] == [4, 4, 4]
 
-    assert path_1.endswith('/a')
-    assert path_2.endswith('/b')
-    assert path_3.endswith('/stupid\'file,name')
+    assert [(row['type'], os.path.basename(row['path']), int(row['size'])) for row in rows] == [
+        ('duplicate_file', 'a', 4),
+        ('duplicate_file', 'b', 4),
+        ('duplicate_file', "stupid'file,name", 4),
+    ]
 
-    assert type_1 == 'duplicate_file'
-    assert type_2 == 'duplicate_file'
-    assert type_3 == 'duplicate_file'
-
-    assert cksum_1 != '0' * 32
-    assert cksum_2 != '0' * 32
-    assert cksum_3 != '0' * 32
+    assert all(set(row['checksum']) != {'0'} for row in rows)
 
 
 # regression test for GitHub issue #496
-def test_no_checksum(usual_setup_usual_teardown):
+def test_no_checksum():
     # rmlint will not (normally) hash files with no same-sized siblings
     create_file('x', 'a')
     create_file('yy', 'b')
 
     # test for 'free(): invalid pointer' crash
-    head, *data, foot, csv = run_rmlint('-S a -c csv:unique', outputs=['csv'])
+    _, *data, _, csv_out = run_rmlint('-S a -c csv:unique', outputs=['csv'])
     assert not data
 
     # empty checksums should make it to output
-    csv_data = csv_string_to_data(csv)
-    assert [r[3] for r in csv_data] == ['', '']
+    assert [r['checksum'] for r in csv_string_to_data(csv_out)] == [''] * 2

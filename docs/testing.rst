@@ -5,7 +5,7 @@ Testsuite
 complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
-The tests are based on ``pytest`` and are written in ``python>=3.0``.
+The tests are based on ``pytest`` and are written in ``python>=3.6``.
 Every testcase just runs the (previously built) ``rmlint`` binary a
 and parses its json output. So they are technically blackbox-tests.
 
@@ -13,11 +13,9 @@ To ensure required test dependencies are present:
 
 .. code-block:: bash
 
-   $ pip3 install -r test-requirements.txt
+   $ pip3 install -r tests/requirements.txt
 
-On every commit, those tests are additionally run on `TravisCI`_.
-
-.. _`TravisCI`: https://travis-ci.com/sahib/rmlint
+On every commit, those tests are additionally run on GitHub Actions.
 
 Control Variables
 ~~~~~~~~~~~~~~~~~
@@ -26,8 +24,8 @@ The behaviour of the testsuite can be controlled by certain environment
 variables which are:
 
 - ``RM_TS_DIR``: Testdir to create files in. Can be very large with some tests,
-  sometimes ``tmpfs`` might therefore slow down your computer. By default
-  ``/tmp`` will be used.
+  sometimes ``tmpfs`` might therefore slow down your computer. The directory
+  must already exist. By default, a temporary directory will be used.
 - ``RM_TS_USE_VALGRIND``: Run each test inside of valgrind's memcheck. *(slow)*
 - ``RM_TS_CHECK_LEAKS``: Fail test if valgrind indicates (definite) memory leak.
 - ``RM_TS_USE_GDB``: Run tests inside of ``gdb``. Fatal signals will trigger a
@@ -38,19 +36,32 @@ variables which are:
   starting the testcase and manually running ``rmlint`` on the priorly generated
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
-- ``RM_TS_KEEP_TESTDIR``: If a test failed, keep the test files.
 
-Additionally slow tests can be omitted with by appending ``-k 'not slow'`` to
+The files of a failing test are kept for inspection, those of a passing one are
+removed as the run goes along. Pass ``-o tmp_path_retention_policy=all`` to keep
+everything, or ``=none`` to keep nothing.
+
+Additionally slow tests can be omitted with by appending ``-m 'not slow'`` to
 the commandline. More information on this syntax can be found on the `pytest
 documentation`_.
 
 .. _`pytest documentation`: https://docs.pytest.org/en/stable/example/markers.html
 
+The suite can be run in parallel with `pytest-xdist`_:
+
+.. code-block:: bash
+
+   $ pytest -n auto --capture=fd
+
+Use ``--capture=fd`` if the default ``-s`` does not work.
+
+.. _`pytest-xdist`: https://pytest-xdist.readthedocs.io/
+
 Before each release we call the testsuite (at least) like this:
 
 .. code-block:: bash
 
-   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'not slow and not known_issue'
+   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -m 'not slow'
 
 The ``sudo`` here is there for executing some tests that need root access (like
 the creating of bad user and group ids). Most tests will work without.
@@ -65,7 +76,7 @@ were executed (and how often) by the testsuite. Here's a short quickstart using
 .. code-block:: bash
 
     $ CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-fprofile-arcs -ftest-coverage" scons -j4 DEBUG=1
-    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -a 'slow and not known_issue'
+    $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -m 'slow and not known_issue'
     $ lcov --capture --directory . --output-file coverage.info
     $ genhtml coverage.info --output-directory out
 
@@ -91,9 +102,9 @@ A template for a testcase looks like this:
 
 .. code-block:: python
 
-    from tests.utils import *
+    from tests.utils import create_file
 
-    def test_basic(usual_setup_usual_teardown):
+    def test_basic():
         create_file('xxx', 'a')
         create_file('xxx', 'b')
 
@@ -112,8 +123,11 @@ Rules
 
   .. code-block:: python
 
+    import pytest
+
+    def test_root_only_case():
       if not runs_as_root():
-          return
+          pytest.skip("reason")
 
 * Regressions in ``rmlint`` should get their own testcase so they do not
   appear again. 
@@ -124,7 +138,7 @@ Rules
     import pytest
 
     @pytest.mark.slow
-    def test_debian_support(usual_setup_usual_teardown):
+    def test_debian_support():
         assert random.choice([True, False]):
 
 * Unresolved issues can be marked with the ``known_issue`` attribute to avoid
@@ -149,4 +163,4 @@ running the test suite:
 
 .. code-block:: bash
 
-   $ PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH" nosetests ...
+   $ PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH" pytest ...

@@ -1,8 +1,9 @@
-#!/usr/bin/env python3
-from tests.utils import *
-
+import os
 import subprocess
+
 import pytest
+
+from tests.utils import create_file, create_link, get_testdir, run_rmlint
 
 
 def _check_interpreter(interpreter):
@@ -13,14 +14,17 @@ def _check_interpreter(interpreter):
         return False
 
 
+def run_py_script(interpreter):
+    return subprocess.check_output(
+        [interpreter, os.path.join(get_testdir(), 'rmlint.py'), '-d', '-p'],
+        cwd=get_testdir(),
+    ).decode('utf-8')
+
+
 @pytest.mark.parametrize("interpreter", ["python2", "python3"])
-def test_paranoia(usual_setup_usual_teardown, interpreter):
+def test_paranoia(interpreter):
     if not _check_interpreter(interpreter):
-        pytest.skip(
-            "Interpreter {} does not seem to be working, skipping test".format(
-                interpreter
-            )
-        )
+        pytest.skip(f"Interpreter {interpreter} does not seem to be working, skipping test")
 
     create_file('xxx', 'a')
     create_file('xxx', 'b')
@@ -28,8 +32,8 @@ def test_paranoia(usual_setup_usual_teardown, interpreter):
     create_file('xxx', 'd')
     create_link('a', 'hardlink_a', symlink=False)
 
-    head, *data, footer = run_rmlint(
-        '-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME)
+    _, *_, footer = run_rmlint(
+        f'-S a -o py:{get_testdir()}/rmlint.py', uses_py_formatter=True
     )
 
     assert footer['duplicate_sets'] == 1
@@ -37,24 +41,17 @@ def test_paranoia(usual_setup_usual_teardown, interpreter):
     assert footer['total_files'] == 5 # 1 is ignored as own output
     assert footer['duplicates'] == 4
 
-    with open(os.path.join(TESTDIR_NAME, 'b'), 'w') as handle:
+    with open(os.path.join(get_testdir(), 'b'), 'w', encoding='utf-8') as handle:
         handle.write('yyy')
 
-    with open(os.path.join(TESTDIR_NAME, 'c'), 'w') as handle:
+    with open(os.path.join(get_testdir(), 'c'), 'w', encoding='utf-8') as handle:
         handle.write('xxxx')
 
-    text = subprocess.check_output([
-        interpreter,
-        os.path.join(TESTDIR_NAME, 'rmlint.py'),
-        '-d',
-        '-p'
-    ])
-    text = text.decode('utf-8')
+    text = run_py_script(interpreter)
 
-    # subprocess.call('ls  -l ' + TESTDIR_NAME, shell=True)
-    os.remove(os.path.join(TESTDIR_NAME, "rmlint.py"))
-    head, *data, footer = run_rmlint(
-        '-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME)
+    os.remove(os.path.join(get_testdir(), "rmlint.py"))
+    _, *_, footer = run_rmlint(
+        f'-S a -o py:{get_testdir()}/rmlint.py', uses_py_formatter=True
     )
 
     assert footer['duplicate_sets'] == 1
@@ -66,15 +63,10 @@ def test_paranoia(usual_setup_usual_teardown, interpreter):
     assert 'Size differs' in text
     assert 'Same inode' in text
 
-    text = subprocess.check_output([
-        interpreter,
-        os.path.join(TESTDIR_NAME, 'rmlint.py'),
-        '-d',
-        '-p'
-    ])
-    os.remove(os.path.join(TESTDIR_NAME, "rmlint.py"))
-    head, *data, footer = run_rmlint(
-        '-S a -o py:{t}/rmlint.py'.format(t=TESTDIR_NAME)
+    run_py_script(interpreter)
+    os.remove(os.path.join(get_testdir(), "rmlint.py"))
+    _, *_, footer = run_rmlint(
+        f'-S a -o py:{get_testdir()}/rmlint.py', uses_py_formatter=True
     )
 
     # Nothing should change.

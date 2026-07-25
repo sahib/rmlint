@@ -1,14 +1,12 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-
 import os
 import re
 import shutil
 import tempfile
 
+from tests.utils import create_file, run_rmlint
 
-def test_backup(usual_setup_usual_teardown):
+
+def test_backup():
     create_file('content', 'name_x')
     create_file('content', 'name_y')
 

@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
+import os
+import subprocess
+
+from tests.utils import create_file, create_testdir, get_testdir, run_rmlint
 
 
 def create_set():
@@ -10,7 +11,7 @@ def create_set():
         create_file('x' * 512, 'small' + suffix)
 
 
-def test_valid(usual_setup_usual_teardown):
+def test_valid():
     create_set()
 
     # Scalar:
@@ -49,7 +50,7 @@ def test_valid(usual_setup_usual_teardown):
     assert footer['duplicates'] == 6
 
 
-def test_invalid(usual_setup_usual_teardown):
+def test_invalid():
     create_set()
 
     def trigger(*args):
@@ -62,7 +63,7 @@ def test_invalid(usual_setup_usual_teardown):
             assert False
 
     # Not a valid range:
-    trigger(r'--size --17')
+    trigger('--size --17')
 
     # max < min
     trigger('--size 10-9')
@@ -81,7 +82,7 @@ def test_invalid(usual_setup_usual_teardown):
 
 
 
-def test_replay_size(usual_setup_usual_teardown):
+def test_replay_size():
     create_file('', 'empty1')
     create_file('', 'empty2')
     create_file('xxx', 'a/xxx')
@@ -90,18 +91,14 @@ def test_replay_size(usual_setup_usual_teardown):
     create_file('yyy', 'b/yyy')
     create_testdir('empty_dir')
 
-    replay_path = os.path.join(TESTDIR_NAME, 'replay.json')
-    head, *data, footer = run_rmlint('-o json:{p}'.format(
-        p=replay_path
-    ))
+    replay_path = os.path.join(get_testdir(), 'replay.json')
+    _, *data, _ = run_rmlint(f'-o json:{replay_path}')
 
     assert len(data) == 7
     assert [e["type"] for e in data] == \
            ["emptydir"] + (["emptyfile"] * 2) + (["duplicate_file"] * 4)
 
-    head, *data, footer = run_rmlint('--replay {p} --size 1-10B'.format(
-        p=replay_path
-    ))
+    _, *data, _ = run_rmlint(f'--replay {replay_path} --size 1-10B')
 
     assert [e["type"] for e in data] == \
            ["emptydir"] + (["emptyfile"] * 2) + (["duplicate_file"] * 4)

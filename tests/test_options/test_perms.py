@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-
+import os
 import stat
-
 from itertools import chain, combinations
+
+from tests.utils import create_file, get_testdir, run_rmlint, runs_as_root
 
 
 def create_file_with_perms(content, path, permissions):
@@ -19,10 +17,10 @@ def create_file_with_perms(content, path, permissions):
         perms |= stat.S_IXUSR
 
     create_file(content, path)
-    os.chmod(os.path.join(TESTDIR_NAME, path), perms)
+    os.chmod(os.path.join(get_testdir(), path), perms)
 
 
-def test_combinations(usual_setup_usual_teardown):
+def test_combinations():
     # This test does not work when run as root.
     # root can read the files anyways.
     if runs_as_root():
@@ -43,27 +41,27 @@ def test_combinations(usual_setup_usual_teardown):
 
     files_created = len(rwx) + 1
 
-    head, *data, footer = run_rmlint('')
+    _, *_, footer = run_rmlint('')
     assert footer['duplicate_sets'] == 1
     assert footer['ignored_files'] == 0
     assert footer['total_files'] == files_created
     assert footer['duplicates'] == 3
 
     for perm_opt, dupes in zip('rwx', (3, 1, 1)):
-        head, *data, footer = run_rmlint('--perms ' + perm_opt)
+        _, *_, footer = run_rmlint('--perms ' + perm_opt)
         assert footer['duplicate_sets'] == 1
         assert footer['ignored_files'] == 4
         assert footer['total_files'] == files_created - 4
         assert footer['duplicates'] == dupes
 
-    head, *data, footer = run_rmlint('--perms rwx')
+    _, *_, footer = run_rmlint('--perms rwx')
     assert footer['duplicate_sets'] == 0
     assert footer['ignored_files'] == 7
     assert footer['total_files'] == 1
     assert footer['duplicates'] == 0
 
     for perm_opt, dupes in zip(["rw", "rx", "wx"], (1, 1, 0)):
-        head, *data, footer = run_rmlint('--perms ' + perm_opt)
+        _, *_, footer = run_rmlint('--perms ' + perm_opt)
         assert footer['duplicate_sets'] == dupes
         assert footer['ignored_files'] == 6
         assert footer['total_files'] == files_created - 6

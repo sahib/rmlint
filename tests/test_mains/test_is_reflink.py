@@ -1,6 +1,17 @@
 import os
 import subprocess
-from tests.utils import *
+
+import pytest
+
+from tests.utils import (
+    assert_exit_code,
+    create_dirs,
+    create_file,
+    create_link,
+    get_testdir,
+    run_rmlint,
+    run_rmlint_once,
+)
 
 
 def check_is_reflink_status(status_code, *paths):
@@ -13,7 +24,7 @@ def check_is_reflink_status(status_code, *paths):
         )
 
 
-def test_bad_arguments(usual_setup_usual_teardown):
+def test_bad_arguments():
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxx', 'b')
     path_c = create_file('xxx', 'c')
@@ -25,38 +36,38 @@ def test_bad_arguments(usual_setup_usual_teardown):
         check_is_reflink_status(1, *paths)  # RM_LINK_NONE
 
 
-def test_directories(usual_setup_usual_teardown):
+def test_directories():
     path_a = create_dirs('dir_a')
     path_b = create_dirs('dir_b')
     check_is_reflink_status(3, path_a, path_b)  # RM_LINK_NOT_FILE
 
 
-def test_different_sizes(usual_setup_usual_teardown):
+def test_different_sizes():
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxxx', 'b')
     check_is_reflink_status(4, path_a, path_b)  # RM_LINK_WRONG_SIZE
 
 
-def test_same_path(usual_setup_usual_teardown):
+def test_same_path():
     path_a = create_file('xxx', 'a')
     check_is_reflink_status(6, path_a, path_a)  # RM_LINK_SAME_FILE
 
 
-def test_path_double(usual_setup_usual_teardown):
+def test_path_double():
     path_a = create_file('xxx', 'dir/a')
     create_link('dir', 'dir_symlink', symlink=True)
-    path_b = os.path.join(TESTDIR_NAME, 'dir_symlink/a')
+    path_b = os.path.join(get_testdir(), 'dir_symlink/a')
     check_is_reflink_status(7, path_a, path_b)  # RM_LINK_PATH_DOUBLE
 
 
-def test_hardlinks(usual_setup_usual_teardown):
+def test_hardlinks():
     path_a = create_file('xxx', 'a')
     path_b = path_a + '_hardlink'
     create_link('a', 'a_hardlink', symlink=False)
     check_is_reflink_status(8, path_a, path_b)  # RM_LINK_HARDLINK
 
 
-def test_symlink(usual_setup_usual_teardown):
+def test_symlink():
     path_a = create_file('xxx', 'a')
     path_b = create_file('xxx', 'b') + '_symlink'
     create_link('b', 'b_symlink', symlink=True)
@@ -72,8 +83,8 @@ def _run_dd_urandom(outfile, blocksize, count, extra=''):
 
 
 def _make_reflink_testcase(extents, hole_extents=None, break_link=False):
-    path_a = os.path.join(TESTDIR_NAME, 'a')
-    path_b = os.path.join(TESTDIR_NAME, 'b')
+    path_a = os.path.join(get_testdir(), 'a')
+    path_b = os.path.join(get_testdir(), 'b')
 
     _run_dd_urandom(path_a, '4K', extents)
 
@@ -90,24 +101,27 @@ def _make_reflink_testcase(extents, hole_extents=None, break_link=False):
 
 
 # GitHub issue #527: Make sure rmlint does not skip every other extent.
-def test_second_extent_differs(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_second_extent_differs():
     _make_reflink_testcase(extents=5, break_link=True)
 
 
 # GitHub issue #528, part 1: Make sure the last extent is not ignored.
-def test_last_extent_differs(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_last_extent_differs():
     _make_reflink_testcase(extents=2, break_link=True)
 
 
 # GitHub issue #528, part 2: Make sure files that end in a hole can be identified as reflinked.
-def test_reflink_ends_with_hole(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_reflink_ends_with_hole():
     _make_reflink_testcase(extents=1, hole_extents=1)
 
 
 def _copy_file_range(src, dst, count, offset_src, offset_dst):
     bytes_copied = os.copy_file_range(src, dst, count, offset_src, offset_dst)
     if bytes_copied < count:
-        raise RuntimeError('copy_file_range only copied {} bytes (expected {})'.format(bytes_copied, count))
+        raise RuntimeError(f'copy_file_range only copied {bytes_copied} bytes (expected {count})')
 
 
 def kb(n):
@@ -115,8 +129,8 @@ def kb(n):
 
 
 def _hole_testcase_inner(extents):
-    path_a = os.path.join(TESTDIR_NAME, 'a')
-    path_b = os.path.join(TESTDIR_NAME, 'b')
+    path_a = os.path.join(get_testdir(), 'a')
+    path_b = os.path.join(get_testdir(), 'b')
 
     _run_dd_urandom(path_a, kb(16) // extents, extents)
     with open(path_b, 'wb') as f:
@@ -132,7 +146,8 @@ def _hole_testcase_inner(extents):
 
 # GitHub issue #611: Make sure holes can be detected when the physical offsets and logical
 # extent ends are otherwise the same.
-def test_hole_before_extent(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_hole_before_extent():
     for infd, outfd in _hole_testcase_inner(extents=2):
         # copy first half of first extent with 4K offset
         _copy_file_range(infd, outfd, kb(4), kb(0), kb(4))
@@ -142,7 +157,8 @@ def test_hole_before_extent(usual_setup_usual_teardown, needs_reflink_fs):
 
 # GitHub issue #530: Make sure physically adjacent extents aren't merged if there is a
 # hole between them logically.
-def test_hole_between_extents(usual_setup_usual_teardown, needs_reflink_fs):
+@pytest.mark.usefixtures("needs_reflink_fs")
+def test_hole_between_extents():
     for infd, outfd in _hole_testcase_inner(extents=1):
         # copy first extent
         _copy_file_range(infd, outfd, kb(8), kb(0), kb(0))
@@ -150,20 +166,15 @@ def test_hole_between_extents(usual_setup_usual_teardown, needs_reflink_fs):
         _copy_file_range(infd, outfd, kb(4), kb(8), kb(12))
 
 
-def test_default_outputs_disabled(usual_setup_usual_teardown):
+def test_default_outputs_disabled():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
-    cwd = os.getcwd()
     try:
-        os.chdir(TESTDIR_NAME)
-        try:
-            run_rmlint('--is-reflink a b', use_default_dir=False, with_json=False)
-        except subprocess.CalledProcessError:
-            pass  # nonzero exit status is expected
+        run_rmlint('--is-reflink a b', use_default_dir=False, with_json=False)
+    except subprocess.CalledProcessError:
+        pass  # nonzero exit status is expected
 
-        # --is-reflink should not create or overwrite rmlint.sh or rmlint.json
-        assert not os.path.exists('rmlint.sh')
-        assert not os.path.exists('rmlint.json')
-    finally:
-        os.chdir(cwd)
+    # --is-reflink should not create or overwrite rmlint.sh or rmlint.json
+    assert not os.path.exists(os.path.join(get_testdir(), 'rmlint.sh'))
+    assert not os.path.exists(os.path.join(get_testdir(), 'rmlint.json'))

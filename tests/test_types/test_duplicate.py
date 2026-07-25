@@ -1,90 +1,83 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-import os
+from tests.utils import create_dirs, create_file, create_link, get_testdir, run_rmlint, use_valgrind
 
 
-def create_data(len, flips=None):
-    data = ['0'] * len
-    for flip in flips or []:
-        data[flip] = '1'
-
-    return ''.join(data)
-
-
-def test_small_diffs(usual_setup_usual_teardown):
+def test_small_diffs():
+    def create_data(length, flips=()):
+        data = ['0'] * length
+        for flip in flips:
+            data[flip] = '1'
+        return ''.join(data)
 
     if use_valgrind():
-        N = 32
+        size = 32
     else:
         # Takes horribly long elsewhise
-        N = 128
+        size = 128
 
-    create_file(create_data(len=N, flips=None), 'a')
-    create_file(create_data(len=N, flips=[-1]), 'b')
-    head, *data, footer = run_rmlint('-S a')
-
-    assert len(data) == 0
-
-    create_file(create_data(len=N, flips=[+1]), 'a')
-    create_file(create_data(len=N, flips=[-1]), 'b')
-    head, *data, footer = run_rmlint('-S a')
+    create_file(create_data(size), 'a')
+    create_file(create_data(size, flips=(-1,)), 'b')
+    _, *data, _ = run_rmlint('-S a')
 
     assert len(data) == 0
 
-    create_file(create_data(len=N, flips=[+1]), 'a')
-    create_file(create_data(len=N, flips=[+1]), 'b')
-    head, *data, footer = run_rmlint('-S a')
+    create_file(create_data(size, flips=(+1,)), 'a')
+    create_file(create_data(size, flips=(-1,)), 'b')
+    _, *data, _ = run_rmlint('-S a')
+
+    assert len(data) == 0
+
+    create_file(create_data(size, flips=(+1,)), 'a')
+    create_file(create_data(size, flips=(+1,)), 'b')
+    _, *data, _ = run_rmlint('-S a')
 
     assert len(data) == 2
 
-    for i in range(0, N // 2):
-        create_file(create_data(len=N, flips=[+i]), 'a')
-        create_file(create_data(len=N, flips=[-i]), 'b')
-        head, *data, footer = run_rmlint('-S a')
+    for i in range(0, size // 2):
+        create_file(create_data(size, flips=(+i,)), 'a')
+        create_file(create_data(size, flips=(-i,)), 'b')
+        _, *data, _ = run_rmlint('-S a')
 
-        if i == N - i or i == 0:
-            assert len(data) == 2
-        else:
-            assert len(data) == 0
+        assert len(data) == (2 if i in (size - i, 0) else 0)
 
 
-def test_one_byte_file_negative(usual_setup_usual_teardown):
+def test_one_byte_file_negative():
     create_file('1', 'one')
     create_file('2', 'two')
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, _ = run_rmlint('-S a')
 
     assert len(data) == 0
 
 
-def test_one_byte_file_positive(usual_setup_usual_teardown):
+def test_one_byte_file_positive():
     create_file('1', 'one')
     create_file('1', 'two')
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, _ = run_rmlint('-S a')
 
     assert len(data) == 2
 
-def test_two_hardlinks(usual_setup_usual_teardown):
+
+def test_two_hardlinks():
     create_file('xxx', 'a')
     create_link('a', 'b')
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, footer = run_rmlint('-S a')
 
     assert len(data) == 2
     assert footer['total_lint_size'] == 0
 
-def test_two_external_hardlinks(usual_setup_usual_teardown):
+
+def test_two_external_hardlinks():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
     create_dirs('sub')
     create_link('a', 'sub/a')
     create_link('a', 'sub/b')
-    head, *data, footer = run_rmlint('-S a')
+    _, *data, footer = run_rmlint('-S a')
 
     assert len(data) == 4
     assert footer['total_lint_size'] == 3
 
-    head, *data, footer = run_rmlint(
-        "{t}/sub".format(t=TESTDIR_NAME),
+    _, *data, footer = run_rmlint(
+        f"{get_testdir()}/sub",
         use_default_dir=False
     )
 

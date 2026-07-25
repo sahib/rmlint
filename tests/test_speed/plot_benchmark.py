@@ -1,21 +1,13 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
-# Stdlib:
-import os
-import sys
-import json
-import glob
+#!/usr/bin/env python3
 import argparse
-import statistics
+import glob
+import json
+import os
 
-# External:
 import pygal
-
 
 # from pygal.style import LightSolarizedStyle as Style
 from pygal.style import DefaultStyle as Style
-
 
 VALID_ATTRS = {
     'timing': 0,
@@ -188,7 +180,7 @@ def main():
     }
 
     for path in glob.glob(os.path.join(options.input_dir, '*.json')):
-        with open(path, 'r') as handle:
+        with open(path) as handle:
             data = json.loads(handle.read())
             for attr, (plot_func, is_table) in PLOT_FUNCS.items():
                 svg_or_table = plot_func(data)

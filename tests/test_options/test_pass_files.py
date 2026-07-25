@@ -1,15 +1,12 @@
-#!/usr/bin/env python3
-# encoding: utf-8
-from tests.utils import *
-import json
+from tests.utils import create_file, run_rmlint
 
 
-def test_stdin_read(usual_setup_usual_teardown):
+def test_stdin_read():
     path_a = create_file('1234', 'a')
     path_b = create_file('1234', 'b')
     path_c = create_file('1234', '.hidden')
 
-    head, *data, footer = run_rmlint('-S a -D --partial-hidden', path_a, path_b, path_c)
+    _, *data, footer = run_rmlint('-S a -D --partial-hidden', path_a, path_b, path_c)
 
     # Hidden is well, hidden due to --partial-hidden and -D.
     assert data[0]['path'].endswith('a')
