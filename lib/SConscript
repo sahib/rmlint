@@ -85,35 +85,12 @@ sh_formatter = env.Command(
     'formats/sh.c', ['formats/sh.c.in', 'formats/sh.sh'], build_sh_formatter
 )
 
-blake3 = Glob('checksums/blake3/*.[cS]')
-if not env['HAVE_AVX2']:
-    print('Not compiling blake3 avx2 options')
-    blake3 = [f for f in blake3 if 'avx2' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_AVX2'])
-
-if not env['HAVE_AVX512F'] or not env['HAVE_AVX512VL']:
-    print('Not compiling blake3 avx512 options')
-    blake3 = [f for f in blake3 if 'avx512' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_AVX512'])
-
-if not env['HAVE_SSE4_1']:
-    print('Not compiling blake3 sse41 options')
-    blake3 = [f for f in blake3 if 'sse41' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_SSE41'])
-
-if not env['HAVE_SSE2']:
-    print('Not compiling blake3 sse2 options')
-    blake3 = [f for f in blake3 if 'sse2' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_SSE2'])
+checksums = SConscript('checksums/SConscript', exports='env')
 
 library = env.Library(
     '../rmlint',
-    Glob('*.c')           +
-    Glob('checksums/*.c') +
-    Glob('checksums/xxhash/*.c') +
-    Glob('checksums/blake2/*.c') +
-    blake3 +
-    Glob('checksums/sha3/*.c') +
+    Glob('*.c') +
+    checksums +
     Glob('formats/*.c') +
     Glob('fts/*.c')
 )
