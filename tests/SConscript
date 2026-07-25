@@ -1,31 +1,19 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 Import('env')
 Import('programs')
 
-
 import os
+import shutil
 import subprocess
 
 
-def cmd_exists(cmd):
-    return any(
-        os.access(os.path.join(path, cmd), os.X_OK)
-        for path in os.environ["PATH"].split(os.pathsep)
-    )
-
-
 def run_tests(target=None, source=None, env=None):
-    names = ["pytest"]
-    exes = [exe for exe in names if cmd_exists(exe)]
-    if any(exes):
-        name = exes[0]
-        print('Found pytest as "{}"'.format(name))
-        Exit(subprocess.call(name + ' -s -v -k "not slow"', shell=True))
+    pytest = shutil.which('pytest')
+    if not pytest:
+        print('Unable to find pytest in PATH')
+        Exit(1)
 
-    print('Unable to find pytest, tried these: ' + str(names))
-    Exit(-1)
+    test_env = dict(os.environ, RM_TS_DIR='/tmp/rmlint-tests')
+    Exit(subprocess.call([pytest, '-s', '-v', '-m', 'not slow'], env=test_env))
 
 
 if 'test' in COMMAND_LINE_TARGETS:

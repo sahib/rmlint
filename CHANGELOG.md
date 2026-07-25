@@ -27,6 +27,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``-c json:traversed`` to include list of fully-traversed dirs in json output
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
+* For packagers: ``STRIP=`` scons build variable to opt out of link-time stripping.
 
 ### Changed
 

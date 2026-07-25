@@ -36,3 +36,7 @@ uninstall-
 
 # JetBrains' IDE
 .idea
+
+# generated clang tooling
+/compile_flags.txt
+/.clang_complete
