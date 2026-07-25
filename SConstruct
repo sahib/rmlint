@@ -109,7 +109,6 @@ if ARGUMENTS.get('VERBOSE') == "1":
 
 # Actually instance the Environment with all collected information:
 env = Environment(**options)
-Export('env')
 
 ###########################################################################
 #                           Dependency Checks                             #
@@ -213,7 +212,7 @@ conf.env.Append(CCFLAGS=[
 ])
 
 
-env.ParseConfig(PKG_CONFIG + ' --cflags --libs ' + ' '.join(packages))
+conf.env.ParseConfig(PKG_CONFIG + ' --cflags --libs ' + ' '.join(packages))
 
 
 conf.env.Append(_LIBFLAGS=['-lm'])
@@ -342,6 +341,7 @@ if value:
 
 # Your extra checks here
 env = conf.Finish()
+Export('env')
 
 # snapshot the compile flags before we add host-specific flags
 # for vendored libraries.
