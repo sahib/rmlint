@@ -113,7 +113,7 @@ static void rm_fmt_object_write_and_free(JsonObject *obj, RmFmtHandlerJSON *self
     json_node_set_object(self->root, obj);
     json_generator_set_root(self->generator, self->root);
 
-    if(!json_generator_to_stream(self->generator, self->stream, false, &error)) {
+    if(!json_generator_to_stream(self->generator, self->stream, NULL, &error)) {
         rm_log_error_line("Error writing to json stream");
     }
     json_object_unref(obj);

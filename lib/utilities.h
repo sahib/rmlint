@@ -206,7 +206,7 @@ bool rm_util_is_nonstripped(const char *path, RmStat *statp);
  *
  * @return NULL on failure, the pointer after the last / on success.
  */
-char *rm_util_basename(const char *filename);
+const char *rm_util_basename(const char *filename);
 
 /**
  * @brief Check if the file or any components of it are hidden.
@@ -312,7 +312,7 @@ gpointer rm_util_slist_pop(GSList **list, GMutex *lock);
  *
  * @return: a pointer >= basename or NULL.
  */
-char *rm_util_path_extension(const char *basename);
+const char *rm_util_path_extension(const char *basename);
 
 /**
  * @brief Get the inode of the directory of the file specified in path.

@@ -42,6 +42,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   are typically stored as inline extents
 * docker: update to a more recent alpine and install full test dependencies
 * short option ``-U`` now refers to ``--hash-unmatched`` instead of ``--write-unfinished``.
+* Treat paths beyond ``PATH_MAX`` as a hard error instead of truncating them
 
 ### Removed
 * ``--dedupe-xattr``.  Use ``--dedupe --xattr``

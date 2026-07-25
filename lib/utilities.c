@@ -187,7 +187,7 @@ guint64 rm_util_size_string_to_bytes(const char *size_spec, GError **error) {
     if(*size_format != 0) {
         need_multiply = true;
         FormatSpec key = {.id = size_format};
-        FormatSpec *found = bsearch(&key,
+        const FormatSpec *found = bsearch(&key,
                                     SIZE_FORMAT_TABLE,
                                     SIZE_FORMAT_TABLE_N,
                                     sizeof(FormatSpec),
@@ -273,8 +273,8 @@ char *rm_util_strsub(const char *string, const char *subs, const char *with) {
     return result;
 }
 
-char *rm_util_basename(const char *filename) {
-    char *base = strrchr(filename, G_DIR_SEPARATOR);
+const char *rm_util_basename(const char *filename) {
+    const char *base = strrchr(filename, G_DIR_SEPARATOR);
     if(base != NULL) {
         /* Return a pointer to the part behind it
          * (which may be the empty string)
@@ -283,11 +283,11 @@ char *rm_util_basename(const char *filename) {
     }
 
     /* It's the full path anyway */
-    return (char *)filename;
+    return filename;
 }
 
-char *rm_util_path_extension(const char *basename) {
-    char *point = strrchr(basename, '.');
+const char *rm_util_path_extension(const char *basename) {
+    const char *point = strrchr(basename, '.');
     if(point) {
         return point + 1;
     } else {
@@ -1306,8 +1306,8 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
 #endif
 
 static gboolean rm_util_is_path_double(const char *path1, const char *path2) {
-    char *basename1 = rm_util_basename(path1);
-    char *basename2 = rm_util_basename(path2);
+    const char *basename1 = rm_util_basename(path1);
+    const char *basename2 = rm_util_basename(path2);
     return (strcmp(basename1, basename2) == 0 &&
             rm_util_parent_node(path1) == rm_util_parent_node(path2));
 }
@@ -1430,7 +1430,7 @@ RmLinkType rm_util_link_type(const char *path1, const char *path2, bool use_fiem
 #undef RM_RETURN
 }
 
-const char **rm_link_type_to_desc() {
+const char **rm_link_type_to_desc(void) {
     /* indexes must match RmLinkType values */
     static const char *RM_LINK_TYPE_TO_DESC[] = {N_("Reflink"),
                                                  N_("Not linked"),
