@@ -201,8 +201,8 @@ gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b) {
     const char *ext_b = rm_util_path_extension(basename_b);
 
     /* Check length till extension, or full length if none present */
-    size_t a_len = (ext_a) ? (ext_a - basename_a) : (int)strlen(basename_a);
-    size_t b_len = (ext_b) ? (ext_b - basename_b) : (int)strlen(basename_a);
+    size_t a_len = (ext_a) ? (size_t)(ext_a - basename_a) : strlen(basename_a);
+    size_t b_len = (ext_b) ? (size_t)(ext_b - basename_b) : strlen(basename_b);
 
     RETURN_IF_NONZERO(SIGN_DIFF(a_len, b_len));
 
