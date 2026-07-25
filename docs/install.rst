@@ -31,6 +31,7 @@ Build dependencies:
 * **scons** (build system)
 * **sphinx** (manpage/documentation generation)
 * **gettext** (support for localization)
+* **py-cpuinfo** (soft build dependency: detect SSE/AVX support)
 
 Here's a list of readily prepared commands for known operating systems:
 
@@ -40,7 +41,7 @@ Here's a list of readily prepared commands for known operating systems:
 
     $ sudo dnf install git pkgconf gcc gettext scons glib2-devel json-glib-devel
     # Optional dependencies for more features:
-    $ sudo dnf install libblkid-devel elfutils-libelf-devel
+    $ sudo dnf install libblkid-devel elfutils-libelf-devel python3-cpuinfo
     # Optional dependencies for building documentation:
     $ sudo dnf install python3-sphinx
     # Optional dependencies for the GUI:
@@ -75,7 +76,7 @@ Here's a list of readily prepared commands for known operating systems:
 
     $ sudo pacman -S pkgconf git scons glib2 gettext json-glib
     # Optional dependencies for more features:
-    $ sudo pacman -S util-linux-libs libelf
+    $ sudo pacman -S util-linux-libs libelf python-py-cpuinfo
     # Optional dependencies for building documentation:
     $ sudo pacman -S python-sphinx python-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
@@ -105,9 +106,10 @@ Here's a list of readily prepared commands for known operating systems:
 
     # Ubuntu-only:
     $ sudo apt install software-properties-common && add-apt-repository universe
+
     $ sudo apt install git scons pkgconf gettext build-essential libjson-glib-1.0-0 libjson-glib-dev
     # Optional dependencies for more features:
-    $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev
+    $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev py-cpuinfo
     # Optional dependencies for building documentation:
     $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
@@ -149,7 +151,7 @@ Here's a list of readily prepared commands for known operating systems:
 
     $ doas pkg install git scons-py311 pkgconf glib gettext json-glib
     # Optional dependencies for more features:
-    $ doas pkg install libelf
+    $ doas pkg install libelf py311-py-cpuinfo
     # Optional dependencies for building documentation:
     $ doas pkg install py311-sphinx py311-pydata-sphinx-theme gtksourceview4
 
