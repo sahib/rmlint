@@ -134,10 +134,15 @@ static void rm_path_iter_init(RmPathIter *iter, const char *path) {
         path++;
     }
 
-    strncpy(iter->path_buf, path, PATH_MAX);
-    if (iter->path_buf[PATH_MAX - 1]) {
-        iter->path_buf[PATH_MAX - 1] = 0;
-        rm_log_error("path too long, truncated to: %s", iter->path_buf);
+    size_t path_len = g_strlcpy(iter->path_buf, path, sizeof(iter->path_buf));
+    if(path_len >= sizeof(iter->path_buf)) {
+        G_STATIC_ASSERT(sizeof(iter->path_buf) >= 128);
+        char *head = g_utf8_make_valid(path, (gssize)128);
+        rm_log_error("path too long (%"G_GSIZE_FORMAT" >= %d): %s[...]",
+                     path_len, PATH_MAX, head);
+        g_free(head);
+        /* TODO: clean error/exit (or skip) path */
+        g_error("pathtricia: path too long");
     }
 
     iter->curr_elem = iter->path_buf;
@@ -240,10 +245,9 @@ char *rm_trie_build_path_unlocked(RmNode *node, char *buf, size_t buf_len) {
     /* walk up the folder tree, collecting path elements into a list */
     for(RmNode *folder = node->parent; folder && folder->parent;
         folder = folder->parent) {
+        /* cannot happen: insertion bounds paths to PATH_MAX bytes. */
+        g_assert(n_elements < G_N_ELEMENTS(elements));
         elements[n_elements++] = folder->basename;
-        if(n_elements >= sizeof(elements)) {
-            break;
-        }
     }
 
     /* copy collected elements into *buf */
