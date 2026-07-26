@@ -10,8 +10,15 @@ from SCons.Script import ARGUMENTS, Exit, GetOption
 from rm_build_support import OPTIONAL_FLAGS, PKG_CONFIG, read_version
 
 STATIC_GIT_REV = read_version()[4]
+CUSTOM_TESTS = {}  # Passed to Configure(); the SConstruct calls these as conf.<name>().
 
 
+def custom_test(func):
+    CUSTOM_TESTS[func.__name__] = func
+    return func
+
+
+@custom_test
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
     command = PKG_CONFIG + ' --atleast-pkgconfig-version=' + version
@@ -23,6 +30,7 @@ def check_pkgconfig(context, version):
     return rc
 
 
+@custom_test
 def check_pkg(context, name, varname, required=True):
     rc, text = 1, ''
 
@@ -46,6 +54,7 @@ def check_pkg(context, name, varname, required=True):
     return rc, text
 
 
+@custom_test
 def check_git_rev(context):
     context.Message('Checking for git revision... ')
     rev = STATIC_GIT_REV
@@ -66,6 +75,7 @@ def check_git_rev(context):
     return rev
 
 
+@custom_test
 def check_sysmacro_h(context):
     rc = 1
     if rc and tests.CheckHeader(context, 'sys/sysmacros.h'):
@@ -77,6 +87,7 @@ def check_sysmacro_h(context):
     return rc
 
 
+@custom_test
 def check_libelf(context):
     rc = 1
 
@@ -96,6 +107,7 @@ def check_libelf(context):
     return rc
 
 
+@custom_test
 def check_uname(context):
     rc = 1
 
@@ -109,6 +121,7 @@ def check_uname(context):
     return rc
 
 
+@custom_test
 def check_gettext(context):
     env = context.sconf.env
     rc = 1
@@ -117,6 +130,9 @@ def check_gettext(context):
         rc = 0
 
     if rc and tests.CheckHeader(context, 'locale.h'):
+        rc = 0
+
+    if rc and tests.CheckHeader(context, 'libintl.h'):
         rc = 0
 
     env['HAVE_LIBINTL'] = rc
@@ -128,6 +144,7 @@ def check_gettext(context):
     return rc
 
 
+@custom_test
 def check_fiemap(context):
     rc = 1
 
@@ -144,6 +161,7 @@ def check_fiemap(context):
     return rc
 
 
+@custom_test
 def check_bigfiles(context):
     off_t_is_big_enough = True
 
@@ -156,7 +174,7 @@ def check_bigfiles(context):
 
     rc = int(off_t_is_big_enough or have_stat64)
     context.sconf.env['HAVE_BIG_OFF_T'] = int(off_t_is_big_enough)
-    context.sconf.env['HAVE_BIG_STAT'] = int(have_stat64)
+    context.sconf.env['HAVE_STAT64'] = int(have_stat64)
     context.sconf.env['HAVE_BIGFILES'] = rc
 
     context.did_show_result = True
@@ -164,6 +182,7 @@ def check_bigfiles(context):
     return rc
 
 
+@custom_test
 def check_blkid(context):
     rc = 1
 
@@ -184,6 +203,7 @@ def check_blkid(context):
     return rc
 
 
+@custom_test
 def check_sys_block(context):
     rc = 1
 
@@ -197,6 +217,7 @@ def check_sys_block(context):
     return rc
 
 
+@custom_test
 def check_posix_fadvise(context):
     rc = 1
 
@@ -213,6 +234,7 @@ def check_posix_fadvise(context):
     return rc
 
 
+@custom_test
 def check_xattr(context):
     rc = 1
 
@@ -228,6 +250,7 @@ def check_xattr(context):
     return rc
 
 
+@custom_test
 def check_lxattr(context):
     rc = 1
 
@@ -243,6 +266,7 @@ def check_lxattr(context):
     return rc
 
 
+@custom_test
 def check_sha512(context):
     rc = 1
     if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>'):
@@ -255,6 +279,7 @@ def check_sha512(context):
     return rc
 
 
+@custom_test
 def check_btrfs_h(context):
     rc = 1
     if tests.CheckHeader(
@@ -269,6 +294,7 @@ def check_btrfs_h(context):
     return rc
 
 
+@custom_test
 def check_linux_fs_h(context):
     rc = 1
     if tests.CheckHeader(context, 'linux/fs.h'):
@@ -280,6 +306,7 @@ def check_linux_fs_h(context):
     return rc
 
 
+@custom_test
 def check_linux_limits(context):
     rc = 1
     if tests.CheckHeader(context, 'linux/limits.h'):
@@ -291,6 +318,7 @@ def check_linux_limits(context):
     return rc
 
 
+@custom_test
 def check_cygwin(context):
     context.Message('Checking for cygwin environment...')
     uname = platform.uname()
@@ -302,6 +330,7 @@ def check_cygwin(context):
     return rc
 
 
+@custom_test
 def check_mm_crc32_u64(context):
     rc = 0 if tests.CheckDeclaration(
         context,
@@ -315,6 +344,7 @@ def check_mm_crc32_u64(context):
     return rc
 
 
+@custom_test
 def check_builtin_cpu_supports(context):
     rc = 0 if tests.CheckDeclaration(
         context,
@@ -327,6 +357,7 @@ def check_builtin_cpu_supports(context):
     return rc
 
 
+@custom_test
 def check_target_arch(context):
     # Determine the target CPU architecture and environment from the compiler.
     # The decision is made based on $CFLAGS and toolchain; never the build host.
@@ -336,7 +367,7 @@ def check_target_arch(context):
     context.Message('Checking target environment and CPU architecture... ')
 
     def _defined(macro):
-        src = '#if !defined(%s)\n#error not defined\n#endif\nint _target_arch_check;\n' % macro
+        src = f'#if !defined({macro})\n#error not defined\n#endif\nint _target_arch_check;\n'
         return context.TryCompile(src, '.c')
 
     env = context.sconf.env
@@ -352,30 +383,3 @@ def check_target_arch(context):
         env['IS_X86'], env['IS_X86_64'], env['IS_WINDOWS']
     ))
     return True  # unused
-
-
-# Passed to Configure(); the SConstruct calls these as conf.<name>().
-CUSTOM_TESTS = {
-    'check_pkgconfig': check_pkgconfig,
-    'check_pkg': check_pkg,
-    'check_git_rev': check_git_rev,
-    'check_libelf': check_libelf,
-    'check_fiemap': check_fiemap,
-    'check_xattr': check_xattr,
-    'check_lxattr': check_lxattr,
-    'check_sha512': check_sha512,
-    'check_blkid': check_blkid,
-    'check_posix_fadvise': check_posix_fadvise,
-    'check_sys_block': check_sys_block,
-    'check_bigfiles': check_bigfiles,
-    'check_gettext': check_gettext,
-    'check_linux_limits': check_linux_limits,
-    'check_btrfs_h': check_btrfs_h,
-    'check_linux_fs_h': check_linux_fs_h,
-    'check_uname': check_uname,
-    'check_cygwin': check_cygwin,
-    'check_mm_crc32_u64': check_mm_crc32_u64,
-    'check_target_arch': check_target_arch,
-    'check_builtin_cpu_supports': check_builtin_cpu_supports,
-    'check_sysmacro_h': check_sysmacro_h,
-}

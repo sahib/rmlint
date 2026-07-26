@@ -462,7 +462,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
             bigofft=yesno(env['HAVE_BIG_OFF_T']),
-            bigstat=yesno(env['HAVE_BIG_STAT']),
+            bigstat=yesno(env['HAVE_STAT64']),
             sphinx=COLORS['green'] + 'yes, using ' + COLORS['end'] + sphinx_bin if sphinx_bin else yesno(sphinx_bin),
             compiler=env['CC'],
             prefix=GetOption('prefix'),
