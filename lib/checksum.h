@@ -41,9 +41,7 @@ typedef enum RmDigestType {
     RM_DIGEST_MD5,
     RM_DIGEST_SHA1,
     RM_DIGEST_SHA256,
-#if HAVE_SHA512
     RM_DIGEST_SHA512,
-#endif
     RM_DIGEST_SHA3_256,
     RM_DIGEST_SHA3_384,
     RM_DIGEST_SHA3_512,

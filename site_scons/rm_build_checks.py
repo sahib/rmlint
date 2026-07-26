@@ -265,19 +265,6 @@ def check_lxattr(context):
 
 
 @custom_test
-def check_sha512(context):
-    rc = 1
-    if tests.CheckDeclaration(context, 'G_CHECKSUM_SHA512', includes='#include <glib.h>'):
-        rc = 0
-
-    context.sconf.env['HAVE_SHA512'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-@custom_test
 def check_btrfs_h(context):
     rc = 1
     if tests.CheckHeader(

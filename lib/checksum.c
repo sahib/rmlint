@@ -475,8 +475,6 @@ static void rm_digest_sha256_steal(GChecksum *state, guint8 *result) {
 
 RM_DIGEST_DEFINE_GLIB(sha256, 256);
 
-#if HAVE_SHA512
-
 /* sha512 */
 static GChecksum *rm_digest_sha512_new(void) {
     return g_checksum_new(G_CHECKSUM_SHA512);
@@ -487,8 +485,6 @@ static void rm_digest_sha512_steal(GChecksum *state, guint8 *result) {
     rm_digest_glib_steal(state, result, &len);
 }
 RM_DIGEST_DEFINE_GLIB(sha512, 512);
-
-#endif
 
 ///////////////////////////
 //      sha3 hashes      //
@@ -640,7 +636,6 @@ static const RmDigestInterface blake3_512_interface = {
     .update = (RmDigestUpdateFunc)blake3_hasher_update,
     .copy = (RmDigestCopyFunc)rm_digest_blake3_copy,
     .steal = (RmDigestStealFunc)rm_digest_blake3_512_steal};
-
 
 ///////////////////////////
 //      ext  hash        //
@@ -858,9 +853,7 @@ static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
         [RM_DIGEST_MD5] = &md5_interface,
         [RM_DIGEST_SHA1] = &sha1_interface,
         [RM_DIGEST_SHA256] = &sha256_interface,
-#if HAVE_SHA512
         [RM_DIGEST_SHA512] = &sha512_interface,
-#endif
         [RM_DIGEST_SHA3_256] = &sha3_256_interface,
         [RM_DIGEST_SHA3_384] = &sha3_384_interface,
         [RM_DIGEST_SHA3_512] = &sha3_512_interface,
