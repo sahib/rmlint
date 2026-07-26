@@ -34,12 +34,12 @@ CONFIG_VALUES = {
 
 def build_config_template(target, source, env):
     template = source[0].get_text_contents()
-    with open(target[0].get_abspath(), 'w') as handle:
+    with open(target[0].get_abspath(), 'w', encoding='utf-8') as handle:
         handle.write(template.format(**source[1].read()))
 
 
 def prepare_c_source(text):
-    # Prepare the Python source to be compatible with C-strings
+    """Prepare the Python source to be compatible with C-strings"""
     text = text.replace('\\', '\\\\')
     text = text.replace('"', '\\"')
     text = '\\n"\n"'.join(text.splitlines())

@@ -43,7 +43,7 @@ SConsEnvironment.InstallPerm = InstallPerm
 def get_default_prefix():
     if 'uninstall' in COMMAND_LINE_TARGETS:
         try:
-            with open(PREFIX_RECORD_FILE, 'r') as handle:
+            with open(PREFIX_RECORD_FILE, 'r', encoding='utf-8') as handle:
                 prefix = handle.read()
             print(f'===> Using cached installation prefix "{prefix}"')
             return prefix
@@ -82,7 +82,7 @@ for suffix in OPTIONAL_FLAGS:
 
 if 'install' in COMMAND_LINE_TARGETS:
     # record the installation prefix for later uninstall
-    with open(PREFIX_RECORD_FILE, 'w') as f:
+    with open(PREFIX_RECORD_FILE, 'w', encoding='utf-8') as f:
         f.write(GetOption('prefix'))
 
 
@@ -375,11 +375,11 @@ if 'dist' in COMMAND_LINE_TARGETS:
 if 'release' in COMMAND_LINE_TARGETS:
     def replace_version_strings(target=None, source=None, env=None):
         print('Patching .version file...')
-        with open('.version', 'r') as handle:
+        with open('.version', 'r', encoding='utf-8') as handle:
             text = handle.read().strip()
 
         if '@' not in text:
-            with open('.version', 'w') as handle:
+            with open('.version', 'w', encoding='utf-8') as handle:
                 handle.write(f"{text}@{conf.env['gitrev']}\n")
 
             # Commit the .version change, so git archive can see it.
@@ -394,7 +394,7 @@ if 'release' in COMMAND_LINE_TARGETS:
         # We do not want lots of temp commits, so revert the latest one.
         if '@' not in text:
             subprocess.check_call('git reset --hard HEAD^', shell=True)
-            with open('.version', 'w') as handle:
+            with open('.version', 'w', encoding='utf-8') as handle:
                 handle.write(text + '\n')
 
     release = env.Command(

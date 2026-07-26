@@ -32,25 +32,23 @@ def check_pkgconfig(context, version):
 
 @custom_test
 def check_pkg(context, name, varname, required=True):
-    rc, text = 1, ''
-
     package = name.split()[0]
-    if package in OPTIONAL_FLAGS and GetOption('with_' + package) is False:
-        context.Message(f'Explicitly disabling {name}...')
-        rc = 0
+    disabled = package in OPTIONAL_FLAGS and GetOption(f'with_{package}') is False
 
-    if rc != 0:
+    if disabled:
+        context.Message(f'Explicitly disabling {name}... ')
+        rc, text = False, ''
+    else:
         context.Message(f'Checking for {name}... ')
+        # NOTE: TryAction returns 1 on success, 0 on failure
         rc, text = context.TryAction(f"{PKG_CONFIG} --exists '{name}'")
 
-    # 0 is defined as error by TryAction
-    if rc == 0 and required:
-        print('Error: ' + name + ' not found.')
-        Exit(1)
-
-    # Remember we have it:
-    context.sconf.env[varname] = rc
+    context.sconf.env[varname] = int(rc)
     context.Result(rc)
+
+    if required and not rc:
+        Exit(f'Error: {name} is required but {"disabled" if disabled else "not found"}.')
+
     return rc, text
 
 
@@ -322,7 +320,7 @@ def check_linux_limits(context):
 def check_cygwin(context):
     context.Message('Checking for cygwin environment...')
     uname = platform.uname()
-    context.Message('/'.join(uname))
+    context.Log('/'.join(uname) + '\n')
     rc = uname[0].upper().startswith('CYGWIN')
 
     context.sconf.env['IS_CYGWIN'] = rc
