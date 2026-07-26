@@ -138,7 +138,7 @@ static void rm_path_iter_init(RmPathIter *iter, const char *path) {
     if(path_len >= sizeof(iter->path_buf)) {
         G_STATIC_ASSERT(sizeof(iter->path_buf) >= 128);
         char *head = g_utf8_make_valid(path, (gssize)128);
-        rm_log_error("path too long (%"G_GSIZE_FORMAT" >= %d): %s[...]",
+        rm_log_error("path too long (%zu >= %d): %s[...]",
                      path_len, PATH_MAX, head);
         g_free(head);
         /* TODO: clean error/exit (or skip) path */
