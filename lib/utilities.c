@@ -249,8 +249,9 @@ guint64 rm_util_size_string_to_bytes(const char *size_spec, GError **error) {
         // Only multiply if we really have to.
         double fres = (result + fraction) * size_factor;
 
-        // Check if an overflow happened during multiplication.
-        if(fres > nextafter(ULLONG_MAX, 0)) {
+        /* Check if an overflow happened during multiplication.
+         * NOTE: ULLONG_MAX is converted to (double)ULLONG_MAX+1, which is 0x1p64 */
+        if(fres > nextafter((double)ULLONG_MAX, 0)) {
             g_set_error(error, RM_ERROR_QUARK, 0,
                         _("Size factor would overflow size (max. 2**64 allowed)"));
             return 0;
@@ -348,7 +349,7 @@ ino_t rm_util_parent_node(const char *path) {
         return stat_buf.st_ino;
     } else {
         g_free(parent_path);
-        return -1;
+        return (ino_t)-1;
     }
 }
 
@@ -1308,6 +1309,7 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
 static gboolean rm_util_is_path_double(const char *path1, const char *path2) {
     const char *basename1 = rm_util_basename(path1);
     const char *basename2 = rm_util_basename(path2);
+    /* XXX: false-positive if both rm_util_parent_node fail. */
     return (strcmp(basename1, basename2) == 0 &&
             rm_util_parent_node(path1) == rm_util_parent_node(path2));
 }
