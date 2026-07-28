@@ -233,7 +233,7 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
     char **order_vec = g_strsplit(handler_cfg, ",", -1);
     for(int i = 0; order_vec && order_vec[i]; ++i) {
         bool found = false;
-        for(RmShHandler n = 0; n < RM_SH_HANDLER_N; ++n) {
+        for(guint8 n = 0; n < RM_SH_HANDLER_N; ++n) {
             if(ORDER_TO_STRING[n] == NULL) {
                 continue;
             }
