@@ -7,6 +7,8 @@ Import('create_uninstall_target')
 
 import os
 
+from rm_build_support import ConfigHeaderBuilder, EmbedPayloadBuilder
+
 ENV_KEYS = (
     # libraries
     'HAVE_LIBELF', 'HAVE_GIO_UNIX', 'HAVE_BLKID', 'HAVE_LIBINTL',
@@ -19,7 +21,16 @@ ENV_KEYS = (
     'HAVE_BIGFILES', 'HAVE_BIG_OFF_T', 'HAVE_STAT64',
     # cpu extensions
     'HAVE_MM_CRC32_U64', 'HAVE_BUILTIN_CPU_SUPPORTS',
+    # language features
+    'HAVE_C23_EMBED',
 )
+
+# XXX: remove this when we fully switch to C23+ only
+MAYBE_EMBEDED_FORMATTERS = (
+    ('formats/py.c', 'formats/py.py'),
+    ('formats/sh.c', 'formats/sh.sh'),
+)
+FORMATTER_NAMES = {os.path.basename(src) for src, _ in MAYBE_EMBEDED_FORMATTERS}
 
 CONFIG_VALUES = {
     **{key: env[key] for key in ENV_KEYS},
@@ -32,49 +43,34 @@ CONFIG_VALUES = {
 }
 
 
-def build_config_template(target, source, env):
-    template = source[0].get_text_contents()
-    with open(target[0].get_abspath(), 'w', encoding='utf-8') as handle:
-        handle.write(template.format(**source[1].read()))
+env.Append(BUILDERS={
+    'ConfigHeader': ConfigHeaderBuilder,
+    'EmbedPayload': EmbedPayloadBuilder,
+})
 
+config = env.ConfigHeader('config.h', ['config.h.in', env.Value(CONFIG_VALUES)])
 
-def prepare_c_source(text):
-    """Prepare the Python source to be compatible with C-strings"""
-    text = text.replace('\\', '\\\\')
-    text = text.replace('"', '\\"')
-    text = '\\n"\n"'.join(text.splitlines())
+payloads = []
+if not env['HAVE_C23_EMBED']:
+    payloads = [env.EmbedPayload(f'{payload}.c.inc', payload)
+                for _, payload in MAYBE_EMBEDED_FORMATTERS]
 
-    return text
+# XXX: remove this when we fully switch to C23+ only
+formatter_env = env
+if env['HAVE_C23_EMBED']:
+    formatter_env = env.Clone(CCFLAGS=[
+        flag for flag in env['CCFLAGS'] if not str(flag).startswith('-std=')
+    ] + ['-std=c23'])
 
+formatters = []
+for source, payload in MAYBE_EMBEDED_FORMATTERS:
+    obj = formatter_env.Object(source)
+    # XXX: to be removed when/if https://github.com/SCons/scons/pull/4889 is merged
+    env.Depends(obj, payload)
+    formatters.append(obj)
 
-def embed_formatter_payload(target, source, placeholder):
-    """Embed source[1] into the C template source[0]."""
-    template = source[0].get_text_contents()
-    payload = prepare_c_source(source[1].get_text_contents())
-
-    with open(target[0].get_abspath(), 'w') as handle:
-        handle.write(template.replace(placeholder, payload))
-
-
-def build_python_formatter(target, source, env):
-    embed_formatter_payload(target, source, '<<PYTHON_SOURCE>>')
-
-
-def build_sh_formatter(target, source, env):
-    embed_formatter_payload(target, source, '<<SH_SOURCE>>')
-
-
-config = env.Command(
-    'config.h', ['config.h.in', env.Value(CONFIG_VALUES)], build_config_template
-)
-
-py_formatter = env.Command(
-    'formats/py.c', ['formats/py.c.in', 'formats/py.py'], build_python_formatter
-)
-
-sh_formatter = env.Command(
-    'formats/sh.c', ['formats/sh.c.in', 'formats/sh.sh'], build_sh_formatter
-)
+# Listed unconditionally so that 'scons -c' also clears old c.inc files on a new compiler
+env.Clean(formatters, [f'{payload}.c.inc' for _, payload in MAYBE_EMBEDED_FORMATTERS])
 
 checksums = SConscript('checksums/SConscript', exports='env')
 
@@ -82,12 +78,13 @@ library = env.Library(
     '../rmlint',
     Glob('*.c') +
     checksums +
-    Glob('formats/*.c') +
+    formatters +
+    [node for node in Glob('formats/*.c') if node.name not in FORMATTER_NAMES] +
     Glob('fts/*.c')
 )
 
 headers = Glob('*.h')
-env.Depends(library, [config, py_formatter, sh_formatter])
+env.Depends(library, [config, *payloads])
 
 # Disable this for now until someone
 # announces interest in this.

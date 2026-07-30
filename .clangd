@@ -1,0 +1,6 @@
+If:
+  PathMatch: lib/formats/(py\.c|sh\.c)$
+
+CompileFlags:
+  Remove: [-std=c17]
+  Add: [-std=c23]

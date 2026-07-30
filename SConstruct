@@ -233,6 +233,7 @@ conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
 conf.check_target_arch()
+conf.check_c23_embed('lib/formats/sh.sh')
 
 if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])

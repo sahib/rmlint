@@ -23,8 +23,7 @@ docs/_build
 __pycache__
 
 lib/config.h
-lib/formats/py.c
-lib/formats/sh.c
+lib/formats/*.c.inc
 uninstall-
 *.a
 

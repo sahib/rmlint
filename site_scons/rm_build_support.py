@@ -4,8 +4,12 @@ import os
 import re
 import shutil
 import sys
+from pathlib import Path
 
+from SCons.Action import Action
+from SCons.Builder import Builder
 from SCons.Defaults import Chmod, Delete
+from SCons.Errors import UserError
 
 PKG_CONFIG = os.getenv('PKG_CONFIG', 'pkg-config')
 
@@ -115,6 +119,56 @@ def get_cpu_count():
     if 'NUM_CPU' in os.environ:
         return int(os.environ['NUM_CPU'])
     return os.cpu_count() or 4
+
+
+###########################################################################
+#                      Build-time generated C sources                     #
+###########################################################################
+
+
+def build_config_header(target, source, env) -> None:
+    """Substitute the configure results into lib/config.h.in."""
+    template = source[0].get_text_contents()
+    Path(target[0].get_abspath()).write_text(
+        template.format(**source[1].read()), encoding='utf-8'
+    )
+
+
+def encode_payload(data: bytes, name: str) -> str:
+    """Render *data* as a C byte list mirroring its own line structure."""
+    lines = data.splitlines(keepends=True)
+    rows = []
+
+    for number, line in enumerate(lines, start=1):
+        text = line.rstrip(b'\r\n')
+        if b'*/' in text:
+            raise UserError(
+                f'{name}:{number}: contains "*/", which would close the '
+                'generated comment early'
+            )
+
+        last = number == len(lines)
+        rows.append(f'/* {text.decode("utf-8", "replace")} */')
+        rows.append(','.join(f'0x{byte:02x}' for byte in line) + ('' if last else ','))
+
+    return '\n'.join(rows) + '\n'
+
+
+def embed_payload(target, source, env) -> None:
+    """Encode source[0] into a byte list for the formatters to #include."""
+    Path(target[0].get_abspath()).write_text(
+        encode_payload(source[0].get_contents(), source[0].path), encoding='utf-8'
+    )
+
+
+ConfigHeaderBuilder = Builder(
+    action=Action(build_config_header, 'Generating $TARGET'),
+)
+
+EmbedPayloadBuilder = Builder(
+    action=Action(embed_payload, 'Encoding $SOURCE ==> $TARGET'),
+    single_source=True,
+)
 
 
 ###########################################################################

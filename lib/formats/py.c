@@ -25,8 +25,14 @@
 
 #include "../formats.h"
 
-
-static const char PY_SOURCE[] = "<<PYTHON_SOURCE>>";
+static const char PY_SOURCE[] = {
+#if HAVE_C23_EMBED
+#embed "py.py"
+#else
+#include "py.py.c.inc"
+#endif
+    , 0x00
+};
 
 typedef struct RmFmtHandlerPy {
     /* must be first */

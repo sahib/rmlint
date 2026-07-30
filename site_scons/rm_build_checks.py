@@ -315,6 +315,46 @@ def check_cygwin(context):
     return rc
 
 
+C23_EMBED_PROBE = '''
+#if !defined(__has_embed)
+#error "no __has_embed"
+#endif
+static const char probe[] = {{
+#embed "{payload}"
+    , 0x00
+}};
+const char *probe_ptr(void) {{ return probe; }}
+'''
+
+
+@custom_test
+def check_c23_embed(context, payload):
+    """Probe whether the compiler can #embed a repo-relative file.
+
+    TryCompile builds inside .sconf_temp/, so the path must be made
+    absolute. -pedantic-errors is to force GCC and Clang to reject
+    #embed if c23 is not specified.
+    """
+    context.Message('Checking for C23 #embed support...')
+
+    rc = 0
+    if ARGUMENTS.get('C23_EMBED') != '0':
+        saved = context.env['CCFLAGS']
+        context.env.Replace(CCFLAGS=[
+            flag for flag in saved if not str(flag).startswith('-std=')
+        ] + ['-std=c23', '-pedantic-errors'])
+        rc = int(bool(context.TryCompile(
+            C23_EMBED_PROBE.format(
+                payload=context.env.File(f'#{payload}').abspath
+            ), '.c'
+        )))
+        context.env.Replace(CCFLAGS=saved)
+
+    context.sconf.env['HAVE_C23_EMBED'] = rc
+    context.Result(rc)
+    return rc
+
+
 @custom_test
 def check_mm_crc32_u64(context):
     rc = 0 if tests.CheckDeclaration(

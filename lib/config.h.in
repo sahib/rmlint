@@ -3,6 +3,7 @@
 
 #define INSTALL_PREFIX "{INSTALL_PREFIX}"
 
+#define HAVE_C23_EMBED     ({HAVE_C23_EMBED})
 #define HAVE_BLKID         ({HAVE_BLKID})
 #define HAVE_LIBINTL       ({HAVE_LIBINTL})
 #define HAVE_LIBELF        ({HAVE_LIBELF})

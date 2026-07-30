@@ -26,7 +26,6 @@
 #include "../formats.h"
 #include <string.h>
 
-
 typedef struct RmFmtHandlerShScript {
     RmFmtHandler parent;
     RmFile *last_original;
@@ -45,8 +44,15 @@ typedef struct RmFmtHandlerShScript {
     RmOff line_count;
 } RmFmtHandlerShScript;
 
-static const char *SH_SCRIPT_TEMPLATE_HEAD = "<<SH_SOURCE>>";
-static const char *SH_SCRIPT_TEMPLATE_FOOT =
+static const char SH_SCRIPT_TEMPLATE_HEAD[] = {
+#if HAVE_C23_EMBED
+#embed "sh.sh"
+#else
+#include "sh.sh.c.inc"
+#endif
+    , 0x00
+};
+static const char SH_SCRIPT_TEMPLATE_FOOT[] =
     "\n"
     "\n"
     "\n"
