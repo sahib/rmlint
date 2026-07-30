@@ -1,4 +1,4 @@
-from tests.utils import create_dirs, create_file, create_link, get_testdir, run_rmlint, use_valgrind
+from tests.utils import create_dirs, create_file, create_link, get_env_flag, get_testdir, run_rmlint
 
 
 def test_small_diffs():
@@ -8,7 +8,7 @@ def test_small_diffs():
             data[flip] = '1'
         return ''.join(data)
 
-    if use_valgrind():
+    if get_env_flag('use_valgrind'):
         size = 32
     else:
         # Takes horribly long elsewhise

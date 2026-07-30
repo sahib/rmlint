@@ -76,13 +76,13 @@ static void rm_cmd_show_version(void) {
         fprintf(stderr, " %c%s", (features[i].enabled) ? '+' : '-', features[i].name);
     }
 
-    fprintf(stderr, RESET "\n\n");
+    fputs("\n\n", stderr);
     fprintf(stderr, _("rmlint was written by Christopher <sahib> Pahl and Daniel "
                       "<SeeSpotRun> Thomas."));
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
     fprintf(stderr, _("The code at https://github.com/sahib/rmlint is licensed under the "
                       "terms of the GPLv3."));
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
     exit(0);
 }
 

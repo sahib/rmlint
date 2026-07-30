@@ -1,17 +1,21 @@
 """Utilities"""
 import contextlib
 import json
+import logging
 import os
 import pprint
 import re
 import shlex
+import shutil
 import struct
 import subprocess
 import sys
 import tempfile
 import time
+from functools import cache
 
 import psutil
+import pytest
 import xattr
 
 # TESTDIR_BASE holds every test directory. It is not created automatically.
@@ -39,59 +43,72 @@ def get_testdir():
     return _TESTDIR
 
 
+# XXX: metrocrc* used to be gated behind inexistent 'sse4' feature.
 CKSUM_TYPES = [
     'murmur',
-    'metro',
-    'metro256',
+    'metro', 'metro256',
+    # 'metrocrc', 'metrocrc256'
     'md5',
     'sha1',
-    'sha256',
-    'sha512',
-    'sha3-256',
-    'sha3-384',
-    'sha3-512',
-    'blake2s',
-    'blake2b',
-    'blake2sp',
-    'blake2bp',
-    'blake3',
-    'blake3_512',
+    'sha256', 'sha512',
+    'sha3-256', 'sha3-384', 'sha3-512',
+    'blake2s', 'blake2b', 'blake2sp', 'blake2bp',
+    'blake3', 'blake3_512',
     'xxhash',
-    'highway64',
-    'highway128',
-    'highway256',
-    #'cumulative',
-    #'ext',
+    'highway64', 'highway128', 'highway256',
+    # 'cumulative', 'ext',
     'paranoid',
 ]
 
 
-def get_env_flag(name):
+@cache
+def get_env_flag(name: str) -> bool:
+    env_name = f'RM_TS_{name.upper()}'
     try:
-        return int(os.environ.get(name) or 0)
+        return bool(int(os.environ.get(env_name, 0)))
     except ValueError:
-        print(f'{name} should be an integer.')
-    return 0
+        logging.warning("%s should be an integer; assuming 0.", env_name)
+        return False
 
 
-_USE_VALGRIND = get_env_flag('RM_TS_USE_VALGRIND')
-_PRINT_CMD = get_env_flag('RM_TS_PRINT_CMD')
-_SLEEP = get_env_flag('RM_TS_SLEEP')
-_FEATURES = subprocess.check_output(
-    [RMLINT_BINARY, '--version'], stderr=subprocess.STDOUT).decode('utf-8')
+@cache
+def features() -> dict[str, bool]:
+    version = subprocess.run(
+        (RMLINT_BINARY, '--version'),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        check=True,
+        text=True,
+    ).stderr
+
+    match = re.search(r'^compiled with:\s*(.+)$', version, re.MULTILINE)
+    if not match:
+        raise RuntimeError(f"could not extract features from: \n{version}")
+
+    result = {}
+    for token in match.group(1).split():
+        sign, name = token[0], token[1:]
+        if sign not in "+-":
+            raise RuntimeError(f"unexpected feature token {token!r}")
+        result[name] = sign == '+'
+    return result
 
 
-def use_valgrind():
-    return _USE_VALGRIND
+def has_feature(feature: str) -> bool:
+    try:
+        return features()[feature]
+    except KeyError:
+        raise LookupError(
+            f"{feature!r} is not a known rmlint feature "
+            f"(known: {sorted(features())})"
+        ) from None
 
 
-def has_feature(feature):
-    return '+' + feature in _FEATURES
-
-
-if has_feature('sse4'):
-    CKSUM_TYPES.append('metrocrc')
-    CKSUM_TYPES.append('metrocrc256')
+@cache
+def get_bash() -> str:
+    if bash_path := shutil.which("bash"):
+        return bash_path
+    raise RuntimeError('bash not found.')
 
 
 def runs_as_root():
@@ -142,15 +159,15 @@ def run_rmlint_once(*args,
     else:
         target_dir = ""
 
-    if use_valgrind():
+    if get_env_flag('use_valgrind'):
         env = {
             'G_DEBUG': 'gc-friendly',
             'G_SLICE': 'always-malloc'
         }
         cmd = ['valgrind', '--error-exitcode=1', '-q']
-        if get_env_flag('RM_TS_CHECK_LEAKS') and not has_known_leak(*args):
+        if get_env_flag('check_leaks') and not has_known_leak(*args):
             cmd += ('--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite')
-    elif get_env_flag('RM_TS_USE_GDB'):
+    elif get_env_flag('use_gdb'):
         env, cmd = {}, ['gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
@@ -181,7 +198,7 @@ def run_rmlint_once(*args,
     }
 
     if use_shell:
-        run_args['executable'] = "bash"
+        run_args['executable'] = get_bash()
 
     if uses_py_formatter:
         # The py formatter writes its JSON document to `.rmlint.json` in
@@ -190,17 +207,17 @@ def run_rmlint_once(*args,
         with contextlib.suppress(FileNotFoundError):
             os.unlink(os.path.join(get_testdir(), '.rmlint.json'))
 
-    if _PRINT_CMD:
+    if get_env_flag('print_cmd'):
         print(f"running{' in shell' if use_shell else ''} from `{get_testdir()}`: {' '.join(cmd)}")
 
-    if _SLEEP:
+    if get_env_flag('sleep'):
         print('Waiting for 1000 seconds.')
         time.sleep(1000)
 
     result = subprocess.run(' '.join(cmd) if use_shell else cmd, **run_args)
     sys.stdout.buffer.write(result.stderr)
 
-    if get_env_flag('RM_TS_USE_GDB'):
+    if get_env_flag('use_gdb'):
         sys.stdout.buffer.write(b"\n==> START OF GDB OUTPUT <==\n")
         sys.stdout.buffer.write(result.stdout)
         sys.stdout.buffer.write(b"==> END OF GDB OUTPUT <==\n")
@@ -289,7 +306,7 @@ def run_rmlint_pedantic(*args, **kwargs):
         '--algorithm=paranoid --limit-mem 1M'
     ]
 
-
+    # XXX: 'paranoid' is in CKSUM_TYPES
     for cksum_type in CKSUM_TYPES:
         options.append('--algorithm=' + cksum_type)
 
@@ -312,7 +329,7 @@ def run_rmlint_pedantic(*args, **kwargs):
         # We cannot compare checksum in all cases.
         # XXX: algorithm options must be grouped at the end of the options list.
         # TODO: end-to-end tests of algorithms
-        compare_checksum = not any((option.startswith('--algorithm='), 
+        compare_checksum = not any((option.startswith('--algorithm='),
                                     option.startswith('-P'), option.startswith('-p')))
 
         if (data_skip and 'directly_return_output' not in kwargs
@@ -419,17 +436,17 @@ def create_special_fs(name, fs_type='ext4'):
 @contextlib.contextmanager
 def bind_mount_a_b(mnt_root):
     mnt_dir = os.path.join(mnt_root, 'a/b')
-    subprocess.call(
-        f'mount --rbind {mnt_root} {mnt_dir}',
-        shell=True
-    )
+    if sys.platform.startswith("linux"):
+        subprocess.call(('mount', '--bind', mnt_root, mnt_dir))
+    elif sys.platform.startswith("freebsd"):
+        pytest.xfail("https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=297174")
+        subprocess.call(('mount', '-t', 'nullfs', mnt_root, mnt_dir))
+    else:
+        pytest.skip(f"bind_mount: {sys.platform} not implemented/supported")
     try:
         yield
     finally:
-        subprocess.call(
-            f'umount {mnt_dir}',
-            shell=True
-        )
+        subprocess.call(('umount', mnt_dir))
 
 
 def must_read_xattr(path):
