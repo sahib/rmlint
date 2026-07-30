@@ -1,0 +1,29 @@
+name: FreeBSD
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: FreeBSD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and test
+        uses: vmactions/freebsd-vm@v1
+        with:
+          mem: 12288
+          copyback: false
+          cache-after-prepare: true
+          prepare: |
+            ./ci/freebsd/prepare.sh
+          run: |
+            ./ci/freebsd/build-and-test.sh
