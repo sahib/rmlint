@@ -47,7 +47,7 @@ static size_t rm_rank_parse_pattern(const char *pattern, GRegex **regex, GError 
     while((iter = strpbrk(&iter[1], "<>"))) {
         if(iter[-1] == '\\') {
             /* escaped, skip */
-            break;
+            continue;
         }
 
         if(iter && *iter == '<') {

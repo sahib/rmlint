@@ -108,7 +108,7 @@ def test_sort_by_outlyer():
 # See this issue for more information.
 # https://github.com/sahib/rmlint/issues/196
 #
-# Testsetup by "Awerick"
+# Test setup by "Awerick"
 def test_sort_by_outlyer_hardcore():
     for suffix in 'ABCD':
         create_file('xxx', 'inside/foo' + suffix)
@@ -145,7 +145,6 @@ def test_sort_by_outlyer_hardcore():
     assert run_inside_job('HOa').endswith('inside/fooB')
     assert run_inside_job('OHa').endswith('inside/fooC')
     assert run_inside_job('OA').endswith('inside/fooD')
-
 
 
 def test_sort_by_regex():
@@ -197,8 +196,8 @@ def test_sort_by_regex_bad_input():
         pass
 
 
-# regression test for GitHub issue #484
 def test_regex_multiple_matches():
+    """regression test for GitHub issue #484"""
     paths = [os.path.join(dname, bname)
              for dname in ['unique_1', 'unique_2']
              for bname in ['a', 'a2', 'b']]
@@ -212,3 +211,22 @@ def test_regex_multiple_matches():
         _, *data, _ = run_rmlint("-S 'r<unique_1>x<a>l'")
         assert len(data) == len(paths)
         assert [e['path'] for e in data] == [os.path.join(get_testdir(), p) for p in paths]
+
+
+def test_sort_by_regex_escaped_bracket():
+    create_file('xxx', 'gfoo>barg')   # basename holds a literal '>'
+    create_file('xxx', 'lbaz<quxl')   # basename holds a literal '<'
+    create_file('xxx', 'aaa')
+    create_file('xxx', 'bbb')
+
+    _, *data, _ = run_rmlint(r"-S 'x<foo\>bar>a'")
+    assert os.path.basename(data[0]['path']) == 'gfoo>barg'
+
+    _, *data, _ = run_rmlint(r"-S 'x<baz\<qux>a'")
+    assert os.path.basename(data[0]['path']) == 'lbaz<quxl'
+
+    try:
+        run_rmlint(r"-S 'x<foo\>'")
+        assert False
+    except subprocess.CalledProcessError:
+        pass
