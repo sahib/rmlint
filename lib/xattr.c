@@ -136,10 +136,7 @@ static int rm_xattr_build_key(RmSession *session,
                               char *buf,
                               size_t buf_size) {
     g_assert(session);
-
-    /* Be safe, assume caller is not concentrated. */
     g_assert(buf);
-    memset(buf, 0, sizeof(buf_size));
 
     const char *digest_name = rm_digest_type_to_string(session->cfg->checksum_type);
     if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
