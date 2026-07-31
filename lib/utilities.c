@@ -905,7 +905,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
 
         RmStat stat_buf_dev;
         if(rm_sys_stat(entry->fsname, &stat_buf_dev) == -1) {
-            char *nfs_marker = NULL;
+            char *nfs_marker;
             /* folder rm_sys_stat() is ok but devname rm_sys_stat() is not; this happens
              * for example
              * with tmpfs and with nfs mounts.  Try to handle a few such cases.
@@ -916,7 +916,7 @@ static bool rm_mounts_create_tables(RmMountTable *self, bool force_fiemap) {
                 whole_disk = stat_buf_folder.st_dev;
             } else if((nfs_marker = strstr(entry->fsname, ":/")) != NULL) {
                 size_t until_slash =
-                    MIN((int)sizeof(entry->fsname), nfs_marker - entry->fsname);
+                    MIN(sizeof(diskname) - 1, (size_t)(nfs_marker - entry->fsname));
                 strncpy(diskname, entry->fsname, until_slash);
                 is_rotational = true;
 
