@@ -17,7 +17,7 @@ offers to remove it.
    :target: https://github.com/sahib/rmlint/issues
 
 .. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint
-   :target: https://github.com/sahib/rmlint/commits/master/
+   :target: https://github.com/sahib/rmlint/commits/develop/
 
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
