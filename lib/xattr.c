@@ -218,17 +218,6 @@ static int rm_xattr_build_key(RmSession *session,
                     suffix) < 0;
 }
 
-static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
-    g_assert(file);
-    g_assert(file->digest);
-
-    g_assert(buf);
-    memset(buf, '0', buf_size);
-    buf[buf_size - 1] = 0;
-
-    return rm_digest_hexstring(file->digest, buf);
-}
-
 static int rm_xattr_is_fail(const char *name, char *path, bool warn, int rc) {
     if(rc != -1) {
         return 0;
@@ -301,7 +290,7 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
 
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
-       rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
+       rm_digest_hexstring(file->digest, cksum_hex_str) == 0 ||
        rm_xattr_set(file, cksum_key, cksum_hex_str, strlen(cksum_hex_str), follow) ||
        rm_xattr_set(file, mtime_key, timestamp, strlen(timestamp), follow)) {
         return errno;
@@ -324,9 +313,6 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
 
     char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
          cksum_hex_str[512] = {0};
-
-    memset(cksum_hex_str, 0, sizeof(cksum_hex_str));
-    cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;
 
     bool follow = session->cfg->follow_symlinks;
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
