@@ -21,7 +21,7 @@ def run_py_script(interpreter):
     ).decode('utf-8')
 
 
-@pytest.mark.parametrize("interpreter", ["python2", "python3"])
+@pytest.mark.parametrize("interpreter", ("python3",))
 def test_paranoia(interpreter):
     if not _check_interpreter(interpreter):
         pytest.skip(f"Interpreter {interpreter} does not seem to be working, skipping test")

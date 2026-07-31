@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
-
 """ This file is part of rmlint.
 
 rmlint is free software: you can redistribute it and/or modify
@@ -31,17 +29,14 @@ Authors:
 # pylint: disable=unused-argument,missing-docstring,invalid-name
 # pylint: disable=redefined-outer-name,unused-variable
 
-# Python2 compat:
-from __future__ import print_function
-
-import os
-import sys
-import pwd
-import json
-import shutil
-import filecmp
 import argparse
+import filecmp
+import json
+import os
+import pwd
+import shutil
 import subprocess
+import sys
 
 CURRENT_UID = os.geteuid()
 CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
@@ -182,7 +177,7 @@ def main(args, data):
     if data[0].get('description'):
         header = data.pop(0)
     if data[-1].get('total_files'):
-        footer = data.pop(-1)
+        data.pop(-1)  # footer
 
     if not args.no_ask and not args.dry_run:
         print('rmlint was executed in the following way:\n',
@@ -256,14 +251,14 @@ if __name__ == '__main__':
     json_docs = []
     for json_file in args.json_files:
         try:
-            with open(json_file) as f:
+            with open(json_file, encoding='utf-8') as f:
                 j = json.load(f)
             json_docs.append(j)
-        except IOError as err:      # Cannot open file
+        except OSError as err:  # Cannot open file
             print(err, file=sys.stderr)
             sys.exit(-1)
-        except ValueError as err:   # File is not valid JSON
-            print('{}: {}'.format(err, json_file), file=sys.stderr)
+        except ValueError as err:  # File is not valid JSON
+            print(f'{err}: {json_file}', file=sys.stderr)
             sys.exit(-1)
 
     try:
@@ -287,4 +282,3 @@ if __name__ == '__main__':
             )
     except KeyboardInterrupt:
         print('\ncanceled.')
-

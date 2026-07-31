@@ -45,10 +45,12 @@ The format follows [keepachangelog.com]. Please stick to it.
 * short option ``-U`` now refers to ``--hash-unmatched`` instead of ``--write-unfinished``.
 * Treat paths beyond ``PATH_MAX`` as a hard error instead of truncating them
 * ``-g --progress`` and ``-G --no-progress`` do not clear outputs anymore (#582).
+* The minimum supported Python version is now 3.9
 
 ### Removed
 * ``--dedupe-xattr``.  Use ``--dedupe --xattr``
 * ``--dedupe-readonly``.  Use ``--dedupe --readonly``
+* Dropped support for Python 2.
 
 ## [2.10.3 Ludicrous Lemur] - 2025-03-22
 
