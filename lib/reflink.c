@@ -241,7 +241,7 @@ int rm_dedupe_main(int argc, const char **argv) {
         // next time. This is supposed to avoid disk thrashing.
         // (See also: https://github.com/sahib/rmlint/issues/349)
         if(rm_xattr_is_deduplicated(dest_path, follow_symlinks)) {
-            rm_log_debug_line("Already deduplicated according to xattr!");
+            rm_log_debug_line("Already deduplicated (or stat error) according to xattr!");
             return EXIT_SUCCESS;
         }
     }

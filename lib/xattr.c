@@ -118,7 +118,7 @@ static int rm_sys_listxattr(const char *path, char *out, size_t out_size,
 
 #elif RM_IS_APPLE
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
+static ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
     int flags = 0;
     if(!follow_link) {
@@ -128,7 +128,7 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size, 0, flags);
 }
 
-ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+static ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
                         size_t size, int flags, bool follow_link) {
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -137,7 +137,7 @@ ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
     return setxattr(path, name, value, size, 0, flags);
 }
 
-int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+static int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     int flags = 0;
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -146,7 +146,7 @@ int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     return removexattr(path, name, flags);
 }
 
-int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
+static int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
     int flags = 0;
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -157,7 +157,7 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
 
 #else /* Linux */
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
+static ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
@@ -168,7 +168,7 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size);
 }
 
-ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+static ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
                         size_t size, int flags, bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
@@ -179,7 +179,7 @@ ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
     return setxattr(path, name, value, size, flags);
 }
 
-int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+static int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
         return lremovexattr(path, name);
@@ -189,7 +189,7 @@ int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     return removexattr(path, name);
 }
 
-int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
+static int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
         return llistxattr(path, out, out_size);
@@ -340,7 +340,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    gdouble xattr_mtime = g_strtod(mtime_buf, NULL);
+    gdouble xattr_mtime = g_ascii_strtod(mtime_buf, NULL);
     if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, MTIME_TOL) != 0) {
         /* Data is too old and not useful, autoclean it */
         RM_DEFINE_PATH(file);
@@ -395,8 +395,7 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 #if RM_HAVE_XATTR
 
 static GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
-    const size_t buf_size = 4096;
-    const size_t val_size = 1024;
+    enum { buf_size = 4096, val_size = 1024 };
     const char prefix[] = RM_XATTR_USR_PREFIX "rmlint.";
 
     char buf[buf_size];
@@ -482,11 +481,12 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to check dedupe state of %s: %s", path,
                             g_strerror(errno));
-        return EXIT_FAILURE;
+        return true; /* XXX: skip dedupe attempt on a file we cannot stat */
     }
 
     bool result = false;
     char *key = NULL, *value = NULL;
+
     GHashTable *map = rm_xattr_list(path, follow_symlinks);
     GHashTableIter iter;
 
@@ -539,10 +539,10 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to mark dedupe state of %s: %s", path,
                             g_strerror(errno));
-        return EXIT_FAILURE;
+        return -1;
     }
 
-    int result = EXIT_FAILURE;
+    int result = -1;
     char *key = NULL, *value = NULL;
     GHashTable *map = rm_xattr_list(path, follow_symlinks);
     GHashTableIter iter;
