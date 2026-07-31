@@ -728,6 +728,7 @@ static const RmDigestInterface ext_interface = {
 static RmParanoid *rm_digest_paranoid_new(void) {
     RmParanoid *paranoid = g_slice_new0(RmParanoid);
     paranoid->incoming_twin_candidates = g_async_queue_new();
+    /* XXX: change the following shadow digest in xattr.c as well ! */
     paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, 0);
     return paranoid;
 }

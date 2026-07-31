@@ -210,7 +210,7 @@ static int rm_xattr_build_key(RmSession *session,
 
     const char *digest_name = rm_digest_type_to_string(session->cfg->checksum_type);
     if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
-        digest_name = rm_digest_type_to_string(RM_DEFAULT_DIGEST);
+        digest_name = rm_digest_type_to_string(RM_DIGEST_XXHASH);
     }
 
     g_assert(suffix);
