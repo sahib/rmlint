@@ -15,9 +15,12 @@ STATIC_GIT_REV = read_version()[4]
 def check_pkgconfig(context, version):
     context.Message('Checking for pkg-config... ')
     command = PKG_CONFIG + ' --atleast-pkgconfig-version=' + version
-    ret = context.TryAction(command)[0]
-    context.Result(ret)
-    return ret
+    rc, _ = context.TryAction(command)
+    if not rc:
+        print("Error: pkg-config not found (or too old).")
+        Exit(1)
+    context.Result(rc)
+    return rc
 
 
 def check_pkg(context, name, varname, required=True):

@@ -9,9 +9,14 @@ from tests.utils import (
     create_file,
     create_link,
     get_testdir,
+    has_feature,
     run_rmlint,
     run_rmlint_once,
 )
+
+if not has_feature('fiemap'):
+    pytest.skip("rmlint was compiled without fiemap support",
+                allow_module_level=True)
 
 
 def check_is_reflink_status(status_code, *paths):

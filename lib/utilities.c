@@ -689,7 +689,7 @@ static gchar rm_mounts_is_rotational_blockdev(const char *dev) {
     fclose(sys_fdes);
 #else
     (void)dev;
-#endif
+#endif /* HAVE_SYSBLOCK */
 
     return is_rotational;
 }
@@ -1012,7 +1012,7 @@ void rm_mounts_table_destroy(RmMountTable *self) {
     g_slice_free(RmMountTable, self);
 }
 
-#else /* probably FreeBSD */
+#else
 
 RmMountTable *rm_mounts_table_new(_UNUSED bool force_fiemap) {
     return NULL;
@@ -1105,7 +1105,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev,
     (void)dev;
     (void)path;
     return 0;
-#endif
+#endif /* RM_MOUNTTABLE_IS_USABLE */
 }
 
 dev_t rm_mounts_get_disk_id_by_path(RmMountTable *self, const char *path) {
@@ -1290,7 +1290,7 @@ RmOff rm_offset_get_from_path(const char *path, RmOff file_offset,
     return result;
 }
 
-#else /* Probably FreeBSD */
+#else /* FreeBSD */
 
 RmOff rm_offset_get_from_fd(_UNUSED int fd, _UNUSED RmOff file_offset,
                             _UNUSED RmOff *file_offset_next, _UNUSED RmOff *logical_offset,
@@ -1303,7 +1303,7 @@ RmOff rm_offset_get_from_path(_UNUSED const char *path, _UNUSED RmOff file_offse
     return 0;
 }
 
-#endif
+#endif /* HAVE_FIEMAP */
 
 static gboolean rm_util_is_path_double(const char *path1, const char *path2) {
     const char *basename1 = rm_util_basename(path1);

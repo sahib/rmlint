@@ -192,7 +192,7 @@ else:
 # check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
 
-if IS_CLANG := any(cc in os.path.basename(conf.env['CC']) for cc in ('clang', 'include-what-you-use')):
+if IS_CLANG := conf.CheckDeclaration("__clang__"):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])

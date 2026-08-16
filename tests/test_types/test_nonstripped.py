@@ -23,7 +23,7 @@ def create_binary(path, stripped=False):
     full_path = os.path.join(get_testdir(), path)
 
     command = '{cc} -o {path} {option} -std=c99 -xc -'.format(
-        cc=os.environ.get('CC', 'gcc'), path=full_path, option='-s' if stripped else '-ggdb3',
+        cc=os.environ.get('CC', 'cc'), path=full_path, option='-s' if stripped else '-g3',
     )
     subprocess.run(command, input=SOURCE, shell=True, text=True, check=True)
 
