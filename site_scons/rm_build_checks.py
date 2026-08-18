@@ -327,43 +327,31 @@ def check_builtin_cpu_supports(context):
     return rc
 
 
-def read_cpu_flags():
-    """Feature flags of the build host's CPU, as a lowercase set."""
-    try:
-        from cpuinfo import get_cpu_info
-        return set(get_cpu_info().get('flags', []))
-    except Exception:
-        pass
+def check_target_arch(context):
+    # Determine the target CPU architecture and environment from the compiler.
+    # The decision is made based on $CFLAGS and toolchain; never the build host.
+    # This determines whether blake3 is built using x86_64 assembly or
+    # x86 C intrinsics for different SIMD extensions; blake3's own runtime
+    # dispatch then picks the widest available implementation at runtime.
+    context.Message('Checking target environment and CPU architecture... ')
 
-    # No py-cpuinfo; /proc/cpuinfo uses the same flag names.
-    try:
-        with open('/proc/cpuinfo') as handle:
-            for line in handle:
-                key, _, value = line.partition(':')
-                if key.strip() == 'flags':
-                    return set(value.split())
-    except OSError:
-        pass
+    def _defined(macro):
+        src = '#if !defined(%s)\n#error not defined\n#endif\nint _target_arch_check;\n' % macro
+        return context.TryCompile(src, '.c')
 
-    print('   Unable to detect CPU flags (tried py-cpuinfo and /proc/cpuinfo)')
-    return set()
+    env = context.sconf.env
+    env['IS_X86_64'] = 1 if (
+        _defined('__x86_64__') or _defined('__amd64__') or _defined('_M_X64')
+    ) else 0
+    env['IS_X86'] = 1 if (
+        env['IS_X86_64'] or _defined('__i386__') or _defined('_M_IX86')
+    ) else 0
+    env['IS_WINDOWS'] = 1 if _defined('_WIN32') else 0
 
-
-def check_cpu_extensions(context):
-    print('==> Checking CPU checksum and vector extensions...')
-
-    cpu_flags = set()
-    if ARGUMENTS.get('CPU_EXTENSIONS') != '0':
-        cpu_flags = read_cpu_flags()
-
-    for ext in ['AVX512F', 'AVX512VL', 'AVX2', 'SSE4_1', 'SSE2']:
-        have_ext = int(ext.lower() in cpu_flags)
-        context.sconf.env['HAVE_' + ext] = have_ext
-        print(f'    {ext}: {have_ext}')
-
-    context.did_show_result = True
-    context.Result(1)
-    return 1
+    context.Result('x86=%s x86_64=%s windows=%s' % (
+        env['IS_X86'], env['IS_X86_64'], env['IS_WINDOWS']
+    ))
+    return True  # unused
 
 
 # Passed to Configure(); the SConstruct calls these as conf.<name>().
@@ -387,7 +375,7 @@ CUSTOM_TESTS = {
     'check_uname': check_uname,
     'check_cygwin': check_cygwin,
     'check_mm_crc32_u64': check_mm_crc32_u64,
-    'check_cpu_extensions': check_cpu_extensions,
+    'check_target_arch': check_target_arch,
     'check_builtin_cpu_supports': check_builtin_cpu_supports,
     'check_sysmacro_h': check_sysmacro_h,
 }

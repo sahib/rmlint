@@ -1,46 +1,52 @@
 Import('env')
 
-import platform
+# On x86 blake3 implements runtime CPU feature dispatch (via cpuid) to choose the
+# best available SIMD implementation out of those compiled in. We build all of
+# them unconditionally so the choice is made at runtime (based on the CPU that
+# is executing rmlint) rather than at build time (based on the capabilities of
+# the build host and/or the compilation flags which signify the baseline).
+#
+# On x86_64 we use the hand-written assembly sources which do not require any
+# additional build flags. For i386 no assembly is provided, but the dispatch
+# routine still looks for SIMD implementations, so we have to build the C sources
+# and provide appropriate feature flags for each implementation.
+#
+# NB: We provide specific feature flags for each implementation (e.g. `-mavx2`
+# for the AVX2 impl) *regardless* of the build target or the build CPU capabilities.
+# This is safe and correct because the specific impl is chosen at runtime based
+# on the executing CPU, and we do not "leak" the flags into other TUs.
+#
 
+blake3 = [
+    File('blake3/blake3.c'),
+    File('blake3/blake3_dispatch.c'),
+    File('blake3/blake3_portable.c'),
+]
 
-blake3 = Glob('blake3/*.[cS]')
-blake3_machine = platform.machine().lower()
-
-# Windows-only blake3 assembly files are vendored, ignore them for now.
-blake3 = [f for f in blake3 if '_windows_' not in f.path]
-
-if blake3_machine in ('x86_64', 'amd64'):
-    # remove C intrinsics when we should use the assembly version
-    blake3_intrinsics = (
-        'blake3_sse2.c', 'blake3_sse41.c', 'blake3_avx2.c', 'blake3_avx512.c'
-    )
-    blake3 = [f for f in blake3 if f.name not in blake3_intrinsics]
+if env['IS_X86_64']:
+    print('Compiling BLAKE3 using x86_64 SIMD assembly')
+    flavor = 'windows_gnu' if env['IS_WINDOWS'] else 'unix'
+    blake3 += [
+        File('blake3/blake3_%s_x86-64_%s.S' % (isa, flavor))
+        for isa in ('sse2', 'sse41', 'avx2', 'avx512')
+    ]
+elif env['IS_X86']:
+    print('Compiling BLAKE3 using x86 SIMD C intrinsics')
+    blake3_simd_flags = {
+        'sse2':   ['-msse2'],
+        'sse41':  ['-msse4.1'],
+        'avx2':   ['-mavx2'],
+        'avx512': ['-mavx512f', '-mavx512vl'],
+    }
+    blake3 += [
+        env.Object(
+            'blake3/blake3_%s.c' % isa,
+            CCFLAGS=env['CCFLAGS'] + flags,
+        )
+        for isa, flags in blake3_simd_flags.items()
+    ]
 else:
-    # the assembly is x86-64-only
-    blake3 = [f for f in blake3 if not f.path.endswith('.S')]
-
-if blake3_machine != 'aarch64':
-    blake3 = [f for f in blake3 if 'neon' not in f.path]
-
-if not env['HAVE_AVX2']:
-    print('Not compiling blake3 avx2 options')
-    blake3 = [f for f in blake3 if 'avx2' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_AVX2'])
-
-if not env['HAVE_AVX512F'] or not env['HAVE_AVX512VL']:
-    print('Not compiling blake3 avx512 options')
-    blake3 = [f for f in blake3 if 'avx512' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_AVX512'])
-
-if not env['HAVE_SSE4_1']:
-    print('Not compiling blake3 sse41 options')
-    blake3 = [f for f in blake3 if 'sse41' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_SSE41'])
-
-if not env['HAVE_SSE2']:
-    print('Not compiling blake3 sse2 options')
-    blake3 = [f for f in blake3 if 'sse2' not in f.path]
-    env.Append(CCFLAGS=['-DBLAKE3_NO_SSE2'])
+    print('Not compiling BLAKE3 SIMD implementations (non-x86 target)')
 
 sources = (
     Glob('*.c') +
