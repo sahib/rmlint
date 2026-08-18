@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../.."
 export ASSUME_ALWAYS_YES=yes
 
 PACKAGES="rsync git py312-sphinx"
-PACKAGES_BUILD="scons-py312 pkgconf glib json-glib libblkid gettext py312-py-cpuinfo"
+PACKAGES_BUILD="scons-py312 pkgconf glib json-glib libblkid gettext"
 PACKAGES_TEST="bash dash py312-pip"
 
 echo "==> pkg install: $PACKAGES"
