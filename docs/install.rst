@@ -207,6 +207,18 @@ Uninstall with ``sudo scons uninstall`` and clean with ``scons -c``.
 You can also only type the ``install`` command above. The buildsystem is clever
 enough to figure out which targets need to be built beforehand.
 
+Container
+---------
+
+A containerised version is available, mostly for test and development purposes.
+Note that for the time being, you cannot use it straightforwardly to scan system paths
+(such as ``/usr/lib`` or ``/opt``).
+
+.. code-block:: bash
+
+   $ buildah bud -t rmlint .  # build the container
+   $ podman run --rm -v "$PWD:$PWD" -w "$PWD" rmlint -o json  # output to stdout
+
 Troubleshooting
 ---------------
 
