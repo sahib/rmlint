@@ -43,6 +43,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * docker: update to a more recent alpine and install full test dependencies
 * short option ``-U`` now refers to ``--hash-unmatched`` instead of ``--write-unfinished``.
 * Treat paths beyond ``PATH_MAX`` as a hard error instead of truncating them
+* ``-g --progress`` and ``-G --no-progress`` do not clear outputs anymore (#582).
 
 ### Removed
 * ``--dedupe-xattr``.  Use ``--dedupe --xattr``
