@@ -39,3 +39,4 @@ uninstall-
 # generated clang tooling
 /compile_flags.txt
 /.clang_complete
+/compile_commands.json

@@ -332,8 +332,9 @@ env = conf.Finish()
 Export('env')
 
 # snapshot the compile flags before we add host-specific flags
-# for vendored libraries.
+# for vendored libraries, as well as the compilation database records.
 CLANG_FLAGS = collect_clang_flags(env)
+env.Tool('compilation_db')
 
 # set number of parallel jobs during build
 # note: while not particularly intuitive or obvious from the documentation,
@@ -354,12 +355,19 @@ SConscript('gui/SConscript')
 
 
 # clang tooling
+cdb = env.CompilationDatabase()
+env.Depends(cdb, 'lib/config.h')
+env.Alias('cdb', cdb)
+
 compile_flags = env.Command(
     'compile_flags.txt', env.Value(CLANG_FLAGS),
     Action(write_compile_flags, "Generating $TARGET and .clang_complete")
 )
 env.Depends(compile_flags, 'lib/config.h')
 env.Alias('compile-flags', compile_flags)
+env.Clean(compile_flags, '.clang_complete')
+
+env.Clean(library, ('compile_commands.json', 'compile_flags.txt', '.clang_complete'))
 
 
 def build_tar_gz(target=None, source=None, env=None):
