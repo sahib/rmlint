@@ -5,7 +5,7 @@ Testsuite
 complete yet (and probably never will), but it's already a valuable boost of
 confidence in ``rmlint's`` correctness.
 
-The tests are based on ``pytest`` and are written in ``python>=3.9``.
+The tests are based on ``pytest`` and are written in ``python>=3.11``.
 Every testcase just runs the (previously built) ``rmlint`` binary a
 and parses its json output. So they are technically blackbox-tests.
 
@@ -143,6 +143,16 @@ Rules
 
 * Unresolved issues can be marked with the ``known_issue`` attribute to avoid
   failing automated travis testing.
+
+Container
+~~~~~~~~~
+
+Tests can be run in an Alpine container.
+
+.. code-block:: bash
+
+   $ buildah bud --target test -t rmlint-test .
+   $ podman run --rm --privileged rmlint-test
 
 Note for Mac Developers
 ~~~~~~~~~~~~~~~~~~~~~~~

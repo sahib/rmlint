@@ -7,6 +7,13 @@ WORKDIR /rmlint
 COPY . .
 RUN scons --without-gui --without-gettext
 
+FROM build AS test
+RUN apk add --no-cache py3-sphinx py3-pip bash dash mandoc
+RUN scons --without-gui --without-gettext DEBUG=1
+RUN pip install --break-system-packages -r tests/requirements.txt
+ENTRYPOINT ["pytest", "-m", "not slow"]
+CMD ["tests"]
+
 FROM alpine:3 AS run
 LABEL \
     org.opencontainers.image.title="rmlint" \

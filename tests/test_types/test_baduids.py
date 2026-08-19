@@ -1,3 +1,4 @@
+import platform
 import subprocess
 import sys
 
@@ -9,14 +10,25 @@ RMLINT_DUMMY_GROUP = '__rmlint_dummy_group'
 RMLINT_DUMMY_USER = '__rmlint_dummy_user'
 
 if sys.platform.startswith('linux'):
-    ADD_ID_CMDS = (
-        'groupadd {g}',
-        'useradd -M -N {u}',
-    )
-    DEL_ID_CMDS = (
-        'userdel -r {u}',
-        'groupdel {g}',
-    )
+    match platform.freedesktop_os_release()['ID']:
+        case 'alpine':
+            ADD_ID_CMDS = (
+                'addgroup {g}',
+                'adduser -H -D {u}',
+            )
+            DEL_ID_CMDS = (
+                'deluser --remove-home {u}',
+                'delgroup {g}',
+            )
+        case _:
+            ADD_ID_CMDS = (
+                'groupadd {g}',
+                'useradd -M -N {u}',
+            )
+            DEL_ID_CMDS = (
+                'userdel -r {u}',
+                'groupdel {g}',
+            )
 elif sys.platform.startswith('freebsd'):
     ADD_ID_CMDS = (
         'pw groupadd -n {g}',

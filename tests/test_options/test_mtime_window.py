@@ -1,12 +1,19 @@
 import os
-import subprocess
+from datetime import datetime as dt, timedelta, UTC
 
 from tests.utils import create_file, get_testdir, run_rmlint
 
+_EPOCH = dt(1970, 1, 1, tzinfo=UTC)
+_US = timedelta(microseconds=1)
 
-def set_mtime(path, mtime):
-    full_path = os.path.join(get_testdir(), path)
-    subprocess.call(['touch', '-m', '-d', str(mtime), full_path])
+
+def t(second, microsecond=0) -> dt:
+    return dt(2004, 2, 29, 16, 21, second, microsecond, tzinfo=UTC)
+
+
+def set_mtime(path: str, mtime: dt):
+    ns = (mtime - _EPOCH) // _US * 1000
+    os.utime(os.path.join(get_testdir(), path), ns=(ns, ns))
 
 
 def test_consider_mtime():
@@ -15,10 +22,10 @@ def test_consider_mtime():
     create_file('xxx', 'c')
     create_file('xxx', 'd')
 
-    set_mtime('a', '2004-02-29  16:21:42')
-    set_mtime('b', '2004-02-29  16:21:42')
-    set_mtime('c', '2004-02-29  16:21:44')
-    set_mtime('d', '2004-02-29  16:21:45')
+    set_mtime('a', t(42))
+    set_mtime('b', t(42))
+    set_mtime('c', t(44))
+    set_mtime('d', t(45))
 
     _, *data, footer = run_rmlint('--mtime-window=-1')
     assert len(data) == 4
@@ -53,8 +60,8 @@ def test_consider_mtime_subsecond():
     create_file('xxx', 'a')
     create_file('xxx', 'b')
 
-    set_mtime('a', '2004-02-29  16:21:42.00')
-    set_mtime('b', '2004-02-29  16:21:43.99')
+    set_mtime('a', t(42))
+    set_mtime('b', t(43, 990_000))
 
     _, *data, _ = run_rmlint('--mtime-window=1.9')
     assert len(data) == 0
@@ -62,8 +69,8 @@ def test_consider_mtime_subsecond():
     _, *data, _ = run_rmlint('--mtime-window=2.0')
     assert len(data) == 2
 
-    set_mtime('a', '2004-02-29  16:21:42.00')
-    set_mtime('b', '2004-02-29  16:21:42.99')
+    set_mtime('a', t(42))
+    set_mtime('b', t(42, 990_000))
 
     _, *data, _ = run_rmlint('--mtime-window=0')
     assert len(data) == 0
@@ -73,9 +80,9 @@ def test_consider_mtime_fail_by_association():
     create_file('yyy', 'b')
     create_file('xxx', 'c')
 
-    set_mtime('a', '2004-02-29  16:21:42')
-    set_mtime('b', '2004-02-29  16:21:44')
-    set_mtime('c', '2004-02-29  16:21:46')
+    set_mtime('a', t(42))
+    set_mtime('b', t(44))
+    set_mtime('c', t(46))
 
     _, *data, footer = run_rmlint('--mtime-window=3')
 
@@ -94,13 +101,13 @@ def test_mtime_and_unmatched_basenames():
     create_file('yyy', 'dir2/b')
     create_file('yyy', 'dir2/c')
 
-    set_mtime('dir1/a', '2004-02-29  16:21:42')
-    set_mtime('dir1/c', '2004-02-29  16:21:44')
-    set_mtime('dir2/a', '2004-02-29  16:21:48')
+    set_mtime('dir1/a', t(42))
+    set_mtime('dir1/c', t(44))
+    set_mtime('dir2/a', t(48))
 
-    set_mtime('dir1/b', '2004-02-29  16:21:46')
-    set_mtime('dir2/b', '2004-02-29  16:21:48')
-    set_mtime('dir2/c', '2004-02-29  16:21:50')
+    set_mtime('dir1/b', t(46))
+    set_mtime('dir2/b', t(48))
+    set_mtime('dir2/c', t(50))
 
     _, *data, footer = run_rmlint('--mtime-window=3 --unmatched-basename -S m')
 
