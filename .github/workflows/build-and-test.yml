@@ -28,7 +28,7 @@ jobs:
             scons gettext python3-setuptools libblkid-dev \
             libelf-dev libglib2.0-dev libjson-glib-dev \
             python3-pip python3-cffi python3-dev libffi-dev
-          pip3 install -r tests/requirements.txt -r docs/requirements.txt
+          pip3 install -r docs/requirements.txt
 
       - name: Build
         run: |
@@ -51,6 +51,7 @@ jobs:
         #  instances hosted in GitHub have 16G of RAM available we will
         #  use it to speed up the run.
         run: |
+          pip3 install -r tests/requirements.txt
           sudo mkdir "${RM_TS_DIR}"
           sudo mount -o size=12G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
 
@@ -58,6 +59,16 @@ jobs:
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
           RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
+
+      - name: GUI tests
+        if: ${{ env.RUN_TEST == 'true' }}
+        shell: bash
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            python3-setuptools python3-gi-cairo \
+            gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 \
+            python3-colorlog xvfb
+          xvfb-run -a pytest tests/test_gui
 
       - name: CoW tests
         if: ${{ env.RUN_TEST == 'true' }}
