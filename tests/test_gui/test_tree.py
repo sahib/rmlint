@@ -3,7 +3,20 @@ from tests.test_gui import helpers
 
 helpers.import_shredder()
 
-from shredder.tree import Column, PathTreeModel
+from shredder.tree import Column, PathTreeModel, PathTrie
+
+
+def test_trie_sort_by_size():
+    trie = PathTrie()
+
+    for name, size in [('big', 300), ('small', 10), ('mid', 100)]:
+        trie.insert('/' + name, Column.make_row({'size': size}))
+
+    list(trie.sort(Column.SIZE))
+    assert [node.name for node in trie.root.indices] == ['small', 'mid', 'big']
+
+    list(trie.sort(Column.SIZE, reverse=True))
+    assert [node.name for node in trie.root.indices] == ['big', 'mid', 'small']
 
 
 def test_model_sort():
