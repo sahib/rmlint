@@ -16,7 +16,7 @@ offers to remove it.
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
-.. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint
+.. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint/develop
    :target: https://github.com/sahib/rmlint/commits/develop/
 
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
