@@ -61,4 +61,4 @@ char *rm_rank_compile_patterns(RmSession *session, const char *sortcrit, GError 
 
 
 
-#endif
+#endif /* RM_RANK_H */

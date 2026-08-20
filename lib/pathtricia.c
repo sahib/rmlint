@@ -378,4 +378,4 @@ int main(void) {
     return 0;
 }
 
-#endif
+#endif /* _RM_PATHTRICIA_BUILD_MAIN */

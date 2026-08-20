@@ -23,6 +23,11 @@
  *
  */
 
-/* GLib types are part of the API */
+#ifndef RM_API_H
+#define RM_API_H
+
+/* GLib types are part of the API. */
 
 #include "cmdline.h"
+
+#endif /* RM_API_H */

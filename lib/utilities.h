@@ -23,8 +23,8 @@
 *
 */
 
-#ifndef RM_UTILITIES_H_INCLUDE
-#define RM_UTILITIES_H_INCLUDE
+#ifndef RM_UTILITIES_H
+#define RM_UTILITIES_H
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -506,4 +506,4 @@ gdouble rm_running_mean_get(RmRunningMean *m);
  */
 void rm_running_mean_unref(RmRunningMean *m);
 
-#endif /* RM_UTILITIES_H_INCLUDE*/
+#endif /* RM_UTILITIES_H */

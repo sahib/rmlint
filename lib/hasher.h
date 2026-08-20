@@ -154,4 +154,4 @@ gboolean rm_hasher_task_hash(RmHasherTask *task,
  **/
 RmDigest *rm_hasher_task_finish(RmHasherTask *task);
 
-#endif /* end of include guard */
+#endif /* RM_HASHER_H */

@@ -1036,7 +1036,7 @@ static FTSENT *fts_alloc(FTS *sp, const char *name, size_t namelen) {
             free(p);
             return (NULL);
         }
-#endif
+#endif /* FTS_ALLOC_ALIGNED */
 
     if(ISSET(FTS_NOSTAT))
         p->fts_statp = NULL;

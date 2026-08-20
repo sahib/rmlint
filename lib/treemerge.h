@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef RM_TREEMERGE_INCLUDE
-#define RM_TREEMERGE_INCLUDE
+#ifndef RM_TREEMERGE_H
+#define RM_TREEMERGE_H
 
 
 #include "file.h"
@@ -85,4 +85,4 @@ typedef struct RmDirectory RmDirectory;
 
 const char *rm_directory_get_dirname(RmDirectory *self);
 
-#endif /* RM_TREEMERGE_INCLUDE*/
+#endif /* RM_TREEMERGE_H */

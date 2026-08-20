@@ -83,4 +83,4 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks);
  */
 int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks);
 
-#endif
+#endif /* RM_XATTR_H */

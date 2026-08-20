@@ -33,4 +33,4 @@
  */
 int rm_hasher_main(int argc, const char **argv);
 
-#endif
+#endif /* RM_HASH_UTILITY_H */

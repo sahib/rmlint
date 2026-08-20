@@ -41,4 +41,4 @@
  **/
 int rm_gui_launch(int argc, const char **argv);
 
-#endif /* end of include guard */
+#endif /* RM_GUI_H */

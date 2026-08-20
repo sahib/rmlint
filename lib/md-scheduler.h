@@ -214,4 +214,4 @@ void rm_mds_push_task(RmMDSDevice *device,
  **/
 gint rm_mds_elevator_cmp(const RmMDSTask *task_a, const RmMDSTask *task_b);
 
-#endif /* end of include guard */
+#endif /* RM_MD_SCHEDULER_H */

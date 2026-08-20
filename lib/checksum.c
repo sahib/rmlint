@@ -269,7 +269,7 @@ static const RmDigestInterface metrocrc256_interface = {
     .copy = (RmDigestCopyFunc)metrohash256_copy, /* <-same */
     .steal = (RmDigestStealFunc)metrohash256crc_steal};
 
-#endif
+#endif /* HAVE_MM_CRC32_U64 */
 
 ///////////////////////////
 //      cumulative       //

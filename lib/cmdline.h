@@ -134,7 +134,7 @@ ssize_t getline(char **restrict lineptr, size_t *restrict n,
 {
 	return getdelim(lineptr, n, '\n', stream);
 }
-#endif
+#endif /* MAC_OS_X_VERSION_MAX_ALLOWED < 1070 */
 #endif /* RM_IS_APPLE */
 
 #endif /* RM_CMDLINE_H */

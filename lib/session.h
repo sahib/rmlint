@@ -222,4 +222,4 @@ int rm_session_is_reflink_main(RmCfg *cfg);
 #define MAYBE_GREEN(o, s) MAYBE_COLOR(o, s, GREEN)
 #define MAYBE_BLUE(o, s) MAYBE_COLOR(o, s, BLUE)
 
-#endif /* end of include guard */
+#endif /* RM_SESSION_H */

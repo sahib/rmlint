@@ -165,4 +165,4 @@ void rm_trie_iter(RmTrie *self,
                   RmTrieIterCallback callback,
                   void *user_data);
 
-#endif
+#endif /* RM_PATHTRICIA_H */

@@ -521,7 +521,7 @@ bool rm_util_is_nonstripped(_UNUSED const char *path, _UNUSED RmStat *statp) {
     }
     elf_end(elf);
     rm_sys_close(fd);
-#endif
+#endif /* HAVE_LIBELF */
 
     return is_ns;
 }
@@ -1102,7 +1102,7 @@ dev_t rm_mounts_get_disk_id(RmMountTable *self, _UNUSED dev_t dev,
     }
 
     return 0;
-#else
+#else /* RM_MOUNTTABLE_IS_USABLE */
     (void)dev;
     (void)path;
     return 0;

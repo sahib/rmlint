@@ -74,4 +74,4 @@ int rm_shred_cmp_orig_criteria(RmFile *a, RmFile *b, RmSession *session);
 
 void rm_shred_output_tm_results(RmFile *result, gpointer data);
 
-#endif
+#endif /* RM_SHREDDER_H */

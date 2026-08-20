@@ -417,4 +417,4 @@ RmOff rm_file_clamped_size(RmFile *file);
  */
 RmOff rm_file_end_seek(RmFile *file);
 
-#endif /* end of include guard */
+#endif /* RM_FILE_H */

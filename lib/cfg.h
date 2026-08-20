@@ -22,8 +22,8 @@
 * Hosted on http://github.com/sahib/rmlint
 **/
 
-#ifndef RM_SETTINGS_H
-#define RM_SETTINGS_H
+#ifndef RM_CFG_H
+#define RM_CFG_H
 
 
 #include "checksum.h"
@@ -208,4 +208,4 @@ bool rm_cfg_is_traversed(RmCfg *cfg, RmNode *node, bool *is_prefd,
                          unsigned long *path_index, bool *is_hidden,
                          bool *is_on_subvol_fs, short *depth);
 
-#endif /* end of include guard */
+#endif /* RM_CFG_H */

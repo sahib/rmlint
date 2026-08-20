@@ -85,7 +85,7 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
     return listxattr(path, out, out_size, flags);
 }
 
-#else
+#else /* RM_IS_APPLE */
 
 ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
@@ -129,7 +129,7 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
     return listxattr(path, out, out_size);
 }
 
-#endif
+#endif /* RM_IS_APPLE */
 
 static int rm_xattr_build_key(RmSession *session,
                               const char *suffix,
@@ -206,7 +206,7 @@ static int rm_xattr_del(RmFile *file, const char *key, bool follow_link) {
                             rm_sys_removexattr(file_path, key, follow_link));
 }
 
-#endif
+#endif /* HAVE_XATTR */
 
 ////////////////////////////
 //  ACTUAL API FUNCTIONS  //
@@ -282,9 +282,9 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
 
     file->ext_cksum = g_strdup(cksum_hex_str);
     return TRUE;
-#else
+#else /* HAVE_XATTR */
     return FALSE;
-#endif
+#endif /* HAVE_XATTR */
 }
 
 int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
@@ -490,4 +490,4 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
     return result;
 }
 
-#endif
+#endif /* HAVE_XATTR */

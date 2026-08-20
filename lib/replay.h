@@ -33,4 +33,4 @@
  */
 int rm_parrot_load(RmSession *session);
 
-#endif /* end of include guard */
+#endif /* RM_REPLAY_H */

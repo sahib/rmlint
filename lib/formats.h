@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef RM_OUTPUTS_H
-#define RM_OUTPUTS_H
+#ifndef RM_FORMATS_H
+#define RM_FORMATS_H
 
 
 #include "session.h"
@@ -301,4 +301,4 @@ static RmFmtHandlerProgress PROGRESS_HANDLER = {
 
 */
 
-#endif /* end of include guard */
+#endif /* RM_FORMATS_H */

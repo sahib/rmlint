@@ -60,4 +60,4 @@ void rm_file_list_insert_file(RmFile *file, const RmSession *session);
 void rm_file_tables_clear(const RmSession *session);
 
 
-#endif
+#endif /* RM_PREPROCESS_H */

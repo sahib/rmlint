@@ -318,4 +318,4 @@ void rm_digest_send_match_candidate(RmDigest *target, RmDigest *candidate);
  */
 void rm_digest_enable_sse(gboolean use_sse);
 
-#endif /* end of include guard */
+#endif /* RM_CHECKSUM_H */

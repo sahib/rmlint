@@ -302,7 +302,7 @@ void metrohash256crc_steal(Metro256State *state, uint8_t *out) {
     metrohash128crc_2_steal(&state->state2, out + 16);
 }
 
-#endif
+#endif /* HAVE_MM_CRC32_U64 */
 
 void metrohash128_1_update(Metro128State *state, const uint8_t *key, size_t len) {
 

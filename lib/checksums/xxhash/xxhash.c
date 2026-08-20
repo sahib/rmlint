@@ -321,7 +321,7 @@ unsigned XXH32(const void* input, size_t len, unsigned seed) {
         return XXH32_endian_align(input, len, seed, XXH_littleEndian, XXH_unaligned);
     else
         return XXH32_endian_align(input, len, seed, XXH_bigEndian, XXH_unaligned);
-#endif
+#endif /* 0 */
 }
 
 static INLINE U64 XXH64_endian_align(const void* input, size_t len, U64 seed,
@@ -452,7 +452,7 @@ unsigned long long XXH64(const void* input, size_t len, unsigned long long seed)
         return XXH64_endian_align(input, len, seed, XXH_littleEndian, XXH_unaligned);
     else
         return XXH64_endian_align(input, len, seed, XXH_bigEndian, XXH_unaligned);
-#endif
+#endif /* 0 */
 }
 
 /****************************************************

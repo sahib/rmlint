@@ -246,7 +246,7 @@ static void rm_traverse_convert_small_stat_buf(struct stat *fts_statp, RmStat *b
         _ADD_FILE(lint_type, is_symlink, &buf)                  \
     }
 
-#else
+#else /* RM_PLATFORM_32 && HAVE_STAT64 */
 
 // size_t is 32 bits on 32-bit platforms, stat64 uses a 64-bit type
 G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_size) == G_SIZEOF_MEMBER(__fts_stat_t, st_size));
@@ -256,7 +256,7 @@ G_STATIC_ASSERT(G_SIZEOF_MEMBER(RmStat, st_ino) == G_SIZEOF_MEMBER(__fts_stat_t,
 #define ADD_FILE(lint_type, is_symlink) \
     _ADD_FILE(lint_type, is_symlink, (RmStat *)p->fts_statp)
 
-#endif
+#endif /* RM_PLATFORM_32 && HAVE_STAT64 */
 
 bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
     /* Initialize ftsp */

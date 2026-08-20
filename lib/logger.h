@@ -152,4 +152,4 @@ static inline gboolean rm_logger_quieter(_UNUSED const char *option_name,
     return TRUE;
 }
 
-#endif /* end of include guard */
+#endif /* RM_LOGGER_H */

@@ -80,7 +80,7 @@
 # define _FILE_DEDUPE_RANGE        btrfs_ioctl_same_args
 # define _FILE_DEDUPE_RANGE_INFO   btrfs_ioctl_same_extent_info
 # define _MIN_LINUX_SUBVERSION     2
-#endif
+#endif /* HAVE_FIDEDUPERANGE */
 
 
 RmLinkType rm_reflink_type_from_fd(int fd1, int fd2) {
@@ -166,9 +166,9 @@ RmLinkType rm_reflink_type_from_fd(int fd1, int fd2) {
     }
 
     return RM_LINK_ERROR;
-#else
+#else /* HAVE_FIEMAP */
     return RM_LINK_NONE;
-#endif
+#endif /* HAVE_FIEMAP */
 }
 
 static void print_usage(GOptionContext *context) {
@@ -336,11 +336,11 @@ int rm_dedupe_main(int argc, const char **argv) {
             // unlink(cloneto_path);
             result = EXIT_FAILURE;
         }
-#else
+#else /* FICLONE */
         rm_log_error_line(_("dedupe: Can't create clone of hardlink because FICLONE not "
                             "defined on your system"));
         result = EXIT_FAILURE;
-#endif
+#endif /* FICLONE */
     } else {
         gint64 bytes_deduped = 0;
         /* a poorly-documented limit for dedupe ioctl's */
@@ -436,9 +436,9 @@ int rm_dedupe_main(int argc, const char **argv) {
 
     return result;
 
-#else
+#else /* HAVE_FIDEDUPERANGE || HAVE_BTRFS_H */
     rm_log_error_line(_("rmlint was not compiled with file cloning support."))
-#endif
+#endif /* HAVE_FIDEDUPERANGE || HAVE_BTRFS_H */
 
     return EXIT_FAILURE;
 }
