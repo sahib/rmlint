@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: FreeBSD
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

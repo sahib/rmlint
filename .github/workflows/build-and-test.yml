@@ -1,15 +1,17 @@
-name: Build and test
+name: Linux
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - master
       - develop
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
     env:
       RM_TS_DIR: "/tmp/rmlint-unit-testdir"
@@ -19,7 +21,7 @@ jobs:
         with:
             fetch-depth: 0
 
-      - name: "Prepare build environment"
+      - name: Prepare build environment
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -28,12 +30,12 @@ jobs:
             python3-pip python3-cffi python3-dev libffi-dev
           pip3 install -r tests/requirements.txt -r docs/requirements.txt
 
-      - name: "Build"
+      - name: Build
         run: |
           scons config $scons_ARGS
           scons $scons_ARGS
 
-      - name: "Check need for testing"
+      - name: Check need for testing
         # TODO: also include skipping build but allow docs to be processed
         run: |
           if git diff --exit-code --name-only origin/$GITHUB_BASE_REF...$GITHUB_SHA ':!.gitignore' ':!docs' ':!*.md' ':!*.txt' ':!*.rst'; then
@@ -44,7 +46,7 @@ jobs:
             echo "RUN_TEST = true"
           fi
 
-      - name: "Prepare test environment"
+      - name: Prepare test environment
         if: ${{ env.RUN_TEST == 'true' }}
         # The test suite is seriously disk-intensive. Given that linux
         #  instances hosted in GitHub have 16G of RAM available we will
@@ -53,7 +55,7 @@ jobs:
           sudo mkdir "${RM_TS_DIR}"
           sudo mount -o size=12G,nr_inodes=0 -t tmpfs tmpfs "${RM_TS_DIR}"
 
-      - name: "Test it"
+      - name: Test
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
           RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
@@ -83,7 +85,7 @@ jobs:
           EOF
           RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
 
-      - name: "Cleanup"
+      - name: Cleanup
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
           sudo umount "${RM_TS_DIR}"
