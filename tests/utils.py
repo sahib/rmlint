@@ -12,7 +12,9 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Iterable
 from functools import cache
+from typing import Final
 
 import psutil
 import pytest
@@ -30,18 +32,11 @@ RMLINT_BINARY = os.path.join(RMLINT_BINARY_DIR, 'rmlint')
 # `rmlint_testdir` fixture in conftest.py.
 _TESTDIR = None
 
-
-def set_testdir(path):
-    global _TESTDIR
-    _TESTDIR = path
-
-
-def get_testdir():
-    """Directory of the currently running test."""
-    if _TESTDIR is None:
-        raise RuntimeError('get_testdir() is only available inside a test.')
-    return _TESTDIR
-
+# Known leaks
+KNOWN_LEAK_OPTIONS: Final[frozenset[str]] = frozenset()
+KNOWN_LEAK_SWITCHES: Final[frozenset[str]] = frozenset()
+KNOWN_LEAK_LINT_TYPES: Final[tuple[str, ...]] = ()
+LINT_TYPE_SWITCHES: Final[frozenset[str]] = frozenset({"-T", "--types"})
 
 # XXX: metrocrc* used to be gated behind inexistent 'sse4' feature.
 CKSUM_TYPES = [
@@ -59,6 +54,18 @@ CKSUM_TYPES = [
     # 'cumulative', 'ext',
     'paranoid',
 ]
+
+
+def set_testdir(path):
+    global _TESTDIR
+    _TESTDIR = path
+
+
+def get_testdir():
+    """Directory of the currently running test."""
+    if _TESTDIR is None:
+        raise RuntimeError('get_testdir() is only available inside a test.')
+    return _TESTDIR
 
 
 @cache
@@ -105,10 +112,23 @@ def has_feature(feature: str) -> bool:
 
 
 @cache
-def get_bash() -> str:
-    if bash_path := shutil.which("bash"):
-        return bash_path
-    raise RuntimeError('bash not found.')
+def get_bin_path(name: str) -> str:
+    if path := shutil.which(name):
+        return path
+    raise RuntimeError(f"{name!r} not found.")
+
+
+@cache
+def debuginfo_env() -> dict[str, str]:
+    if dbg_info_path := shutil.which("debuginfod-find"):
+        dbg_info_path = os.path.dirname(dbg_info_path)
+
+    env = {
+        **{key: os.environ[key] for key in [
+            "DEBUGINFOD_URLS", "XDG_CACHE_HOME", "HOME"] if key in os.environ},
+        **({"PATH": dbg_info_path} if dbg_info_path else {}),
+    }
+    return env
 
 
 def runs_as_root():
@@ -120,27 +140,29 @@ def create_testdir(*extra_path):
     os.makedirs(os.path.join(get_testdir(), *extra_path), exist_ok=True)
 
 
-def has_known_leak(*args):
-    KNOWN_LEAK_OPTIONS = {}
-    KNOWN_LEAK_SWITCHES = {}
-    KNOWN_LEAK_LINT_TYPES = []
-    LINT_TYPE_SWITCHES = {"-T", "--types"}
-    split_args = shlex.split(' '.join(args))
-    i = 0
-    while i < len(split_args):
-        arg = split_args[i]
-        if arg in KNOWN_LEAK_OPTIONS:
+def tokenise(args: Iterable[str]) -> tuple[str, ...]:
+    """Flatten a mix of command strings and pre-split argv entries into tokens."""
+    return tuple(token for arg in args for token in shlex.split(arg))
+
+
+def has_known_leak(tokens: Iterable[str]) -> bool:
+    """Return True if the command line enables an option known to leak."""
+    for token in (it := iter(tokens)):
+        if token in KNOWN_LEAK_OPTIONS:
             return True
-        if arg[0] == "-" and arg [1] != "-":
-            for switch in KNOWN_LEAK_SWITCHES:
-                if switch in arg:
-                    return True
-        if split_args[i] in LINT_TYPE_SWITCHES:
-            i += 1
-            for lint_type in KNOWN_LEAK_LINT_TYPES:
-                if lint_type in split_args[i]:
-                    return True
-        i += 1
+
+        if token.startswith("-") and not token.startswith("--"):
+            if any(switch in token for switch in KNOWN_LEAK_SWITCHES):
+                return True
+
+        name, sep, value = token.partition("=")
+        if name in LINT_TYPE_SWITCHES:
+            if not sep:  # value is the next token, e.g. `-T foo`
+                value = next(it, "")
+            if any(lint_type in value for lint_type in KNOWN_LEAK_LINT_TYPES):
+                return True
+
+    return False
 
 
 def run_rmlint_once(*args,
@@ -159,23 +181,30 @@ def run_rmlint_once(*args,
     else:
         target_dir = ""
 
+    args_tokens = tokenise(args)
+
     if get_env_flag('use_valgrind'):
         env = {
+            **debuginfo_env(),
             'G_DEBUG': 'gc-friendly',
             'G_SLICE': 'always-malloc'
         }
-        cmd = ['valgrind', '--error-exitcode=1', '-q']
-        if get_env_flag('check_leaks') and not has_known_leak(*args):
-            cmd += ('--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite')
+        cmd = [get_bin_path('valgrind'), '--error-exitcode=1', '-q']
+        if get_env_flag('check_leaks'):
+            if has_known_leak(args_tokens):
+                logging.warning("skipping known leak check for `%s`", shlex.join(args_tokens))
+            else:
+                cmd += ('--leak-check=full', '--show-leak-kinds=definite', '--errors-for-leak-kinds=definite')
     elif get_env_flag('use_gdb'):
-        env, cmd = {}, ['gdb', '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
+        env, cmd = debuginfo_env(), [ get_bin_path('gdb'),
+                                     '-batch', '--silent', '-ex=run', '-ex=thread apply all bt', '-ex=quit', '--args']
     else:
         env, cmd = {}, []
 
     cmd.append(RMLINT_BINARY)
     cmd.extend(arg for arg in (verbosity, target_dir) if arg)
 
-    cmd.extend(shlex.split(' '.join(args)))
+    cmd.extend(args_tokens)
 
     if with_json:
         cmd.extend(('-o', 'json:' + os.path.join(get_testdir(), 'out.json'), '-c', 'json:oneline'))
@@ -198,7 +227,7 @@ def run_rmlint_once(*args,
     }
 
     if use_shell:
-        run_args['executable'] = get_bash()
+        run_args['executable'] = get_bin_path('bash')
 
     if uses_py_formatter:
         # The py formatter writes its JSON document to `.rmlint.json` in

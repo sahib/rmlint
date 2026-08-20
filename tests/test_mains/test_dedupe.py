@@ -32,7 +32,6 @@ def test_equal_files():
             verbosity="")
 
 
-@pytest.mark.skip(reason="valgrind issue, see #492")
 @pytest.mark.usefixtures("needs_reflink_fs")
 def test_hardlinks():
     # test files need to be larger than btrfs node size to prevent inline extents
