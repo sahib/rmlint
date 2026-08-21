@@ -1,33 +1,24 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """Shredder's GtkApplication implementation.
 
 It loads all initially required resources and triggers
 the gui build by instancing the MainWindow.
 """
 
-# Stdlib:
-import os
-import sys
 import gettext
 import logging
+import os
 
-# External:
-from gi.repository import Gtk, Gio, Rsvg, GdkPixbuf
+from gi.repository import GdkPixbuf, GLib, Gio, Gtk, Rsvg
 
-# Internal
 from shredder import APP_TITLE
-from shredder.util import load_css_from_data
 from shredder.about import AboutDialog
 from shredder.runner import Script
-from shredder.window import MainWindow
-
-from shredder.views.settings import SettingsView
+from shredder.util import load_css_from_data
+from shredder.views.editor import EditorView
 from shredder.views.locations import LocationView
 from shredder.views.runner import RunnerView
-from shredder.views.editor import EditorView
-
+from shredder.views.settings import SettingsView
+from shredder.window import MainWindow
 
 LOGGER = logging.getLogger('application')
 
@@ -71,11 +62,13 @@ def _load_app_icon():
 class Application(Gtk.Application):
     """GtkApplication implementation of Shredder."""
     def __init__(self, options):
-        Gtk.Application.__init__(
-            self,
+        GLib.set_application_name(APP_TITLE)
+
+        super().__init__(
             application_id='org.gnome.Shredder',
             flags=Gio.ApplicationFlags.FLAGS_NONE
         )
+
         self.cmd_opts = options
         self.settings = self.win = None
 
@@ -130,10 +123,6 @@ class Application(Gtk.Application):
         self.set_accels_for_action('app.quit', ['<Ctrl>Q'])
         self.set_accels_for_action('app.search', ['<Ctrl>F'])
         self.set_accels_for_action('app.activate', ['<Ctrl>Return'])
-
-        # Set the fallback window title.
-        # This is only used if no .desktop file is provided.
-        self.win.set_wmclass(APP_TITLE, APP_TITLE)
 
         # Load the application icon
         self.win.set_default_icon(_load_app_icon())

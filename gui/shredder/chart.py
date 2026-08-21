@@ -1,30 +1,16 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 Chart rendering code and relevant Gtk widgets.
 The chart is drawn via cairo and a tiny bit of math.
 """
 
-
-# Stdlib:
-import math
 import colorsys
+import math
 
-# Internal:
-from shredder.util import size_to_human_readable
-from shredder.tree import Column
-
-# External:
 import cairo
+from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo
 
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import GLib
-
-from gi.repository import Pango
-from gi.repository import PangoCairo
-
+from shredder.tree import Column
+from shredder.util import size_to_human_readable
 
 ANGLE_LIMIT_TOOLTIP = math.pi / 32
 ANGLE_LIMIT_VISIBLE = math.pi / 256

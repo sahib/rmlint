@@ -17,6 +17,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Various fixes aimed at improving mac osx compatibility
 * Avoid generating ``rmlint.sh`` or other output files for ``rmlint --dedupe`` or ``rmlint --is-reflink`
 * Fix possible compile problems scons' default CC flags are non-functional
+* Fix GUI failing to start with pygobject >= 3.56
 
 ### Added
 

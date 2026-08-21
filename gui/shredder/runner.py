@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
-
-
 """
 This module coordinates the actual running of the `rmlint` utility.
 For running GLib's GSuprocess is used, which provides a nice API.
@@ -10,23 +7,17 @@ options set in prior by GSettings (e.g. from the Settings view).
 The settings are described and defined in the settings schema.
 """
 
-# Stdlib:
+import codecs
+import errno
+import json
+import logging
 import os
 import re
-import json
-import errno
 import shutil
-import codecs
-import logging
 import tempfile
-
 from enum import Enum
 
-# External:
-from gi.repository import Gio
-from gi.repository import GLib
-from gi.repository import GObject
-
+from gi.repository import Gio, GLib, GObject
 
 LOGGER = logging.getLogger('runner')
 ASCII_COLOR_REGEX = re.compile(r'\x1B\[\d+(.*?)m')
@@ -174,12 +165,7 @@ def _create_rmlint_process(
         extra_options = [item for sublist in extra_options for item in sublist]
 
         min_size, max_size = cfg.get_value('traverse-size-limits')
-        extra_options += [
-            '--size', '{a}-{b}'.format(
-                a=min_size,
-                b=max_size
-            )
-        ]
+        extra_options += ['--size', f'{min_size}-{max_size}']
 
         extra_options += [
             '--max-depth', str(cfg.get_int('traverse-max-depth'))
@@ -304,8 +290,8 @@ class Runner(GObject.Object):
             self.process = None
             return
 
-        line = line.strip(', ')
-        if line in ['[', ']']:
+        line = line.strip('[], ')
+        if not line:
             self._queue_read()
             return
 
@@ -391,7 +377,7 @@ class Runner(GObject.Object):
 
         # Write the replay script to filter the input.
         replay_path = os.path.join(self._tmpdir.name, 'shredder.replay.json')
-        with open(replay_path, 'w') as handle:
+        with open(replay_path, 'w', encoding='utf-8') as handle:
             handle.write(json.dumps(results))
 
         # Regenerate output formatters by calling rmlint:
@@ -446,7 +432,7 @@ def _fix_shell_auto_remove_path(sh_path, temp_path):
     Shell scripts contain the path that they were created under.
     This is used to remove the script after a successful run.
     """
-    with open(sh_path, "r") as fd:
+    with open(sh_path) as fd:
         text = fd.read()
 
     with open(sh_path, "w") as fd:

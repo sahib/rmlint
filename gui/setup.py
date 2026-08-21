@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
+import logging
+import os
+import subprocess
+from distutils.command.install_data import install_data
 
 from setuptools import setup
 from setuptools.command.install import install
-from distutils.command.install_data import install_data
-
-import os
-import logging
-import subprocess
 
 GRESOURCE_DIR = 'shredder/resources'
 GRESOURCE_FILE = 'shredder.gresource.xml'
@@ -15,7 +13,7 @@ GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 
 def read_version():
     vfp = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, '.version')
-    with open(vfp, 'r') as handle:
+    with open(vfp) as handle:
         version_string = handle.read()
 
     version_numbers, _ = version_string.split(' ', 1)
@@ -35,7 +33,7 @@ class install_glib_resources(install):
         try:
             subprocess.call([
                 'glib-compile-resources',
-                '--sourcedir={}'.format(GRESOURCE_DIR),
+                f'--sourcedir={GRESOURCE_DIR}',
                 os.path.join(GRESOURCE_DIR, GRESOURCE_FILE)
             ])
         except subprocess.CalledProcessError as err:

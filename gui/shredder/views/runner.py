@@ -1,27 +1,17 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 Main view of Shredder.
 
 Shows the chart and a treeview of suspicious files.
 """
 
-# Stdlib:
 import logging
 
-# External:
-from gi.repository import Gtk
-from gi.repository import GLib
-from gi.repository import GObject
+from gi.repository import GLib, GObject, Gtk
 
-# Internal:
-from shredder.util import View, IconButton, NodeState
-from shredder.util import MultipleChoiceButton, scrolled
 from shredder.chart import ChartStack
-from shredder.tree import PathTreeView, PathTreeModel, Column
 from shredder.runner import Runner
-
+from shredder.tree import Column, PathTreeModel, PathTreeView
+from shredder.util import IconButton, MultipleChoiceButton, NodeState, View, scrolled
 
 LOGGER = logging.getLogger('runview')
 RENDER_CHOICES = ['All', 'Selected', 'Filtered']

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 
 """Implement a very small query language useful for filtering.
 
@@ -11,8 +10,8 @@ This is a valid example for example:
 """
 
 # Stdlib:
-import re
 import logging
+import re
 from collections import defaultdict
 
 try:
@@ -236,4 +235,4 @@ def parse(query):
 if __name__ == '__main__':
     import sys
 
-    print('`{}`'.format(parse(sys.argv[1])))
+    print(f'`{parse(sys.argv[1])}`')

@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 This is a rather generic interface for building a settings view
 from a GSettingsSchema, which is (usually) defined as XML File.
@@ -15,21 +12,14 @@ For reference, keys can be changed on the commandline too:
 $ gsettings --schemadir ~/.glib-schemas set org.gnome.Shredder traverse-depth 2
 """
 
-# Stdlib:
-import re
 import logging
-
-from operator import itemgetter
+import re
 from functools import partial
+from operator import itemgetter
 
-# External:
-from gi.repository import Gtk
-from gi.repository import GLib
+from gi.repository import GLib, Gtk
 
-# Internal:
-from shredder.util import View, SuggestedButton, DestructiveButton
-from shredder.util import FileSizeRange, MultipleChoiceButton
-
+from shredder.util import DestructiveButton, FileSizeRange, MultipleChoiceButton, SuggestedButton, View
 
 LOGGER = logging.getLogger('settings')
 
@@ -177,7 +167,7 @@ class SettingsView(View):
         label = Gtk.Label()
         label.set_margin_top(30)
         label.set_markup(
-            '<b>{}:</b>'.format(GLib.markup_escape_text(heading, -1))
+            f'<b>{GLib.markup_escape_text(heading, -1)}:</b>'
         )
         label.set_halign(Gtk.Align.START)
         label.set_margin_bottom(2)
@@ -260,7 +250,7 @@ class SettingsView(View):
                 continue
 
             # Get the key summary and description:
-            summary = '{}'.format(key.get_summary())
+            summary = f'{key.get_summary()}'
 
             # This is an extension of this code:
             if summary.startswith('[hidden]'):
@@ -289,7 +279,7 @@ class SettingsView(View):
                 (order, section, val_widget, key_name, summary, description)
             )
 
-        for section in sorted(set([entry[1] for entry in entry_rows])):
+        for section in sorted({entry[1] for entry in entry_rows}):
             self.append_section(section.capitalize())
 
         for entry in sorted(entry_rows, key=itemgetter(0, 2)):

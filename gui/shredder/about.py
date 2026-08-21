@@ -1,29 +1,18 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """Own module for the about dialog."""
-
-
-# Stdlib:
-import re
 import logging
+import re
 
-# Internal
-from shredder import APP_TITLE, APP_DESCRIPTION
+from gi.repository import Gio, Gtk
 
-# External:
-from gi.repository import Gtk, Gio
-
+from shredder import APP_DESCRIPTION, APP_TITLE
 
 LOGGER = logging.getLogger('about')
-
 
 MAIN_AUTHORS = [
     'Christopher Pahl <sahib@online.de>',
     'Daniel Thomas <thomas_d_j@yahoo.com.au>',
     'Cebtenzzre <cebtenzzre@gmail.com>',
 ]
-
 
 # Change when needed.
 DOCUMENTERS = MAIN_AUTHORS
@@ -81,6 +70,7 @@ if __name__ == '__main__':
     def main():
         """Show the about dialog as modal window."""
         import os
+
         from shredder.application import _load_app_icon
 
         win = Gtk.Window()

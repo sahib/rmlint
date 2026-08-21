@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 """
 GtkTreeModel Implementation for a directory tree and accompanying classes.
 
@@ -15,29 +12,22 @@ Most of the code should be very clean but some voodoo is hidden.
 If you don't find it, that's good. If you do, blame @sahib.
 """
 
-# Stdlib:
+import logging
 import os
 import time
-import logging
-
 from collections import OrderedDict, defaultdict, deque
 
-# External:
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import Gio
-from gi.repository import GLib
-from gi.repository import GObject
-
-# Internal:
-from shredder.util import CellRendererSize
-from shredder.util import CellRendererModifiedTime
-from shredder.util import CellRendererCount
-from shredder.util import CellRendererLint
-from shredder.util import PopupMenu, NodeState
+from gi.repository import Gdk, Gio, GLib, GObject, Gtk
 
 from shredder.query import Query
-
+from shredder.util import (
+    CellRendererCount,
+    CellRendererLint,
+    CellRendererModifiedTime,
+    CellRendererSize,
+    NodeState,
+    PopupMenu,
+)
 
 LOGGER = logging.getLogger('tree')
 
@@ -397,7 +387,7 @@ class PathTreeModel(GObject.GObject, Gtk.TreeModel, Gtk.TreeSortable):
     """
 
     def __init__(self, paths):
-        super(PathTreeModel, self).__init__()
+        super().__init__()
 
         # Actual data storage:
         self.paths = paths
