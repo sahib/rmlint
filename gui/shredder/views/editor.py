@@ -305,7 +305,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
     """GtkFileChooserWidget tailored for saving a `Script` instance."""
 
     __gsignals__ = {
-        'saved': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'saved': (GObject.SignalFlags.RUN_FIRST, None, ()),
     }
 
     def __init__(self, editor_view):
@@ -427,8 +427,8 @@ class OverlaySaveButton(Gtk.Overlay):
     """
 
     __gsignals__ = {
-        'save-clicked': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'unlock-clicked': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'save-clicked': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'unlock-clicked': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __init__(self):

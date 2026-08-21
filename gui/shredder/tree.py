@@ -204,7 +204,7 @@ def _lookup_root_path_index(index, components):
 class PathTrie(GObject.Object):
     """Python version of rmlint's pathtricia trie."""
     __gsignals__ = {
-        'node-updated': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_UINT64, ))
+        'node-updated': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_UINT64, ))
     }
 
     def __init__(self, root_paths=None):

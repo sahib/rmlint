@@ -59,7 +59,7 @@ class LocationEntry(Gtk.ListBoxRow):
     preferred = GObject.Property(type=bool, default=False)
 
     __gsignals__ = {
-        'shortcut': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'shortcut': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def to_dict(self):
