@@ -263,7 +263,7 @@ def test_keep_parent_timestamps(shell):
     run_shell_script(shell, sh_path, "-dck")
     stat_after = os.stat(dir_path)
 
-    assert stat_before.st_mtime == stat_after.st_mtime
+    assert stat_before.st_mtime_ns == stat_after.st_mtime_ns
 
 
 @pytest.mark.parametrize("tm_opt", ('', '-D'))
