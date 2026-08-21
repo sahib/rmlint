@@ -2,6 +2,7 @@ import os
 import shlex
 import subprocess
 
+import SCons.SConf
 from SCons.Script import *
 from SCons.Script.SConscript import SConsEnvironment
 
@@ -70,6 +71,12 @@ AddOption(
     action='store', metavar='DIR', help='libdir name (lib or lib64)'
 )
 
+AddOption(
+    '--show-config', default=False,
+    dest='show_config', action='store_true',
+    help='print the detected feature summary before building (-n to stop there)'
+)
+
 for suffix in OPTIONAL_FLAGS:
     AddOption(
         '--without-' + suffix, action='store_const', default=False, const=False,
@@ -115,6 +122,10 @@ env = Environment(**options)
 ###########################################################################
 
 # Configuration:
+sc_dryrun = SCons.SConf.dryrun
+if GetOption('show_config'):
+    SCons.SConf.dryrun = 0  # let configuration phase run with --show-config -n
+
 conf = Configure(env, custom_tests=CUSTOM_TESTS)
 
 #######################################################################
@@ -329,6 +340,7 @@ if value:
 
 # Your extra checks here
 env = conf.Finish()
+SCons.SConf.dryrun = sc_dryrun
 Export('env')
 
 # snapshot the compile flags before we add host-specific flags
@@ -411,13 +423,15 @@ if 'release' in COMMAND_LINE_TARGETS:
     env.Depends(release, env.Alias('gettext'))
 
 
-if 'config' in COMMAND_LINE_TARGETS:
-    def print_config(target=None, source=None, env=None):
-        yesno = lambda boolean: COLORS['green'] + 'yes' + COLORS['end'] if boolean else COLORS['red'] + 'no' + COLORS['end']
+if GetOption('show_config'):
+    def color(text, colour):
+        return COLORS[colour] + text + COLORS['end']
 
-        sphinx_bin = find_sphinx_binary()
+    yesno = lambda b: color('yes' if b else 'no', 'green' if b else 'red')
 
-        print('''
+    sphinx_bin = find_sphinx_binary()
+
+    print('''
 {grey}rmlint will be compiled with the following features:{end}
 
     Find non-stripped binaries (needs libelf)             : {libelf}
@@ -452,38 +466,42 @@ if 'config' in COMMAND_LINE_TARGETS:
     Active sanitisers    : {sanitisers}
     Stripping symbols    : {strip}
     Compile Glib schemas : {compile_glib_schemas}
+{trailer}    '''.format(
+        grey=COLORS['grey'], end=COLORS['end'],
 
-Type 'scons' to actually compile rmlint now. Good luck.
-    '''.format(
-            grey=COLORS['grey'], end=COLORS['end'],
-            libelf=yesno(env['HAVE_LIBELF']),
-            gettext=yesno(env['HAVE_GETTEXT']),
-            locale=yesno(env['HAVE_LIBINTL']),
-            msgfmt=yesno(env['HAVE_MSGFMT']),
-            xattr=yesno(env['HAVE_XATTR']),
-            nonrotational=yesno(env['HAVE_GIO_UNIX'] & env['HAVE_BLKID']),
-            gio_unix=yesno(env['HAVE_GIO_UNIX']),
-            blkid=yesno(env['HAVE_BLKID']),
-            fiemap=yesno(env['HAVE_FIEMAP']),
-            crc_dispatch=yesno(env['HAVE_BUILTIN_CPU_SUPPORTS'] & env['HAVE_MM_CRC32_U64']),
-            blake3_simd_asm=yesno(env['IS_X86_64']),
-            blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
-            bigfiles=yesno(env['HAVE_BIGFILES']),
-            bigofft=yesno(env['HAVE_BIG_OFF_T']),
-            bigstat=yesno(env['HAVE_STAT64']),
-            sphinx=COLORS['green'] + 'yes, using ' + COLORS['end'] + sphinx_bin if sphinx_bin else yesno(sphinx_bin),
-            compiler=env['CC'],
-            prefix=GetOption('prefix'),
-            actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
-            compile_glib_schemas=yesno(GetOption('with_compile-glib-schemas')),
-            verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
-            debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
-            symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
-            sanitisers=(COLORS['green'] + ', '.join(sanitisers) + COLORS['end'])
-                       if sanitisers else (COLORS['red'] + 'none' + COLORS['end']),
-            strip=yesno(strip),
-            version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
-                    f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})'
-        ))
+        libelf=yesno(env['HAVE_LIBELF']),
+        fiemap=yesno(env['HAVE_FIEMAP']),
+        crc_dispatch=yesno(env['HAVE_BUILTIN_CPU_SUPPORTS'] & env['HAVE_MM_CRC32_U64']),
 
-    env.Command('config', None, Action(print_config, "Printing configuration..."))
+        blake3_simd_asm=yesno(env['IS_X86_64']),
+        blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
+
+        sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin else yesno(sphinx_bin),
+        xattr=yesno(env['HAVE_XATTR']),
+        bigfiles=yesno(env['HAVE_BIGFILES']),
+        bigofft=yesno(env['HAVE_BIG_OFF_T']),
+        bigstat=yesno(env['HAVE_STAT64']),
+
+        nonrotational=yesno(env['HAVE_GIO_UNIX'] & env['HAVE_BLKID']),
+        blkid=yesno(env['HAVE_BLKID']),
+        gio_unix=yesno(env['HAVE_GIO_UNIX']),
+
+        gettext=yesno(env['HAVE_GETTEXT']),
+        locale=yesno(env['HAVE_LIBINTL']),
+        msgfmt=yesno(env['HAVE_MSGFMT']),
+
+        version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
+                f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})',
+        compiler=env['CC'],
+        prefix=GetOption('prefix'),
+        actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
+        verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
+        debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
+        symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
+        sanitisers = color(', '.join(sanitisers), 'green') if sanitisers else color('none', 'red'),
+        strip=yesno(strip),
+        compile_glib_schemas=yesno(GetOption('with_compile-glib-schemas')),
+
+        trailer="\nType 'scons' to actually compile rmlint now. Good luck.\n"
+                if GetOption('no_exec') else ''
+    ))

@@ -30,6 +30,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
 * For packagers: ``STRIP=`` scons build variable to opt out of link-time stripping.
+* ``scons --show-config`` shows features and build in one run.
 
 ### Changed
 
@@ -49,8 +50,9 @@ The format follows [keepachangelog.com]. Please stick to it.
 * The minimum supported Python version is now 3.9
 
 ### Removed
-* ``--dedupe-xattr``.  Use ``--dedupe --xattr``
-* ``--dedupe-readonly``.  Use ``--dedupe --readonly``
+* ``--dedupe-xattr``. Use ``--dedupe --xattr``
+* ``--dedupe-readonly``. Use ``--dedupe --readonly``
+* Build target ``config``. Use ``scons --show-config -n``.
 * Dropped support for Python 2.
 
 ## [2.10.3 Ludicrous Lemur] - 2025-03-22

@@ -190,8 +190,7 @@ build the software from the potentially unstable ``develop`` branch:
    $ # Omit -b develop if you want to build from the stable master
    $ git clone -b develop https://github.com/sahib/rmlint.git 
    $ cd rmlint/
-   $ scons config       # Look what features scons would compile
-   $ scons DEBUG=1      # Optional, build locally.
+   $ scons --show-config DEBUG=1  # show features and build locally.
    # Install (and build if necessary). For releases you can omit DEBUG=1
    $ sudo scons DEBUG=1 --prefix=/usr/local install
 

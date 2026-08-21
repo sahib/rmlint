@@ -72,7 +72,6 @@ jobs:
             export UNUSED_VAR_SO_THIS_CMD_IS_NEVER_EMPTY= ${{ matrix.build.env }} 
             ${{ matrix.build.installcmd }} ${{ matrix.build.pkgs }}
             cd /build
-            scons config
-            scons VERBOSE=1 DEBUG=1 O=release
+            scons --show-config VERBOSE=1 DEBUG=1 O=release
             exit
           " | docker run --rm -v "$PWD:/build" "${{ matrix.build.tag }}" sh
