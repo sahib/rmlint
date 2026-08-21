@@ -3,6 +3,7 @@ import os
 import platform
 import shutil
 import subprocess
+from textwrap import dedent
 
 import SCons.Conftest as tests
 from SCons.Script import ARGUMENTS, Exit, GetOption
@@ -315,18 +316,6 @@ def check_cygwin(context):
     return rc
 
 
-C23_EMBED_PROBE = '''
-#if !defined(__has_embed)
-#error "no __has_embed"
-#endif
-static const char probe[] = {{
-#embed "{payload}"
-    , 0x00
-}};
-const char *probe_ptr(void) {{ return probe; }}
-'''
-
-
 @custom_test
 def check_c23_embed(context, payload):
     """Probe whether the compiler can #embed a repo-relative file.
@@ -336,6 +325,17 @@ def check_c23_embed(context, payload):
     #embed if c23 is not specified.
     """
     context.Message('Checking for C23 #embed support...')
+
+    C23_EMBED_PROBE = dedent('''\
+    #if !defined(__has_embed)
+    #error "no __has_embed"
+    #endif
+    static const char src[] = {{
+    #embed "{payload}"
+    	, 0x00
+    }};
+    const char *get_src(void) {{ return src; }}
+    ''')
 
     rc = 0
     if ARGUMENTS.get('C23_EMBED') != '0':
@@ -371,13 +371,21 @@ def check_mm_crc32_u64(context):
 
 @custom_test
 def check_builtin_cpu_supports(context):
-    rc = 0 if tests.CheckDeclaration(
-        context,
-        symbol='__builtin_cpu_supports'
-    ) else 1
+    context.Message('Checking whether __builtin_cpu_supports is available... ')
+
+    BUILTIN_CPU_SUPPORTS_PROBE = dedent('''\
+    #if !defined(__has_builtin)
+    #error "no __has_builtin"
+    #endif
+    #if !__has_builtin(__builtin_cpu_supports)
+    #error "no __builtin_cpu_supports"
+    #endif
+    int sse42(void) { return __builtin_cpu_supports("sse4.2"); };
+    ''')
+
+    rc = int(bool(context.TryCompile(BUILTIN_CPU_SUPPORTS_PROBE, '.c')))
 
     context.sconf.env['HAVE_BUILTIN_CPU_SUPPORTS'] = rc
-    context.did_show_result = True
     context.Result(rc)
     return rc
 

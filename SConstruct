@@ -422,6 +422,7 @@ if 'config' in COMMAND_LINE_TARGETS:
 
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
+    Metro SSE4.2 dispatch                                 : {crc_dispatch}
     blake3 uses x86 SIMD...
         ...assembly (x86_64 only)                         : {blake3_simd_asm}
         ...C intrinsics                                   : {blake3_simd_c}
@@ -464,6 +465,7 @@ Type 'scons' to actually compile rmlint now. Good luck.
             gio_unix=yesno(env['HAVE_GIO_UNIX']),
             blkid=yesno(env['HAVE_BLKID']),
             fiemap=yesno(env['HAVE_FIEMAP']),
+            crc_dispatch=yesno(env['HAVE_BUILTIN_CPU_SUPPORTS'] & env['HAVE_MM_CRC32_U64']),
             blake3_simd_asm=yesno(env['IS_X86_64']),
             blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
             bigfiles=yesno(env['HAVE_BIGFILES']),
