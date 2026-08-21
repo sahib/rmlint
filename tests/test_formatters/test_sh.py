@@ -2,10 +2,20 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 
 import pytest
 
-from tests.utils import create_dirs, create_file, create_link, get_testdir, pattern_count, run_rmlint
+from tests.utils import (
+    RMLINT_BINARY,
+    RMLINT_BINARY_DIR,
+    create_dirs,
+    create_file,
+    create_link,
+    get_testdir,
+    pattern_count,
+    run_rmlint,
+)
 
 
 def run_shell_script(shell, sh_path, *args):
@@ -287,3 +297,29 @@ def test_skip_hardlinks(tm_opt):
     counts = pattern_count(sh_path, ["^cp_hardlink +'", "^skip_hardlink +'"])
     assert counts[0] == 0
     assert counts[1] == 1
+
+
+def test_binary_path_from_path_lookup():
+    """Checks that RMLINT_BINARY is the correct absolute path."""
+    if not sys.platform.startswith(("freebsd", "linux", "cygwin")):
+        pytest.skip("unsupported platform")
+
+    create_file('xxx', 'a')
+    create_file('xxx', 'b')
+
+    sh_path = os.path.join(get_testdir(), 'rmlint.sh')
+    env = dict(os.environ, PATH=RMLINT_BINARY_DIR + os.pathsep + os.environ['PATH'])
+
+    subprocess.run(
+        ['rmlint', '-S', 'a', '-o', f'sh:{sh_path}', get_testdir()],
+        cwd=get_testdir(),
+        env=env,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    with open(sh_path, encoding='utf-8') as handle:
+        line = next(l for l in handle if l.startswith('RMLINT_BINARY='))
+
+    assert line.strip() == f'RMLINT_BINARY="{os.path.realpath(RMLINT_BINARY)}"'

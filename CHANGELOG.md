@@ -19,6 +19,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Fix possible compile problems scons' default CC flags are non-functional
 * Fix GUI failing to start with pygobject >= 3.56
 * Make SSE4.2 runtime dispatch works on Clang builds.
+* FreeBSD: ``rmlint.sh``'s RMLINT_BINARY= entry.
 
 ### Added
 

@@ -36,6 +36,11 @@
 #include "shredder.h"
 #include "traverse.h"
 
+#if RM_IS_FREEBSD
+#include <sys/sysctl.h>
+#include <errno.h>
+#endif
+
 #define EXIT_EQUAL_UNKNOWN 2
 
 
@@ -1053,14 +1058,52 @@ static bool rm_cmd_set_outputs(RmSession *session, GError **error) {
     return true;
 }
 
+static char *rm_cmd_query_own_exe_path(void) {
+    char exe_path[PATH_MAX];
+
+#if RM_IS_FREEBSD
+    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+    size_t exe_path_len = sizeof(exe_path);
+
+    if(sysctl(mib, G_N_ELEMENTS(mib), exe_path, &exe_path_len, NULL, 0) != 0) {
+        if(errno == ENOMEM)
+            rm_log_error_line("path of own executable too long (%zu >= %d)",
+                              exe_path_len, PATH_MAX);
+
+        return NULL;
+    }
+
+    /* sysctl returns a zero-terminated string. */
+    if(exe_path_len < 2 || exe_path[exe_path_len - 1] != '\0' || exe_path[0] != '/')
+        return NULL;
+#elif RM_IS_LINUX || RM_IS_CYGWIN
+    ssize_t exe_path_len = readlink("/proc/self/exe", exe_path, sizeof(exe_path));
+    if(exe_path_len < 1)
+        return NULL;
+
+    if(exe_path_len >= (ssize_t)sizeof(exe_path)) {
+        G_STATIC_ASSERT(sizeof(exe_path) >= 128);
+        char *head = g_utf8_make_valid(exe_path, (gssize)128);
+        rm_log_warning_line("path of own executable too long (>= %d): %s[...]", PATH_MAX, head);
+        g_free(head);
+        return NULL;
+    }
+
+    /* «should not assume that the returned contents of the symbolic link are null-terminated.» */
+    exe_path[exe_path_len] = '\0';
+#else
+    return NULL;
+#endif
+
+    return g_strdup(exe_path);
+}
+
 static char *rm_cmd_find_own_executable_path(RmSession *session, char **argv) {
     RmCfg *cfg = session->cfg;
     if(cfg->full_argv0_path == NULL) {
-        /* Note: this check will only work on linux! */
-        char exe_path[PATH_MAX] = {0};
-        if(readlink("/proc/self/exe", exe_path, sizeof(exe_path)) != -1) {
-            return g_strdup(exe_path);
-        }
+        char *exe_path = rm_cmd_query_own_exe_path();
+        if(exe_path != NULL)
+            return exe_path;
 
         if(strchr(argv[0], '/')) {
             return realpath(argv[0], NULL);
