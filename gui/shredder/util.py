@@ -178,8 +178,8 @@ class View(Gtk.Grid):
     """Default View class that has some utility extras.
     """
     __gsignals__ = {
-        'view-enter': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'view-leave': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'view-enter': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'view-leave': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __init__(self, app, sub_title=None):
@@ -667,7 +667,7 @@ class MultipleChoiceButton(Gtk.Button):
     - The popup is a GtkPopover.
     """
     __gsignals__ = {
-        'row-selected': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'row-selected': (GObject.SignalFlags.RUN_FIRST, None, ()),
     }
 
     def __init__(self, values, default, selected):
@@ -764,7 +764,7 @@ class FileSizeSpinButton(Gtk.Box):
     Works mostly like a GtkSpinButon (and consists of one).
     """
     __gsignals__ = {
-        'value-changed': (GObject.SIGNAL_RUN_FIRST, None, (int, ))
+        'value-changed': (GObject.SignalFlags.RUN_FIRST, None, (int, ))
     }
 
     def __init__(self):
@@ -849,7 +849,7 @@ class FileSizeRange(Gtk.Grid):
     The minimum may not be higher or eqal than than the maximum.
     """
     __gsignals__ = {
-        'value-changed': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'value-changed': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __init__(self, min_val, max_val):

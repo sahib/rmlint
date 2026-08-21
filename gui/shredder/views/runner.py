@@ -20,9 +20,9 @@ RENDER_CHOICES = ['All', 'Selected', 'Filtered']
 class ResultActionBar(Gtk.ActionBar):
     """Down right bar with the controls"""
     __gsignals__ = {
-        'generate-all-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'generate-filtered-script': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'generate-selection-script': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'generate-all-script': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'generate-filtered-script': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'generate-selection-script': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __init__(self, view):

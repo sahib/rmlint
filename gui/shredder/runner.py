@@ -219,9 +219,9 @@ def _create_rmlint_process(
 class Runner(GObject.Object):
     """Wrapper class for a process of rmlint."""
     __gsignals__ = {
-        'lint-added': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'replay-finished': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'process-finished': (GObject.SIGNAL_RUN_FIRST, None, (str, ))
+        'lint-added': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'replay-finished': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'process-finished': (GObject.SignalFlags.RUN_FIRST, None, (str, ))
     }
 
     def __init__(self, settings, untagged_paths, tagged_paths):
@@ -449,8 +449,8 @@ class Script(GObject.Object):
     `run()` will execute the script (either dry or for real)
     """
     __gsignals__ = {
-        'line-read': (GObject.SIGNAL_RUN_FIRST, None, (str, str)),
-        'script-finished': (GObject.SIGNAL_RUN_FIRST, None, ())
+        'line-read': (GObject.SignalFlags.RUN_FIRST, None, (str, str)),
+        'script-finished': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __init__(self, script_file):
