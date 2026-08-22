@@ -55,6 +55,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * GUI: the minimum supported Python version is now 3.12
 * GUI: the minimum supported Gtk version is now 3.22
 * GUI: remove hard Rsvg dependency.
+* The minimum supported Glib version is now 2.74
 * The default installation prefix is now ``/usr/local``.
 * The build system supports ``PREFIX=`` and ``DESTDIR=`` options.
 

@@ -15,7 +15,7 @@ Dependencies
 Hard dependencies:
 ~~~~~~~~~~~~~~~~~~
 
-* **glib** :math:`\geq 2.64` (general C Utility Library)
+* **glib** :math:`\geq 2.74` (general C Utility Library)
 * **libjson-glib** (parsing rmlint's own json as caching layer)
 
 Soft dependencies:

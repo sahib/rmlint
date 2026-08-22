@@ -69,7 +69,7 @@ class Application(Gtk.Application):
 
         super().__init__(
             application_id='org.gnome.Shredder',
-            flags=Gio.ApplicationFlags.FLAGS_NONE
+            flags=Gio.ApplicationFlags.DEFAULT_FLAGS
         )
 
         self.cmd_opts = options
