@@ -68,7 +68,9 @@ if __name__ == '__main__':
         resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')
         resource_bundle = Gio.Resource.load(resource_file)
         Gio.resources_register(resource_bundle)
-        win.set_default_icon(_load_app_icon())
+        app_icon = _load_app_icon()
+        if app_icon is not None:
+            win.set_default_icon(app_icon)
 
         about = AboutDialog(win)
         about.show_all()

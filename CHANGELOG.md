@@ -53,6 +53,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * ``-g --progress`` and ``-G --no-progress`` do not clear outputs anymore (#582).
 * The generated ``rmlint.py`` minimum supported Python is now 3.9
 * GUI: the minimum supported Python version is now 3.12
+* GUI: the minimum supported Gtk version is now 3.22
+* GUI: remove hard Rsvg dependency.
 * The default installation prefix is now ``/usr/local``.
 * The build system supports ``PREFIX=`` and ``DESTDIR=`` options.
 

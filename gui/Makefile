@@ -7,6 +7,6 @@ schema:
 	@glib-compile-schemas ~/.glib-schemas
 
 run: resources schema
-	@PATH="$$(realpath ../):$$PATH" GSETTINGS_SCHEMA_DIR=~/.glib-schemas/ python3 -c "import shredder; shredder.run_gui()"
+	@PATH="$$(realpath ../):$$PATH" GSETTINGS_SCHEMA_DIR=~/.glib-schemas/ python3 -Wd -c "import shredder; shredder.run_gui()"
 
 all: run

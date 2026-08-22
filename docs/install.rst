@@ -44,7 +44,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo dnf install python3-sphinx
     # Optional dependencies for the GUI:
-    $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 librsvg2 hicolor-icon-theme
+    $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog
     # Optional dependencies for tests:
     $ sudo dnf install python3-pytest-xdist+psutil python3-xattr
 
@@ -79,7 +79,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo pacman -S python-sphinx python-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
-    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg
+    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg python-colorlog
     # Optional dependencies for tests:
     $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil btrfs-progs
 
@@ -112,7 +112,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
     # Optional dependencies for running the GUI:
-    $ sudo apt install  python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
+    $ sudo apt install python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 librsvg2-common python3-colorlog
     # Optional dependencies for installing the GUI:
     $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
@@ -154,7 +154,9 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for more features:
     $ doas pkg install libelf
     # Optional dependencies for building documentation:
-    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme gtksourceview4
+    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme
+    # Optional dependencies for the GUI:
+    $ doas pkg install gtksourceview4 librsvg2 py312-colorlog
 
 .. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
 .. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint
@@ -178,7 +180,7 @@ need an update. The commands above install the full dependencies, therefore
 some packages might be stripped if you do not need the feature
 they enable. Only hard requirement for the commandline is ``glib``.
 
-Also be aware that the GUI needs at least :math:`gtk \geq 3.12` to work!
+Also be aware that the GUI needs at least :math:`gtk \geq 3.22` to work!
 
 Compilation
 -----------

@@ -8,7 +8,7 @@ import gettext
 import logging
 import os
 
-from gi.repository import GdkPixbuf, GLib, Gio, Gtk, Rsvg
+from gi.repository import GdkPixbuf, Gio, GLib, Gtk
 
 from shredder import APP_TITLE
 from shredder.about import AboutDialog
@@ -50,13 +50,16 @@ def _create_action(name, callback=None):
 
 
 def _load_app_icon():
-    """Load & render the application svg icon from the resource bundle"""
-    logo_svg = Gio.resources_lookup_data('/org/gnome/shredder/shredder.svg', 0)
-    logo_handle = Rsvg.Handle.new_from_data(logo_svg.get_data())
-    logo_handle.set_dpi_x_y(75, 75)
-    return logo_handle.get_pixbuf().scale_simple(
-        200, 200, GdkPixbuf.InterpType.HYPER
-    )
+    """Load & render the application svg icon from the resource bundle.
+    Or return None if no loader is available.
+    """
+    try:
+        return GdkPixbuf.Pixbuf.new_from_resource_at_scale(
+            '/org/gnome/shredder/shredder.svg', 200, 200, True
+        )
+    except GLib.Error as err:
+        LOGGER.warning('Could not render the application icon: %s', err)
+        return None
 
 
 class Application(Gtk.Application):
@@ -125,7 +128,9 @@ class Application(Gtk.Application):
         self.set_accels_for_action('app.activate', ['<Ctrl>Return'])
 
         # Load the application icon
-        self.win.set_default_icon(_load_app_icon())
+        app_icon = _load_app_icon()
+        if app_icon is not None:
+            self.win.set_default_icon(app_icon)
 
         LOGGER.debug('Instancing views.')
         self.win.views.add_view(SettingsView(self), 'settings')
