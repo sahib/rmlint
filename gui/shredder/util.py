@@ -324,7 +324,7 @@ class PopupMenu(Gtk.Menu):
     Otherwise it is a normal Gtk.Menu and can be used as such.
     '''
     def __init__(self):
-        Gtk.Menu.__init__(self)
+        super().__init__()
 
     def _add_item(self, item):
         """Append and show_all for safety"""
@@ -357,13 +357,6 @@ class PopupMenu(Gtk.Menu):
         '''Add a Gtk.SeparatorMenuItem to the Menu.
         '''
         self._add_item(Gtk.SeparatorMenuItem())
-
-    def simple_popup(self, button_event):
-        'A simpler version of GtkMenu.popup(); only requiring GdkEventButton.'
-        self.popup(
-            None, None, None, None,
-            button_event.button, button_event.time
-        )
 
 
 ########################

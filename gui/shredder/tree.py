@@ -874,7 +874,7 @@ class PathTreeView(Gtk.TreeView):
 
         menu = self.on_show_menu()
         if menu:
-            menu.simple_popup(event)
+            menu.popup_at_pointer(event)
 
     #######################
     # MENU ENTRY HANDLING #
