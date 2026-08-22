@@ -56,7 +56,7 @@ def scrolled(widget):
 class IconButton(Gtk.Button):
     """Button with easy icon support."""
     def __init__(self, icon_name, label=None):
-        Gtk.Button.__init__(self)
+        super().__init__()
 
         box = Gtk.Box()
         box.add(
@@ -84,7 +84,7 @@ class IconButton(Gtk.Button):
 class SuggestedButton(IconButton):
     """Gtk.Button with suggested-action style class pre-added."""
     def __init__(self, text=None):
-        IconButton.__init__(self, 'object-select-symbolic', text or 'Apply')
+        super().__init__('object-select-symbolic', text or 'Apply')
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_SUGGESTED_ACTION
         )
@@ -93,7 +93,7 @@ class SuggestedButton(IconButton):
 class DestructiveButton(IconButton):
     """Gtk.Button with destructive style class pre-added."""
     def __init__(self, text=None):
-        IconButton.__init__(self, 'user-trash-symbolic', text or 'Cancel')
+        super().__init__('user-trash-symbolic', text or 'Cancel')
         self.get_style_context().add_class(
             Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION
         )
@@ -138,7 +138,7 @@ def create_searchbar(win):
 class InfoBar(Gtk.InfoBar):
     """Easier to use version Gtk.InfoBar."""
     def __init__(self):
-        Gtk.InfoBar.__init__(self)
+        super().__init__()
         self._label = Gtk.Label()
 
         self.set_show_close_button(True)
@@ -147,11 +147,11 @@ class InfoBar(Gtk.InfoBar):
         self.set_no_show_all(True)
         self.connect('response', self.on_response)
 
-    def show(self, message, message_type):
+    def show_message(self, message, message_type):
         """Show with a certain message and severity level."""
         self.set_message_type(message_type)
         self._label.set_markup(GLib.markup_escape_text(message, -1))
-        Gtk.InfoBar.show(self)
+        super().show()
 
     def on_response(self, _, response_id):
         """Just hide once an action was done."""
@@ -168,7 +168,8 @@ class View(Gtk.Grid):
     }
 
     def __init__(self, app, sub_title=None):
-        Gtk.Grid.__init__(self)
+        super().__init__()
+
         self.scw = Gtk.ScrolledWindow()
         self.scw.set_hexpand(True)
 
@@ -256,7 +257,7 @@ class View(Gtk.Grid):
               This is slightly restarted and basically makes
               the message_type parameter useless.
         """
-        self.infobar.show(message, message_type)
+        self.infobar.show_message(message, message_type)
 
     def hide_infobar(self):
         """Hide an infobar (if displayed)
@@ -368,7 +369,8 @@ class CellRendererSize(Gtk.CellRendererText):
     size = GObject.Property(type=float, default=0)
 
     def __init__(self, **kwargs):
-        Gtk.CellRendererText.__init__(self, **kwargs)
+        super().__init__(**kwargs)
+
         self.connect('notify::size', CellRendererSize._transform_size)
 
     def _transform_size(self, _):
@@ -402,7 +404,7 @@ def pretty_seconds(second_diff):
         return _rnd(second_diff / 3600) + " hours ago"
 
 
-def pretty_date(time=False):
+def pretty_date(time):
     """Get a datetime object or an int() Epoch timestamp and return a
     pretty string like 'an hour ago', 'Yesterday', '3 months ago',
     'just now', etc
@@ -430,7 +432,8 @@ class CellRendererModifiedTime(Gtk.CellRendererText):
     mtime = GObject.Property(type=int, default=0)
 
     def __init__(self, **kwargs):
-        Gtk.CellRendererText.__init__(self, **kwargs)
+        super().__init__(**kwargs)
+
         self.connect(
             'notify::mtime',
             CellRendererModifiedTime._transform_mtime
@@ -452,7 +455,8 @@ class CellRendererCount(Gtk.CellRendererText):
     count = GObject.Property(type=int, default=-1)
 
     def __init__(self, **kwargs):
-        Gtk.CellRendererText.__init__(self, **kwargs)
+        super().__init__(**kwargs)
+
         self.connect(
             'notify::count',
             CellRendererCount._transform_count
@@ -507,7 +511,8 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
     tag = GObject.Property(type=int, default=NodeState.DUPLICATE)
 
     def __init__(self, **kwargs):
-        Gtk.CellRendererPixbuf.__init__(self, **kwargs)
+        super().__init__(**kwargs)
+
         self.set_alignment(0.0, 0.6)
 
     def do_render(self, ctx, widget, bg, cell, *_):
@@ -555,7 +560,7 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
 class ChoiceRow(Gtk.ListBoxRow):
     """Row representing a single choice"""
     def __init__(self, value, is_default, capitalize=False):
-        Gtk.ListBoxRow.__init__(self)
+        super().__init__()
 
         self.value, self.is_default = value, is_default
 
@@ -612,7 +617,8 @@ class ChoiceRow(Gtk.ListBoxRow):
 class CurrentChoiceLabel(Gtk.Label):
     """Helper class for displaying the current choice as label"""
     def __init__(self, text):
-        Gtk.Label.__init__(self)
+        super().__init__()
+
         self.set_use_markup(True)
         self.set_choice(text)
 
@@ -649,7 +655,8 @@ class MultipleChoiceButton(Gtk.Button):
     }
 
     def __init__(self, values, default, selected):
-        Gtk.Button.__init__(self)
+        super().__init__()
+
         self._selected_choice = selected
         self.set_relief(Gtk.ReliefStyle.NONE)
         self.set_can_focus(False)
@@ -746,7 +753,7 @@ class FileSizeSpinButton(Gtk.Box):
     }
 
     def __init__(self):
-        Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
 
         self._last_val, self._curr_exp = 1, 1
         self._units = MultipleChoiceButton(
@@ -831,7 +838,8 @@ class FileSizeRange(Gtk.Grid):
     }
 
     def __init__(self, min_val, max_val):
-        Gtk.Grid.__init__(self)
+        super().__init__()
+
         self._min_wdgt = FileSizeSpinButton()
         self._max_wdgt = FileSizeSpinButton()
         self._min_wdgt.set_bytes(min_val)

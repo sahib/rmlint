@@ -28,12 +28,17 @@ if Polkit is not None:
         print('running without Polkit')
         Polkit = None
 
-# Internal:
 from shredder.runner import Script
-from shredder.util import IconButton, MultipleChoiceButton, SuggestedButton, View, scrolled, size_to_human_readable
+from shredder.util import (
+    IconButton,
+    MultipleChoiceButton,
+    SuggestedButton,
+    View,
+    scrolled,
+    size_to_human_readable,
+)
 
 LOGGER = logging.getLogger('editor')
-
 
 REMOVED_LABEL = '''<big>{s}</big><small> {n} removed</small>
 <small>Currently {t}</small> <b><big>{p}</big></b>
@@ -124,7 +129,6 @@ try:
 # Fallback to the normal Gtk.TextView if no GtkSource.View could be imported
 # This is the bare minimum we support. It's neither pretty nor very useful.
 except ImportError:
-
     def _create_source_view():
         """Create a suitable text view + buffer for showing a sh script."""
         LOGGER.info('No GtkSourceView found.')
@@ -140,7 +144,6 @@ except ImportError:
 
         def next_hop(self, *_):
             """No-op"""
-            pass
 
     def _set_source_style(*_):
         """If supported, set a color scheme by name."""
@@ -193,7 +196,7 @@ def _create_finished_screen(callback):
 class RunningLabel(Gtk.Label):
     """Centered large label showing a size sum and the current deleted path."""
     def __init__(self):
-        Gtk.Label.__init__(self)
+        super().__init__()
 
         # Basename is more important:
         self.set_ellipsize(Pango.EllipsizeMode.START)
@@ -240,7 +243,7 @@ class RunButton(IconButton):
     dry_run = GObject.Property(type=bool, default=True)
 
     def __init__(self, icon, label, state_btn):
-        IconButton.__init__(self, icon, label)
+        super().__init__(icon, label)
         self.state = state_btn
         self.state.connect('notify::active', self._toggle_dry_run)
 
@@ -309,7 +312,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
     }
 
     def __init__(self, editor_view):
-        Gtk.FileChooserWidget.__init__(self)
+        super().__init__()
 
         self.editor_view = editor_view
         self.set_select_multiple(False)
@@ -432,7 +435,7 @@ class OverlaySaveButton(Gtk.Overlay):
     }
 
     def __init__(self):
-        Gtk.Overlay.__init__(self)
+        super().__init__()
 
         self._box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self._box.get_style_context().add_class(
@@ -482,7 +485,7 @@ class OverlaySaveButton(Gtk.Overlay):
 class EditorView(View):
     """Actual view class."""
     def __init__(self, win):
-        View.__init__(self, win)
+        super().__init__(win)
 
         self._last_runner = None
         self.script = Script.create_dummy()

@@ -40,7 +40,7 @@ def _guess_rmlint_version():
 class AboutDialog(Gtk.AboutDialog):
     """GtkAboutDialog for Shreddder"""
     def __init__(self, app_win):
-        Gtk.AboutDialog.__init__(self)
+        super().__init__()
 
         try:
             buttons = list(self.get_action_area())

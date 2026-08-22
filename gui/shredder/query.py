@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """Implement a very small query language useful for filtering.
 
 Beside simple string matching the search should be able to
@@ -9,7 +8,6 @@ This is a valid example for example:
     Hello world size:2K-3M count:2,4-10 mtime:today
 """
 
-# Stdlib:
 import logging
 import re
 from collections import defaultdict
@@ -19,7 +17,6 @@ try:
     HAS_PARSEDATETIME = True
 except ImportError:
     HAS_PARSEDATETIME = False
-
 
 LOGGER = logging.getLogger('query')
 
@@ -92,10 +89,7 @@ class Query:
         if not check_numeric(self.mtimes, mtime):
             return False
 
-        if not check_numeric(self.amounts, count):
-            return False
-
-        return True
+        return check_numeric(self.amounts, count)
 
 
 def parse_generic_range(value, converter):
@@ -113,7 +107,7 @@ def parse_generic_range(value, converter):
             try:
                 parsed = converter(sub)
             except ValueError as err:
-                LOGGER.warning('Could not convert value: %s', str(err))
+                LOGGER.warning("Could not convert value: %s", err)
             else:
                 if parsed:
                     sub_results.append(parsed)

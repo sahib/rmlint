@@ -208,7 +208,7 @@ class PathTrie(GObject.Object):
     }
 
     def __init__(self, root_paths=None):
-        GObject.Object.__init__(self)
+        super().__init__()
 
         self.root = PathNode('/', None, {})
         self.sub_roots = []
@@ -801,7 +801,7 @@ def _create_column(title, id_, renderers, fixed_width=100):
 class PathTreeView(Gtk.TreeView):
     """A GtkTreeView that is readily configured for using PathTreeModel"""
     def __init__(self):
-        Gtk.TreeView.__init__(self)
+        super().__init__()
 
         # Enable separator lines:
         self.set_grid_lines(Gtk.TreeViewGridLines.NONE)

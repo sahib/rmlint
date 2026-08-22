@@ -25,7 +25,7 @@ class DeferSizeLabel(Gtk.Bin):
     is displayed as normal text label.
     """
     def __init__(self, path):
-        Gtk.Bin.__init__(self)
+        super().__init__()
 
         spinner = Gtk.Spinner()
         spinner.start()
@@ -71,7 +71,8 @@ class LocationEntry(Gtk.ListBoxRow):
         }
 
     def __init__(self, name, path, themed_icon, fill_level=None):
-        Gtk.ListBoxRow.__init__(self)
+        super().__init__()
+
         self.set_size_request(-1, 80)
         self.set_can_focus(False)
         self.themed_icon = themed_icon
@@ -215,7 +216,7 @@ def load_saved_entries():
         with open(cache_file_path()) as fd:
             return json.loads(fd.read())
     except OSError as exc:
-        LOGGER.warning(f"Failed to get location entries: {exc}")
+        LOGGER.warning("Failed to get location entries: %s", exc)
     except Exception:
         LOGGER.exception("Failed to get location entries unexpected")
 
@@ -233,7 +234,8 @@ def store_saved_entries(entries):
 class LocationView(View):
     """The actual view instance."""
     def __init__(self, app):
-        View.__init__(self, app)
+        super().__init__(app)
+
         self.selected_locations = []
         self.known_paths = set()
         self._set_title()
@@ -326,7 +328,7 @@ class LocationView(View):
 
         recent_mgr = Gtk.RecentManager.get_default()
         if not recent_mgr.add_full(path, data):
-            LOGGER.warning('Could not add to recently used: ' + path)
+            LOGGER.warning("Could not add to recently used: %s", path)
 
     def load_entries_from_disk(self, entries):
         LOGGER.info('Loading entries initially')
@@ -376,10 +378,9 @@ class LocationView(View):
                     ])
                 )
             except Exception as exc:
-                LOGGER.warning("Failed to get fs info for {}: {}".format(
+                LOGGER.warning("Failed to get fs info for %s: %s",
                     mount.get_name(),
-                    exc,
-                ))
+                    exc)
                 continue
 
             self.add_entry(
@@ -399,8 +400,7 @@ class LocationView(View):
                 continue
 
             path = item.get_uri()
-            if path.startswith('file://'):
-                path = path[7:]
+            path = path.removeprefix('file://')
 
             self.add_entry(
                 os.path.basename(path),
@@ -418,7 +418,7 @@ class LocationView(View):
             return
 
         if path in self.known_paths:
-            LOGGER.info('In known paths: ' + path)
+            LOGGER.info("In known paths: %s", path)
             return
 
         entry = LocationEntry(name, path, icon, fill_level)
@@ -583,7 +583,7 @@ class LocationView(View):
     def _del_clicked(self, _):
         """Delete all selected LocationEntries."""
         for row in self.selected_locations:
-            LOGGER.debug('Removing location entry:' + row.path)
+            LOGGER.debug("Removing location entry: %s", row.path)
             self.box.remove(row)
 
             try:

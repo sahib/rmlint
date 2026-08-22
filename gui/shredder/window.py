@@ -24,7 +24,8 @@ class ViewSwitcher(Gtk.Box):
     Looks like a linked two button box on the outside.
     """
     def __init__(self, stack):
-        Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
+
         self._stack = stack
         self._prev = None
         self._switch_to_previous_next = False
@@ -157,7 +158,7 @@ class ViewSwitcher(Gtk.Box):
 class HeaderBar(Gtk.HeaderBar):
     """Container for the headerbar logic."""
     def __init__(self):
-        Gtk.HeaderBar.__init__(self)
+        super().__init__()
 
         self.set_title(shredder.APP_TITLE)
         self.set_subtitle(shredder.APP_DESCRIPTION)
@@ -172,7 +173,7 @@ class HeaderBar(Gtk.HeaderBar):
 def _create_item(name, action, icon, variant=None):
     """Create a GMenuItem from an action, optionally with an icon"""
     if variant is not None:
-        name = f'{name} ({str(variant)})'
+        name = f'{name} ({variant!s})'
 
     item = Gio.MenuItem.new(name, action)
     item.set_icon(Gio.ThemedIcon.new(icon))
@@ -186,8 +187,8 @@ def _create_item(name, action, icon, variant=None):
 class MainWindow(Gtk.ApplicationWindow):
     """Shredder's top level GtkApplicationWindow"""
     def __init__(self, application):
-        Gtk.ApplicationWindow.__init__(
-            self, title='Shredder', application=application
+        super().__init__(
+            title='Shredder', application=application
         )
 
         # Set the css name:

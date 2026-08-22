@@ -26,7 +26,7 @@ class ResultActionBar(Gtk.ActionBar):
     }
 
     def __init__(self, view):
-        Gtk.ActionBar.__init__(self)
+        super().__init__()
 
         left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         left_box.get_style_context().add_class("linked")
@@ -117,7 +117,7 @@ class RunnerView(View):
         - model: The data.
     """
     def __init__(self, app):
-        View.__init__(self, app, 'Running…')
+        super().__init__(app, 'Running…')
 
         # Public: The runner.
         self.runner = None

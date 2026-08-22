@@ -19,7 +19,14 @@ from operator import itemgetter
 
 from gi.repository import GLib, Gtk
 
-from shredder.util import DestructiveButton, FileSizeRange, MultipleChoiceButton, SuggestedButton, View
+from shredder.util import (
+    DestructiveButton,
+    FileSizeRange,
+    MultipleChoiceButton,
+    SuggestedButton,
+    View,
+)
+
 
 LOGGER = logging.getLogger('settings')
 
@@ -122,8 +129,8 @@ VARIANT_TO_WIDGET = {
 class SettingsView(View):
     """Generic GSettingsView in a modern Gnome like appearance."""
     def __init__(self, app):
-        View.__init__(
-            self, app, sub_title='Configure how duplicates are searched'
+        super().__init__(
+            app, sub_title='Configure how duplicates are searched'
         )
 
         self._grid = Gtk.Grid()
@@ -264,9 +271,7 @@ class SettingsView(View):
 
             description = key.get_description()
             if description:
-                description = '<small>{desc}</small>'.format(
-                    desc=key.get_description()
-                )
+                description = f'<small>{key.get_description()}</small>'
 
             # Get a fitting, readily prepared configure widget
             val_widget = constructor(gst, key_name, summary, description)
@@ -300,7 +305,7 @@ class SettingsView(View):
             widget.set_sensitive(state)
             widget.set_opacity(1.0 if state else lower)
 
-        for _, metadata in self.metadata.items():
+        for metadata in self.metadata.values():
             section_visible = 0
 
             for key_name, info in metadata.items():
