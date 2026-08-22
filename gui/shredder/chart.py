@@ -544,7 +544,7 @@ class ChartStack(Gtk.Stack):
         self.add_named(self.chart, ChartStack.CHART)
 
         self.empty_label = Gtk.Label(
-            '<span font="90">✔</span>\nNothing found!'
+            label='<span font="90">✔</span>\nNothing found!'
         )
         self.empty_label.set_use_markup(True)
         self.empty_label.get_style_context().add_class(

@@ -342,7 +342,7 @@ class ScriptSaverDialog(Gtk.FileChooserWidget):
 
         self.connect('selection-changed', self.on_selection_changed)
 
-        file_type_label = Gtk.Label('<b>Filetype</b>')
+        file_type_label = Gtk.Label(label='<b>Filetype</b>')
         file_type_label.set_use_markup(True)
         file_type_label.props.margin_end = 5
         file_type_label.get_style_context().add_class(

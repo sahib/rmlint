@@ -38,7 +38,10 @@ class ViewSwitcher(Gtk.Box):
                 (self.go_left, Gtk.ArrowType.LEFT, -1),
                 (self.go_right, Gtk.ArrowType.RIGHT, +1)
         ):
-            btn.add(Gtk.Arrow(arrow, Gtk.ShadowType.NONE))
+            btn.add(Gtk.Arrow(
+                arrow_type=arrow,
+                shadow_type=Gtk.ShadowType.NONE,
+            ))
             btn.connect('clicked', partial(
                 self._set_widget_at, step=direction
             ))

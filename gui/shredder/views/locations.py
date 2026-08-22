@@ -50,7 +50,7 @@ class DeferSizeLabel(Gtk.Bin):
             text = ''
 
         self.remove(self.get_child())
-        self.add(Gtk.Label(text))
+        self.add(Gtk.Label(label=text))
         self.show_all()
 
 
@@ -83,14 +83,14 @@ class LocationEntry(Gtk.ListBoxRow):
         self.path, self.name = path, name
 
         name_label = Gtk.Label(
-            f'<b>{GLib.markup_escape_text(name)}</b>'
+            label=f'<b>{GLib.markup_escape_text(name)}</b>'
         )
         name_label.set_use_markup(True)
         name_label.set_hexpand(True)
         name_label.set_halign(Gtk.Align.START)
 
         path_label = Gtk.Label(
-            f'<small>{GLib.markup_escape_text(path)}</small>'
+            label=f'<small>{GLib.markup_escape_text(path)}</small>'
         )
         path_label.set_use_markup(True)
         path_label.set_hexpand(True)
@@ -128,7 +128,10 @@ class LocationEntry(Gtk.ListBoxRow):
 
         # Quick-select button with arrow inside:
         shortcut_btn = Gtk.Button()
-        shortcut_btn.add(Gtk.Arrow(Gtk.ArrowType.RIGHT, Gtk.ShadowType.NONE))
+        shortcut_btn.add(Gtk.Arrow(
+            arrow_type=Gtk.ArrowType.RIGHT,
+            shadow_type=Gtk.ShadowType.NONE
+        ))
         shortcut_btn.set_relief(Gtk.ReliefStyle.NONE)
         shortcut_btn.set_vexpand(False)
         shortcut_btn.set_valign(Gtk.Align.START)
@@ -243,7 +246,7 @@ class LocationView(View):
         self.box = Gtk.ListBox()
         self.box.set_selection_mode(Gtk.SelectionMode.NONE)
         self.box.set_hexpand(True)
-        self.box.set_placeholder(Gtk.Label('No locations mounted.'))
+        self.box.set_placeholder(Gtk.Label(label='No locations mounted.'))
         self.box.set_valign(Gtk.Align.FILL)
         self.box.set_vexpand(True)
 

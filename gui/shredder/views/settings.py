@@ -194,8 +194,8 @@ class SettingsView(View):
         summary: A short summary to show.
         desc: A longer description.
         """
-        desc_label = Gtk.Label(desc or '')
-        summ_label = Gtk.Label(summary or '')
+        desc_label = Gtk.Label(label=desc or '')
+        summ_label = Gtk.Label(label=summary or '')
 
         desc_label.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL

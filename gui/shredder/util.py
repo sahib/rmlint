@@ -68,7 +68,7 @@ class IconButton(Gtk.Button):
 
         self.label = None
         if label is not None:
-            self.label = Gtk.Label(label)
+            self.label = Gtk.Label(label=label)
             self.label.set_margin_start(5)
             box.add(self.label)
 
@@ -577,7 +577,7 @@ class ChoiceRow(Gtk.ListBoxRow):
         else:
             display_value = value
 
-        label = Gtk.Label(display_value)
+        label = Gtk.Label(label=display_value)
         label.props.xalign = 0
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -846,7 +846,7 @@ class FileSizeRange(Gtk.Grid):
         self._max_wdgt.set_hexpand(True)
 
         self.attach(self._min_wdgt, 0, 0, 1, 1)
-        self.attach(Gtk.Label(' to '), 1, 0, 1, 1)
+        self.attach(Gtk.Label(label=' to '), 1, 0, 1, 1)
         self.attach(self._max_wdgt, 2, 0, 1, 1)
 
         self._min_wdgt.connect('value-changed', self.on_value_changed)
