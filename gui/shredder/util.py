@@ -538,18 +538,15 @@ class CellRendererLint(Gtk.CellRendererPixbuf):
         ctx.move_to(cell.x - fw + xpad, cell.y + fh + ypad)
         PangoCairo.show_layout(ctx, layout)
 
-    def do_get_size(self, _, cell_area):
+    def do_get_preferred_width(self, _):
         xpad = self.get_property('xpad')
-        width = height = xpad * 2 + CellRendererLint.ICON_SIZE
+        width = xpad * 2 + CellRendererLint.ICON_SIZE
+        return width, width
 
-        x_loc, y_loc = 0, 0
-        if cell_area:
-            xalign = self.get_property('xalign')
-            yalign = self.get_property('yalign')
-            x_loc = max(0, xalign * (cell_area.width - width))
-            y_loc = max(0, yalign * (cell_area.height - height))
-
-        return x_loc, y_loc, width, height
+    def do_get_preferred_height(self, _):
+        xpad = self.get_property('xpad')
+        height = xpad * 2 + CellRendererLint.ICON_SIZE
+        return height, height
 
 
 ###############################
