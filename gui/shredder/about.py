@@ -1,12 +1,9 @@
 """Own module for the about dialog."""
-import logging
 import re
 
 from gi.repository import Gio, Gtk
 
 from shredder import APP_DESCRIPTION, APP_TITLE
-
-LOGGER = logging.getLogger('about')
 
 MAIN_AUTHORS = [
     'Christopher Pahl <sahib@online.de>',
@@ -42,15 +39,6 @@ class AboutDialog(Gtk.AboutDialog):
     def __init__(self, app_win):
         super().__init__()
 
-        try:
-            buttons = list(self.get_action_area())
-            close_button = buttons[2]
-            close_button.connect('clicked', lambda _: self.destroy())
-            license_button = buttons[1]
-            license_button.set_no_show_all(True)
-        except IndexError:
-            LOGGER.error('GtkAboutDialog layout changed...')
-
         self.set_transient_for(app_win)
         self.set_modal(True)
         self.set_license_type(Gtk.License.GPL_3_0)
@@ -60,10 +48,9 @@ class AboutDialog(Gtk.AboutDialog):
         self.set_version(_guess_rmlint_version())
         self.set_authors(MAIN_AUTHORS)
         self.set_documenters(DOCUMENTERS)
-        self.set_website('http://rmlint.rtfd.org')
+        self.set_website('https://rmlint.rtfd.org')
         self.set_website_label('rmlint.rtfd.org')
         self.set_logo(None)
-        self.show_all()
 
 
 if __name__ == '__main__':
@@ -84,7 +71,7 @@ if __name__ == '__main__':
         win.set_default_icon(_load_app_icon())
 
         about = AboutDialog(win)
-        about.show()
+        about.show_all()
 
         Gtk.main()
 
