@@ -232,16 +232,18 @@ class SettingsView(View):
 
     def reset_to_defaults(self):
         """Reset whole view and keys to their defaults"""
-        for key_name in self.app.settings.list_keys():
+        schema = self.app.settings.props.settings_schema
+        for key_name in schema.list_keys():
             self.app.settings.reset(key_name)
 
     def build(self):
         """Built all entries and sections"""
         gst = self.app.settings
+        schema = gst.props.settings_schema
         entry_rows = []
 
-        for key_name in gst.list_keys():
-            key = gst.get_property('settings-schema').get_key(key_name)
+        for key_name in schema.list_keys():
+            key = schema.get_key(key_name)
             variant_key = gst.get_value(key_name)
 
             # Try to find a way to render this option:
