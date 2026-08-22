@@ -53,21 +53,6 @@ def scrolled(widget):
     return scw
 
 
-def get_theme_color(widget, background=True, state=Gtk.StateFlags.SELECTED):
-    """Get current theme's color for a certain widget being in `state`"""
-    color = None
-    sctx = widget.get_style_context()
-    if background:
-        color = sctx.get_background_color(state)
-    else:
-        color = sctx.get_color(state)
-        return '#{r:0^2x}{g:0^2x}{b:0^2x}'.format(
-            r=int(255 * color.red),
-            g=int(255 * color.green),
-            b=int(255 * color.blue)
-        )
-
-
 class IconButton(Gtk.Button):
     """Button with easy icon support."""
     def __init__(self, icon_name, label=None):
