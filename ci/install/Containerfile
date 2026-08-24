@@ -1,0 +1,17 @@
+# container to test how scons install (with or without DESTDIR, etc) behave under Debian
+#
+# podman build -t rmlint/ci/install/deb ci/install
+# podman run --rm -it -v "$PWD":/src:ro,Z rmlint/ci/install/deb
+FROM debian:sid-slim
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends git rsync \
+        scons pkgconf gettext build-essential libglib2.0-dev libjson-glib-dev \
+	libelf-dev libblkid-dev \
+	python3-sphinx python3-sphinx-bootstrap-theme \
+        python3-setuptools python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 librsvg2-common python3-colorlog \
+        python3-setuptools python3-build python3-installer &&\
+	rm -fr /var/lib/apt/lists/*
+
+WORKDIR /rmlint
+CMD ["bash", "-c", "git -C /src ls-files -c --exclude-standard -z | rsync -a --from0 --files-from=- /src/ /rmlint/ && exec bash"]

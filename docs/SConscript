@@ -41,7 +41,7 @@ if SPHINX_BINARY:
 
     if 'install' in COMMAND_LINE_TARGETS:
         man_install = env.InstallPerm(
-            '$PREFIX/share/man/man1',
+            '$staged_prefix/share/man/man1',
             [manpage],
             0o644,
         )
@@ -62,5 +62,5 @@ elif {'man', 'docs'} & set(COMMAND_LINE_TARGETS):
     Exit(1)
 
 
-if 'uninstall' in COMMAND_LINE_TARGETS:
+if SPHINX_BINARY and 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1')

@@ -1,63 +1,221 @@
+import configparser
 import os
-import shutil
 import subprocess
+import sys
+import sysconfig
+from importlib import metadata, util
+from pathlib import Path
+
+from SCons.Errors import UserError
 
 Import('env')
+Import('VERSION_MAJOR')
+Import('VERSION_MINOR')
+Import('VERSION_PATCH')
+Import('create_uninstall_target')
+
+GUI_DIR = 'gui'
+genv = env.Clone()
+genv['ENV'].update(
+    (key, os.environ[key])
+    for key in ('SOURCE_DATE_EPOCH', 'DEB_PYTHON_INSTALL_LAYOUT')
+    if key in os.environ
+)
+
+# Written by the old setup.py-based install; still honoured on uninstall.
+# TODO: Keep it until 2.12.0
+LEGACY_FILES_RECORD = os.path.join(GUI_DIR, '.files.txt')
+
+PYTHON = sys.executable
+PREFIX: Path = env['PREFIX']
+DESTDIR = env['DESTDIR']
+STAGED_PREFIX = env['staged_prefix']
 
 GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
-GUI_DIR = 'gui'
-FILES_RECORD = '.files.txt'
-FILES_RECORD_FULL = os.path.join(GUI_DIR, FILES_RECORD)
-PREFIX = env['PREFIX']
+RESOURCE_DIR = 'shredder/resources'
+GRESOURCE = RESOURCE_DIR + '/shredder.gresource'
+GRESOURCE_XML = RESOURCE_DIR + '/shredder.gresource.xml'
+COMPILE_SCHEMAS = GetOption('with_compile-glib-schemas')
 
-PYTHON = ARGUMENTS.get('PYTHON', 'python3')
+VERSION = f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}'
 
-if 'install' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
-    python_exe = shutil.which(PYTHON)
-    if not python_exe:
-        print(f'!! Unable to find {PYTHON} executable.')
-        print('!! Will build no GUI.')
-    else:
-        if GetOption('with_compile-glib-schemas'):
-            env['ENV']['COMPILE_GLIB_SCHEMA'] = '1'
-        py_install = env.Command(
-            'always.install',
-            ['setup.py'],
-            f'cd {GUI_DIR} && {python_exe} setup.py install '
-            f'--prefix "{PREFIX}" --record {FILES_RECORD}'
+GSCHEMA_SOURCE = 'shredder/resources/org.gnome.Shredder.gschema.xml'
+DATA_FILES = [
+    (Path('$PREFIX/share/icons/hicolor/scalable/apps/shredder.svg'),
+     'shredder/resources/shredder.svg'),
+    (Path(f'$PREFIX/{GSCHEMA_DIR_SUFFIX}/org.gnome.Shredder.gschema.xml'),
+     GSCHEMA_SOURCE),
+    (Path('$PREFIX/share/applications/shredder.desktop'),
+     'shredder.desktop'),
+]
+
+purelib = sysconfig.get_path("purelib", vars={"base": PREFIX})
+
+# XXX: Debian have '/usr' in bases and appends 'local/' to it
+if DEBIAN_OK := ('deb_system' in sysconfig.get_scheme_names()
+                 and PREFIX.samefile(Path('/usr/local'))
+                 and purelib.startswith('/usr/local/local/lib/python')):
+    purelib = purelib.replace('/usr/local/local/', '/usr/local/', 1)
+
+def err_externally_managed():
+    if DESTDIR or GetOption('allow_externally_managed') or DEBIAN_OK:
+        return
+
+    stdlib = sysconfig.get_path("stdlib")
+    marker = os.path.join(stdlib, 'EXTERNALLY-MANAGED')
+    if not os.path.isfile(marker):
+        return
+
+    def norm(path): return Path(os.path.normpath(path))
+
+    if not norm(Path(sysconfig.get_path("purelib"))).is_relative_to(norm(PREFIX)):
+        config = configparser.ConfigParser(interpolation=None)
+        config.read(marker, encoding='utf-8')
+        error = config.get(
+            'externally-managed',
+            'Error',
+            fallback='This Python context is externally managed.',
         )
-        env.Alias('install', py_install)
+        print(f'Your distribution has something to say to you:\n {error}')
+        raise UserError(f"Externally managed Python on {stdlib}. "
+                        "Change PREFIX= or use --allow-externally-managed to override.")
 
+#==============================================================================#
+#                                  uninstall                                   #
+#==============================================================================#
 
-if 'uninstall' in COMMAND_LINE_TARGETS and GetOption('with_gui'):
-    def uninstall_python_module(**kwargs):
+if 'uninstall' in COMMAND_LINE_TARGETS:
+    data_uninstalls = [create_uninstall_target(env, dest)
+                       for dest, _ in DATA_FILES]
+
+    def delete_file(path: Path, parent_dirs):
         try:
-            with open(FILES_RECORD_FULL, 'r') as handle:
-                for path in handle:
-                    path = path.strip()
-                    try:
-                        os.remove(path)
-                    except OSError as err:
-                        print('Unable to delete', path, ':', err)
-
+            path.unlink()
+            if path.parent.name != 'bin':  # don't delete /usr/local/bin
+                parent_dirs.add(path.parent)
+        except FileNotFoundError:
+            return
         except OSError as err:
-            print(f'Could not open {FILES_RECORD_FULL}: ', err)
+            print(f"Unable to delete {path}: {err}", file=sys.stderr)
 
-        if not GetOption('with_compile-glib-schemas'):
+    def prune_empty_dirs(parent_dirs):
+        for directory in sorted(parent_dirs, key=lambda p: len(p.parts), reverse=True):
+            try:
+                directory.rmdir()
+            except OSError:
+                pass  # possibly not empty, keep it
+
+    def uninstall_wheel():
+        err_externally_managed()
+
+        parent_dirs = set()
+        for dist in metadata.distributions(path=[purelib]):
+            if dist.metadata['Name'] != 'shredder':
+                continue
+
+            for file in dist.files or ():
+                path = dist.locate_file(file)
+                if file.suffix == '.py':
+                    for optimise in ('', 1, 2):
+                        pyc = Path(util.cache_from_source(path, optimization=optimise))
+                        delete_file(pyc, parent_dirs)
+                delete_file(path, parent_dirs)
+        prune_empty_dirs(parent_dirs)
+
+    def uninstall_legacy_record():
+        """Delete files recorded by the old setup.py-based install."""
+        if not os.path.exists(LEGACY_FILES_RECORD):
             return
 
-        # recompile remaining glib schemas after deleting ours
-        print('Recompiling glib schemas')
-        gschema_dir = os.path.join(env['PREFIX'], GSCHEMA_DIR_SUFFIX)
-        try:
+        parent_dirs = set()
+        with open(LEGACY_FILES_RECORD) as handle:
+            for line in handle:
+                if line.strip():
+                    delete_file(Path(line.strip()), parent_dirs)
+
+        prune_empty_dirs(parent_dirs)
+        os.remove(LEGACY_FILES_RECORD)
+
+    def uninstall_gui(target, source, env):
+        uninstall_wheel()
+        uninstall_legacy_record()
+
+        if not COMPILE_SCHEMAS:
+            return
+
+        # recompile glib schemas after deleting ours
+        print('Recompiling glib schemas…')
+        gschema_dir = str(PREFIX / GSCHEMA_DIR_SUFFIX)
+        if os.path.isdir(gschema_dir):
             subprocess.call(['glib-compile-schemas', gschema_dir])
-        except OSError:
-            print('Error recompiling glib schemas post uninstall')
+        else:
+            print('the schema dir is missing; skipped.')
 
-
-    env.Alias('uninstall',
-        env.Command(
-            FILES_RECORD_FULL, '',
-            Action(uninstall_python_module, "Uninstalling recorded files...")
-        )
+    gui_uninstall = env.Command(
+        'shredder.uninstall', '',
+        Action(uninstall_gui, 'Uninstalling shredder…')
     )
+    env.Depends(gui_uninstall, data_uninstalls)
+    env.Alias('uninstall', gui_uninstall)
+    Return()
+
+#==============================================================================#
+#                                    wheel                                     #
+#==============================================================================#
+
+resource_deps = subprocess.check_output(
+    ['glib-compile-resources', '--sourcedir', RESOURCE_DIR,
+    '--generate-dependencies', GRESOURCE_XML],
+    text=True,
+).split()
+
+sources = ([node for node in Glob('shredder/*.py') if node.name != '_version.py']
+           + Glob('shredder/views/*.py'))
+wheel = genv.Command(
+    f'dist/shredder-{VERSION}-py3-none-any.whl',
+    ['pyproject.toml', 'setup.py', '../.version']
+    + sources + [GRESOURCE_XML] + resource_deps,
+    f'cd {GUI_DIR} && {PYTHON} -m build --no-isolation --wheel --outdir dist .'
+)
+
+env.Clean(wheel, [
+    GRESOURCE,
+    'shredder/_version.py',
+    'build',
+    'shredder.egg-info',
+])
+env.Default(wheel)
+
+#==============================================================================#
+#                                   install                                    #
+#==============================================================================#
+
+if 'install' in COMMAND_LINE_TARGETS:
+    err_externally_managed()
+
+    install_cmd = f'{PYTHON} -m installer'
+    if DESTDIR:
+        install_cmd += f' --destdir "{DESTDIR}"'
+    # DEBIAN_OK implies PREFIX=/usr/local
+    # and Debian installs to /usr/local without prefix
+    if not DEBIAN_OK:
+        install_cmd += f' --destdir "{DESTDIR}"'
+    install_cmd += ' $SOURCE'
+    wheel_install = genv.Command('shredder.install', wheel[0], install_cmd)
+
+    data_installs = [
+        env.InstallAs(str(DESTDIR / dest), src)
+        for dest, src in DATA_FILES
+    ]
+    env.Alias('install', [wheel_install] + data_installs)
+
+    if COMPILE_SCHEMAS and not DESTDIR:
+        compile_schemas = env.Command(
+            'shredder.gschemas', GSCHEMA_SOURCE,
+            f'glib-compile-schemas "{PREFIX / GSCHEMA_DIR_SUFFIX}"'
+        )
+        env.Alias('install', compile_schemas)
+    else:
+        print('==> Not compiling glib schemas (--without-compile-glib-schemas).')
+        print('==> You may need to run this after installing:')
+        print(f'==>     glib-compile-schemas {PREFIX / GSCHEMA_DIR_SUFFIX}')

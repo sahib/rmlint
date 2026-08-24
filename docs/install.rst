@@ -111,8 +111,10 @@ Here's a list of readily prepared commands for known operating systems:
     $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev
     # Optional dependencies for building documentation:
     $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
-    # Optional dependencies for the GUI:
-    $ sudo apt install python3-setuptools python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
+    # Optional dependencies for running the GUI:
+    $ sudo apt install  python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
+    # Optional dependencies for installing the GUI:
+    $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
     $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr
 
@@ -188,11 +190,12 @@ build the software from the potentially unstable ``develop`` branch:
 .. code-block:: bash
 
    $ # Omit -b develop if you want to build from the stable master
-   $ git clone -b develop https://github.com/sahib/rmlint.git 
+   $ git clone -b develop https://github.com/sahib/rmlint.git
    $ cd rmlint/
    $ scons --show-config DEBUG=1  # show features and build locally.
    # Install (and build if necessary). For releases you can omit DEBUG=1
-   $ sudo scons DEBUG=1 --prefix=/usr/local install
+   # The default install prefix is /usr/local
+   $ sudo scons DEBUG=1 install
 
 Done!
 
@@ -221,10 +224,14 @@ Note that for the time being, you cannot use it straightforwardly to scan system
 Troubleshooting
 ---------------
 
-On some distributions (especially Debian derived) ``rmlint --gui`` might fail
-with ``/usr/bin/python3: No module named shredder`` (or similar). This is due 
-some incompatible changes on Debian's side.
+The GUI is built and installed as a Python wheel: ``scons install`` places
+the ``shredder`` package in the Python library path belonging to the default
+or chosen ``PREFIX=``.
 
-See `this thread`_ for a workaround using ``PYTHONPATH``.
+With the default ``PREFIX=`` that directory may not be on
+Python's search path. In that case point ``PYTHONPATH`` at the installed
+location, e.g.:
 
-.. _`this thread`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
+.. code-block:: bash
+
+   $ export PYTHONPATH=/usr/local/lib/python3/site-packages

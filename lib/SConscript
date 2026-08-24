@@ -6,6 +6,7 @@ Import('VERSION_NAME')
 Import('create_uninstall_target')
 
 import os
+from pathlib import Path
 
 from rm_build_support import ConfigHeaderBuilder, EmbedPayloadBuilder
 
@@ -34,7 +35,7 @@ FORMATTER_NAMES = {os.path.basename(src) for src, _ in MAYBE_EMBEDED_FORMATTERS}
 
 CONFIG_VALUES = {
     **{key: env[key] for key in ENV_KEYS},
-    'INSTALL_PREFIX': GetOption('actual_prefix') or GetOption('prefix'),
+    'INSTALL_PREFIX': env['PREFIX'],
     'VERSION_MAJOR': VERSION_MAJOR,
     'VERSION_MINOR': VERSION_MINOR,
     'VERSION_PATCH': VERSION_PATCH,
@@ -90,18 +91,19 @@ env.Depends(library, [config, *payloads])
 # announces interest in this.
 INSTALL_LIBRARY = False
 
-if 'install' in COMMAND_LINE_TARGETS and INSTALL_LIBRARY:
-    env.Alias('install', env.Install('$PREFIX/' + GetOption('libdir'), [library]))
-    for header in headers:
-        env.Alias('install', env.Install('$PREFIX/include/rmlint', [header]))
+if INSTALL_LIBRARY:
+    libdir = env['staged_prefix'] / env['LIBDIR']
+    includedir = env['staged_prefix'] / 'include' / 'rmlint'
 
-if 'uninstall' in COMMAND_LINE_TARGETS and INSTALL_LIBRARY:
-    create_uninstall_target(env, '$PREFIX/{}/{}'.format(
-        GetOption('libdir'),
-        os.path.basename(str(library[0]))
-    ))
+    if 'install' in COMMAND_LINE_TARGETS:
+        env.Alias('install', env.Install(str(libdir), [library]))
+        for header in headers:
+            env.Alias('install', env.Install(str(includedir), [header]))
 
-    for header in headers:
-        create_uninstall_target(env, '$PREFIX/include/rmlint/' + str(header))
+    if 'uninstall' in COMMAND_LINE_TARGETS:
+        create_uninstall_target(env, libdir / Path(str(library[0])).name)
+
+        for header in headers:
+            create_uninstall_target(env, includedir / str(header))
 
 Return('library')

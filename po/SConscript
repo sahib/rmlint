@@ -12,13 +12,13 @@ if env['HAVE_MSGFMT']:
         lang = os.path.basename(src.get_abspath())[:-3]
         mo = env.Command(f'{lang}.mo', src, 'msgfmt $SOURCE -o $TARGET')
 
-        path = f'$PREFIX/share/locale/{lang}/LC_MESSAGES/rmlint.mo'
+        path = f'share/locale/{lang}/LC_MESSAGES/rmlint.mo'
 
         if 'install' in COMMAND_LINE_TARGETS:
-            env.Alias('install', env.InstallAs(path, mo))
+            env.Alias('install', env.InstallAs('$staged_prefix/' + path, mo))
 
         if 'uninstall' in COMMAND_LINE_TARGETS:
-            create_uninstall_target(env, path)
+            create_uninstall_target(env, '$PREFIX/' + path)
 
 
 def xgettext():

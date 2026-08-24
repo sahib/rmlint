@@ -1,32 +1,39 @@
+[build-system]
+requires = ["setuptools >= 64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "shredder"
 dynamic = ["version"]
+description = "A graphical user interface to rmlint using GTK+"
+authors = [
+    {name = "Christopher Pahl", email = "sahib@online.de"}
+]
+requires-python = ">= 3.12"
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Environment :: X11 Applications :: GTK",
+    "Programming Language :: Python :: 3",
+]
 dependencies = [
     "colorlog",
     "pycairo",
     "PyGObject",
     "parsedatetime",
 ]
-authors = [
-    {name = "Christopher Pahl", email="sahib@online.de"}
-]
-description = "A graphical user interface to rmlint using GTK+"
-readme = "README.rst"
-license = {file = "COPYING"}
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages]
-find = {exclude = ["bin"]}
-
-[tool.setuptools.package-dir]
-readme = "../README.rst"
-license = "../COPYING"
 
 [project.urls]
 Homepage = "https://rmlint.rtfd.org"
 Documentation = "https://rmlint.readthedocs.io/en/master/"
 Repository = "https://github.com/sahib/rmlint.git"
 Changelog = "https://github.com/sahib/rmlint/blob/master/CHANGELOG.md"
+
+[project.scripts]
+shredder = "shredder:run_gui"
+
+[tool.setuptools]
+packages = ["shredder", "shredder.views"]
+include-package-data = false
+
+[tool.setuptools.package-data]
+shredder = ["resources/*.gresource"]

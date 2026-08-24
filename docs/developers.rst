@@ -101,6 +101,24 @@ Environment Variables
 Variables
 ~~~~~~~~~
 
+:PREFIX=<prefix>:
+
+    Change the installation prefix. By default this is ``/usr/local``, but
+    some users might prefer ``/usr`` or ``/opt``.
+
+:DESTDIR=<destdir>:
+
+    Staging directory like ``/tmp/rootfs``. It is prepended to PREFIX and
+    is mainly useful for packagers.
+
+:LIBDIR=<libdir>:
+
+    This applies only to the static library ``librmlint.a`` installation,
+    which is not installed by default (override in lib/SConscript).
+    Some distributions use separate libdirectories for 64/32 bit.
+    If this happens, you should set the correct one for 64 bit with
+    ``LIBDIR=lib64``.
+
 :O=<level>:
 
     Set the optimization level.
@@ -168,26 +186,6 @@ Variables
 Arguments
 ~~~~~~~~~
 
-:--prefix:
-
-    Change the installation prefix. By default this is ``/usr``, but some users
-    might prefer ``/usr/local`` or ``/opt``. 
-
-:--actual-prefix:
-
-    This is mainly useful for packagers. The ``rmlint`` binary knows where it
-    is installed (which is needed to set e.g. the path to the gettext files).
-    When installing a package, most of the time the build is installed to
-    a local test environment first before being packed to ``/usr``. In this
-    case the ``--prefix`` would be set to the path of the temporary build env,
-    while ``--actual-prefix`` would be set to ``/usr``.
-
-:--libdir:
-
-    Some distributions like Fedora use separate libdirectories for 64/32 bit. 
-    If this happens, you should set the correct one for 64 bit with
-    ``--libdir=lib64``.
-
 :--without-libelf:
     
     Do not link with ``libelf``, which is needed for nonstripped binary
@@ -208,7 +206,7 @@ Arguments
 
 :--without-gui:
 
-    Do not install ``shredder`` (GUI).
+    Do not build or install ``shredder`` (GUI).
 
 :--without-compile-glib-schemas:
 

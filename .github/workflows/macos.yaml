@@ -28,7 +28,8 @@ jobs:
         run: |
           brew install --quiet \
             scons pkgconf glib json-glib
-          pip install -r tests/requirements.txt -r docs/requirements.txt
+          pip install -r tests/requirements.txt -r docs/requirements.txt \
+            setuptools build installer
 
       - name: Build
         run: |

@@ -80,11 +80,13 @@ def InstallPerm(env, dest, files, perm):
     return dest
 
 
-def create_uninstall_target(env, path):
-    env.Command('uninstall-' + path, path, [
+def create_uninstall_target(env, path: str|Path):
+    path = str(path)
+    cmd = env.Command('uninstall-' + path, path, [
         Delete('$SOURCE'),
     ])
     env.Alias('uninstall', 'uninstall-' + path)
+    return cmd
 
 
 ###########################################################################

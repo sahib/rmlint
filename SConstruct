@@ -1,6 +1,7 @@
 import os
 import shlex
 import subprocess
+from pathlib import Path
 
 import SCons.Action
 import SCons.SConf
@@ -28,8 +29,8 @@ from rm_build_support import (
     write_compile_flags,
 )
 
-DEFAULT_PREFIX = '/usr'
-PREFIX_RECORD_FILE = '.prefix.txt'
+DEFAULT_PREFIX = '/usr/local'
+PREFIX_RECORD_FILE = Path('.prefix.txt')
 
 VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME, _ = read_version()
 Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
@@ -39,44 +40,21 @@ Export('find_sphinx_binary')
 # put this function "in" scons
 SConsEnvironment.InstallPerm = InstallPerm
 
-###########################################################################
-#                            Option Parsing                               #
-###########################################################################
-
-def get_default_prefix():
-    if 'uninstall' in COMMAND_LINE_TARGETS:
-        try:
-            with open(PREFIX_RECORD_FILE, 'r', encoding='utf-8') as handle:
-                prefix = handle.read()
-            print(f'===> Using cached installation prefix "{prefix}"')
-            return prefix
-        except OSError as err:
-            print(f'===> Failed to get cached installation prefix: {err}')
-    return DEFAULT_PREFIX
-
-
-AddOption(
-    '--prefix', default=get_default_prefix(),
-    dest='prefix', type='string', nargs=1,
-    action='store', metavar='DIR', help='installation prefix'
-)
-
-AddOption(
-    '--actual-prefix', default=None,
-    dest='actual_prefix', type='string', nargs=1,
-    action='store', metavar='DIR', help='where files will eventually land'
-)
-
-AddOption(
-    '--libdir', default='lib',
-    dest='libdir', type='string', nargs=1,
-    action='store', metavar='DIR', help='libdir name (lib or lib64)'
-)
+#==============================================================================#
+#                                Option Parsing                                #
+#==============================================================================#
 
 AddOption(
     '--show-config', default=False,
     dest='show_config', action='store_true',
     help='print the detected feature summary before building (-n to stop there)'
+)
+
+AddOption(
+    '--allow-externally-managed',
+    action='store_true',
+    dest='allow_externally_managed',
+    help='Allow Shredder installation into an externally managed Python environment',
 )
 
 for suffix in OPTIONAL_FLAGS:
@@ -89,11 +67,42 @@ for suffix in OPTIONAL_FLAGS:
         dest='with_' + suffix
     )
 
-if 'install' in COMMAND_LINE_TARGETS:
-    # record the installation prefix for later uninstall
-    with open(PREFIX_RECORD_FILE, 'w', encoding='utf-8') as f:
-        f.write(GetOption('prefix'))
+#==============================================================================#
+#                                  Prefix(es)                                  #
+#==============================================================================#
 
+def get_default_prefix():
+    if 'uninstall' in COMMAND_LINE_TARGETS:
+        try:
+            prefix = PREFIX_RECORD_FILE.read_text(encoding='utf-8')
+            print(f'===> Using cached installation prefix "{prefix}"')
+            return prefix
+        except OSError as err:
+            print(f'===> Failed to get cached installation prefix: {err}')
+    return DEFAULT_PREFIX
+
+vars = Variables()
+
+vars.Add(PathVariable(
+    'PREFIX',
+    help='installation prefix',
+    default=get_default_prefix(),
+    validator=PathVariable.PathIsDir,
+))
+
+vars.Add(PathVariable(
+    'DESTDIR',
+    help='installation staging directory',
+    default='',
+    validator=PathVariable.PathAccept,
+))
+
+vars.Add(
+    'LIBDIR',
+    help='library installation directory, relative to PREFIX (lib, lib64, etc)',
+    default='lib',
+    validator=lambda _key, value, _env: not Path(value).is_absolute(),
+)
 
 # General Environment
 options = dict(
@@ -105,7 +114,6 @@ options = dict(
     RANLIBCOMSTR=ranlib_library_message,
     SHLINKCOMSTR=link_shared_library_message,
     LINKCOMSTR=link_program_message,
-    PREFIX=GetOption('prefix'),
     ENV = dict([ (key, os.environ[key])
                  for key in os.environ
                  if key in ['PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH']
@@ -116,12 +124,31 @@ if ARGUMENTS.get('VERBOSE') == "1":
     del options['CCCOMSTR']
     del options['LINKCOMSTR']
 
-# Actually instance the Environment with all collected information:
-env = Environment(**options)
+#==============================================================================#
+#                                 Environment                                  #
+#==============================================================================#
 
-###########################################################################
-#                           Dependency Checks                             #
-###########################################################################
+# Actually instance the Environment with all collected information:
+env = Environment(variables=vars, **options)
+Help(vars.GenerateHelpText(env))
+
+env['PREFIX'] = Path(env['PREFIX'])
+if env['DESTDIR']:
+    env['DESTDIR'] = Path(env['DESTDIR'])
+    if not env['PREFIX'].is_absolute():
+        raise UserError('PREFIX must be an absolute path when DESTDIR is specified')
+
+env['staged_prefix'] = (
+    env['DESTDIR'] / env['PREFIX'].relative_to('/')
+    if env['DESTDIR']
+    else env['PREFIX']
+)
+
+#==============================================================================#
+
+if 'install' in COMMAND_LINE_TARGETS and not env['DESTDIR']:
+    # record the installation prefix for later uninstall
+    PREFIX_RECORD_FILE.write_text(str(env['PREFIX']), encoding='utf-8')
 
 # Configuration:
 sc_noexec = None
@@ -133,9 +160,9 @@ if SCons.SConf.dryrun and GetOption('show_config'):
 
 conf = Configure(env, custom_tests=CUSTOM_TESTS)
 
-#######################################################################
-#                      Compiler Checks and Flags                      #
-#######################################################################
+#==============================================================================#
+#                          Compiler Checks and Flags                           #
+#==============================================================================#
 
 if 'CC' in os.environ:
     conf.env.Replace(CC=os.environ['CC'])
@@ -202,6 +229,10 @@ else:
 # check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
 
+#==============================================================================#
+#                               Compiler options                               #
+#==============================================================================#
+
 conf.env['IS_CLANG'] = conf.CheckDeclaration("__clang__")
 
 if conf.env['IS_CLANG']:
@@ -236,7 +267,6 @@ conf.env.Append(CCFLAGS=[
 
 
 conf.env.ParseConfig(PKG_CONFIG + ' --cflags --libs ' + ' '.join(packages))
-
 conf.env.Append(_LIBFLAGS=['-lm'])
 
 conf.check_builtin_cpu_supports()
@@ -387,10 +417,13 @@ if strip and conf.env['IS_APPLE']:
 SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
-SConscript('gui/SConscript')
+if GetOption('with_gui'):
+    SConscript('gui/SConscript')
 
+#==============================================================================#
+#                                Clang tooling                                 #
+#==============================================================================#
 
-# clang tooling
 cdb = env.CompilationDatabase()
 env.Depends(cdb, 'lib/config.h')
 env.Alias('cdb', cdb)
@@ -484,7 +517,8 @@ if GetOption('show_config'):
     Version information  : {version}
     Compiler             : {compiler}
     Install prefix       : {prefix}
-    Actual prefix        : {actual_prefix}
+    Staging directory    : {dest_dir}
+    Staged prefix        : {staged_prefix}
     Verbose building     : {verbose}
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
@@ -519,8 +553,9 @@ if GetOption('show_config'):
         version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
                 f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})',
         compiler=env['CC'],
-        prefix=GetOption('prefix'),
-        actual_prefix=GetOption('actual_prefix') or GetOption('prefix'),
+        prefix=env['PREFIX'],
+        dest_dir=env['DESTDIR'],
+        staged_prefix=env['staged_prefix'],
         verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
         debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
         symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
