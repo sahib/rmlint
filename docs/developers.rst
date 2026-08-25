@@ -183,8 +183,22 @@ Variables
     per a POSIX shell command line, and so it may include shell quoting if
     necessary.
 
+:STRIP=0:
+
+    Override the default binary stripping of ``O=release``.
+
+:SANITISE=<1,address,thread,memory,undefined,…>:
+
+    Compile with sanitisers enabled. ``SANITISE=1`` means ``=address,undefined``.
+
 Arguments
 ~~~~~~~~~
+
+:--show-config:
+
+    Print a summary of all features that will be compiled and what the
+    environment looks like, then carry on with the target. Add ``-n``
+    to stop at the summary instead.
 
 :--without-libelf:
     
@@ -212,9 +226,8 @@ Arguments
 
     Do not (re)compile system Glib schemas on installation/uninstallation.
 
-All ``--without-*`` options come with a ``--with-*`` option that inverses its
-effect.  By default ``rmlint`` is built with all features available on the
-system, so you do not need to specify any ``--with-*`` option normally.
+By default, all  ``--without-*`` options are enabled, i.e. as if they were
+compiled by an hypothetical ``--with-*`` option.
 
 Notable targets
 ~~~~~~~~~~~~~~~
@@ -222,11 +235,6 @@ Notable targets
 :install:
 
     Install all program parts system-wide.
-
-:config:
-
-    Print a summary of all features that will be compiled and what the
-    environment looks like.
 
 :man:
 
@@ -244,7 +252,7 @@ Notable targets
 
     .. code-block:: bash
 
-        $ USE_VALGRIND=1 pytest
+        $ RM_TS_USE_VALGRIND=1 pytest
 
 :xgettext:
 
@@ -260,6 +268,13 @@ Notable targets
     Same as ``dist``, but reads the ``.version`` file and replaces the current
     version in the files that are not built by *scons*.
 
+:cdb:
+
+    Generate a JSON compilation database ``compile_commands.json``.
+
+:compile-flags:
+
+    For older tools, generate a ``compile_flags.txt`` file, as well as a ``.clang_complete`` link.
 
 Sourcecode layout
 -----------------
@@ -268,7 +283,6 @@ Sourcecode layout
 - As an exception, the main lives in ``src/rmlint.c``.
 - All documentation is inside ``docs``. 
 - All translation stuff should go to ``po``.
-- All packaging should be done in ``pkg/<distribution>``.
 - Tests are written in Python and live in ``tests``.
 
 

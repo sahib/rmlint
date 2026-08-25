@@ -59,12 +59,8 @@ AddOption(
 
 for suffix in OPTIONAL_FLAGS:
     AddOption(
-        '--without-' + suffix, action='store_const', default=False, const=False,
-        dest='with_' + suffix
-    )
-    AddOption(
-        '--with-' + suffix, action='store_const', default=True, const=True,
-        dest='with_' + suffix
+        f'--without-{suffix}', action='store_false',
+        dest=f'with_{suffix}', default=True,
     )
 
 #==============================================================================#
