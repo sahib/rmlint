@@ -33,13 +33,12 @@ import argparse
 import filecmp
 import json
 import os
-import pwd
 import shutil
 import subprocess
 import sys
 
 CURRENT_UID = os.geteuid()
-CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
+CURRENT_GID = os.getegid()
 
 USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
 COLORS = {
