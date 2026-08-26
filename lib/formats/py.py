@@ -188,8 +188,10 @@ def main(args, data):
         sys.stdin.read(1)
 
     for item in data:
-        progress_prefix = '{c[blue]}[{p:3}%]{c[reset]} '.format(
-            c=COLORS, p=item['progress'])
+        progress_prefix = (
+            f"{COLORS['blue']}[{item['progress']:3}%]{COLORS['reset']} "
+            if 'progress' in item else ' ' * 7
+        )
 
         if item['is_original']:
             msg_template = MESSAGES.get(item['type'])
