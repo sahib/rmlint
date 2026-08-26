@@ -64,7 +64,7 @@ def original_check(path, original, be_paranoid=True):
                   '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
 
-        if be_paranoid and not filecmp.cmp(path, original):
+        if be_paranoid and not filecmp.cmp(path, original, shallow=False):
             print('{c[red]}Content differs; ignoring:{c[reset]} '
                   '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
