@@ -787,8 +787,7 @@ static void rm_shred_group_free(RmShredGroup *self) {
 }
 
 static gboolean rm_shred_group_qualifies(RmShredGroup *group) {
-    return 1 &&
-           (group->num_files >= 2)
+    return (group->num_files >= 2)
            /* it takes 2 to tango */
            && (group->n_pref > 0 || !NEEDS_PREF(group))
            /* we have at least one file from preferred path, or we don't care */
