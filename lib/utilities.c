@@ -1239,8 +1239,8 @@ RmOff rm_offset_get_from_fd(int fd, RmOff file_offset, RmOff *file_offset_next,
                 first = FALSE;
             } else {
                 /* check if subsequent extents are contiguous */
-                unsigned long expected_dense = fm_last.fe_physical + fm_last.fe_length;
-                unsigned long expected = fm_last.fe_physical + fm_ext.fe_logical - fm_last.fe_logical;
+                RmOff expected_dense = fm_last.fe_physical + fm_last.fe_length;
+                RmOff expected = fm_last.fe_physical + fm_ext.fe_logical - fm_last.fe_logical;
                 if(fm_ext.fe_physical != expected || fm_ext.fe_physical != expected_dense) {
                     /* current extent is not contiguous with previous, so we can stop */
                     g_free(fm);
