@@ -403,6 +403,23 @@ static gint rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
         } else {
             switch(p->fts_info) {
             case FTS_D: /* preorder directory */
+                if(cfg->limits_specified && cfg->apply_limits_to_dirs && cfg->minsize > 0) {
+                    RmOff dir_size = p->fts_statp->st_size;
+                    if(dir_size < cfg->minsize) {
+                        /* skip folder if size < minsize
+                         * In some filesystems e.g. Ceph, folder size = 
+                         * recursive sum of all contents. */
+                        fts_set(ftsp, p, FTS_SKIP);
+                        g_atomic_int_inc(&session->ignored_folders);
+                        FLAG_NOT_TRAVERSED;
+                        rm_log_debug_line(
+                            "Not descending into %s because size %" G_GINT64_FORMAT
+                            " is below minimum %" G_GINT64_FORMAT,
+                            p->fts_path, dir_size, cfg->minsize);
+                        break;
+                    }
+                }
+
                 if(cfg->depth != 0 && p->fts_level >= cfg->depth) {
                     /* continuing into folder would exceed maxdepth*/
                     fts_set(ftsp, p, FTS_SKIP); /* do not recurse */

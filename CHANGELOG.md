@@ -32,6 +32,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
 * For packagers: ``STRIP=`` scons build variable to opt out of link-time stripping.
 * ``scons --show-config`` shows features and build in one run.
+* ``,d`` flag to ``--size`` to skip directories by `st_size`.
 
 ### Changed
 

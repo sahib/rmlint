@@ -74,6 +74,7 @@ typedef struct RmCfg {
     gboolean find_hardlinked_dupes;
     gboolean keep_hardlinked_dupes;
     gboolean limits_specified;
+    gboolean apply_limits_to_dirs;
     gboolean filter_mtime;
     gboolean match_basename;
     gboolean unmatched_basenames;
