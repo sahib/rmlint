@@ -285,7 +285,7 @@ General Options
 Traversal Options
 -----------------
 
-:``-s --size=range`` (**default\:** "1"):
+:``-s --size=range[,flags]`` (**default\:** "1"):
 
     Only consider files as duplicates in a certain size range.
     The format of ``range`` is ``min-max``, where both ends can be specified
@@ -301,6 +301,10 @@ Traversal Options
     It's also possible to specify only one size. In this case the size is
     interpreted as *"bigger or equal"*. If you want to filter for files
     *up to this size* you can add a ``-`` in front (``-s -1M`` == ``-s 0-1M``).
+
+    There is only one flag supported at the moment: ``d`` to skip directories
+    whose `st_size` is inferior to the the lower bound of the range.
+    Useful with the Ceph rbytes feature.
 
     **Edge case:** The default excludes empty files from the duplicate search.
     Normally these are treated specially by ``rmlint`` by handling them as
