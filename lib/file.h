@@ -324,13 +324,23 @@ int rm_file_unref(RmFile *file);
  */
 int rm_file_unref_full(RmFile *file);
 
+/**
+ * @brief GDestroyNotify adapter for rm_file_unref().
+ */
+void rm_file_unref_gdnotify(gpointer file);
+
+/**
+ * @brief GFunc adapter for rm_file_unref().
+ * @note user_data is unused.
+ */
+void rm_file_unref_gfunc(gpointer file, gpointer user_data);
+
 
 /**
  * @brief Increase reference count to file;
  * @note threadsafe
  */
 RmFile *rm_file_ref(RmFile *file);
-
 
 
 /**

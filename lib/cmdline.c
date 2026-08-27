@@ -28,6 +28,7 @@
 #include <string.h>
 #include <search.h>
 
+#include "config.h"
 #include "formats.h"
 #include "md-scheduler.h"
 #include "preprocess.h"
@@ -56,7 +57,7 @@ static const RmDigestType RM_PARANOIA_LEVELS[] = {RM_DIGEST_METRO,
 static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST */
 static const int RM_PARANOIA_MAX = 5;
 
-static void rm_cmd_show_version(void) {
+NORETURN static void rm_cmd_show_version(void) {
     fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
             __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
 
@@ -90,20 +91,19 @@ static void rm_cmd_show_version(void) {
     exit(0);
 }
 
-static void rm_cmd_show_manpage(void) {
-    static const char *commands[] = {"man %s docs/_build/man/rmlint.1 2> /dev/null",
-                                     "man %s rmlint", NULL};
+NORETURN static void rm_cmd_show_manpage(void) {
+    static const char *commands[] = {
+#ifdef RM_DEBUG
+        "man docs/_build/man/rmlint.1 2> /dev/null",
+#endif
+        "man rmlint",
+        NULL
+    };
 
     bool found_manpage = false;
 
     for(int i = 0; commands[i] && !found_manpage; ++i) {
-        char cmd_buf[512] = {0};
-        if(snprintf(cmd_buf, sizeof(cmd_buf), commands[i],
-                    (RM_MANPAGE_USE_PAGER) ? "" : "-P cat") == -1) {
-            continue;
-        }
-
-        if(system(cmd_buf) == 0) {
+        if(system(commands[i]) == 0) {
             found_manpage = true;
         }
     }
@@ -113,9 +113,10 @@ static void rm_cmd_show_manpage(void) {
         rm_log_warning_line(_("Please run rmlint --help to show the regular help."));
         rm_log_warning_line(_(
             "Alternatively, visit https://rmlint.rtfd.org for the online documentation"));
+        exit(EXIT_FAILURE);
     }
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 /* Size spec parsing implemented by qitta (http://github.com/qitta)
@@ -1495,7 +1496,7 @@ int rm_cmd_main(RmSession *session) {
     if(cfg->merge_directories) {
         rm_fmt_set_state(session->formats, RM_PROGRESS_STATE_MERGE);
         rm_tm_set_callback(session->dir_merger,
-                           (RmTreeMergeOutputFunc)rm_shred_output_tm_results, session);
+                           rm_shred_output_tm_results, session);
         rm_tm_finish(session->dir_merger);
     }
 

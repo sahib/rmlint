@@ -1510,7 +1510,7 @@ bool rm_iso8601_format(time_t stamp, char *buf, gsize buf_size) {
 #define SECONDS_PER_HOUR (60 * 60)
 #define SECONDS_PER_MINUTE (60)
 
-char *rm_format_elapsed_time(gfloat elapsed_sec, int sec_precision) {
+char *rm_format_elapsed_time(gdouble elapsed_sec, int sec_precision) {
     GString *buf = g_string_new(NULL);
 
     if(elapsed_sec > SECONDS_PER_DAY) {

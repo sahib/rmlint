@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include "file.h"
 #include "formats.h"
 #include "rank.h"
 
@@ -246,7 +247,7 @@ void rm_file_tables_destroy(RmFileTables *tables) {
     // walk along tables->size_groups, cleaning up as we go:
     while(tables->size_groups) {
         GSList *list = tables->size_groups->data;
-        g_slist_free_full(list, (GDestroyNotify)rm_file_unref);
+        g_slist_free_full(list, rm_file_unref_gdnotify);
         tables->size_groups =
                 g_slist_delete_link(tables->size_groups, tables->size_groups);
     }
@@ -295,7 +296,7 @@ void rm_preprocess(RmSession *session) {
     removed += rm_pp_bundle_hardlinks(session, all_files);
 
     /* sort into size groups, also sorting according to --match-basename etc */
-    g_queue_sort(all_files, (GCompareDataFunc)rm_rank_group, session);
+    g_queue_sort(all_files, rm_rank_group_gcmp, session);
 
     RmFile *prev = NULL, *curr = NULL;
     while((curr = g_queue_pop_head(all_files))) {

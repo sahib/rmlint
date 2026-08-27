@@ -245,7 +245,6 @@ int rm_rank_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *ses
  * each other.  The sorted list can then be split into groups of potential
  * duplicates by splitting whereever rm_rank_group(a, b) != 0 */
 gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
-
     RETURN_IF_NONZERO(SIGN_DIFF(file_a->actual_file_size, file_b->actual_file_size));
 
     /* --see-symlinks should not let regular files match symlinks */
@@ -258,8 +257,15 @@ gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
     RETURN_IF_NONZERO(cfg->match_with_extension && rm_rank_with_extension(file_a, file_b));
 
     return cfg->match_without_extension && rm_rank_without_extension(file_a, file_b);
-
 }
+
+/* GCompareDataFunc wrapper around rm_rank_group */
+gint rm_rank_group_gcmp(gconstpointer file_a, gconstpointer file_b,
+                       _UNUSED gpointer user_data) {
+    return rm_rank_group(file_a, file_b);
+}
+
+
 
 gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b) {
     return g_ascii_strcasecmp(file_a->node->basename, file_b->node->basename);

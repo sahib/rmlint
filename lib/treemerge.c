@@ -76,6 +76,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include "file.h"
 #include "formats.h"
 #include "fts/fts.h"
 #include "rank.h"
@@ -341,7 +342,7 @@ static RmDirectory *rm_directory_new(char *dirname) {
 static void rm_directory_free(RmDirectory *self) {
     rm_digest_unref(self->digest);
     g_hash_table_unref(self->hash_set);
-    g_queue_foreach(&self->known_files, (GFunc)rm_file_unref, NULL);
+    g_queue_foreach(&self->known_files, rm_file_unref_gfunc, NULL);
     g_queue_clear(&self->known_files);
     g_queue_clear(&self->children);
     g_free(self->dirname);
@@ -395,17 +396,17 @@ static RmFile *rm_directory_as_new_file(RmTreeMerger *merger, const RmDirectory 
     return file;
 }
 
-static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
+static gboolean rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
     if(d1->dupe_count != d2->dupe_count) {
-        return false;
+        return FALSE;
     }
 
-    if(rm_digest_equal(d1->digest, d2->digest) == false) {
-        return false;
+    if(rm_digest_equal(d1->digest, d2->digest) == FALSE) {
+        return FALSE;
     }
 
     if(g_hash_table_size(d1->hash_set) != g_hash_table_size(d2->hash_set)) {
-        return false;
+        return FALSE;
     }
 
     /* Compare the exact contents of the hash sets */
@@ -414,12 +415,12 @@ static bool rm_directory_equal(RmDirectory *d1, RmDirectory *d2) {
 
     g_hash_table_iter_init(&iter, d1->hash_set);
     while(g_hash_table_iter_next(&iter, &digest_key, NULL)) {
-        if(g_hash_table_contains(d2->hash_set, digest_key) == false) {
-            return false;
+        if(g_hash_table_contains(d2->hash_set, digest_key) == FALSE) {
+            return FALSE;
         }
     }
 
-    return true;
+    return TRUE;
 }
 
 static guint rm_directory_hash(const RmDirectory *d) {
@@ -914,7 +915,7 @@ static void rm_tm_extract(RmTreeMerger *self) {
         if(file_adaptor_group.length > 1) {
             rm_tm_output_group(self, &file_adaptor_group);
         }
-        g_queue_foreach(&file_adaptor_group, (GFunc)rm_file_unref, NULL);
+        g_queue_foreach(&file_adaptor_group, rm_file_unref_gfunc, NULL);
         g_queue_clear(&file_adaptor_group);
         g_queue_clear(&result_dirs);
     }

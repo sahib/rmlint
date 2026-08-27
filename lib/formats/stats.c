@@ -96,7 +96,7 @@ static void rm_fmt_prog(RmSession *session,
     fprintf(out, _("%s%15ld%s Other lint items\n"), MAYBE_RED(out, session),
             (long)session->other_lint_cnt, MAYBE_RESET(out, session));
 
-    gfloat elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
+    gdouble elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
 
     char *elapsed_time = rm_format_elapsed_time(elapsed, 5);
     fprintf(out, _("%s%15s%s of time spent scanning\n"), MAYBE_RED(out, session),

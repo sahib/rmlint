@@ -52,13 +52,15 @@ int rm_rank_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *ses
 gint rm_rank_group(const RmFile *file_a, const RmFile *file_b);
 
 /**
+ * @brief: GCompareDataFunc adapter for rm_rank_group().
+ * @note user_data is unused.
+ */
+gint rm_rank_group_gcmp(gconstpointer file_a, gconstpointer file_b, gpointer user_data);
+
+/**
  * @brief: Compile all r<PATTERN> constructs in `sortcrit` to a GRegex
  *         and store them into session->pattern_cache.
  */
 char *rm_rank_compile_patterns(RmSession *session, const char *sortcrit, GError **error);
-
-
-
-
 
 #endif /* RM_RANK_H */

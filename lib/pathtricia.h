@@ -53,7 +53,7 @@ typedef struct _RmNode {
     ino_t inode;
 
     /* data was set explicitly */
-    char has_value : 1;
+    bool has_value : 1;
 
     /* User specific data */
     gpointer data;

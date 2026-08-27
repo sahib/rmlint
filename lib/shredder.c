@@ -831,7 +831,6 @@ static void rm_shred_group_finalise(RmShredGroup *self) {
         rm_util_thread_pool_push(self->session->shredder->result_pool, self);
         break;
     case RM_SHRED_GROUP_FINISHED:
-    default:
         g_assert_not_reached();
     }
 }
@@ -970,7 +969,6 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             g_queue_push_head(shred_group->held_files, file);
             break;
         case RM_SHRED_GROUP_FINISHED:
-        default:
             g_assert_not_reached();
         }
     }
@@ -1050,10 +1048,10 @@ static RmFile *rm_shred_sift(RmFile *file) {
 }
 
 /* Hasher callback when file increment hashing is completed. */
-static void rm_shred_hash_callback(_UNUSED RmHasher *hasher,
-                                   RmDigest *digest,
-                                   _UNUSED RmShredTag *tag,
-                                   RmFile *file) {
+static int rm_shred_hash_callback(_UNUSED RmHasher *hasher,
+                                  RmDigest *digest,
+                                  _UNUSED RmShredTag *tag,
+                                  RmFile *file) {
     if(!file->digest) {
         file->digest = rm_digest_ref(digest);
     }
@@ -1067,6 +1065,8 @@ static void rm_shred_hash_callback(_UNUSED RmHasher *hasher,
         /* handle the file ourselves; MDS scheduler has moved on to the next file */
         rm_shred_sift(file);
     }
+
+    return 0;
 }
 
 ////////////////////////////////////
@@ -1735,11 +1735,12 @@ static gint rm_shred_process_file(RmFile *file, RmSession *session) {
 }
 
 /* called when treemerge.c found something interesting */
-void rm_shred_output_tm_results(RmFile *file, gpointer data) {
+gint rm_shred_output_tm_results(RmFile *file, gpointer data) {
     g_assert(data);
 
     RmSession *session = data;
     rm_fmt_write(file, session->formats);
+    return 0;
 }
 
 void rm_shred_run(RmSession *session) {

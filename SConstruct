@@ -167,12 +167,6 @@ conf.check_pkgconfig('0.15.0')
 conf.env['HAVE_GLIB'] = 0
 conf.check_pkg('glib-2.0 >= 2.64', 'HAVE_GLIB', required=True)
 
-if ARGUMENTS.get('VERBOSE') != "1":
-    conf.env.Append(CCFLAGS=[
-        '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_64',
-        '-DGLIB_VERSION_MAX_REQUIRED=GLIB_VERSION_2_64',
-    ])
-
 conf.env['HAVE_GIO_UNIX'] = 0
 conf.check_pkg('gio-unix-2.0', 'HAVE_GIO_UNIX', required=False)
 
@@ -206,20 +200,33 @@ conf.check_mm_crc32_u64()
 if IS_CLANG := conf.CheckDeclaration("__clang__"):
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
-    conf.env.Append(CCFLAGS=['-Wno-bad-function-cast'])
+    conf.env.Append(CCFLAGS=[
+        '-Wmost',
+        '-Wunreachable-code-aggressive',
+        '-Wno-bad-function-cast',
+    ])
 else:
+    conf.env.Append(CCFLAGS=[
+        '-Wduplicated-cond',
+        '-Wduplicated-branches',
+        '-Wlogical-op',
+    ])
     conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CCFLAGS=[
-    '-Wall', '-W', '-Wextra',
+    '-Wall', '-Wextra',
     '-Winit-self',
-    '-Wstrict-aliasing',
     '-Wmissing-include-dirs',
     '-Wuninitialized',
     '-Wstrict-prototypes',
+    '-Wnull-dereference',
+    '-Wformat-security',
+    '-Wformat-y2k',
+    '-Wmissing-noreturn',
     '-Wno-implicit-fallthrough',
     '-Wdeprecated-declarations',
+    '-Wundef',
 ])
 
 
@@ -250,8 +257,17 @@ if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
 # NB: After checks so they don't fail
-conf.env.Append(CCFLAGS=['-Werror=undef'])
+if ARGUMENTS.get('FORCE') != '1':
+    conf.env.Append(CCFLAGS=['-Werror'])
 
+# XXX: after -Werror
+if ARGUMENTS.get('VERBOSE') != '1':
+    conf.env.Append(CCFLAGS=[
+        '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_64',
+        '-DGLIB_VERSION_MAX_REQUIRED=GLIB_VERSION_2_64',
+    ])
+else:
+    conf.env.Append(CCFLAGS=['-Wno-error=deprecated-declarations'])
 
 if ARGUMENTS.get('GDB') == '1':
     ARGUMENTS['DEBUG'] = '1'

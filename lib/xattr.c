@@ -235,6 +235,9 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
        rm_xattr_set(file, mtime_key, timestamp, strlen(timestamp), follow)) {
         return errno;
     }
+#else
+    (void)file;
+    (void)session;
 #endif
     return 0;
 }
@@ -283,6 +286,8 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     file->ext_cksum = g_strdup(cksum_hex_str);
     return TRUE;
 #else /* HAVE_XATTR */
+    (void)file;
+    (void)session;
     return FALSE;
 #endif /* HAVE_XATTR */
 }
@@ -310,13 +315,15 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 
     return error;
 #else
+    (void)file;
+    (void)session;
     return EXIT_FAILURE;
 #endif
 }
 
 #if HAVE_XATTR
 
-GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
+static GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
     const size_t buf_size = 4096;
     const size_t val_size = 1024;
     const char prefix[13] = "user.rmlint.";
@@ -394,9 +401,12 @@ static void rm_xattr_change_subkey(char *key, char *sub_key) {
     strcpy(&key[key_len - sub_key_len], sub_key);
 }
 
+#endif
+
 bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
     g_assert(path);
 
+#if HAVE_XATTR
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to check dedupe state of %s: %s", path,
@@ -443,11 +453,17 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
 
     g_hash_table_destroy(map);
     return result;
+#else
+    (void)path;
+    (void)follow_symlinks;
+    return false;
+#endif
 }
 
 int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
     g_assert(path);
 
+#if HAVE_XATTR
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to mark dedupe state of %s: %s", path,
@@ -488,6 +504,9 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
 
     g_hash_table_destroy(map);
     return result;
-}
-
+#else /* HAVE_XATTR */
+    (void)path;
+    (void)follow_symlinks;
+    return EXIT_FAILURE;
 #endif /* HAVE_XATTR */
+}

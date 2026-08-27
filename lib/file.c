@@ -136,7 +136,10 @@ RmFile *rm_file_copy(RmFile *file) {
     return copy;
 }
 
-static gint rm_file_unref_impl(RmFile *file, gboolean unref_hardlinks) {
+static gint rm_file_unref_impl(gpointer file_ptr, gpointer unref_hardlinks_ptr) {
+    RmFile *file = file_ptr;
+    gboolean unref_hardlinks = GPOINTER_TO_INT(unref_hardlinks_ptr);
+
     if(!file) {
         return 0;
     }
@@ -149,8 +152,8 @@ static gint rm_file_unref_impl(RmFile *file, gboolean unref_hardlinks) {
     if(file->hardlinks) {
         g_queue_remove(file->hardlinks, file);
         if(unref_hardlinks) {
-            freed += rm_util_queue_foreach_remove(file->hardlinks,
-                        (RmRFunc)rm_file_unref_impl, GINT_TO_POINTER(FALSE));
+            freed += rm_util_queue_foreach_remove(file->hardlinks, rm_file_unref_impl,
+                                                  GINT_TO_POINTER(FALSE));
         }
         else if(file->hardlinks->length==0) {
             g_queue_free(file->hardlinks);
@@ -169,18 +172,27 @@ static gint rm_file_unref_impl(RmFile *file, gboolean unref_hardlinks) {
 }
 
 gint rm_file_unref(RmFile *file) {
-    return rm_file_unref_impl(file, FALSE);
+    return rm_file_unref_impl(file, GINT_TO_POINTER(FALSE));
 }
 
 gint rm_file_unref_full(RmFile *file) {
-    return rm_file_unref_impl(file, TRUE);
+    return rm_file_unref_impl(file, GINT_TO_POINTER(TRUE));
+}
+
+/* GDestroyNotify wrapper around rm_file_unref */
+void rm_file_unref_gdnotify(gpointer file) {
+    (void)rm_file_unref(file);
+}
+
+/* GFunc wrapper around rm_file_unref */
+void rm_file_unref_gfunc(gpointer file, _UNUSED gpointer user_data) {
+    (void)rm_file_unref(file);
 }
 
 RmFile *rm_file_ref(RmFile *file) {
     g_atomic_int_inc (&file->ref_count);
     return file;
 }
-
 
 // TODO: this is replicated in formats/pretty.c...
 static const char *LINT_TYPES[] = {
@@ -281,8 +293,11 @@ enum RmFileCountType {
     RM_FILE_COUNT_NEW,
 };
 
-static gint rm_file_count(RmFile *file, gint type) {
-    switch(type) {
+/* NOTE: must satisfy RmRFunc */
+static gint rm_file_count(gpointer file_gptr, gpointer type_gptr) {
+    RmFile *file = file_gptr;
+
+    switch(GPOINTER_TO_INT(type_gptr)) {
     case RM_FILE_COUNT_FILES:
         return 1;
     case RM_FILE_COUNT_PREFD:
@@ -298,21 +313,21 @@ static gint rm_file_count(RmFile *file, gint type) {
 }
 
 gint rm_file_n_files(RmFile *file) {
-    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+    return rm_file_foreach(file, rm_file_count,
                            GINT_TO_POINTER(RM_FILE_COUNT_FILES));
 }
 
 gint rm_file_n_new(RmFile *file) {
-    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+    return rm_file_foreach(file, rm_file_count,
                            GINT_TO_POINTER(RM_FILE_COUNT_NEW));
 }
 
 gint rm_file_n_prefd(RmFile *file) {
-    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+    return rm_file_foreach(file, rm_file_count,
                            GINT_TO_POINTER(RM_FILE_COUNT_PREFD));
 }
 
 gint rm_file_n_nprefd(RmFile *file) {
-    return rm_file_foreach(file, (RmRFunc)rm_file_count,
+    return rm_file_foreach(file, rm_file_count,
                            GINT_TO_POINTER(RM_FILE_COUNT_NPREFD));
 }

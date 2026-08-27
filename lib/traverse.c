@@ -310,7 +310,6 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
             rm_log_warning_line(_("error %d in fts_read for %s (skipping)"), errno,
                                 p->fts_path);
             break;
-            break;
         case FTS_SLNONE:  /* symbolic link without target */
         case FTS_W:       /* whiteout object */
         case FTS_NS:      /* rm_sys_stat(2) failed */
@@ -339,7 +338,7 @@ bool rm_traverse_is_emptydir(const char *path, RmCfg *cfg, int current_depth) {
     memset(is_emptydir, 0, p->fts_level + 1); \
     memset(is_traversed, 0, p->fts_level + 1);
 
-static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
+static gint rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
     RmCfg *cfg = session->cfg;
     RmPath *rmpath = buffer->rmpath;
 
@@ -542,6 +541,8 @@ static void rm_traverse_directory(RmTravBuffer *buffer, RmSession *session) {
 done:
     rm_mds_device_ref(buffer->disk, -1);
     rm_trav_buffer_free(buffer);
+
+    return TRUE; /* task processed/succeeded for rm_mds_factory() */
 }
 
 ////////////////

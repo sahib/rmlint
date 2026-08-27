@@ -470,7 +470,7 @@ bool rm_util_thread_pool_push(GThreadPool *pool, gpointer data);
  *
  * @return The formatted string, free with g_free.
  */
-char *rm_format_elapsed_time(gfloat elapsed_sec, int sec_precision);
+char *rm_format_elapsed_time(gdouble elapsed_sec, int sec_precision);
 
 typedef struct {
     gdouble sum;

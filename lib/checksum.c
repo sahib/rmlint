@@ -170,13 +170,22 @@ static void rm_digest_xxhash_steal(gpointer state, guint8 *result) {
     *(unsigned long long *)result = XXH64_digest(state);
 }
 
+static void rm_digest_xxhash_free(gpointer state) {
+    XXH64_freeState(state);
+}
+
+static void rm_digest_xxhash_update(gpointer state, const unsigned char *data,
+                                    size_t size) {
+    XXH64_update(state, data, size);
+}
+
 static const RmDigestInterface xxhash_interface = {
     .name = "xxhash",
     .bits = 64,
     .len = NULL,
     .new = (RmDigestNewFunc)rm_digest_xxhash_new,
-    .free = (RmDigestFreeFunc)XXH64_freeState,
-    .update = (RmDigestUpdateFunc)XXH64_update,
+    .free = rm_digest_xxhash_free,
+    .update = rm_digest_xxhash_update,
     .copy = (RmDigestCopyFunc)rm_digest_xxhash_copy,
     .steal = rm_digest_xxhash_steal};
 
@@ -438,7 +447,7 @@ static void rm_digest_glib_steal(GChecksum *state, guint8 *result, gsize *len) {
         .free = (RmDigestFreeFunc)g_checksum_free,       \
         .update = (RmDigestUpdateFunc)g_checksum_update, \
         .copy = (RmDigestCopyFunc)g_checksum_copy,       \
-        .steal = (RmDigestStealFunc)rm_digest_##NAME##_steal};
+        .steal = (RmDigestStealFunc)rm_digest_##NAME##_steal}
 
 /* md5 */
 static GChecksum *rm_digest_md5_new(void) {
@@ -575,15 +584,21 @@ RM_DIGEST_DEFINE_SHA3(512)
         rm_digest_##ALGO##_free(copy);                                          \
     }                                                                           \
                                                                                 \
+    static void rm_digest_##ALGO##_update(gpointer state,                       \
+                                          const unsigned char *data,            \
+                                          size_t size) {                        \
+        ALGO##_update(state, data, size);                                       \
+    }                                                                           \
+                                                                                \
     static const RmDigestInterface ALGO##_interface = {                         \
         .name = #ALGO,                                                          \
         .bits = 8 * ALGO_BIG##_OUTBYTES,                                        \
         .len = NULL,                                                            \
         .new = (RmDigestNewFunc)rm_digest_##ALGO##_new,                         \
         .free = (RmDigestFreeFunc)rm_digest_##ALGO##_free,                      \
-        .update = (RmDigestUpdateFunc)ALGO##_update,                            \
+        .update = rm_digest_##ALGO##_update,                                    \
         .copy = (RmDigestCopyFunc)rm_digest_##ALGO##_copy,                      \
-        .steal = (RmDigestStealFunc)rm_digest_##ALGO##_steal};
+        .steal = (RmDigestStealFunc)rm_digest_##ALGO##_steal}
 
 CREATE_BLAKE2_INTERFACE(blake2b, BLAKE2B);
 CREATE_BLAKE2_INTERFACE(blake2bp, BLAKE2B);
