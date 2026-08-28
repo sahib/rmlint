@@ -203,7 +203,6 @@ if IS_CLANG := conf.CheckDeclaration("__clang__"):
     conf.env.Append(CCFLAGS=[
         '-Wmost',
         '-Wunreachable-code-aggressive',
-        '-Wno-bad-function-cast',
     ])
 else:
     conf.env.Append(CCFLAGS=[
@@ -211,7 +210,6 @@ else:
         '-Wduplicated-branches',
         '-Wlogical-op',
     ])
-    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CCFLAGS=[
