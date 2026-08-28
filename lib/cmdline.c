@@ -94,7 +94,7 @@ NORETURN static void rm_cmd_show_version(void) {
 NORETURN static void rm_cmd_show_manpage(void) {
     static const char *commands[] = {
 #ifdef RM_DEBUG
-        "man docs/_build/man/rmlint.1 2> /dev/null",
+        "man -P cat docs/_build/man/rmlint.1",
 #endif
         "man rmlint",
         NULL

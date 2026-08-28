@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - id: prepare-hash
+        run: echo "hash=$(sha256sum ci/freebsd/prepare.sh | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Build and test
         uses: vmactions/freebsd-vm@v1
         with:
@@ -24,6 +28,7 @@ jobs:
           copyback: false
           cache-after-prepare: true
           prepare: |
+            # prepare-hash: ${{ steps.prepare-hash.outputs.hash }}
             ./ci/freebsd/prepare.sh
           run: |
             ./ci/freebsd/build-and-test.sh

@@ -12,15 +12,19 @@ jobs:
   multi-distro-build:
     name: Build (${{ matrix.build.tag }})
     runs-on: ubuntu-latest
+    # XXX: Tumbleweed mirror syncs can temporarily leave metadata inconsistent,
+    # see https://forums.opensuse.org/t/repo-oss-repository-gpg-key-failure/189888
+    continue-on-error:  ${{ matrix.build.tag == 'opensuse/tumbleweed:latest' }}
     strategy:
+      fail-fast: false
       matrix:
         build:
-          # EL
+          # Enterprise Linux
           - tag: "almalinux:10"
-            installcmd: "dnf install -y"
+            installcmd: "dnf install -y epel-release && dnf install -y"
             pkgs: "gcc python3-scons glib2-devel json-glib-devel"
           - tag: "quay.io/centos/centos:stream10"
-            installcmd: "dnf install -y"
+            installcmd: "dnf install -y epel-release && dnf install -y"
             pkgs: "gcc python3-scons glib2-devel json-glib-devel"
           # Alpine
           - tag: "alpine:latest"
@@ -64,8 +68,7 @@ jobs:
             pkgs: "gcc scons pkg-config gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-sphinx"
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
+
       - name: "Build on ${{ matrix.build.tag }}"
         run: >
           echo "
@@ -74,4 +77,4 @@ jobs:
             cd /build
             scons --show-config VERBOSE=1 DEBUG=1 O=release
             exit
-          " | docker run --rm -v "$PWD:/build" "${{ matrix.build.tag }}" sh
+          " | docker run --rm -i -v "$PWD:/build" "${{ matrix.build.tag }}" sh

@@ -236,14 +236,16 @@ def run_rmlint_once(*args,
         with contextlib.suppress(FileNotFoundError):
             os.unlink(os.path.join(get_testdir(), '.rmlint.json'))
 
-    if get_env_flag('print_cmd'):
-        print(f"running{' in shell' if use_shell else ''} from `{get_testdir()}`: {' '.join(cmd)}")
+    cmd_str = ' '.join(cmd)
+
+    logging.info("running%s from `%s`: %s",
+                 ' in shell' if use_shell else '', get_testdir(), cmd_str)
 
     if get_env_flag('sleep'):
         print('Waiting for 1000 seconds.')
         time.sleep(1000)
 
-    result = subprocess.run(' '.join(cmd) if use_shell else cmd, **run_args)
+    result = subprocess.run(cmd_str if use_shell else cmd, **run_args)
     sys.stdout.buffer.write(result.stderr)
 
     if get_env_flag('use_gdb'):
@@ -374,7 +376,7 @@ def run_rmlint_pedantic(*args, **kwargs):
 
 
 def run_rmlint(*args, force_no_pedantic=False, **kwargs):
-    if get_env_flag('RM_TS_PEDANTIC') and force_no_pedantic is False:
+    if get_env_flag('pedantic') and force_no_pedantic is False:
         return run_rmlint_pedantic(*args, **kwargs)
 
     return run_rmlint_once(*args, **kwargs)

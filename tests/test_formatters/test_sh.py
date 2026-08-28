@@ -1,6 +1,5 @@
 import os
 import shlex
-import shutil
 import subprocess
 import sys
 
@@ -12,20 +11,16 @@ from tests.utils import (
     create_dirs,
     create_file,
     create_link,
+    get_bin_path,
     get_testdir,
     pattern_count,
     run_rmlint,
 )
 
 
-def run_shell_script(shell, sh_path, *args):
-    shell_path = shutil.which(shell)
-    if shell_path is None:
-        raise RuntimeError(f"{shell} not found in path")
-
+def run_shell_script(shell, script_path, *args):
     return subprocess.check_output(
-        [shell_path, sh_path] + list(args),
-        shell=False,
+        (get_bin_path(shell), script_path, *args),
         text=True
     )
 

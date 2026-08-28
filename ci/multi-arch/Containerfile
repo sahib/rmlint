@@ -1,0 +1,19 @@
+ARG DEB_IMAGE=docker.io/amd64/debian:testing
+FROM ${DEB_IMAGE} AS toolchain
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential pkg-config scons git \
+        libglib2.0-dev libjson-glib-dev libblkid-dev libelf-dev \
+        gettext python3-sphinx man-db \
+        python3-pytest python3-pytest-xdist \
+        python3-psutil python3-xattr \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM toolchain AS build-and-test
+RUN useradd -m rmlint && mkdir /rmlint && chown rmlint:rmlint /rmlint
+USER rmlint
+WORKDIR /rmlint
+COPY --chown=rmlint:rmlint . .
+RUN scons --without-gui --show-config VERBOSE=1 DEBUG=1 O=release
+ENV RM_TS_ALWAYS_CLEAN=1
+ENTRYPOINT ["pytest", "-n", "auto"]

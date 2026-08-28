@@ -8,6 +8,6 @@ scons_ARGS="VERBOSE=1 DEBUG=1 O=release"
 scons --show-config $scons_ARGS
 
 mount -t tmpfs none /rt
-RM_TS_DIR=/rt pytest -m "not slow"
+RM_TS_DIR=/rt RM_TS_ALWAYS_CLEAN=1 pytest
 
 echo "==> tests passed"
