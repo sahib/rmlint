@@ -16,6 +16,7 @@ Import('env')
 # This is safe and correct because the specific impl is chosen at runtime based
 # on the executing CPU, and we do not "leak" the flags into other TUs.
 #
+# There is no runtime dispatch for aarch64 LE, compile-time BLAKE3_USE_NEON is used.
 
 blake3 = [
     File('blake3/blake3.c'),
@@ -45,8 +46,13 @@ elif env['IS_X86']:
         )
         for isa, flags in blake3_simd_flags.items()
     ]
+elif env['IS_AARCH64_LE']:
+    # We could manually set BLAKE3_USE_NEON, but blake3_impl.h autodetects
+    # this at compile time, let it do it.
+    print('Compiling BLAKE3 using AArch64 NEON')
+    blake3 += [File('blake3/blake3_neon.c')]
 else:
-    print('Not compiling BLAKE3 SIMD implementations (non-x86 target)')
+    print('Not compiling BLAKE3 SIMD implementations (no SIMD for this target)')
 
 sources = (
     Glob('*.c') +

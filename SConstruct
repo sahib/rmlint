@@ -453,9 +453,10 @@ if GetOption('show_config'):
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Metro SSE4.2 dispatch                                 : {crc_dispatch}
-    blake3 uses x86 SIMD...
-        ...assembly (x86_64 only)                         : {blake3_simd_asm}
-        ...C intrinsics                                   : {blake3_simd_c}
+    BLAKE3 uses SIMD...
+        ...x86_64 assembly                                : {blake3_simd_asm}
+        ...x86 C intrinsics                               : {blake3_simd_c}
+        ...AArch64 NEON                                   : {blake3_simd_neon}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
     Checking for proper support of big files >= 4GB       : {bigfiles}
@@ -491,6 +492,7 @@ if GetOption('show_config'):
 
         blake3_simd_asm=yesno(env['IS_X86_64']),
         blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
+        blake3_simd_neon=yesno(env['IS_AARCH64_LE']),
 
         sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin else yesno(sphinx_bin),
         xattr=yesno(env['HAVE_XATTR']),
