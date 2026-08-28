@@ -185,9 +185,10 @@ typedef struct RmCfg {
      */
     gboolean run_equal_mode;
 
+#if HAVE_BUILTIN_CPU_SUPPORTS && HAVE_MM_CRC32_U64
     /* don't use sse accelerations */
-    bool no_sse;
-
+    gboolean no_sse;
+#endif
 } RmCfg;
 
 /**

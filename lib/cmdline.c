@@ -1256,7 +1256,9 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"fake-abort"             , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->fake_abort             , "Simulate interrupt after 10% shredder progress"              , NULL}   ,
         {"buffered-read"          , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->use_buffered_read      , "Default to buffered reading calls (fread) during reading."   , NULL}   ,
         {"shred-never-wait"       , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->shred_never_wait       , "Never waits for file increment to finish hashing"            , NULL}   ,
+#if HAVE_BUILTIN_CPU_SUPPORTS && HAVE_MM_CRC32_U64
         {"no-sse"                 , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->no_sse                 , "Don't use SSE accelerations"                                 , NULL}   ,
+#endif
         {"no-mount-table"         , 0   , DISABLE | HIDDEN , G_OPTION_ARG_NONE     , &cfg->list_mounts            , "Do not try to optimize by listing mounted volumes"           , NULL}   ,
         {"keep-cached-originals"  , 0   , HIDDEN           , G_OPTION_ARG_NONE     , &cfg->keep_cached_originals  , "For --replay runs, preserve any originals in json cache"     , NULL}   ,
         {NULL                     , 0   , HIDDEN           , 0                     , NULL                         , NULL                                                          , NULL}
