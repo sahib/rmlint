@@ -13,7 +13,7 @@ def run_tests(target=None, source=None, env=None):
         Exit(1)
 
     test_env = dict(os.environ, RM_TS_DIR='/tmp/rmlint-tests')
-    Exit(subprocess.call([pytest, '-s', '-v', '-m', 'not slow'], env=test_env))
+    Exit(subprocess.call(pytest, env=test_env))
 
 
 if 'test' in COMMAND_LINE_TARGETS:

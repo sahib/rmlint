@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pytest
 
@@ -17,6 +18,10 @@ def pytest_configure(config):
 
     When running in parallel with xdist, basetemp might be already set.
     """
+    if utils.get_env_flag('print_cmd') and config.option.log_cli_level is None:
+        config.option.log_cli_level = "INFO"
+        config.option.log_cli_format = "%(message)s"
+
     if not os.getenv('RM_TS_DIR') or config.option.basetemp is not None:
         return
 
@@ -66,6 +71,8 @@ def rmlint_testdir(tmp_path):
     utils.set_testdir(str(tmp_path))
     yield tmp_path
     utils.set_testdir(None)
+    if utils.get_env_flag('always_clean'):
+        shutil.rmtree(tmp_path, ignore_errors=True)
 
 
 @pytest.fixture(params=["sh", "bash", "dash"])

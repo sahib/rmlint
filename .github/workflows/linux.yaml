@@ -14,7 +14,7 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     env:
-      RM_TS_DIR: "/tmp/rmlint-unit-testdir"
+      RM_TS_DIR: "/tmp/rmlint-tests"
       scons_ARGS: 'VERBOSE=1 DEBUG=1 O=release'
     steps:
       - uses: actions/checkout@v7
@@ -58,7 +58,7 @@ jobs:
       - name: Test
         if: ${{ env.RUN_TEST == 'true' }}
         run: |
-          RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
+          RM_TS_ALWAYS_CLEAN=1 pytest -v -m ''
 
       - name: GUI tests
         if: ${{ env.RUN_TEST == 'true' }}
@@ -93,7 +93,7 @@ jobs:
               config.hook.pytest_deselected(items=deselected_items)
               items[:] = selected_items
           EOF
-          RM_TS_PRINT_CMD=0 RM_TS_PEDANTIC=0 pytest
+          RM_TS_ALWAYS_CLEAN=1 pytest
 
       - name: Cleanup
         if: ${{ env.RUN_TEST == 'true' }}

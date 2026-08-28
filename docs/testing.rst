@@ -36,14 +36,16 @@ variables which are:
   starting the testcase and manually running ``rmlint`` on the priorly generated
   testdir. 
 - ``RM_TS_PRINT_CMD``: Print the command that is currently run.
+- ``RM_TS_ALWAYS_CLEAN``: Remove the per-test directory right away, failed or not.
 
 The files of a failing test are kept for inspection, those of a passing one are
 removed as the run goes along. Pass ``-o tmp_path_retention_policy=all`` to keep
 everything, or ``=none`` to keep nothing.
 
-Additionally slow tests can be omitted with by appending ``-m 'not slow'`` to
-the commandline. More information on this syntax can be found on the `pytest
-documentation`_.
+Additionally, slow tests can be run by appending ``-m slow`` to the
+commandline. More information on this syntax can be found on the `pytest
+documentation`_. Also, ``-q`` can be used to invalidate the default ``-v``,
+so individual test names aren't displayed.
 
 .. _`pytest documentation`: https://docs.pytest.org/en/stable/example/markers.html
 
@@ -51,9 +53,7 @@ The suite can be run in parallel with `pytest-xdist`_:
 
 .. code-block:: bash
 
-   $ pytest -n auto --capture=fd
-
-Use ``--capture=fd`` if the default ``-s`` does not work.
+   $ pytest -n auto
 
 .. _`pytest-xdist`: https://pytest-xdist.readthedocs.io/
 
@@ -61,10 +61,11 @@ Before each release we call the testsuite (at least) like this:
 
 .. code-block:: bash
 
-   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -s -m 'not slow'
+   $ sudo RM_TS_USE_VALGRIND=1 RM_TS_PRINT_CMD=1 RM_TS_PEDANTIC=1 pytest -m ''
 
-The ``sudo`` here is there for executing some tests that need root access (like
-the creating of bad user and group ids). Most tests will work without.
+The ``sudo`` here is used to execute some tests that require root access (such as
+creating invalid user and group IDs). However, most tests will work fine without it.
+``-m ''`` option is used to execute all tests, including those marked as slow.
 
 Coverage
 ~~~~~~~~

@@ -199,6 +199,9 @@ typedef enum RmShHandler {
     RM_SH_HANDLER_N
 } RmShHandler;
 
+/* XXX: used later as a single-byte to stay endian-independent */
+G_STATIC_ASSERT(RM_SH_HANDLER_N <= G_MAXUINT8 + 1);
+
 static const char *ORDER_TO_STRING[] = {
     [RM_SH_HANDLER_UNKNOWN] = NULL,
     [RM_SH_HANDLER_USER_COMMAND] = "cmd",
@@ -233,7 +236,7 @@ static void rm_sh_parse_handlers(RmFmtHandlerShScript *self, const char *handler
     char **order_vec = g_strsplit(handler_cfg, ",", -1);
     for(int i = 0; order_vec && order_vec[i]; ++i) {
         bool found = false;
-        for(RmShHandler n = 0; n < RM_SH_HANDLER_N; ++n) {
+        for(guint8 n = 0; n < RM_SH_HANDLER_N; ++n) {
             if(ORDER_TO_STRING[n] == NULL) {
                 continue;
             }

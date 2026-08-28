@@ -1,7 +1,7 @@
 [pytest]
 strict = true
 minversion = "9.0"
-addopts = ["-s", "-v"]
+addopts = ['-v', '-m', 'not slow']
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 tmp_path_retention_policy = "failed"

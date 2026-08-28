@@ -1,0 +1,31 @@
+name: Multi-arch
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  multi-arch:
+    name: Build and test (${{ matrix.arch }})
+    runs-on: ${{ startsWith(matrix.arch, 'arm') && 'ubuntu-26.04-arm' || 'ubuntu-latest' }}
+    continue-on-error: ${{ matrix.arch != 'amd64' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, i386, s390x, arm64, armv7]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - if: ${{ matrix.arch == 's390x' }}
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: s390x
+
+      - name: Build and test
+        env:
+          CONTAINER_ENGINE: docker
+        run: ./ci/multi-arch/build-and-test.sh ${{ matrix.arch }}

@@ -185,6 +185,12 @@ General Options
     The use of 64-bit hash length for detecting duplicate files is not recommended, due to the
     probability of a random hash collision.
 
+    **Cross-platform caches:** checksums cached in file attributes (``--xattr``)
+    or in a ``--replay`` JSON file are portable between machines of different 
+    endianness only for the endian-agnostic hashes: MD5, the SHA and BLAKE families.
+    xxHash (used by paranoid cache) and Highway are theoretically endian-agnostic
+    as well, but due to an implementation detail, they differs on disk (for now).
+
 :``-p --paranoid`` / ``-P --less-paranoid`` (**default**):
 
     Increase or decrease the paranoia of ``rmlint``'s duplicate algorithm.
