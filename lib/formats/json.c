@@ -135,7 +135,7 @@ static void rm_fmt_head(RmSession *session, RmFmtHandler *parent, FILE *out) {
         json_object_set_string_member(header, "cwd", session->cfg->iwd);
         json_object_set_string_member(header, "args", session->cfg->joined_argv);
         json_object_set_string_member(header, "version", RM_VERSION);
-        json_object_set_string_member(header, "rev", RM_VERSION_GIT_REVISION);
+        json_object_set_string_member(header, "rev", RM_VERSION_GIT_REV);
         json_object_set_int_member(header, "progress", 0); /* Header is always first. */
         json_object_set_string_member(
             header, "checksum_type",

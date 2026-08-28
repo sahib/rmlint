@@ -266,15 +266,10 @@ Notable targets
 
     ``xgettext`` followed by ``msgmerge``.
 
-:dist: 
+:dist:
 
     Build a tarball suitable for release. Save it under
-    ``rmlint-$major-$minor-$patch.tar.gz``. 
-
-:release:
-
-    Same as ``dist``, but reads the ``.version`` file and replaces the current
-    version in the files that are not built by *scons*.
+    ``rmlint-$major-$minor-$patch(-$prerelease).tar.gz``.
 
 :cdb:
 

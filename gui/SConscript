@@ -9,9 +9,7 @@ from pathlib import Path
 from SCons.Errors import UserError
 
 Import('env')
-Import('VERSION_MAJOR')
-Import('VERSION_MINOR')
-Import('VERSION_PATCH')
+Import('VERSION')
 Import('create_uninstall_target')
 
 GUI_DIR = 'gui'
@@ -36,8 +34,6 @@ RESOURCE_DIR = 'shredder/resources'
 GRESOURCE = RESOURCE_DIR + '/shredder.gresource'
 GRESOURCE_XML = RESOURCE_DIR + '/shredder.gresource.xml'
 COMPILE_SCHEMAS = GetOption('with_compile-glib-schemas')
-
-VERSION = f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}'
 
 GSCHEMA_SOURCE = 'schemas/io.github.sahib.rmlint.Shredder.gschema.xml'
 DATA_FILES = [
@@ -172,7 +168,7 @@ resource_deps = subprocess.check_output(
 sources = ([node for node in Glob('shredder/*.py') if node.name != '_version.py']
            + Glob('shredder/views/*.py'))
 wheel = genv.Command(
-    f'dist/shredder-{VERSION}-py3-none-any.whl',
+    f'dist/shredder-{VERSION.pep440}-py3-none-any.whl',
     ['pyproject.toml', 'setup.py', '../.version']
     + sources + [GRESOURCE_XML] + resource_deps,
     f'cd {GUI_DIR} && {PYTHON} -m build --no-isolation --wheel --outdir dist .'

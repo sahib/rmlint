@@ -1,8 +1,5 @@
 Import('env')
-Import('VERSION_MAJOR')
-Import('VERSION_MINOR')
-Import('VERSION_PATCH')
-Import('VERSION_NAME')
+Import('VERSION')
 Import('create_uninstall_target')
 
 import os
@@ -34,11 +31,13 @@ FORMATTER_NAMES = {os.path.basename(src) for src, _ in MAYBE_EMBEDED_FORMATTERS}
 CONFIG_VALUES = {
     **{key: env[key] for key in ENV_KEYS},
     'INSTALL_PREFIX': env['PREFIX'],
-    'VERSION_MAJOR': VERSION_MAJOR,
-    'VERSION_MINOR': VERSION_MINOR,
-    'VERSION_PATCH': VERSION_PATCH,
-    'VERSION_NAME': VERSION_NAME,
-    'VERSION_GIT_REVISION': env['gitrev'].strip(),
+    'VERSION': str(VERSION),
+    'VERSION_MAJOR': VERSION.major,
+    'VERSION_MINOR': VERSION.minor,
+    'VERSION_PATCH': VERSION.patch,
+    'VERSION_NAME': VERSION.name,
+    'VERSION_GIT_REV': env['gitrev'] or 'unknown',
+    'VERSION_FULL': VERSION.with_rev(env['gitrev']),
 }
 
 

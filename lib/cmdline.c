@@ -58,8 +58,8 @@ static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST
 static const int RM_PARANOIA_MAX = 5;
 
 NORETURN static void rm_cmd_show_version(void) {
-    fprintf(stderr, "version %s compiled: %s at [%s] \"%s\" (rev %s)\n", RM_VERSION,
-            __DATE__, __TIME__, RM_VERSION_NAME, RM_VERSION_GIT_REVISION);
+    fprintf(stderr, "version %s compiled: %s at [%s] \"%s\"\n", RM_VERSION_FULL,
+            __DATE__, __TIME__, RM_VERSION_NAME);
 
     /* Make a list of all supported features from the macros in config.h */
     /* clang-format off */
@@ -1285,8 +1285,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
     /* Attempt to find out path to own executable.
      * This is used in the shell script to call the executable
      * for special modes like --dedupe or --equal.
-     * We want to make sure the installed version has this
-     * */
+     * We want to make sure the installed version has this */
     cfg->full_argv0_path = rm_cmd_find_own_executable_path(session, argv);
 
     ////////////////////

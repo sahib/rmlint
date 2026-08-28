@@ -1,8 +1,6 @@
 Import('env')
 Import('create_uninstall_target')
-Import('VERSION_MAJOR')
-Import('VERSION_MINOR')
-Import('VERSION_PATCH')
+Import('VERSION')
 
 import os
 import subprocess
@@ -28,7 +26,7 @@ if env['HAVE_MSGFMT']:
 def xgettext_action(target, source, env):
     return subprocess.call(
         'xgettext --package-name rmlint -k_ -kN_ -kngettext:1,2 '
-        f'--package-version {VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
+        f'--package-version {VERSION} '
         '--default-domain rmlint '
         '--add-location=file '
         f'{"--join-existing " if os.path.exists("po/rmlint.pot") else ""}'
