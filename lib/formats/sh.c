@@ -199,6 +199,9 @@ typedef enum RmShHandler {
     RM_SH_HANDLER_N
 } RmShHandler;
 
+/* XXX: used later as a single-byte to stay endian-independent */
+G_STATIC_ASSERT(RM_SH_HANDLER_N <= G_MAXUINT8 + 1);
+
 static const char *ORDER_TO_STRING[] = {
     [RM_SH_HANDLER_UNKNOWN] = NULL,
     [RM_SH_HANDLER_USER_COMMAND] = "cmd",
