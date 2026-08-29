@@ -81,14 +81,12 @@ NORETURN static void rm_cmd_show_version(void) {
         fprintf(stderr, " %c%s", (features[i].enabled) ? '+' : '-', features[i].name);
     }
 
-    fputs("\n\n", stderr);
-    fprintf(stderr, _("rmlint was written by Christopher <sahib> Pahl and Daniel "
-                      "<SeeSpotRun> Thomas."));
-    fputc('\n', stderr);
-    fprintf(stderr, _("The code at https://github.com/sahib/rmlint is licensed under the "
-                      "terms of the GPLv3."));
-    fputc('\n', stderr);
-    exit(0);
+    fputs(_("\n\n"
+            "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n"
+            "The code at https://github.com/sahib/rmlint is licensed under the "
+            "terms of the GPLv3.\n"),
+          stderr);
+    exit(EXIT_SUCCESS);
 }
 
 NORETURN static void rm_cmd_show_manpage(void) {

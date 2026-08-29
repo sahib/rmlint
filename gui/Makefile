@@ -27,7 +27,7 @@ run: $(RESOURCE_OUT) $(SCHEMA_OUT)
 		GSETTINGS_BACKEND=memory \
 		GSETTINGS_SCHEMA_DIR=$(abspath $(SCHEMA_DIR)) \
 		GIO_USE_VFS=local \
-		python3 -Wd -c "import shredder; shredder.run_gui()"
+		python3 -Wd -c "import shredder; shredder.run_gui()" $(ARGS)
 
 clean:
 	@rm -f $(RESOURCE_OUT) $(SCHEMA_OUT)
