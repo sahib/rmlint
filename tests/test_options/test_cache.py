@@ -1,6 +1,7 @@
 import hashlib
 import os
 import subprocess
+import sys
 from typing import Final
 
 import pytest
@@ -15,7 +16,9 @@ from tests.utils import (
     run_rmlint_once,
 )
 
-RMLINT_XATTR_PREFIX: Final[str] = 'user.rmlint.'
+RMLINT_XATTR_PREFIX: Final[str] = (
+    'io.github.sahib.rmlint.' if sys.platform == 'darwin' else 'user.rmlint.'
+)
 
 if skip_msg := check_xattr_capable():
     pytest.skip(skip_msg, allow_module_level=True)

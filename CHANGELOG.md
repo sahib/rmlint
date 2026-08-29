@@ -35,6 +35,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   are honoured when installing the GUI.
 * ``scons --show-config`` shows features and build in one run.
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
+* FreeBSD: support for xattr checksum cache (#800).
 
 ### Changed
 

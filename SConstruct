@@ -272,6 +272,7 @@ conf.check_libelf()
 conf.check_fiemap()
 conf.check_xattr()
 conf.check_lxattr()
+conf.check_extattr()
 conf.check_bigfiles()
 conf.check_gettext()
 conf.check_linux_limits()
@@ -533,7 +534,7 @@ if GetOption('show_config'):
         blake3_simd_neon=yesno(env['IS_AARCH64_LE']),
 
         sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin else yesno(sphinx_bin),
-        xattr=yesno(env['HAVE_XATTR']),
+        xattr=yesno(env['HAVE_XATTR'] or env['HAVE_EXTATTR']),
         bigfiles=yesno(env['HAVE_BIGFILES']),
         bigofft=yesno(env['HAVE_BIG_OFF_T']),
         bigstat=yesno(env['HAVE_STAT64']),

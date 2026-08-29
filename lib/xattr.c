@@ -29,7 +29,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if HAVE_XATTR
+#if HAVE_EXTATTR
+#include <sys/types.h>
+#include <sys/extattr.h>
+#elif HAVE_XATTR
 #include <sys/xattr.h>
 #endif
 
@@ -37,16 +40,83 @@
 #define ENODATA ENOMSG
 #endif
 
+#if RM_IS_LINUX
+#define RM_XATTR_USR_PREFIX "user."
+#elif RM_IS_APPLE
+#define RM_XATTR_USR_PREFIX "io.github.sahib."
+#else
+#define RM_XATTR_USR_PREFIX ""
+#endif
+
 ////////////////////////////
 //    UTILITY FUNCTIONS   //
 ////////////////////////////
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
 
 /* Compat wrappers for MacOSX and other platforms.
  */
 
-#if RM_IS_APPLE
+#if HAVE_EXTATTR /* BSDs */
+
+static ssize_t rm_sys_getxattr(const char *path, const char *name, void *value,
+                               size_t size, bool follow_link) {
+    if(!follow_link)
+        return extattr_get_link(path, EXTATTR_NAMESPACE_USER, name, value, size);
+
+    return extattr_get_file(path, EXTATTR_NAMESPACE_USER, name, value, size);
+}
+
+static ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+                               size_t size, _UNUSED int flags, bool follow_link) {
+    ssize_t written =
+        follow_link
+            ? extattr_set_file(path, EXTATTR_NAMESPACE_USER, name, value, size)
+            : extattr_set_link(path, EXTATTR_NAMESPACE_USER, name, value, size);
+
+    /* extattr_set_*() calls return the number of bytes that were written, but
+     * historically, rmlint expect setxattr() returns values, so 0 or -1. */
+    return written < 0 ? -1 : 0;
+}
+
+static int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+    if(!follow_link)
+        return extattr_delete_link(path, EXTATTR_NAMESPACE_USER, name);
+
+    return extattr_delete_file(path, EXTATTR_NAMESPACE_USER, name);
+}
+
+static int rm_sys_listxattr(const char *path, char *out, size_t out_size,
+                            bool follow_link) {
+    ssize_t size =
+        follow_link ? extattr_list_file(path, EXTATTR_NAMESPACE_USER, out, out_size)
+                    : extattr_list_link(path, EXTATTR_NAMESPACE_USER, out, out_size);
+
+    if(size < 0)
+        return -1;
+
+
+    /* convert in place to the listxattr() format */
+    ssize_t pos = 0;
+    while(pos < size) {
+        size_t name_len = (unsigned char)out[pos];
+
+        if(name_len == 0 || pos + 1 + (ssize_t)name_len > size) {
+            /* drop what's truncated */
+            memset(&out[pos], 0, size - pos);
+            size = pos;
+            break;
+        }
+
+        memmove(&out[pos], &out[pos + 1], name_len);
+        out[pos + name_len] = '\0';
+        pos += name_len + 1;
+    }
+
+    return size;
+}
+
+#elif RM_IS_APPLE
 
 ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
@@ -85,7 +155,7 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
     return listxattr(path, out, out_size, flags);
 }
 
-#else /* RM_IS_APPLE */
+#else /* Linux */
 
 ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
@@ -129,7 +199,7 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
     return listxattr(path, out, out_size);
 }
 
-#endif /* RM_IS_APPLE */
+#endif /* HAVE_EXTATTR / RM_IS_APPLE / Linux */
 
 static int rm_xattr_build_key(RmSession *session,
                               const char *suffix,
@@ -144,7 +214,8 @@ static int rm_xattr_build_key(RmSession *session,
     }
 
     g_assert(suffix);
-    return snprintf(buf, buf_size, "user.rmlint.%s.%s", digest_name, suffix) < 0;
+    return snprintf(buf, buf_size, RM_XATTR_USR_PREFIX "rmlint.%s.%s", digest_name,
+                    suffix) < 0;
 }
 
 static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
@@ -206,7 +277,7 @@ static int rm_xattr_del(RmFile *file, const char *key, bool follow_link) {
                             rm_sys_removexattr(file_path, key, follow_link));
 }
 
-#endif /* HAVE_XATTR */
+#endif /* RM_HAVE_XATTR */
 
 ////////////////////////////
 //  ACTUAL API FUNCTIONS  //
@@ -217,7 +288,7 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
     g_assert(file->digest);
     g_assert(session);
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
     if(file->ext_cksum || session->cfg->write_cksum_to_xattr == false) {
         return EINVAL;
     }
@@ -246,7 +317,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     g_assert(file);
     g_assert(session);
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
     if(session->cfg->read_cksum_from_xattr == false) {
         return FALSE;
     }
@@ -285,18 +356,18 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
 
     file->ext_cksum = g_strdup(cksum_hex_str);
     return TRUE;
-#else /* HAVE_XATTR */
+#else /* RM_HAVE_XATTR */
     (void)file;
     (void)session;
     return FALSE;
-#endif /* HAVE_XATTR */
+#endif /* RM_HAVE_XATTR */
 }
 
 int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
     g_assert(file);
     g_assert(session);
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
     int error = 0;
     const char *keys[] = {"cksum", "mtime", NULL};
 
@@ -321,12 +392,12 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 #endif
 }
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
 
 static GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
     const size_t buf_size = 4096;
     const size_t val_size = 1024;
-    const char prefix[13] = "user.rmlint.";
+    const char prefix[] = RM_XATTR_USR_PREFIX "rmlint.";
 
     char buf[buf_size];
     memset(buf, 0, buf_size);
@@ -406,7 +477,7 @@ static void rm_xattr_change_subkey(char *key, char *sub_key) {
 bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
     g_assert(path);
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to check dedupe state of %s: %s", path,
@@ -463,7 +534,7 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
 int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
     g_assert(path);
 
-#if HAVE_XATTR
+#if RM_HAVE_XATTR
     RmStat stat_buf;
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to mark dedupe state of %s: %s", path,

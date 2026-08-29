@@ -11,6 +11,7 @@
 #define HAVE_FIEMAP        ({HAVE_FIEMAP})
 #define HAVE_XATTR         ({HAVE_XATTR})
 #define HAVE_LXATTR        ({HAVE_LXATTR})
+#define HAVE_EXTATTR       ({HAVE_EXTATTR})
 #define HAVE_BIGFILES      ({HAVE_BIGFILES})
 #define HAVE_STAT64        ({HAVE_STAT64})
 #define HAVE_BIG_OFF_T     ({HAVE_BIG_OFF_T})
@@ -23,6 +24,12 @@
 #define HAVE_SYSMACROS_H   ({HAVE_SYSMACROS_H})
 #define HAVE_MM_CRC32_U64  ({HAVE_MM_CRC32_U64})
 #define HAVE_BUILTIN_CPU_SUPPORTS ({HAVE_BUILTIN_CPU_SUPPORTS})
+
+/* RM_HAVE_XATTR refers to the rmlint extended attribute *feature*,
+ * backed by (l)xattr (Linux, macOS, Cygwin) or exattr (*BSD).
+ * Arguably, xattr should be split in two, as macOS and Linux
+ * share only the header and function names, not the API. */
+#define RM_HAVE_XATTR      (HAVE_XATTR || HAVE_EXTATTR)
 
 /* define here so rmlint and hash utility can both access */
 #define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B

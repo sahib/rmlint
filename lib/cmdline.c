@@ -71,12 +71,12 @@ NORETURN static void rm_cmd_show_version(void) {
                     {.name = "fiemap",         .enabled = HAVE_FIEMAP},
                     {.name = "bigfiles",       .enabled = HAVE_BIGFILES},
                     {.name = "intl",           .enabled = HAVE_LIBINTL},
-                    {.name = "xattr",          .enabled = HAVE_XATTR},
+                    {.name = "xattr",          .enabled = RM_HAVE_XATTR},
                     {.name = "btrfs-support",  .enabled = HAVE_BTRFS_H},
                     {.name = NULL,             .enabled = 0}};
     /* clang-format on */
 
-    fprintf(stderr, _("compiled with:"));
+    fputs(_("compiled with:"), stderr);
     for(int i = 0; features[i].name; ++i) {
         fprintf(stderr, " %c%s", (features[i].enabled) ? '+' : '-', features[i].name);
     }
