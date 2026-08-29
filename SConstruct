@@ -2,6 +2,7 @@ import os
 import shlex
 import subprocess
 
+import SCons.Action
 import SCons.SConf
 from SCons.Script import *
 from SCons.Script.SConscript import SConsEnvironment
@@ -122,9 +123,12 @@ env = Environment(**options)
 ###########################################################################
 
 # Configuration:
-sc_dryrun = SCons.SConf.dryrun
-if GetOption('show_config'):
-    SCons.SConf.dryrun = 0  # let configuration phase run with --show-config -n
+sc_noexec = None
+if SCons.SConf.dryrun and GetOption('show_config'):
+    # let configuration phase run with --show-config -n
+    sc_noexec = SCons.SConf.dryrun, SCons.Action.execute_actions
+    SCons.SConf.dryrun = 0
+    SCons.Action.execute_actions = 1
 
 conf = Configure(env, custom_tests=CUSTOM_TESTS)
 
@@ -354,7 +358,11 @@ if value:
 
 # Your extra checks here
 env = conf.Finish()
-SCons.SConf.dryrun = sc_dryrun
+
+# restore -n after config
+if sc_noexec:
+    SCons.SConf.dryrun, SCons.Action.execute_actions = sc_noexec
+
 Export('env')
 
 # snapshot the compile flags before we add host-specific flags
