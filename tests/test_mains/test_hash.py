@@ -40,7 +40,4 @@ def streaming_compliance_check(patterns):
         'highway'
         ))
 def test_hash_function(pat):
-    if(len(pat)==1):
-        streaming_compliance_check(pat)
-    else:
-        streaming_compliance_check(pat[1:])
+    streaming_compliance_check((pat,) if isinstance(pat, str) else pat[1:])
