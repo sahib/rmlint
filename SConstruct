@@ -2,6 +2,7 @@ import os
 import shlex
 import subprocess
 
+import SCons.Action
 import SCons.SConf
 from SCons.Script import *
 from SCons.Script.SConscript import SConsEnvironment
@@ -122,9 +123,12 @@ env = Environment(**options)
 ###########################################################################
 
 # Configuration:
-sc_dryrun = SCons.SConf.dryrun
-if GetOption('show_config'):
-    SCons.SConf.dryrun = 0  # let configuration phase run with --show-config -n
+sc_noexec = None
+if SCons.SConf.dryrun and GetOption('show_config'):
+    # let configuration phase run with --show-config -n
+    sc_noexec = SCons.SConf.dryrun, SCons.Action.execute_actions
+    SCons.SConf.dryrun = 0
+    SCons.Action.execute_actions = 1
 
 conf = Configure(env, custom_tests=CUSTOM_TESTS)
 
@@ -203,7 +207,6 @@ if IS_CLANG := conf.CheckDeclaration("__clang__"):
     conf.env.Append(CCFLAGS=[
         '-Wmost',
         '-Wunreachable-code-aggressive',
-        '-Wno-bad-function-cast',
     ])
 else:
     conf.env.Append(CCFLAGS=[
@@ -211,7 +214,6 @@ else:
         '-Wduplicated-branches',
         '-Wlogical-op',
     ])
-    conf.env.Append(CCFLAGS=['-Wno-cast-function-type'])
 
 # Optional flags:
 conf.env.Append(CCFLAGS=[
@@ -356,7 +358,11 @@ if value:
 
 # Your extra checks here
 env = conf.Finish()
-SCons.SConf.dryrun = sc_dryrun
+
+# restore -n after config
+if sc_noexec:
+    SCons.SConf.dryrun, SCons.Action.execute_actions = sc_noexec
+
 Export('env')
 
 # snapshot the compile flags before we add host-specific flags
@@ -453,9 +459,10 @@ if GetOption('show_config'):
     Find non-stripped binaries (needs libelf)             : {libelf}
     Optimize using ioctl(FS_IOC_FIEMAP) (needs linux)     : {fiemap}
     Metro SSE4.2 dispatch                                 : {crc_dispatch}
-    blake3 uses x86 SIMD...
-        ...assembly (x86_64 only)                         : {blake3_simd_asm}
-        ...C intrinsics                                   : {blake3_simd_c}
+    BLAKE3 uses SIMD...
+        ...x86_64 assembly                                : {blake3_simd_asm}
+        ...x86 C intrinsics                               : {blake3_simd_c}
+        ...AArch64 NEON                                   : {blake3_simd_neon}
     Build manpage from docs/rmlint.1.rst                  : {sphinx}
     Support for caching checksums in file's xattr         : {xattr}
     Checking for proper support of big files >= 4GB       : {bigfiles}
@@ -491,6 +498,7 @@ if GetOption('show_config'):
 
         blake3_simd_asm=yesno(env['IS_X86_64']),
         blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
+        blake3_simd_neon=yesno(env['IS_AARCH64_LE']),
 
         sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin else yesno(sphinx_bin),
         xattr=yesno(env['HAVE_XATTR']),

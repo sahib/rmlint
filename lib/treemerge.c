@@ -252,6 +252,7 @@ static bool rm_tm_count_files(RmTrie *count_tree, const RmCfg *const cfg) {
                     node->data = GINT_TO_POINTER(false);
                 }
             }
+            break;
         case FTS_D:
         case FTS_DNR:
         case FTS_DOT:

@@ -392,11 +392,8 @@ def check_builtin_cpu_supports(context):
 
 @custom_test
 def check_target_arch(context):
-    # Determine the target CPU architecture and environment from the compiler.
-    # The decision is made based on $CFLAGS and toolchain; never the build host.
-    # This determines whether blake3 is built using x86_64 assembly or
-    # x86 C intrinsics for different SIMD extensions; blake3's own runtime
-    # dispatch then picks the widest available implementation at runtime.
+    """Determine the target CPU architecture and environment from the compiler."""
+
     context.Message('Checking target environment and CPU architecture... ')
 
     def _defined(macro):
@@ -412,7 +409,12 @@ def check_target_arch(context):
     ) else 0
     env['IS_WINDOWS'] = 1 if _defined('_WIN32') else 0
 
-    context.Result('x86=%s x86_64=%s windows=%s' % (
-        env['IS_X86'], env['IS_X86_64'], env['IS_WINDOWS']
+    env['IS_AARCH64_LE'] = 1 if (
+        (_defined('__aarch64__') or _defined('_M_ARM64') or _defined('_M_ARM64EC'))
+        and not _defined('__ARM_BIG_ENDIAN')
+    ) else 0
+
+    context.Result('x86=%s x86_64=%s aarch64_le=%s windows=%s' % (
+        env['IS_X86'], env['IS_X86_64'], env['IS_AARCH64_LE'], env['IS_WINDOWS']
     ))
     return True  # unused

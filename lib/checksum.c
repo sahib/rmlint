@@ -384,7 +384,7 @@ static void rm_digest_highway_free(HighwayHashCat *state) {
 }
 
 static void rm_digest_highway_update(HighwayHashCat *state, const unsigned char *data,
-                                     RmOff size) {
+                                     size_t size) {
     HighwayHashCatAppend((const uint8_t *)data, size, state);
 }
 
@@ -681,7 +681,7 @@ static void rm_digest_ext_free(RmDigestExt *state) {
 }
 
 static void rm_digest_ext_update(RmDigestExt *state, const unsigned char *data,
-                                 RmOff size) {
+                                 size_t size) {
 /* Data is assumed to be a hex representation of a checksum.
  * Needs to be compressed in pure memory first.
  *

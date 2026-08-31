@@ -597,8 +597,8 @@ static gboolean rm_cmd_parse_timestamp(_UNUSED const char *option_name,
             memset(time_buf, 0, sizeof(time_buf));
             rm_iso8601_format(time(NULL), time_buf, sizeof(time_buf));
 
-            rm_log_warning_line("-N %s is newer than current time (%s) [%lu > %lu]",
-                                string, time_buf, (time_t)result, now);
+            rm_log_warning_line("-N %s is newer than current time (%s) [%lld > %lld]",
+                                string, time_buf, (long long)result, (long long)now);
         }
     }
 
