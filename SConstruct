@@ -192,8 +192,8 @@ conf.env.Append(CCFLAGS=[
     '-std=c17', '-pipe', '-D_GNU_SOURCE'
 ])
 
-# Support cygwin:
-conf.check_cygwin()
+conf.check_target_platform()
+
 if conf.env['IS_CYGWIN']:
     conf.env.Append(CCFLAGS=['-U__STRICT_ANSI__'])
 else:
@@ -237,7 +237,6 @@ conf.env.Append(CCFLAGS=[
 
 conf.env.ParseConfig(PKG_CONFIG + ' --cflags --libs ' + ' '.join(packages))
 
-
 conf.env.Append(_LIBFLAGS=['-lm'])
 
 conf.check_builtin_cpu_supports()
@@ -255,7 +254,6 @@ conf.check_btrfs_h()
 conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
-conf.check_target_arch()
 conf.check_c23_embed('lib/formats/sh.sh')
 
 if conf.env['HAVE_LIBELF']:
@@ -349,7 +347,7 @@ if (strip_arg := ARGUMENTS.get('STRIP')) is not None:
 else:
     strip = ARGUMENTS.get('DEBUG') != '1' and not sanitisers
 
-if strip:
+if strip and not conf.env['IS_APPLE']:
     conf.env.Append(LINKFLAGS=['-s'])
 
 value = ARGUMENTS.get('CCFLAGS')
@@ -382,6 +380,9 @@ print(f"Running with --jobs={GetOption('num_jobs')}")
 library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')
 env.Default(library)
+
+if strip and conf.env['IS_APPLE']:
+    env.AddPostAction(programs, Action('strip $TARGET', 'Stripping $TARGET'))
 
 SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')
