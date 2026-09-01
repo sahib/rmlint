@@ -4,7 +4,6 @@ It loads all initially required resources and triggers
 the gui build by instancing the MainWindow.
 """
 
-import gettext
 import logging
 import os
 
@@ -81,10 +80,6 @@ class Application(Gtk.Application):
 
     def do_startup(self, **kw):
         Gtk.Application.do_startup(self, **kw)
-
-        # Make translating strings possible:
-        # (We use the same message catalouge as rmlint)
-        gettext.install('rmlint')
 
         rel_dir = os.path.dirname(__file__)
         resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')

@@ -258,6 +258,14 @@ Notable targets
 
     Extract a gettext ``.pot`` template from the source.
 
+:msgmerge:
+
+    Update every ``.po`` catalog against ``rmlint.pot``.
+
+:gettext:
+
+    ``xgettext`` followed by ``msgmerge``.
+
 :dist: 
 
     Build a tarball suitable for release. Save it under

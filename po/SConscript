@@ -6,6 +6,10 @@ Import('VERSION_PATCH')
 
 import os
 import subprocess
+from pathlib import Path
+
+from SCons.Errors import BuildError
+
 
 if env['HAVE_MSGFMT']:
     for src in env.Glob('*.po'):
@@ -21,65 +25,46 @@ if env['HAVE_MSGFMT']:
             create_uninstall_target(env, '$PREFIX/' + path)
 
 
-def xgettext():
+def xgettext_action(target, source, env):
     return subprocess.call(
-        'xgettext --package-name rmlint -k_ -kN_ '
+        'xgettext --package-name rmlint -k_ -kN_ -kngettext:1,2 '
         f'--package-version {VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
         '--default-domain rmlint '
         '--add-location=file '
-        '--join-existing '
+        f'{"--join-existing " if os.path.exists("po/rmlint.pot") else ""}'
         '--output po/rmlint.pot '
         '--from-code UTF-8 '
-        '$(find src lib -iname "*.[ch]") && '
-        'sed -i "s/CHARSET/UTF-8/g" po/rmlint.pot',
+        '-w 100 '
+        '$(find src lib -iname "*.[ch]") '
+        '$(find gui/shredder -iname "*.py")',
         shell=True
     )
 
 
-def xgettext_action(target=None, source=None, env=None):
-    status = xgettext()
-    if status:
-        print('Error: xgettext failed')
-        Exit(status)
+def msgmerge_action(target, source, env):
+    for p in Path('po').glob('*.po'):
+        if subprocess.call((
+            'msgmerge',
+            '--update',
+            '--backup=none',
+            '-w', '100',
+            str(p),
+            'po/rmlint.pot',
+        )):
+            raise BuildError(f'msgmerge failed on {p}')
 
 
-def msgmerge():
-    return subprocess.call(
-        'set -e; '
-        'for p in po/*.po; do '
-        '  msgmerge --update --backup=none "$p" po/rmlint.pot; '
-        'done',
-        shell=True
-    )
+env.AlwaysBuild(env.Alias(
+    'xgettext', None,
+    env.Action(xgettext_action, "Extracting strings…")
+))
 
+env.AlwaysBuild(env.Alias(
+    'msgmerge', None,
+    env.Action(msgmerge_action, "Merging translations…")
+))
 
-def msgmerge_action(target=None, source=None, env=None):
-    status = msgmerge()
-    if status:
-        print('Error: msgmerge failed')
-        Exit(status)
-
-
-def gettext_action(target=None, source=None, env=None):
-    status = xgettext()
-    if status:
-        print('Error: gettext failed while running xgettext')
-        Exit(status)
-    status = msgmerge()
-    if status:
-        print('Error: gettext failed while running msgmerge')
-        Exit(status)
-
-
-env.Alias(
-    'xgettext',
-    env.Command('xgettext', None, Action(xgettext_action, "Running xgettext"))
-)
-env.Alias(
-    'msgmerge',
-    env.Command('msgmerge', None, Action(msgmerge_action, "Running msgmerge"))
-)
-env.Alias(
-    'gettext',
-    env.Command('gettext', None, Action(gettext_action, "Running gettext"))
-)
+env.AlwaysBuild(env.Alias('gettext', None, [
+    env.Action(xgettext_action),
+    env.Action(msgmerge_action)
+]))
