@@ -1,21 +1,34 @@
 import hashlib
 import os
 import subprocess
+from typing import Final
 
 import pytest
+import xattr
 
 from tests.utils import (
     check_xattr_capable,
     create_dirs,
     create_file,
     get_testdir,
-    must_read_xattr,
     run_rmlint,
     run_rmlint_once,
 )
 
+RMLINT_XATTR_PREFIX: Final[str] = 'user.rmlint.'
+
 if skip_msg := check_xattr_capable():
     pytest.skip(skip_msg, allow_module_level=True)
+
+
+def get_all_xattr(path):
+    return xattr.xattr(os.path.join(get_testdir(), path)).items()
+
+
+def get_rmlint_xattr(path):
+    """Read the extended rmlint attributes of «path»."""
+    return {k: v for k, v in get_all_xattr(path)
+            if k.startswith(RMLINT_XATTR_PREFIX)}
 
 
 def create_files():
@@ -86,6 +99,7 @@ BLAKE2B = {
     s: hashlib.blake2b(s).hexdigest().encode("ascii")
     for s in (b'abc', b'def', b'longer')
 }
+BLAKE2_XATTR_KEY = RMLINT_XATTR_PREFIX + 'blake2b.cksum'
 
 
 @pytest.mark.usefixtures("needs_xattr_fs")
@@ -115,11 +129,11 @@ def test_xattr_detail(extra_opts):
     _, *data, _ = run_rmlint_once(base_options + ' --xattr-write')
     assert len(data) == 2
 
-    xattr_1 = must_read_xattr(path_1)
-    xattr_2 = must_read_xattr(path_2)
-    xattr_3 = must_read_xattr(path_3)
-    xattr_4 = must_read_xattr(path_4)
-    assert xattr_1["user.rmlint.blake2b.cksum"] == BLAKE2B[b'abc']
+    xattr_1 = get_rmlint_xattr(path_1)
+    xattr_2 = get_rmlint_xattr(path_2)
+    xattr_3 = get_rmlint_xattr(path_3)
+    xattr_4 = get_rmlint_xattr(path_4)
+    assert xattr_1[BLAKE2_XATTR_KEY] == BLAKE2B[b'abc']
     assert xattr_1 == xattr_2
 
     # no --hash-unatched given.
@@ -134,16 +148,16 @@ def test_xattr_detail(extra_opts):
         # one more due to the size twin
         assert len(data) == 3
 
-        xattr_1 = must_read_xattr(path_1)
-        xattr_2 = must_read_xattr(path_2)
-        xattr_3 = must_read_xattr(path_3)
-        xattr_4 = must_read_xattr(path_4)
-        assert xattr_1["user.rmlint.blake2b.cksum"] == BLAKE2B[b'abc']
+        xattr_1 = get_rmlint_xattr(path_1)
+        xattr_2 = get_rmlint_xattr(path_2)
+        xattr_3 = get_rmlint_xattr(path_3)
+        xattr_4 = get_rmlint_xattr(path_4)
+        assert xattr_1[BLAKE2_XATTR_KEY] == BLAKE2B[b'abc']
         assert xattr_1 == xattr_2
 
         # size-twin with --hash-unmatched.
-        xattr_3 = must_read_xattr(path_3)
-        assert xattr_3["user.rmlint.blake2b.cksum"] == BLAKE2B[b'def']
+        xattr_3 = get_rmlint_xattr(path_3)
+        assert xattr_3[BLAKE2_XATTR_KEY] == BLAKE2B[b'def']
 
         # unique-length file which was not hashed -> does not need to be touched.
         assert not xattr_4
@@ -152,7 +166,7 @@ def test_xattr_detail(extra_opts):
     _, *data, _ = run_rmlint_once(base_options + '--xattr-clear')
     assert len(data) == 2
     for path in (path_1, path_2, path_3, path_4):
-        assert not must_read_xattr(path), path
+        assert not get_rmlint_xattr(path), path
 
     # Run several times with --hash-uniques.
     for _ in range(10):
@@ -160,26 +174,26 @@ def test_xattr_detail(extra_opts):
         # one more due to the 'longer' file
         assert len(data) == 4
 
-        xattr_1 = must_read_xattr(path_1)
-        xattr_2 = must_read_xattr(path_2)
-        xattr_3 = must_read_xattr(path_3)
-        xattr_4 = must_read_xattr(path_4)
-        assert xattr_1["user.rmlint.blake2b.cksum"] == BLAKE2B[b'abc']
+        xattr_1 = get_rmlint_xattr(path_1)
+        xattr_2 = get_rmlint_xattr(path_2)
+        xattr_3 = get_rmlint_xattr(path_3)
+        xattr_4 = get_rmlint_xattr(path_4)
+        assert xattr_1[BLAKE2_XATTR_KEY] == BLAKE2B[b'abc']
         assert xattr_1 == xattr_2
 
         # size-twin with --hash-unmatched.
-        xattr_3 = must_read_xattr(path_3)
-        assert xattr_3["user.rmlint.blake2b.cksum"] == BLAKE2B[b'def']
+        xattr_3 = get_rmlint_xattr(path_3)
+        assert xattr_3[BLAKE2_XATTR_KEY] == BLAKE2B[b'def']
 
         # unique file which was not hashed -> does not need to be touched.
-        xattr_4 = must_read_xattr(path_4)
-        assert xattr_4["user.rmlint.blake2b.cksum"] == BLAKE2B[b'longer']
+        xattr_4 = get_rmlint_xattr(path_4)
+        assert xattr_4[BLAKE2_XATTR_KEY] == BLAKE2B[b'longer']
 
     # Try clearing the attributes:
     _, *data, _ = run_rmlint(base_options + '--xattr-clear')
     assert len(data) == 2
     for path in (path_1, path_2, path_3, path_4):
-        assert not must_read_xattr(path), path
+        assert not get_rmlint_xattr(path), path
 
 
 @pytest.mark.usefixtures("needs_xattr_fs")
@@ -244,3 +258,27 @@ def test_clamp_xattr_false_positive(clamp):
     # we would get a false positive here, as the xattrs matched
     _, *data, _ = run_rmlint('--xattr -T dd', force_no_pedantic=True)
     assert not any(e['type'] == 'duplicate_dir' for e in data)  # do 'a' and 'b' match?
+
+
+@pytest.mark.usefixtures("needs_xattr_fs")
+def test_xattr_stays_in_its_namespace():
+    """rmlint must not write anything outside of its prefix."""
+
+    def check_only_rmlint_xattrs():
+        for root, _, files in os.walk(get_testdir()):
+            for name in files:
+                print(os.path.join(root, name))
+                for key, _ in get_all_xattr(os.path.join(root, name)):
+                    if not key.startswith(RMLINT_XATTR_PREFIX):
+                        return False
+        return True
+
+    create_files()
+    if not check_only_rmlint_xattrs():
+        pytest.skip("this system taints tested files with foreign keys")
+
+    for options in ('--xattr-write --hash-uniques -D',
+                    '--xattr-read',
+                    '--xattr-clear'):
+        run_rmlint_once(options)
+        assert check_only_rmlint_xattrs()

@@ -480,16 +480,6 @@ def bind_mount_a_b(mnt_root):
         subprocess.call(('umount', mnt_dir))
 
 
-def must_read_xattr(path):
-    """
-    Read all extended attributes of a »path«.
-
-    NOTE: This will only work on non-tmpfs mounts.
-          See create_special_fs for a workaround.
-    """
-    return dict(xattr.xattr(os.path.join(get_testdir(), path)).items())
-
-
 @contextlib.contextmanager
 def assert_exit_code(status_code):
     """
