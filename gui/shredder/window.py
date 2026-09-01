@@ -9,13 +9,12 @@ Notable classes:
 
 import logging
 from functools import partial
-from gettext import gettext
 
 from gi.repository import Gio, Gtk
 
 import shredder
+from shredder.i18n import _
 
-_ = gettext
 LOGGER = logging.getLogger('window')
 
 

@@ -10,11 +10,13 @@ gi.require_version('GtkSource', '4')
 if gi.Repository.get_default().enumerate_versions('Polkit'):
     gi.require_version('Polkit', '1.0')
 
+from shredder.i18n import _
+
 # Name of your application:
 APP_TITLE = 'Shredder'
 
 # One sentence description of the application:
-APP_DESCRIPTION = 'Find & clean duplicate files'
+APP_DESCRIPTION = _('Find & clean duplicate files')
 
 # Use boxy old menus or new popovers?
 APP_USE_TRADITIONAL_MENU = False

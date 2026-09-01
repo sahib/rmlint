@@ -9,6 +9,7 @@ import argparse
 import logging
 import os
 
+from shredder.i18n import _
 from shredder.version import get_version
 
 
@@ -29,7 +30,7 @@ def parse_arguments(root_logger):
     """Parse the cmdline options using argparse."""
     parser = argparse.ArgumentParser(
         prog='shredder',
-        description="A gui frontend to rmlint.",
+        description=_("A GUI frontend to rmlint"),
     )
     parser.add_argument(
         "-a", "--add-location",

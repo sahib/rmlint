@@ -19,6 +19,7 @@ from operator import itemgetter
 
 from gi.repository import GLib, Gtk
 
+from shredder.i18n import _
 from shredder.util import (
     DestructiveButton,
     FileSizeRange,
@@ -130,7 +131,7 @@ class SettingsView(View):
     """Generic GSettingsView in a modern Gnome like appearance."""
     def __init__(self, app):
         super().__init__(
-            app, sub_title='Configure how duplicates are searched'
+            app, sub_title=_('Configure how duplicates are searched')
         )
 
         self._grid = Gtk.Grid()
@@ -149,7 +150,7 @@ class SettingsView(View):
         self.metadata = {}
 
         self.appy_btn = SuggestedButton()
-        self.deny_btn = DestructiveButton('Reset to defaults')
+        self.deny_btn = DestructiveButton(_('Reset to defaults'))
 
         self.appy_btn.connect('clicked', self.on_apply_settings)
         self.deny_btn.connect('clicked', self.on_reset_to_defaults)

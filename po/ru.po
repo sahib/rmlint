@@ -1,31 +1,31 @@
 # Russian translations for rmlint package.
 # Copyright (C) 2025 THE rmlint'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the rmlint package.
-# Automatically generated, 2025.
+# Василий Черский, 2025.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: rmlint 2.10.3\n"
+"Project-Id-Version: rmlint 2.11.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-01 18:50+0000\n"
-"PO-Revision-Date: 2025-03-19 11:56+0100\n"
+"POT-Creation-Date: 2026-08-28 00:00+0000\n"
+"PO-Revision-Date: 2026-08-28 10:24+0000\n"
 "Last-Translator: Василий Черский <vt+git@vbc.su>\n"
 "Language-Team: none\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || "
+"n%100>=20) ? 1 : 2);\n"
 
 #: src/rmlint.c
 #, c-format
-msgid "Aborting due to a fatal error. (signal received: %s)"
-msgstr "Прерывание из-за фатальной ошибки. (получен сигнал: %s)"
+msgid "Aborting due to a fatal error. (signal received: %s)\n"
+msgstr ""
 
 #: src/rmlint.c
-msgid "Please file a bug report (See rmlint -h)"
-msgstr "Пожалуйста, отправьте отчёт об ошибке (см. rmlint -h)"
+msgid "Please file a bug report (See rmlint -h)\n"
+msgstr "Пожалуйста, отправьте отчёт об ошибке (см. rmlint -h)\n"
 
 #: lib/formats/pretty.c
 msgid "Bad symlink(s)"
@@ -56,6 +56,16 @@ msgid "Empty file(s)"
 msgstr "Пустой(ые) файл(ы)"
 
 #: lib/formats/pretty.c
+#, fuzzy
+msgid "Duplicate candidates(s)"
+msgstr "Дубликат(ы)"
+
+#: lib/formats/pretty.c
+#, fuzzy
+msgid "Duplicate dir candidate(s)"
+msgstr "Дубликат(ы)"
+
+#: lib/formats/pretty.c
 msgid "Duplicate(s)"
 msgstr "Дубликат(ы)"
 
@@ -63,45 +73,56 @@ msgstr "Дубликат(ы)"
 msgid "Duplicate Directorie(s)"
 msgstr ""
 
-#: lib/formats/summary.c
-#, c-format
-msgid " file(s) after investigation, nothing to search through.\n"
-msgstr "в файл(ы) после расследования, нет ничего, что можно было бы искать.\n"
-
-#: lib/formats/summary.c
-#, c-format
-msgid "Early shutdown, probably not all lint was found.\n"
+#: lib/formats/progressbar.c
+msgid "reduces files to"
 msgstr ""
 
-#: lib/formats/summary.c
-#, c-format
-msgid ""
-"Note: Please use the saved script below for removal, not the above output."
+#: lib/formats/progressbar.c
+msgid "Traversing"
 msgstr ""
 
-#: lib/formats/summary.c
-#, c-format
-msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
-msgstr "Всего %s файлов, из которых %s являются дубликатами в %s группах.\n"
-
-#: lib/formats/summary.c
-#, c-format
-msgid "This equals %s%s%s of duplicates which could be removed.\n"
-msgstr "Это равняется %s%s%s дубликатов, которые можно удалить.\n"
-
-#: lib/formats/summary.c
-#, c-format
-msgid "other suspicious item(s) found, which may vary in size.\n"
+#: lib/formats/progressbar.c
+msgid "usable files"
 msgstr ""
 
-#: lib/formats/summary.c
-#, c-format
-msgid "Scanning took in total %s%s%s.\n"
+#: lib/formats/progressbar.c
+msgid "ignored files / folders"
 msgstr ""
 
-#: lib/formats/summary.c
-#, c-format
-msgid "Wrote a %s%s%s file to: %s%s%s\n"
+#: lib/formats/progressbar.c
+msgid "Preprocessing"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "found"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "other lint"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "Matching"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "dupes of"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "originals"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "to scan in"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "files"
+msgstr ""
+
+#: lib/formats/progressbar.c
+msgid "Merging files into directories (stand by...)"
 msgstr ""
 
 #: lib/formats/stats.c
@@ -171,56 +192,49 @@ msgstr ""
 msgid "%s%15s%s Algorithm efficiency on duplicate file basis\n"
 msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "reduces files to"
+#: lib/formats/summary.c
+#, c-format
+msgid " file(s) after investigation, nothing to search through.\n"
+msgstr " файл(ы) после расследования, нет ничего, что можно было бы искать.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "Early shutdown, probably not all lint was found.\n"
 msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "Traversing"
+#: lib/formats/summary.c
+#, c-format
+msgid "Note: Please use the saved script below for removal, not the above output."
 msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "usable files"
+#: lib/formats/summary.c
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr "Всего %s файлов, из которых %s являются дубликатами в %s группах.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr "Это равняется %s%s%s дубликатов, которые можно удалить.\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
 msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "ignored files / folders"
+#: lib/formats/summary.c
+#, c-format
+msgid "This run was a replay from a previous run. No I/O done!\n"
 msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "Preprocessing"
+#: lib/formats/summary.c
+#, c-format
+msgid "Scanning took in total %s%s%s.\n"
 msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "found"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "other lint"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "Matching"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "dupes of"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "originals"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "to scan in"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "files"
-msgstr ""
-
-#: lib/formats/progressbar.c
-msgid "Merging files into directories (stand by...)"
+#: lib/formats/summary.c
+#, c-format
+msgid "Wrote a %s%s%s file to: %s%s%s\n"
 msgstr ""
 
 #: lib/formats/sh.c
@@ -228,58 +242,55 @@ msgstr ""
 msgid "%s is an invalid handler."
 msgstr ""
 
+#: lib/logger.h
+msgid "ERROR"
+msgstr "ОШИБКА"
+
+#: lib/logger.h
+msgid "WARNING"
+msgstr "ПРЕДУПРЕЖДЕНИЕ"
+
+#: lib/logger.h
+msgid "INFO"
+msgstr ""
+
+#: lib/logger.h
+msgid "DEBUG"
+msgstr ""
+
 #: lib/hasher.c
 #, c-format
-msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
+msgid "Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
 msgstr ""
 
-#: lib/utilities.c
-#, c-format
-msgid "cannot open file '%s' for nonstripped test: "
-msgstr ""
-
-#: lib/utilities.c
-msgid "ELF Library is out of date!"
-msgstr ""
-
-#: lib/utilities.c
-#, c-format
-msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
-msgstr ""
-
-#: lib/preprocess.c lib/rank.c
+#: lib/rank.c
 msgid "Pattern has to start with `<`"
 msgstr ""
 
-#: lib/preprocess.c lib/rank.c
+#: lib/rank.c
 #, c-format
 msgid "`<` or `>` imbalance: %d"
 msgstr ""
 
-#: lib/preprocess.c lib/rank.c
+#: lib/rank.c
 msgid "empty pattern"
 msgstr ""
 
-#: lib/preprocess.c lib/rank.c
+#: lib/rank.c
 msgid "no pattern given in <> after 'r' or 'x'"
 msgstr ""
 
-#: lib/preprocess.c lib/rank.c
+#: lib/rank.c
 #, c-format
 msgid "Cannot add more than %lu regex patterns."
 msgstr ""
 
-#: lib/preprocess.c lib/rank.c
+#: lib/rank.c
 msgid "Error while parsing sortcriteria patterns: "
 msgstr ""
 
 #: lib/replay.c
-msgid "No valid json cache (no array in /)"
-msgstr ""
-
-#: lib/replay.c lib/cmdline.c
-#, c-format
-msgid "lint type '%s' not recognised"
+msgid "lint type of node not recognised"
 msgstr ""
 
 #: lib/replay.c
@@ -293,11 +304,162 @@ msgid "Loading json-results `%s'"
 msgstr ""
 
 #: lib/replay.c
-msgid "json-glib is needed for using --replay."
+msgid "No valid json cache (no array in /)"
 msgstr ""
 
 #: lib/replay.c
-msgid "Please recompile `rmlint` with it installed."
+msgid "No valid .json files given, aborting."
+msgstr ""
+
+#: lib/session.c
+msgid "Received interrupt; stopping..."
+msgstr ""
+
+#: lib/session.c
+msgid "Received second interrupt; stopping hard."
+msgstr ""
+
+#: lib/reflink.c
+msgid "Check extended attributes to see if the file is already deduplicated"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Even dedupe read-only snapshots (needs root)"
+msgstr ""
+
+#: lib/reflink.c lib/cmdline.c
+msgid "Follow symlinks"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Try to dedupe files with inline extents"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Don't use fiemap to check whether files are already reflinked"
+msgstr ""
+
+#: lib/reflink.c lib/cmdline.c
+msgid "Be more verbose (-vv for much more)"
+msgstr ""
+
+#: lib/reflink.c lib/cmdline.c
+msgid "Be less verbose (-VV for much less)"
+msgstr ""
+
+#: lib/reflink.c lib/cmdline.c
+msgid "Dedupe matching extents from source to dest (if filesystem supports)"
+msgstr ""
+
+#: lib/reflink.c
+#, c-format
+msgid ""
+"Error parsing command line:\n"
+"%s"
+msgstr ""
+
+#: lib/reflink.c
+msgid ""
+"must have exactly two files\n"
+"\n"
+msgstr ""
+
+#: lib/reflink.c
+msgid "dedupe: failed to open source file"
+msgstr ""
+
+#: lib/reflink.c
+msgid "dedupe: failed to create temp file"
+msgstr ""
+
+#: lib/reflink.c
+#, c-format
+msgid "dedupe: error %i: failed to open dest file.%s"
+msgstr ""
+
+#: lib/reflink.c
+msgid ""
+"\n"
+"\t(if target is a read-only snapshot then -r option is required)"
+msgstr ""
+
+#: lib/reflink.c
+#, c-format
+msgid "dedupe: error %s create clone via FICLONE; original hardlink left unchanged"
+msgstr ""
+
+#: lib/reflink.c
+msgid "dedupe: Can't create clone of hardlink because FICLONE not defined on your system"
+msgstr ""
+
+#: lib/reflink.c
+#, c-format
+msgid "%s returned error: (%d)"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Files don't match - not deduped"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Only first %"
+msgstr ""
+
+#: lib/reflink.c
+msgid "rmlint was not compiled with file cloning support."
+msgstr ""
+
+#: lib/reflink.c lib/cmdline.c
+msgid "Test if two files are reflinks (share same data extents)"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Returns 0 if the files are reflinks."
+msgstr ""
+
+#: lib/reflink.c
+msgid "Other return codes:"
+msgstr ""
+
+#: lib/reflink.c
+msgid "must have exactly two files"
+msgstr ""
+
+#: lib/reflink.c
+msgid "Cannot test for reflinks because rmlint was compiled without fiemap support"
+msgstr ""
+
+#: lib/reflink.c
+#, c-format
+msgid "`%s`: No such file or directory"
+msgstr ""
+
+#: lib/treemerge.c
+msgid "Failed to allocate memory. Out of memory?"
+msgstr ""
+
+#: lib/formats.c
+#, c-format
+msgid "Old result `%s` already exists."
+msgstr ""
+
+#: lib/formats.c
+#, c-format
+msgid "Moving old file to `%s`. Leave out --backup to disable this."
+msgstr ""
+
+#: lib/formats.c
+msgid "failed to rename old result file"
+msgstr ""
+
+#: lib/formats.c
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr ""
+
+#: lib/formats.c
+#, c-format
+msgid "Unable to open file for writing: %s"
 msgstr ""
 
 #: lib/traverse.c
@@ -317,6 +479,11 @@ msgstr ""
 
 #: lib/traverse.c
 #, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr ""
+
+#: lib/traverse.c
+#, c-format
 msgid "Added big file %s"
 msgstr ""
 
@@ -327,99 +494,12 @@ msgstr ""
 
 #: lib/traverse.c
 #, c-format
-msgid "Unknown fts_info flag %d for file %s"
+msgid "'%s': fts_read failed on %s"
 msgstr ""
 
 #: lib/traverse.c
 #, c-format
-msgid "'%s': fts_read failed on %s"
-msgstr ""
-
-#: lib/cfg.c lib/hash-utility.c
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr ""
-
-#: lib/cfg.c
-#, c-format
-msgid "Can't get real path for directory or file \"%s\": %s"
-msgstr ""
-
-#: lib/session.c
-msgid "Received interrupt; stopping..."
-msgstr ""
-
-#: lib/session.c
-msgid "Received second interrupt; stopping hard."
-msgstr ""
-
-#: lib/formats.c
-#, c-format
-msgid "No such new_handler with this name: %s"
-msgstr ""
-
-#: lib/formats.c
-#, c-format
-msgid "Unable to open file for writing: %s"
-msgstr ""
-
-#: lib/hash-utility.c lib/cmdline.c
-#, c-format
-msgid "Unknown hash algorithm: '%s'"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "Digest type [BLAKE2B]"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "Number of hashing threads [8]"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "Megabytes read buffer [256 MB]"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid ""
-"Print hashes in order completed, not in order entered (reduces memory usage)"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "Space-separated list of files"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "Hash a list of files"
-msgstr ""
-
-#: lib/hash-utility.c
-#, c-format
-msgid ""
-"Multi-threaded file digest (hash) calculator.\n"
-"\n"
-"  Available digest types:\n"
-"    %s\n"
-"\n"
-"  Versions with different bit numbers:\n"
-"    %s\n"
-"\n"
-"  Supported, but not useful:\n"
-"    %s\n"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "No valid paths given"
-msgstr ""
-
-#: lib/hash-utility.c
-#, c-format
-msgid "Directories are not supported: %s"
-msgstr ""
-
-#: lib/hash-utility.c
-#, c-format
-msgid "%s: Unknown file type"
+msgid "Unable to process path %s"
 msgstr ""
 
 #: lib/cmdline.c
@@ -428,17 +508,11 @@ msgid "compiled with:"
 msgstr ""
 
 #: lib/cmdline.c
-#, c-format
 msgid ""
-"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> "
-"Thomas."
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid ""
-"The code at https://github.com/sahib/rmlint is licensed under the terms of "
-"the GPLv3."
+"\n"
+"\n"
+"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n"
+"The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3.\n"
 msgstr ""
 
 #: lib/cmdline.c
@@ -450,66 +524,8 @@ msgid "Please run rmlint --help to show the regular help."
 msgstr "Пожалуйста, запустите rmlint --help, чтобы показать справку."
 
 #: lib/cmdline.c
-msgid ""
-"Alternatively, visit https://rmlint.rtfd.org for the online documentation"
+msgid "Alternatively, visit https://rmlint.rtfd.org for the online documentation"
 msgstr "Или посетите онлайн-документацию https://rmlint.rtfd.org"
-
-#: lib/cmdline.c
-msgid "Usage: rmlint --dedupe [-r] source dest\n"
-msgstr ""
-
-#: lib/cmdline.c lib/session.c lib/reflink.c
-msgid "dedupe: failed to open source file"
-msgstr ""
-
-#: lib/cmdline.c lib/session.c lib/reflink.c
-#, c-format
-msgid "dedupe: error %i: failed to open dest file.%s"
-msgstr ""
-
-#: lib/cmdline.c lib/session.c lib/reflink.c
-msgid ""
-"\n"
-"\t(if target is a read-only snapshot then -r option is required)"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Need to run as root user to clone to a read-only snapshot"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Files don't match - not cloned"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "rmlint was not compiled with btrfs support."
-msgstr ""
-
-#: lib/cmdline.c lib/utilities.c
-msgid "Input size is empty"
-msgstr ""
-
-#: lib/cmdline.c lib/utilities.c
-msgid "This does not look like a number"
-msgstr "Это не похоже на число"
-
-#: lib/cmdline.c
-msgid "Negativ sizes are no good idea"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Given format specifier not found"
-msgstr ""
 
 #: lib/cmdline.c
 msgid "Max is smaller than min"
@@ -526,17 +542,22 @@ msgstr ""
 
 #: lib/cmdline.c
 #, c-format
-msgid "No format (format:key[=val]) specified in '%s'"
+msgid "No formatter (expect %s) specified in '%s'"
 msgstr ""
 
 #: lib/cmdline.c
 #, c-format
-msgid "Missing key (format:key[=val]) in '%s'"
+msgid "Missing key (expect %s) in '%s'"
 msgstr ""
 
 #: lib/cmdline.c
 #, c-format
-msgid "Invalid key `%s' for formatter `%s'"
+msgid "Invalid formatter '%s'"
+msgstr ""
+
+#: lib/cmdline.c
+#, c-format
+msgid "Invalid key '%s' for formatter '%s'"
 msgstr ""
 
 #: lib/cmdline.c
@@ -556,6 +577,11 @@ msgstr ""
 
 #: lib/cmdline.c
 #, c-format
+msgid "lint type '%s' not recognised"
+msgstr ""
+
+#: lib/cmdline.c
+#, c-format
 msgid "Unable to parse time spec \"%s\""
 msgstr ""
 
@@ -565,7 +591,18 @@ msgid "-n %lu is newer than current time (%lu)."
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Only up to -pp or down to -PP flags allowed"
+#, c-format
+msgid "No stamp file at `%s`, will create one after this run."
+msgstr ""
+
+#: lib/cmdline.c
+#, c-format
+msgid "Only up to -%.*s or down to -%.*s flags allowed"
+msgstr ""
+
+#: lib/cmdline.c lib/hash-utility.c
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
 msgstr ""
 
 #: lib/cmdline.c
@@ -583,11 +620,7 @@ msgid "%s may only contain [%s], not `%c`"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Specifiyng both -o and -O is not allowed"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Could not start graphical user interface."
+msgid "Specifying both -o and -O is not allowed"
 msgstr ""
 
 #: lib/cmdline.c
@@ -595,7 +628,7 @@ msgid "Specify max traversal depth"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Select originals by given  criteria"
+msgid "Select originals by given criteria"
 msgstr ""
 
 #: lib/cmdline.c
@@ -635,15 +668,7 @@ msgid "Configure a formatter"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Enable progressbar"
-msgstr ""
-
-#: lib/cmdline.c lib/reflink.c
-msgid "Be more verbose (-vv for much more)"
-msgstr ""
-
-#: lib/cmdline.c lib/reflink.c
-msgid "Be less verbose (-VV for much less)"
+msgid "Enable xattr based caching"
 msgstr ""
 
 #: lib/cmdline.c
@@ -655,15 +680,15 @@ msgid "Test for equality of PATHS"
 msgstr ""
 
 #: lib/cmdline.c
+msgid "Enable progressbar"
+msgstr ""
+
+#: lib/cmdline.c
 msgid "Be not that colorful"
 msgstr ""
 
 #: lib/cmdline.c
 msgid "Find hidden files"
-msgstr ""
-
-#: lib/cmdline.c lib/reflink.c
-msgid "Follow symlinks"
 msgstr ""
 
 #: lib/cmdline.c
@@ -676,6 +701,10 @@ msgstr ""
 
 #: lib/cmdline.c
 msgid "Do not cross mountpoints"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Don't abort run if bad path passed to rmlint"
 msgstr ""
 
 #: lib/cmdline.c
@@ -723,11 +752,23 @@ msgid "Ignore hardlink twins"
 msgstr ""
 
 #: lib/cmdline.c
+msgid "Keep hardlink that are linked to any original"
+msgstr ""
+
+#: lib/cmdline.c
 msgid "Find hidden files in duplicate folders only"
 msgstr ""
 
 #: lib/cmdline.c
 msgid "Consider duplicates only equal when mtime differs at max. T seconds"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Read null-separated file list from stdin"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Do create backups of previous result files"
 msgstr ""
 
 #: lib/cmdline.c
@@ -743,12 +784,7 @@ msgid "If installed, start the optional gui with all following args"
 msgstr ""
 
 #: lib/cmdline.c
-msgid ""
-"Work like sha1sum for all supported hash algorithms (see also --hash --help)"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Clone extents from source to dest, if extents match"
+msgid "Work like sha1sum for all supported hash algorithms (see also --hash --help)"
 msgstr ""
 
 #: lib/cmdline.c
@@ -769,25 +805,32 @@ msgstr ""
 
 #: lib/cmdline.c
 msgid ""
-"rmlint finds space waste and other broken things on your filesystem and "
-"offers to remove it.\n"
-"It is especially good at finding duplicates and offers a big variety of "
-"options to handle them."
+"rmlint finds space waste and other broken things on your filesystem and offers to remove it.\n"
+"It is especially good at finding duplicates and offers a big variety of options to handle them."
 msgstr ""
 
 #: lib/cmdline.c
 msgid ""
-"Only the most important options and options that alter the defaults are "
-"shown above.\n"
-"See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed "
-"usage information,\n"
+"Only the most important options and options that alter the defaults are shown above.\n"
+"See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed usage information,\n"
 "or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
 "Complementary tutorials can be found at: http://rmlint.rtfd.org"
 msgstr ""
 
 #: lib/cmdline.c
-msgid ""
-"--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"
+msgid "Not all given paths are valid. Aborting"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Note that not having duplicate directories enabled as lint type (e.g via -T df)"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "will also disable --merge-directories and trigger this warning."
 msgstr ""
 
 #: lib/cmdline.c
@@ -799,11 +842,15 @@ msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
 msgstr ""
 
 #: lib/cmdline.c
-msgid "Not all given paths are valid. Aborting"
+msgid ""
+"-k and -M should not be specified at the same time (see also: https://github.com/sahib/rmlint/"
+"issues/244)"
 msgstr ""
 
-#: lib/cmdline.c lib/replay.c
-msgid "No valid .json files given, aborting."
+#: lib/cmdline.c
+msgid ""
+"-K and -m should not be specified at the same time (see also: https://github.com/sahib/rmlint/"
+"issues/244)"
 msgstr ""
 
 #: lib/cmdline.c
@@ -815,27 +862,49 @@ msgid "Either do not use -D, or attempt to run again with -Dj."
 msgstr ""
 
 #: lib/cmdline.c
+msgid "Failed to complete setup for merging directories"
+msgstr ""
+
+#: lib/cmdline.c
 msgid "Not enough files for --equal (need at least two to compare)"
 msgstr ""
 
-#: lib/config.h lib/logger.h
-msgid "ERROR"
-msgstr "ОШИБКА"
-
-#: lib/config.h lib/logger.h
-msgid "WARNING"
-msgstr "ПРЕДУПРЕЖДЕНИЕ"
-
-#: lib/config.h lib/logger.h
-msgid "INFO"
+#: lib/cfg.c lib/hash-utility.c
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
 msgstr ""
 
-#: lib/config.h lib/logger.h
-msgid "DEBUG"
+#: lib/cfg.c
+#, c-format
+msgid "Can't get real path for directory or file \"%s\": %s"
+msgstr ""
+
+#: lib/hash-utility.c
+msgid "Digest type [BLAKE2B]"
+msgstr ""
+
+#: lib/hash-utility.c
+msgid "Number of hashing threads [8]"
+msgstr ""
+
+#: lib/hash-utility.c
+msgid "Megabytes read buffer [256 MB]"
 msgstr ""
 
 #: lib/hash-utility.c
 msgid "bytes to hash at a time [4096]"
+msgstr ""
+
+#: lib/hash-utility.c
+msgid "Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr ""
+
+#: lib/hash-utility.c
+msgid "Space-separated list of files"
+msgstr ""
+
+#: lib/hash-utility.c
+msgid "Hash a list of files"
 msgstr ""
 
 #: lib/hash-utility.c
@@ -854,180 +923,68 @@ msgid ""
 "    %s\n"
 msgstr ""
 
-#: lib/formats.c
+#: lib/hash-utility.c
+msgid "No valid paths given"
+msgstr ""
+
+#: lib/hash-utility.c
 #, c-format
-msgid "Old result `%s` already exists."
+msgid "Directories are not supported: %s"
 msgstr ""
 
-#: lib/formats.c
+#: lib/hash-utility.c
 #, c-format
-msgid "Moving old file to `%s`. Use --no-backup to disable this."
+msgid "%s: Unknown file type"
 msgstr ""
 
-#: lib/formats.c
-msgid "failed to rename old result file"
+#: lib/utilities.c
+msgid "Input size is empty"
 msgstr ""
 
-#: lib/session.c
-msgid "Usage: rmlint --dedupe [-r] [-v|V] source dest\n"
-msgstr ""
-
-#: lib/session.c lib/reflink.c
-#, c-format
-msgid "%s returned error: (%d)"
-msgstr ""
-
-#: lib/session.c lib/reflink.c
-msgid "Files don't match - not deduped"
-msgstr ""
-
-#: lib/session.c lib/reflink.c
-msgid "Only first %"
-msgstr ""
-
-#: lib/session.c lib/reflink.c
-msgid "rmlint was not compiled with file cloning support."
-msgstr ""
-
-#: lib/session.c
-msgid "Usage: rmlint --is-clone [-v|V] file1 file2\n"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "Only up to -%.*s or down to -%.*s flags allowed"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Keep hardlink that are linked to any original"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Read null-separated file list from stdin"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Do not create backups of previous result files"
-msgstr ""
-
-#: lib/cmdline.c lib/reflink.c
-msgid "Dedupe matching extents from source to dest (if filesystem supports)"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "(--dedupe option) even dedupe read-only snapshots (needs root)"
-msgstr ""
-
-#: lib/cmdline.c lib/reflink.c
-msgid "Test if two files are reflinks (share same data extents)"
-msgstr ""
-
-#: lib/cmdline.c
-msgid ""
-"-k and -M should not be specified at the same time (see also: https://"
-"github.com/sahib/rmlint/issues/244)"
-msgstr ""
-
-#: lib/cmdline.c
-msgid ""
-"-K and -m should not be specified at the same time (see also: https://"
-"github.com/sahib/rmlint/issues/244)"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Failed to complete setup for merging directories"
-msgstr ""
-
-#: lib/treemerge.c
-msgid "Failed to allocate memory. Out of memory?"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "--replay (-Y) is incompatible with --dedupe or --is-reflink"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "No stamp file at `%s`, will create one after this run."
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Enable xattr based caching"
-msgstr ""
-
-#: lib/cmdline.c lib/reflink.c
-msgid "Check extended attributes to see if the file is already deduplicated"
-msgstr ""
-
-#: lib/cmdline.c
-msgid ""
-"Note that not having duplicate directories enabled as lint type (e.g via -T "
-"df)"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "will also disable --merge-directories and trigger this warning."
-msgstr ""
-
-#: src/rmlint.c
-#, c-format
-msgid "Aborting due to a fatal error. (signal received: %s)\n"
-msgstr ""
-
-#: src/rmlint.c
-msgid "Please file a bug report (See rmlint -h)\n"
-msgstr "Пожалуйста, отправьте отчёт об ошибке (см. rmlint -h)\n"
-
-#: lib/formats/summary.c
-#, c-format
-msgid "This run was a replay from a previous run. No I/O done!\n"
-msgstr ""
-
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
 msgid "Size is empty"
 msgstr ""
 
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
 msgid "Negative sizes are no good idea"
 msgstr ""
 
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
 msgid "Given size_format specifier not found"
 msgstr ""
 
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
 msgid "Failed to parse size fraction"
 msgstr ""
 
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
 msgid "Fraction is too big for uint64"
 msgstr ""
 
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
+msgid "This does not look like a number"
+msgstr "Это не похоже на число"
+
+#: lib/utilities.c
 msgid "Size is too big for uint64"
 msgstr ""
 
-#: lib/cmdline.c lib/utilities.c
+#: lib/utilities.c
 msgid "Size factor would overflow size (max. 2**64 allowed)"
 msgstr ""
 
-#: lib/cmdline.c
-msgid "Specifying both -o and -O is not allowed"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Do create backups of previous result files"
-msgstr ""
-
-#: lib/hasher.c
+#: lib/utilities.c
 #, c-format
-msgid ""
-"Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
+msgid "cannot open file '%s' for nonstripped test: "
 msgstr ""
 
-#: lib/formats.c
+#: lib/utilities.c
+msgid "ELF Library is out of date!"
+msgstr ""
+
+#: lib/utilities.c
 #, c-format
-msgid "Moving old file to `%s`. Leave out --backup to disable this."
+msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
 msgstr ""
 
 #: lib/utilities.c
@@ -1042,107 +999,6 @@ msgstr ""
 
 #: lib/utilities.c
 msgid "rm_offset_get_fiemap: got no extents for %d at offset %"
-msgstr ""
-
-#: lib/session.c
-msgid "Usage: rmlint --is-reflink [-v|V] file1 file2\n"
-msgstr ""
-
-#: lib/formats/pretty.c
-#, fuzzy
-msgid "Duplicate candidates(s)"
-msgstr "Дубликат(ы)"
-
-#: lib/formats/pretty.c
-#, fuzzy
-msgid "Duplicate dir candidate(s)"
-msgstr "Дубликат(ы)"
-
-#: lib/reflink.c
-msgid "Even dedupe read-only snapshots (needs root)"
-msgstr ""
-
-#: lib/reflink.c
-msgid "Try to dedupe files with inline extents"
-msgstr ""
-
-#: lib/reflink.c
-msgid "Don't use fiemap to check whether files are already reflinked"
-msgstr ""
-
-#: lib/reflink.c
-#, c-format
-msgid ""
-"Error parsing command line:\n"
-"%s"
-msgstr ""
-
-#: lib/reflink.c
-msgid ""
-"must have exactly two files\n"
-"\n"
-msgstr ""
-
-#: lib/reflink.c
-msgid "dedupe: failed to create temp file"
-msgstr ""
-
-#: lib/reflink.c
-#, c-format
-msgid ""
-"dedupe: error %s create clone via FICLONE; original hardlink left unchanged"
-msgstr ""
-
-#: lib/reflink.c
-msgid ""
-"dedupe: Can't create clone of hardlink because FICLONE not defined on your "
-"system"
-msgstr ""
-
-#: lib/reflink.c
-msgid "Returns 0 if the files are reflinks."
-msgstr ""
-
-#: lib/reflink.c
-msgid "Other return codes:"
-msgstr ""
-
-#: lib/reflink.c
-msgid "must have exactly two files"
-msgstr ""
-
-#: lib/reflink.c
-msgid ""
-"Cannot test for reflinks because rmlint was compiled without fiemap support"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "No formatter (expect %s) specified in '%s'"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "Missing key (expect %s) in '%s'"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "Invalid formatter '%s'"
-msgstr ""
-
-#: lib/cmdline.c
-#, c-format
-msgid "Invalid key '%s' for formatter '%s'"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Don't abort run if bad path passed to rmlint"
-msgstr ""
-
-#: lib/traverse.c
-#, c-format
-msgid "Unable to process path %s"
 msgstr ""
 
 #: lib/utilities.c
@@ -1162,7 +1018,7 @@ msgid "File sizes differ"
 msgstr ""
 
 #: lib/utilities.c
-msgid "Files have inline extents or fiemap data could not be read"
+msgid "Maybe a reflink (fiemap data could not be read)"
 msgstr ""
 
 #: lib/utilities.c
@@ -1189,19 +1045,45 @@ msgstr ""
 msgid "An error occurred during checking"
 msgstr ""
 
-#: lib/replay.c
-msgid "lint type of node not recognised"
-msgstr ""
-
-#: lib/reflink.c
-#, c-format
-msgid "`%s`: No such file or directory"
-msgstr ""
-
-#: lib/utilities.c
-msgid "Maybe a reflink (fiemap data could not be read)"
-msgstr ""
-
 #: lib/utilities.c
 msgid "Files have inline extents"
 msgstr ""
+
+#: gui/shredder/views/settings.py
+msgid "Configure how duplicates are searched"
+msgstr "Настройка поиска дубликатов"
+
+#: gui/shredder/views/settings.py
+msgid "Reset to defaults"
+msgstr "Восстановить значения по умолчанию"
+
+#: gui/shredder/__init__.py
+msgid "Find & clean duplicate files"
+msgstr "Поиск и удаление дубликатов файлов"
+
+#: gui/shredder/cmdline.py
+msgid "A GUI frontend to rmlint"
+msgstr "Графический интерфейс к rmlint"
+
+#: gui/shredder/window.py
+msgid "Settings"
+msgstr "Параметры"
+
+#: gui/shredder/window.py
+msgid "About"
+msgstr "О программе"
+
+#: gui/shredder/window.py
+msgid "Search"
+msgstr "Поиск"
+
+#: gui/shredder/window.py
+msgid "Quit"
+msgstr "Выход"
+
+#, c-format
+#~ msgid "Aborting due to a fatal error. (signal received: %s)"
+#~ msgstr "Прерывание из-за фатальной ошибки. (получен сигнал: %s)"
+
+#~ msgid "Please file a bug report (See rmlint -h)"
+#~ msgstr "Пожалуйста, отправьте отчёт об ошибке (см. rmlint -h)"
