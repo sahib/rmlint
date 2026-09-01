@@ -544,7 +544,7 @@ class Script(GObject.Object):
 if __name__ == '__main__':
     def main():
         """Stupid test main: Run on /usr."""
-        settings = Gio.Settings.new('org.gnome.Shredder')
+        settings = Gio.Settings.new('io.github.sahib.rmlint.Shredder')
         loop = GLib.MainLoop()
 
         runner = Runner(settings, ['/usr/'], [])

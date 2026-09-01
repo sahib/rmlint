@@ -1081,6 +1081,94 @@ msgstr "Поиск"
 msgid "Quit"
 msgstr "Выход"
 
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Report duplicate hardlinks"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Duplicate files might have hardlinked twins"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Symbolic link handling"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "What to do with symbolic links?"
+msgstr "Что делать с символическими ссылками?"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "How to tackle found duplicates"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Define the handler that will tackle the wasted space"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Find hidden files and directories"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Hidden files and directories begin with a ».«"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "[2] Size limits"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "What size the duplicate files may have"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Traversal depth"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "»1« is only the current directory's files"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Cross mountpoints"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Traverse over mount borders?"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Path limitations"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Only find twins with a certain limitation"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Hash algorithm"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Which hash algorithm to use"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Keep all tagged"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Keep all files that lie in tagged directories"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Must match tagged"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Duplicates must have twins in tagged directories"
+msgstr ""
+
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"
 #~ msgstr "Прерывание из-за фатальной ошибки. (получен сигнал: %s)"

@@ -54,7 +54,7 @@ def _load_app_icon():
     """
     try:
         return GdkPixbuf.Pixbuf.new_from_resource_at_scale(
-            '/org/gnome/shredder/shredder.svg', 200, 200, True
+            '/io/github/sahib/rmlint/Shredder/shredder.svg', 200, 200, True
         )
     except GLib.Error as err:
         LOGGER.warning('Could not render the application icon: %s', err)
@@ -67,7 +67,7 @@ class Application(Gtk.Application):
         GLib.set_application_name(APP_TITLE)
 
         super().__init__(
-            application_id='org.gnome.Shredder',
+            application_id='io.github.sahib.rmlint.Shredder',
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS
         )
 
@@ -89,7 +89,7 @@ class Application(Gtk.Application):
 
         # Load the application CSS files.
         css_data = Gio.resources_lookup_data(
-            '/org/gnome/shredder/shredder.css', 0
+            '/io/github/sahib/rmlint/Shredder/shredder.css', 0
         )
 
         try:
@@ -98,7 +98,7 @@ class Application(Gtk.Application):
             LOGGER.warning("Failed to load css data: %s", err)
 
         # Init the config system
-        self.settings = Gio.Settings.new('org.gnome.Shredder')
+        self.settings = Gio.Settings.new('io.github.sahib.rmlint.Shredder')
 
         self.win = MainWindow(self)
 

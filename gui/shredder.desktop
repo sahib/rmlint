@@ -1,6 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Shredder Duplicate Finder
+Name=Shredder
+Name[bg]=Шредер
+Name[ru]=Шредер
+Name[uk]=Шредер
 GenericName=Duplicate Finder
 Comment=Find and delete duplicates
 TryExec=shredder

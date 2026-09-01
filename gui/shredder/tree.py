@@ -1002,7 +1002,7 @@ if __name__ == '__main__':
                 arg_path, Column.make_row({'mtime': time.time(), 'size': 0}))
 
         from shredder.runner import Runner
-        settings = Gio.Settings.new('org.gnome.Shredder')
+        settings = Gio.Settings.new('io.github.sahib.rmlint.Shredder')
 
         runner = Runner(settings, sys.argv[1:], [])
         runner.connect(

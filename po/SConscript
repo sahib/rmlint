@@ -36,7 +36,8 @@ def xgettext_action(target, source, env):
         '--from-code UTF-8 '
         '-w 100 '
         '$(find src lib -iname "*.[ch]") '
-        '$(find gui/shredder -iname "*.py")',
+        '$(find gui/shredder -iname "*.py") '
+        'gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml',
         shell=True
     )
 

@@ -2,5 +2,6 @@
 /dist/
 /shredder.egg-info/
 /shredder/resources/shredder.gresource
-/.glib-schemas/
+schemas/gschemas.compiled
+/.locale/
 /shredder/_version.py

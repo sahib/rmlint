@@ -58,6 +58,11 @@ The format follows [keepachangelog.com]. Please stick to it.
 * The minimum supported Glib version is now 2.74
 * The default installation prefix is now ``/usr/local``.
 * The build system supports ``PREFIX=`` and ``DESTDIR=`` options.
+* Shredder's GSettings schema is now ``io.github.sahib.rmlint.Shredder``
+  instead of ``org.gnome.Shredder`` — Shredder is not a GNOME project. The
+  application ID and the GResource prefix changed as well accordingly.
+  Shredder will therefore starts from its defaults, but the old values can be
+  read using: ``dconf dump /org/gnome/Shredder/``.
 
 ### Removed
 * ``--dedupe-xattr``. Use ``--dedupe --xattr``

@@ -358,7 +358,8 @@ msgstr "Clonage d'extents de la source vers la destinations (si le système de f
 msgid ""
 "Error parsing command line:\n"
 "%s"
-msgstr "Erreur lors du décodage de la ligne de commande:\n"
+msgstr ""
+"Erreur lors du décodage de la ligne de commande:\n"
 "%s"
 
 #: lib/reflink.c
@@ -1110,6 +1111,96 @@ msgstr "Rechercher"
 #: gui/shredder/window.py
 msgid "Quit"
 msgstr "Quitter"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+#, fuzzy
+msgid "Report duplicate hardlinks"
+msgstr "Considérer les liens en dur comme des doubles"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Duplicate files might have hardlinked twins"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Symbolic link handling"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "What to do with symbolic links?"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "How to tackle found duplicates"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Define the handler that will tackle the wasted space"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Find hidden files and directories"
+msgstr "Trouver les fichiers et répertoires cachés"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Hidden files and directories begin with a ».«"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "[2] Size limits"
+msgstr "[2] limites de taille"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "What size the duplicate files may have"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Traversal depth"
+msgstr "Profondeur de traversée"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "»1« is only the current directory's files"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Cross mountpoints"
+msgstr "Traverser les points de montages"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Traverse over mount borders?"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Path limitations"
+msgstr "limites de chemin"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Only find twins with a certain limitation"
+msgstr "Chercher uniquement les doublons avec la même limite"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Hash algorithm"
+msgstr "algorithme de hachage"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Which hash algorithm to use"
+msgstr "Choisir l'algorithme de hachage"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Keep all tagged"
+msgstr "Conserver tous les fichiers marqués"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Keep all files that lie in tagged directories"
+msgstr ""
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+#, fuzzy
+msgid "Must match tagged"
+msgstr "Il doit y avoir un doublon dans le répertoire marqué"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Duplicates must have twins in tagged directories"
+msgstr "Il doit y avoir un doublon dans le répertoire marqué"
 
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"

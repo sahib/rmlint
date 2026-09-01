@@ -2,14 +2,14 @@
 This is a rather generic interface for building a settings view
 from a GSettingsSchema, which is (usually) defined as XML File.
 
-For shredder this file is `org.gnome.Shredder.gschema.xml` and contains a
-description of all keys used by Shredder.  Keys are typed in GSettings, so
-depending on the type a suitable widget is constructed.  Changes from outside
+For shredder this file is `io.github.sahib.rmlint.Shredder.gschema.xml` and
+contains a description of all keys used by Shredder. Keys are typed in GSettings,
+so depending on the type a suitable widget is constructed. Changes from outside
 are displayed by the widget and changes of the widget cause a change of the
 key's value.
 
 For reference, keys can be changed on the commandline too:
-$ gsettings --schemadir ~/.glib-schemas set org.gnome.Shredder traverse-depth 2
+$ gsettings --schemadir ~/.glib-schemas set io.github.sahib.rmlint.Shredder traverse-depth 2
 """
 
 import logging
@@ -128,7 +128,7 @@ VARIANT_TO_WIDGET = {
 
 
 class SettingsView(View):
-    """Generic GSettingsView in a modern Gnome like appearance."""
+    """Generic GSettingsView in a Gnome-like appearance."""
     def __init__(self, app):
         super().__init__(
             app, sub_title=_('Configure how duplicates are searched')

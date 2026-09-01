@@ -1,9 +1,10 @@
 # This Makefile is for manual testing only.
 # GNU make syntax (shell vs !=), use gmake on BSD.
-SCHEMA_SRC    := shredder/resources/org.gnome.Shredder.gschema.xml
-SCHEMA_DIR    := .glib-schemas
-LOCALE_DIR    := .locale
+SCHEMA_DIR    := schemas
+SCHEMA_SRC    := $(SCHEMA_DIR)/io.github.sahib.rmlint.Shredder.gschema.xml
 SCHEMA_OUT    := $(SCHEMA_DIR)/gschemas.compiled
+
+LOCALE_DIR    := .locale
 
 RESOURCE_XML  := shredder/resources/shredder.gresource.xml
 RESOURCE_OUT  := shredder/resources/shredder.gresource
@@ -21,9 +22,8 @@ $(RESOURCE_OUT): $(RESOURCE_XML) $(RESOURCE_DEPS)
 
 schema: $(SCHEMA_OUT)
 
-$(SCHEMA_OUT): $(SCHEMA_SRC)
-	@mkdir -p $(SCHEMA_DIR)
-	@glib-compile-schemas --targetdir=$(SCHEMA_DIR) shredder/resources
+$(SCHEMA_OUT): translations $(SCHEMA_SRC)
+	@glib-compile-schemas --strict $(SCHEMA_DIR)
 
 translations:
 	@if [ -n "$$LANGUAGE" ]; then \
@@ -39,12 +39,13 @@ run: translations $(RESOURCE_OUT) $(SCHEMA_OUT)
 		GSETTINGS_BACKEND=memory \
 		GSETTINGS_SCHEMA_DIR=$(abspath $(SCHEMA_DIR)) \
 		GIO_USE_VFS=local \
-		SHREDDER_LOCALEDIR=$(abspath $(LOCALE_DIR)) \
+		TEXTDOMAINDIR=$(abspath $(LOCALE_DIR)) \
 		python3 -Wd -c "import shredder; shredder.run_gui()" $(ARGS)
 
 clean:
 	@rm -f $(RESOURCE_OUT) $(SCHEMA_OUT)
-	@rmdir $(SCHEMA_DIR)
 	@find shredder -name '*.py[co]' -delete
 	@find shredder -type d -name '__pycache__' -empty -delete
-	@find "$(LOCALE_DIR)" -depth \( -type d -o -name '*.mo' \) -delete
+	@if [ -d "$(LOCALE_DIR)" ]; then \
+		find "$(LOCALE_DIR)" -depth \( -type d -o -name '*.mo' \) -delete; \
+	fi

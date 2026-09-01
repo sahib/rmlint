@@ -39,13 +39,13 @@ COMPILE_SCHEMAS = GetOption('with_compile-glib-schemas')
 
 VERSION = f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}'
 
-GSCHEMA_SOURCE = 'shredder/resources/org.gnome.Shredder.gschema.xml'
+GSCHEMA_SOURCE = 'schemas/io.github.sahib.rmlint.Shredder.gschema.xml'
 DATA_FILES = [
     (Path('$PREFIX/share/icons/hicolor/scalable/apps/shredder.svg'),
      'shredder/resources/shredder.svg'),
-    (Path(f'$PREFIX/{GSCHEMA_DIR_SUFFIX}/org.gnome.Shredder.gschema.xml'),
+    (Path(f'$PREFIX/{GSCHEMA_DIR_SUFFIX}/io.github.sahib.rmlint.Shredder.gschema.xml'),
      GSCHEMA_SOURCE),
-    (Path('$PREFIX/share/applications/shredder.desktop'),
+    (Path('$PREFIX/share/applications/io.github.sahib.rmlint.Shredder.desktop'),
      'shredder.desktop'),
 ]
 
