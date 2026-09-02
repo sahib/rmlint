@@ -26,7 +26,7 @@ genv['ENV'].update(
 # TODO: Keep it until 2.12.0
 LEGACY_FILES_RECORD = os.path.join(GUI_DIR, '.files.txt')
 
-PYTHON = sys.executable
+PYTHON = os.environ.get('PYTHON', sys.executable)
 PREFIX: Path = env['PREFIX']
 DESTDIR = env['DESTDIR']
 STAGED_PREFIX = env['staged_prefix']
