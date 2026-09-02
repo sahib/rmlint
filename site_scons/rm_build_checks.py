@@ -305,18 +305,6 @@ def check_linux_limits(context):
 
 
 @custom_test
-def check_cygwin(context):
-    context.Message('Checking for cygwin environment...')
-    uname = platform.uname()
-    context.Log('/'.join(uname) + '\n')
-    rc = uname[0].upper().startswith('CYGWIN')
-
-    context.sconf.env['IS_CYGWIN'] = rc
-    context.Result(rc)
-    return rc
-
-
-@custom_test
 def check_c23_embed(context, payload):
     """Probe whether the compiler can #embed a repo-relative file.
 
@@ -391,30 +379,32 @@ def check_builtin_cpu_supports(context):
 
 
 @custom_test
-def check_target_arch(context):
-    """Determine the target CPU architecture and environment from the compiler."""
-
-    context.Message('Checking target environment and CPU architecture... ')
+def check_target_platform(context):
+    """Determine the target CPU architecture and OS from the compiler."""
 
     def _defined(macro):
-        src = f'#if !defined({macro})\n#error not defined\n#endif\nint _target_arch_check;\n'
+        src = f'#ifdef {macro}\nint _check;\n#else\n#error not defined\n#endif'
         return context.TryCompile(src, '.c')
 
     env = context.sconf.env
-    env['IS_X86_64'] = 1 if (
-        _defined('__x86_64__') or _defined('__amd64__') or _defined('_M_X64')
-    ) else 0
-    env['IS_X86'] = 1 if (
-        env['IS_X86_64'] or _defined('__i386__') or _defined('_M_IX86')
-    ) else 0
-    env['IS_WINDOWS'] = 1 if _defined('_WIN32') else 0
 
-    env['IS_AARCH64_LE'] = 1 if (
-        (_defined('__aarch64__') or _defined('_M_ARM64') or _defined('_M_ARM64EC'))
-        and not _defined('__ARM_BIG_ENDIAN')
-    ) else 0
+    context.Message('Checking target arch... ')
+    env['IS_X86_64'] = _defined('__x86_64__') or _defined('__amd64__') or _defined('_M_X64')
+    env.Replace(
+        IS_X86=env['IS_X86_64'] or _defined('__i386__') or _defined('_M_IX86'),
+        IS_AARCH64_LE=int(((_defined('__aarch64__') or _defined('_M_ARM64') or _defined('_M_ARM64EC'))
+                          and not _defined('__ARM_BIG_ENDIAN'))),
+    )
 
-    context.Result('x86=%s x86_64=%s aarch64_le=%s windows=%s' % (
-        env['IS_X86'], env['IS_X86_64'], env['IS_AARCH64_LE'], env['IS_WINDOWS']
-    ))
-    return True  # unused
+    context.Message('and OS... ')
+    env.Replace(
+        IS_APPLE=_defined('__APPLE__'),
+        IS_WINDOWS=_defined('_WIN32'),
+        IS_CYGWIN=_defined('__CYGWIN__'),
+    )
+
+    def _result(targets):
+        return ' '.join('%s=%s' % (t, env['IS_' + t.upper()]) for t in targets)
+
+    context.Result(_result(('x86', 'x86_64', 'aarch64_le', 'apple', 'windows', 'cygwin')))
+    return True

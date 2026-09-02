@@ -6,6 +6,7 @@ import SCons.Action
 import SCons.SConf
 from SCons.Script import *
 from SCons.Script.SConscript import SConsEnvironment
+from SCons.Errors import UserError
 
 from rm_build_checks import CUSTOM_TESTS
 from rm_build_support import (
@@ -191,8 +192,8 @@ conf.env.Append(CCFLAGS=[
     '-std=c17', '-pipe', '-D_GNU_SOURCE'
 ])
 
-# Support cygwin:
-conf.check_cygwin()
+conf.check_target_platform()
+
 if conf.env['IS_CYGWIN']:
     conf.env.Append(CCFLAGS=['-U__STRICT_ANSI__'])
 else:
@@ -201,7 +202,9 @@ else:
 # check _mm_crc32_u64 (SSE4.2) support:
 conf.check_mm_crc32_u64()
 
-if IS_CLANG := conf.CheckDeclaration("__clang__"):
+conf.env['IS_CLANG'] = conf.CheckDeclaration("__clang__")
+
+if conf.env['IS_CLANG']:
     conf.env.Append(CCFLAGS=['-fcolor-diagnostics'])  # Colored warnings
     conf.env.Append(CCFLAGS=['-Qunused-arguments'])   # Hide wrong messages
     conf.env.Append(CCFLAGS=[
@@ -234,7 +237,6 @@ conf.env.Append(CCFLAGS=[
 
 conf.env.ParseConfig(PKG_CONFIG + ' --cflags --libs ' + ' '.join(packages))
 
-
 conf.env.Append(_LIBFLAGS=['-lm'])
 
 conf.check_builtin_cpu_supports()
@@ -252,7 +254,6 @@ conf.check_btrfs_h()
 conf.check_linux_fs_h()
 conf.check_uname()
 conf.check_sysmacro_h()
-conf.check_target_arch()
 conf.check_c23_embed('lib/formats/sh.sh')
 
 if conf.env['HAVE_LIBELF']:
@@ -293,16 +294,14 @@ for s in sanitisers:
 sanitisers = deduped
 
 needs_clang = [s for s in sanitisers if s in SANITISERS_CLANG_ONLY]
-if needs_clang and not IS_CLANG:
-    print(f"Error: sanitiser(s) {', '.join(needs_clang)} require clang; "
-          f"re-run with CC=clang.")
-    Exit(1)
+if needs_clang and not conf.env['IS_CLANG']:
+    raise UserError(f"Error: sanitiser(s) {', '.join(needs_clang)} "
+                     "require clang; re-run with CC=clang.")
 
 exclusive = [s for s in sanitisers if s in SANITISERS_EXCLUSIVE]
 if len(exclusive) > 1:
-    print(f"Error: sanitisers {', '.join(exclusive)} cannot be combined; "
-          f"pick one of address/thread/memory.")
-    Exit(1)
+    raise UserError(f"Error: sanitisers {', '.join(exclusive)}, cannot "
+                     "be combined; pick one of address/thread/memory.")
 
 O_DEBUG   = 'g' # The optimisation level for a debug   build
 O_RELEASE = '2' # The optimisation level for a release build
@@ -348,7 +347,7 @@ if (strip_arg := ARGUMENTS.get('STRIP')) is not None:
 else:
     strip = ARGUMENTS.get('DEBUG') != '1' and not sanitisers
 
-if strip:
+if strip and not conf.env['IS_APPLE']:
     conf.env.Append(LINKFLAGS=['-s'])
 
 value = ARGUMENTS.get('CCFLAGS')
@@ -381,6 +380,9 @@ print(f"Running with --jobs={GetOption('num_jobs')}")
 library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')
 env.Default(library)
+
+if strip and conf.env['IS_APPLE']:
+    env.AddPostAction(programs, Action('strip $TARGET', 'Stripping $TARGET'))
 
 SConscript('tests/SConscript', exports='programs')
 SConscript('po/SConscript')

@@ -20,9 +20,10 @@ Import('env')
 
 blake3 = [
     File('blake3/blake3.c'),
-    File('blake3/blake3_dispatch.c'),
     File('blake3/blake3_portable.c'),
 ]
+
+blake3_dispatch_flags = []
 
 if env['IS_X86_64']:
     print('Compiling BLAKE3 using x86_64 SIMD assembly')
@@ -51,8 +52,15 @@ elif env['IS_AARCH64_LE']:
     # this at compile time, let it do it.
     print('Compiling BLAKE3 using AArch64 NEON')
     blake3 += [File('blake3/blake3_neon.c')]
+    # Keep blake3 vendored verbatim for now, ignore the warning.
+    # see https://github.com/BLAKE3-team/BLAKE3/pull/344
+    if env['IS_CLANG']:
+        blake3_dispatch_flags += ['-Wno-unreachable-code-aggressive']
 else:
-    print('Not compiling BLAKE3 SIMD implementations (no SIMD for this target)')
+    print('Not compiling BLAKE3 SIMD implementations (none for this target)')
+
+blake3 += [env.Object('blake3/blake3_dispatch.c',
+                      CCFLAGS=env['CCFLAGS'] + blake3_dispatch_flags)]
 
 sources = (
     Glob('*.c') +
