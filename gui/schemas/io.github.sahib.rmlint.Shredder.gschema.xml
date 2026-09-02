@@ -1,5 +1,5 @@
 <schemalist>
-    <enum id="org.gnome.Shredder.AlgorithmType">
+    <enum id="io.github.sahib.rmlint.Shredder.AlgorithmType">
         <value nick="spooky" value="1"/>
         <value nick="city" value="2"/>
         <value nick="sha1" value="3"/>
@@ -11,55 +11,55 @@
         <value nick="blake2s" value="9"/>
         <value nick="byte-by-byte" value="10"/>
     </enum>
-    <enum id="org.gnome.Shredder.MatchType">
+    <enum id="io.github.sahib.rmlint.Shredder.MatchType">
         <value nick="No limitation" value="1"/>
         <value nick="Same basename" value="2"/>
         <value nick="Same file extension" value="3"/>
         <value nick="Same basename minus extension" value="4"/>
     </enum>
-    <enum id="org.gnome.Shredder.SymlinkType">
+    <enum id="io.github.sahib.rmlint.Shredder.SymlinkType">
         <value nick="Ignore symbolic links" value="1"/>
         <value nick="See symbolic links" value="2"/>
         <value nick="Follow symbolic links" value="3"/>
     </enum>
-    <enum id="org.gnome.Shredder.HiddenType">
+    <enum id="io.github.sahib.rmlint.Shredder.HiddenType">
         <value nick="Ignore hidden files" value="1"/>
         <value nick="Use for duplicate directories only" value="2"/>
         <value nick="Find all hidden files" value="3"/>
     </enum>
-    <enum id="org.gnome.Shredder.KeepAllType">
+    <enum id="io.github.sahib.rmlint.Shredder.KeepAllType">
         <value nick="No restriction" value="1"/>
         <value nick="Keep all tagged" value="2"/>
         <value nick="Keep all untagged" value="3"/>
     </enum>
-    <enum id="org.gnome.Shredder.MustMatchType">
+    <enum id="io.github.sahib.rmlint.Shredder.MustMatchType">
         <value nick="No restriction" value="1"/>
         <value nick="Must match tagged" value="2"/>
         <value nick="Must match untagged" value="3"/>
     </enum>
-    <enum id="org.gnome.Shredder.HandlerType">
+    <enum id="io.github.sahib.rmlint.Shredder.HandlerType">
         <value nick="Remove duplicates" value="1"/>
         <value nick="Link duplicates" value="2"/>
         <value nick="Symboliclink duplicates" value="3"/>
         <value nick="Hardlink duplicates" value="4"/>
     </enum>
-    <schema id="org.gnome.Shredder" path="/org/gnome/Shredder/" gettext-domain="shredder">
+    <schema id="io.github.sahib.rmlint.Shredder" path="/io/github/sahib/rmlint/Shredder/" gettext-domain="rmlint">
         <key name="general-find-hardlinks" type="b">
             <default>true</default>
             <summary>Report duplicate hardlinks</summary>
             <description>Duplicate files might have hardlinked twins</description>
         </key>
-        <key name="general-find-symlinks" enum="org.gnome.Shredder.SymlinkType">
+        <key name="general-find-symlinks" enum="io.github.sahib.rmlint.Shredder.SymlinkType">
             <default>'See symbolic links'</default>
             <summary>Symbolic link handling</summary>
             <description>What to do with symbolic links?</description>
         </key>
-        <key name="general-handler-type" enum="org.gnome.Shredder.HandlerType">
+        <key name="general-handler-type" enum="io.github.sahib.rmlint.Shredder.HandlerType">
             <default>'Remove duplicates'</default>
             <summary>How to tackle found duplicates</summary>
             <description>Define the handler that will tackle the wasted space</description>
         </key>
-        <key name="traverse-hidden" enum="org.gnome.Shredder.HiddenType">
+        <key name="traverse-hidden" enum="io.github.sahib.rmlint.Shredder.HiddenType">
             <default>'Use for duplicate directories only'</default>
             <summary>Find hidden files and directories</summary>
             <description>Hidden files and directories begin with a ».«</description>
@@ -80,22 +80,22 @@
             <summary>Cross mountpoints</summary>
             <description>Traverse over mount borders?</description>
         </key>
-        <key name='traverse-match' enum='org.gnome.Shredder.MatchType'>
+        <key name='traverse-match' enum='io.github.sahib.rmlint.Shredder.MatchType'>
             <default>'No limitation'</default>
             <summary>Path limitations</summary>
             <description>Only find twins with a certain limitation</description>
         </key>
-        <key name='computation-algorithm' enum='org.gnome.Shredder.AlgorithmType'>
+        <key name='computation-algorithm' enum='io.github.sahib.rmlint.Shredder.AlgorithmType'>
             <default>'blake2b'</default>
             <summary>Hash algorithm</summary>
             <description>Which hash algorithm to use</description>
         </key>
-        <key name='computation-keep-all-tagged' enum="org.gnome.Shredder.KeepAllType">
+        <key name='computation-keep-all-tagged' enum="io.github.sahib.rmlint.Shredder.KeepAllType">
             <default>'No restriction'</default>
             <summary>Keep all tagged</summary>
             <description>Keep all files that lie in tagged directories</description>
         </key>
-        <key name='computation-must-match-tagged' enum="org.gnome.Shredder.MustMatchType">
+        <key name='computation-must-match-tagged' enum="io.github.sahib.rmlint.Shredder.MustMatchType">
             <default>'No restriction'</default>
             <summary>Must match tagged</summary>
             <description>Duplicates must have twins in tagged directories</description>

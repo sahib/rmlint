@@ -208,7 +208,7 @@ class PathTrie(GObject.Object):
     }
 
     def __init__(self, root_paths=None):
-        GObject.Object.__init__(self)
+        super().__init__()
 
         self.root = PathNode('/', None, {})
         self.sub_roots = []
@@ -801,7 +801,7 @@ def _create_column(title, id_, renderers, fixed_width=100):
 class PathTreeView(Gtk.TreeView):
     """A GtkTreeView that is readily configured for using PathTreeModel"""
     def __init__(self):
-        Gtk.TreeView.__init__(self)
+        super().__init__()
 
         # Enable separator lines:
         self.set_grid_lines(Gtk.TreeViewGridLines.NONE)
@@ -874,7 +874,7 @@ class PathTreeView(Gtk.TreeView):
 
         menu = self.on_show_menu()
         if menu:
-            menu.simple_popup(event)
+            menu.popup_at_pointer(event)
 
     #######################
     # MENU ENTRY HANDLING #
@@ -1002,7 +1002,7 @@ if __name__ == '__main__':
                 arg_path, Column.make_row({'mtime': time.time(), 'size': 0}))
 
         from shredder.runner import Runner
-        settings = Gio.Settings.new('org.gnome.Shredder')
+        settings = Gio.Settings.new('io.github.sahib.rmlint.Shredder')
 
         runner = Runner(settings, sys.argv[1:], [])
         runner.connect(

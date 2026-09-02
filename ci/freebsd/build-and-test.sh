@@ -4,8 +4,7 @@ set -eu
 cd "$(dirname "$0")/../.."
 echo "==> $(freebsd-version) $(uname -m), $(sysctl -n hw.ncpu) cpus, $(pwd)"
 
-scons_ARGS="VERBOSE=1 DEBUG=1 O=release"
-scons --show-config $scons_ARGS
+scons --show-config --without-gui VERBOSE=1 DEBUG=1 O=release
 
 mount -t tmpfs none /rt
 RM_TS_DIR=/rt RM_TS_ALWAYS_CLEAN=1 pytest

@@ -26,7 +26,7 @@ class ResultActionBar(Gtk.ActionBar):
     }
 
     def __init__(self, view):
-        Gtk.ActionBar.__init__(self)
+        super().__init__()
 
         left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         left_box.get_style_context().add_class("linked")
@@ -117,7 +117,7 @@ class RunnerView(View):
         - model: The data.
     """
     def __init__(self, app):
-        View.__init__(self, app, 'Running…')
+        super().__init__(app, 'Running…')
 
         # Public: The runner.
         self.runner = None
@@ -155,7 +155,10 @@ class RunnerView(View):
 
         group_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         group_box.pack_start(scrolled(self.group_treeview), True, True, 0)
-        group_box.pack_start(Gtk.HSeparator(), False, False, 0)
+        group_box.pack_start(
+            Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
+            False, False, 0
+        )
 
         self.group_revealer = Gtk.Revealer()
         self.group_revealer.set_vexpand(True)

@@ -101,6 +101,24 @@ Environment Variables
 Variables
 ~~~~~~~~~
 
+:PREFIX=<prefix>:
+
+    Change the installation prefix. By default this is ``/usr/local``, but
+    some users might prefer ``/usr`` or ``/opt``.
+
+:DESTDIR=<destdir>:
+
+    Staging directory like ``/tmp/rootfs``. It is prepended to PREFIX and
+    is mainly useful for packagers.
+
+:LIBDIR=<libdir>:
+
+    This applies only to the static library ``librmlint.a`` installation,
+    which is not installed by default (override in lib/SConscript).
+    Some distributions use separate libdirectories for 64/32 bit.
+    If this happens, you should set the correct one for 64 bit with
+    ``LIBDIR=lib64``.
+
 :O=<level>:
 
     Set the optimization level.
@@ -165,28 +183,22 @@ Variables
     per a POSIX shell command line, and so it may include shell quoting if
     necessary.
 
+:STRIP=0:
+
+    Override the default binary stripping of ``O=release``.
+
+:SANITISE=<1,address,thread,memory,undefined,…>:
+
+    Compile with sanitisers enabled. ``SANITISE=1`` means ``=address,undefined``.
+
 Arguments
 ~~~~~~~~~
 
-:--prefix:
+:--show-config:
 
-    Change the installation prefix. By default this is ``/usr``, but some users
-    might prefer ``/usr/local`` or ``/opt``. 
-
-:--actual-prefix:
-
-    This is mainly useful for packagers. The ``rmlint`` binary knows where it
-    is installed (which is needed to set e.g. the path to the gettext files).
-    When installing a package, most of the time the build is installed to
-    a local test environment first before being packed to ``/usr``. In this
-    case the ``--prefix`` would be set to the path of the temporary build env,
-    while ``--actual-prefix`` would be set to ``/usr``.
-
-:--libdir:
-
-    Some distributions like Fedora use separate libdirectories for 64/32 bit. 
-    If this happens, you should set the correct one for 64 bit with
-    ``--libdir=lib64``.
+    Print a summary of all features that will be compiled and what the
+    environment looks like, then carry on with the target. Add ``-n``
+    to stop at the summary instead.
 
 :--without-libelf:
     
@@ -208,15 +220,14 @@ Arguments
 
 :--without-gui:
 
-    Do not install ``shredder`` (GUI).
+    Do not build or install ``shredder`` (GUI).
 
 :--without-compile-glib-schemas:
 
     Do not (re)compile system Glib schemas on installation/uninstallation.
 
-All ``--without-*`` options come with a ``--with-*`` option that inverses its
-effect.  By default ``rmlint`` is built with all features available on the
-system, so you do not need to specify any ``--with-*`` option normally.
+By default, all  ``--without-*`` options are enabled, i.e. as if they were
+compiled by an hypothetical ``--with-*`` option.
 
 Notable targets
 ~~~~~~~~~~~~~~~
@@ -224,11 +235,6 @@ Notable targets
 :install:
 
     Install all program parts system-wide.
-
-:config:
-
-    Print a summary of all features that will be compiled and what the
-    environment looks like.
 
 :man:
 
@@ -246,11 +252,19 @@ Notable targets
 
     .. code-block:: bash
 
-        $ USE_VALGRIND=1 pytest
+        $ RM_TS_USE_VALGRIND=1 pytest
 
 :xgettext:
 
     Extract a gettext ``.pot`` template from the source.
+
+:msgmerge:
+
+    Update every ``.po`` catalog against ``rmlint.pot``.
+
+:gettext:
+
+    ``xgettext`` followed by ``msgmerge``.
 
 :dist: 
 
@@ -262,6 +276,13 @@ Notable targets
     Same as ``dist``, but reads the ``.version`` file and replaces the current
     version in the files that are not built by *scons*.
 
+:cdb:
+
+    Generate a JSON compilation database ``compile_commands.json``.
+
+:compile-flags:
+
+    For older tools, generate a ``compile_flags.txt`` file, as well as a ``.clang_complete`` link.
 
 Sourcecode layout
 -----------------
@@ -270,7 +291,6 @@ Sourcecode layout
 - As an exception, the main lives in ``src/rmlint.c``.
 - All documentation is inside ``docs``. 
 - All translation stuff should go to ``po``.
-- All packaging should be done in ``pkg/<distribution>``.
 - Tests are written in Python and live in ``tests``.
 
 

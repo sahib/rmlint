@@ -15,7 +15,7 @@ Dependencies
 Hard dependencies:
 ~~~~~~~~~~~~~~~~~~
 
-* **glib** :math:`\geq 2.64` (general C Utility Library)
+* **glib** :math:`\geq 2.74` (general C Utility Library)
 * **libjson-glib** (parsing rmlint's own json as caching layer)
 
 Soft dependencies:
@@ -44,7 +44,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo dnf install python3-sphinx
     # Optional dependencies for the GUI:
-    $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 librsvg2 hicolor-icon-theme
+    $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog
     # Optional dependencies for tests:
     $ sudo dnf install python3-pytest-xdist+psutil python3-xattr
 
@@ -79,7 +79,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for building documentation:
     $ sudo pacman -S python-sphinx python-sphinx-bootstrap-theme
     # Optional dependencies for the GUI:
-    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg
+    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg python-colorlog
     # Optional dependencies for tests:
     $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil btrfs-progs
 
@@ -111,8 +111,10 @@ Here's a list of readily prepared commands for known operating systems:
     $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev
     # Optional dependencies for building documentation:
     $ sudo apt install python3-sphinx python3-sphinx-bootstrap-theme
-    # Optional dependencies for the GUI:
-    $ sudo apt install python3-setuptools python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 python3-colorlog
+    # Optional dependencies for running the GUI:
+    $ sudo apt install python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 librsvg2-common python3-colorlog
+    # Optional dependencies for installing the GUI:
+    $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
     $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr
 
@@ -152,7 +154,9 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for more features:
     $ doas pkg install libelf
     # Optional dependencies for building documentation:
-    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme gtksourceview4
+    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme
+    # Optional dependencies for the GUI:
+    $ doas pkg install gtksourceview4 librsvg2 py312-colorlog
 
 .. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
 .. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint
@@ -176,7 +180,7 @@ need an update. The commands above install the full dependencies, therefore
 some packages might be stripped if you do not need the feature
 they enable. Only hard requirement for the commandline is ``glib``.
 
-Also be aware that the GUI needs at least :math:`gtk \geq 3.12` to work!
+Also be aware that the GUI needs at least :math:`gtk \geq 3.22` to work!
 
 Compilation
 -----------
@@ -188,11 +192,12 @@ build the software from the potentially unstable ``develop`` branch:
 .. code-block:: bash
 
    $ # Omit -b develop if you want to build from the stable master
-   $ git clone -b develop https://github.com/sahib/rmlint.git 
+   $ git clone -b develop https://github.com/sahib/rmlint.git
    $ cd rmlint/
    $ scons --show-config DEBUG=1  # show features and build locally.
    # Install (and build if necessary). For releases you can omit DEBUG=1
-   $ sudo scons DEBUG=1 --prefix=/usr/local install
+   # The default install prefix is /usr/local
+   $ sudo scons DEBUG=1 install
 
 Done!
 
@@ -221,10 +226,14 @@ Note that for the time being, you cannot use it straightforwardly to scan system
 Troubleshooting
 ---------------
 
-On some distributions (especially Debian derived) ``rmlint --gui`` might fail
-with ``/usr/bin/python3: No module named shredder`` (or similar). This is due 
-some incompatible changes on Debian's side.
+The GUI is built and installed as a Python wheel: ``scons install`` places
+the ``shredder`` package in the Python library path belonging to the default
+or chosen ``PREFIX=``.
 
-See `this thread`_ for a workaround using ``PYTHONPATH``.
+With the default ``PREFIX=`` that directory may not be on
+Python's search path. In that case point ``PYTHONPATH`` at the installed
+location, e.g.:
 
-.. _`this thread`: https://github.com/sahib/rmlint/issues/171#issuecomment-199070974
+.. code-block:: bash
+
+   $ export PYTHONPATH=/usr/local/lib/python3/site-packages

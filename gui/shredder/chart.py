@@ -214,7 +214,8 @@ def _draw_tooltip(ctx, alloc, x, y, dist, angle, text):
 class Chart(Gtk.DrawingArea):
     """Base class for charts providing the basic interfaces and signals."""
     def __init__(self):
-        Gtk.DrawingArea.__init__(self)
+        super().__init__()
+
         self.connect('draw', self.on_draw)
 
         self.add_events(
@@ -314,7 +315,7 @@ class RingChart(Chart):
     Size of the node determines the size of the segment.
     """
     def __init__(self):
-        Chart.__init__(self)
+        super().__init__()
 
         # Id of the tooltip timeout
         self._timeout_id = None
@@ -527,7 +528,8 @@ class ChartStack(Gtk.Stack):
     EMPTY = 'empty'
 
     def __init__(self):
-        Gtk.Stack.__init__(self)
+        super().__init__()
+
         self.set_transition_duration(750)
         self.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
 
@@ -542,7 +544,7 @@ class ChartStack(Gtk.Stack):
         self.add_named(self.chart, ChartStack.CHART)
 
         self.empty_label = Gtk.Label(
-            '<span font="90">✔</span>\nNothing found!'
+            label='<span font="90">✔</span>\nNothing found!'
         )
         self.empty_label.set_use_markup(True)
         self.empty_label.get_style_context().add_class(

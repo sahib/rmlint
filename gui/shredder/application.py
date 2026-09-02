@@ -4,11 +4,10 @@ It loads all initially required resources and triggers
 the gui build by instancing the MainWindow.
 """
 
-import gettext
 import logging
 import os
 
-from gi.repository import GdkPixbuf, GLib, Gio, Gtk, Rsvg
+from gi.repository import GdkPixbuf, Gio, GLib, Gtk
 
 from shredder import APP_TITLE
 from shredder.about import AboutDialog
@@ -50,13 +49,16 @@ def _create_action(name, callback=None):
 
 
 def _load_app_icon():
-    """Load & render the application svg icon from the resource bundle"""
-    logo_svg = Gio.resources_lookup_data('/org/gnome/shredder/shredder.svg', 0)
-    logo_handle = Rsvg.Handle.new_from_data(logo_svg.get_data())
-    logo_handle.set_dpi_x_y(75, 75)
-    return logo_handle.get_pixbuf().scale_simple(
-        200, 200, GdkPixbuf.InterpType.HYPER
-    )
+    """Load & render the application svg icon from the resource bundle.
+    Or return None if no loader is available.
+    """
+    try:
+        return GdkPixbuf.Pixbuf.new_from_resource_at_scale(
+            '/io/github/sahib/rmlint/Shredder/shredder.svg', 200, 200, True
+        )
+    except GLib.Error as err:
+        LOGGER.warning('Could not render the application icon: %s', err)
+        return None
 
 
 class Application(Gtk.Application):
@@ -65,8 +67,8 @@ class Application(Gtk.Application):
         GLib.set_application_name(APP_TITLE)
 
         super().__init__(
-            application_id='org.gnome.Shredder',
-            flags=Gio.ApplicationFlags.FLAGS_NONE
+            application_id='io.github.sahib.rmlint.Shredder',
+            flags=Gio.ApplicationFlags.DEFAULT_FLAGS
         )
 
         self.cmd_opts = options
@@ -79,28 +81,24 @@ class Application(Gtk.Application):
     def do_startup(self, **kw):
         Gtk.Application.do_startup(self, **kw)
 
-        # Make translating strings possible:
-        # (We use the same message catalouge as rmlint)
-        gettext.install('rmlint')
-
         rel_dir = os.path.dirname(__file__)
         resource_file = os.path.join(rel_dir, 'resources/shredder.gresource')
-        LOGGER.info('Loading resources from: ' + resource_file)
+        LOGGER.info("Loading resources from: %s", resource_file)
         resource_bundle = Gio.Resource.load(resource_file)
         Gio.resources_register(resource_bundle)
 
         # Load the application CSS files.
         css_data = Gio.resources_lookup_data(
-            '/org/gnome/shredder/shredder.css', 0
+            '/io/github/sahib/rmlint/Shredder/shredder.css', 0
         )
 
         try:
             load_css_from_data(css_data.get_data())
         except Exception as err:
-            LOGGER.warning("Failed to load css data: " + str(err))
+            LOGGER.warning("Failed to load css data: %s", err)
 
         # Init the config system
-        self.settings = Gio.Settings.new('org.gnome.Shredder')
+        self.settings = Gio.Settings.new('io.github.sahib.rmlint.Shredder')
 
         self.win = MainWindow(self)
 
@@ -125,7 +123,9 @@ class Application(Gtk.Application):
         self.set_accels_for_action('app.activate', ['<Ctrl>Return'])
 
         # Load the application icon
-        self.win.set_default_icon(_load_app_icon())
+        app_icon = _load_app_icon()
+        if app_icon is not None:
+            self.win.set_default_icon(app_icon)
 
         LOGGER.debug('Instancing views.')
         self.win.views.add_view(SettingsView(self), 'settings')

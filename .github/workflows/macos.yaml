@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
+        id: python
         with:
           python-version: '>=3.12'
 
@@ -28,9 +29,12 @@ jobs:
         run: |
           brew install --quiet \
             scons pkgconf glib json-glib
-          pip install -r tests/requirements.txt -r docs/requirements.txt
+          pip install -r tests/requirements.txt -r docs/requirements.txt \
+            setuptools build installer
 
       - name: Build
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
         run: |
           scons --without-gettext --show-config VERBOSE=1 DEBUG=1 O=release
 

@@ -1,4 +1,7 @@
-/.files.txt
-/Shredder.egg-info/
 /build/
+/dist/
+/shredder.egg-info/
 /shredder/resources/shredder.gresource
+schemas/gschemas.compiled
+/.locale/
+/shredder/_version.py

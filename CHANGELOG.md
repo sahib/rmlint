@@ -31,6 +31,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
 * For packagers: ``STRIP=`` scons build variable to opt out of link-time stripping.
+* For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT``
+  are honoured when installing the GUI.
 * ``scons --show-config`` shows features and build in one run.
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
 
@@ -49,7 +51,18 @@ The format follows [keepachangelog.com]. Please stick to it.
 * short option ``-U`` now refers to ``--hash-unmatched`` instead of ``--write-unfinished``.
 * Treat paths beyond ``PATH_MAX`` as a hard error instead of truncating them
 * ``-g --progress`` and ``-G --no-progress`` do not clear outputs anymore (#582).
-* The minimum supported Python version is now 3.9
+* The generated ``rmlint.py`` minimum supported Python is now 3.9
+* GUI: the minimum supported Python version is now 3.12
+* GUI: the minimum supported Gtk version is now 3.22
+* GUI: remove hard Rsvg dependency.
+* The minimum supported Glib version is now 2.74
+* The default installation prefix is now ``/usr/local``.
+* The build system supports ``PREFIX=`` and ``DESTDIR=`` options.
+* Shredder's GSettings schema is now ``io.github.sahib.rmlint.Shredder``
+  instead of ``org.gnome.Shredder`` — Shredder is not a GNOME project. The
+  application ID and the GResource prefix changed as well accordingly.
+  Shredder will therefore starts from its defaults, but the old values can be
+  read using: ``dconf dump /org/gnome/Shredder/``.
 
 ### Removed
 * ``--dedupe-xattr``. Use ``--dedupe --xattr``

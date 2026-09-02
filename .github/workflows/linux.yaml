@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RM_TS_DIR: "/tmp/rmlint-tests"
-      scons_ARGS: 'VERBOSE=1 DEBUG=1 O=release'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,7 +31,7 @@ jobs:
 
       - name: Build
         run: |
-          scons --show-config $scons_ARGS
+          scons --show-config --without-gui VERBOSE=1 DEBUG=1 O=release
 
       - name: Check need for testing
         # TODO: also include skipping build but allow docs to be processed
@@ -64,10 +63,9 @@ jobs:
         if: ${{ env.RUN_TEST == 'true' }}
         shell: bash
         run: |
-          sudo apt-get install -y --no-install-recommends \
-            python3-setuptools python3-gi-cairo \
-            gir1.2-gtksource-4 gir1.2-polkit-1.0 gir1.2-rsvg-2.0 \
-            python3-colorlog xvfb
+          sudo apt-get install -y --no-install-recommends xvfb \
+            python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 librsvg2-common \
+            python3-colorlog python3-parsedatetime
           xvfb-run -a pytest tests/test_gui
 
       - name: CoW tests
@@ -100,3 +98,11 @@ jobs:
         run: |
           sudo umount "${RM_TS_DIR}"
           sudo rmdir "${RM_TS_DIR}"
+
+      - name: installer test
+        if: ${{ env.RUN_TEST == 'true' }}
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            python3-setuptools python3-build python3-installer
+          sudo scons install
+          sudo scons uninstall

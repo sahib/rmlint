@@ -52,10 +52,8 @@ int rm_gui_launch(int argc, const char **argv) {
         }
         rm_log_warning("\n");
         rm_log_error_line("%s %d", g_strerror(errno), errno == ENOENT);
-    } else {
-        /* This is not reached anymore when execvp suceeded */
-        return EXIT_SUCCESS;
-    }
+    } else
+        g_assert_not_reached();
 
     rm_log_error_line("Could not launch gui");
     return EXIT_FAILURE;

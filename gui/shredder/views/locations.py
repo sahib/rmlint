@@ -25,7 +25,7 @@ class DeferSizeLabel(Gtk.Bin):
     is displayed as normal text label.
     """
     def __init__(self, path):
-        Gtk.Bin.__init__(self)
+        super().__init__()
 
         spinner = Gtk.Spinner()
         spinner.start()
@@ -50,7 +50,7 @@ class DeferSizeLabel(Gtk.Bin):
             text = ''
 
         self.remove(self.get_child())
-        self.add(Gtk.Label(text))
+        self.add(Gtk.Label(label=text))
         self.show_all()
 
 
@@ -71,7 +71,8 @@ class LocationEntry(Gtk.ListBoxRow):
         }
 
     def __init__(self, name, path, themed_icon, fill_level=None):
-        Gtk.ListBoxRow.__init__(self)
+        super().__init__()
+
         self.set_size_request(-1, 80)
         self.set_can_focus(False)
         self.themed_icon = themed_icon
@@ -82,14 +83,14 @@ class LocationEntry(Gtk.ListBoxRow):
         self.path, self.name = path, name
 
         name_label = Gtk.Label(
-            f'<b>{GLib.markup_escape_text(name)}</b>'
+            label=f'<b>{GLib.markup_escape_text(name)}</b>'
         )
         name_label.set_use_markup(True)
         name_label.set_hexpand(True)
         name_label.set_halign(Gtk.Align.START)
 
         path_label = Gtk.Label(
-            f'<small>{GLib.markup_escape_text(path)}</small>'
+            label=f'<small>{GLib.markup_escape_text(path)}</small>'
         )
         path_label.set_use_markup(True)
         path_label.set_hexpand(True)
@@ -127,7 +128,10 @@ class LocationEntry(Gtk.ListBoxRow):
 
         # Quick-select button with arrow inside:
         shortcut_btn = Gtk.Button()
-        shortcut_btn.add(Gtk.Arrow(Gtk.ArrowType.RIGHT, Gtk.ShadowType.NONE))
+        shortcut_btn.add(Gtk.Arrow(
+            arrow_type=Gtk.ArrowType.RIGHT,
+            shadow_type=Gtk.ShadowType.NONE
+        ))
         shortcut_btn.set_relief(Gtk.ReliefStyle.NONE)
         shortcut_btn.set_vexpand(False)
         shortcut_btn.set_valign(Gtk.Align.START)
@@ -215,7 +219,7 @@ def load_saved_entries():
         with open(cache_file_path()) as fd:
             return json.loads(fd.read())
     except OSError as exc:
-        LOGGER.warning(f"Failed to get location entries: {exc}")
+        LOGGER.warning("Failed to get location entries: %s", exc)
     except Exception:
         LOGGER.exception("Failed to get location entries unexpected")
 
@@ -233,7 +237,8 @@ def store_saved_entries(entries):
 class LocationView(View):
     """The actual view instance."""
     def __init__(self, app):
-        View.__init__(self, app)
+        super().__init__(app)
+
         self.selected_locations = []
         self.known_paths = set()
         self._set_title()
@@ -241,7 +246,7 @@ class LocationView(View):
         self.box = Gtk.ListBox()
         self.box.set_selection_mode(Gtk.SelectionMode.NONE)
         self.box.set_hexpand(True)
-        self.box.set_placeholder(Gtk.Label('No locations mounted.'))
+        self.box.set_placeholder(Gtk.Label(label='No locations mounted.'))
         self.box.set_valign(Gtk.Align.FILL)
         self.box.set_vexpand(True)
 
@@ -326,7 +331,7 @@ class LocationView(View):
 
         recent_mgr = Gtk.RecentManager.get_default()
         if not recent_mgr.add_full(path, data):
-            LOGGER.warning('Could not add to recently used: ' + path)
+            LOGGER.warning("Could not add to recently used: %s", path)
 
     def load_entries_from_disk(self, entries):
         LOGGER.info('Loading entries initially')
@@ -376,10 +381,9 @@ class LocationView(View):
                     ])
                 )
             except Exception as exc:
-                LOGGER.warning("Failed to get fs info for {}: {}".format(
+                LOGGER.warning("Failed to get fs info for %s: %s",
                     mount.get_name(),
-                    exc,
-                ))
+                    exc)
                 continue
 
             self.add_entry(
@@ -399,8 +403,7 @@ class LocationView(View):
                 continue
 
             path = item.get_uri()
-            if path.startswith('file://'):
-                path = path[7:]
+            path = path.removeprefix('file://')
 
             self.add_entry(
                 os.path.basename(path),
@@ -418,7 +421,7 @@ class LocationView(View):
             return
 
         if path in self.known_paths:
-            LOGGER.info('In known paths: ' + path)
+            LOGGER.info("In known paths: %s", path)
             return
 
         entry = LocationEntry(name, path, icon, fill_level)
@@ -583,7 +586,7 @@ class LocationView(View):
     def _del_clicked(self, _):
         """Delete all selected LocationEntries."""
         for row in self.selected_locations:
-            LOGGER.debug('Removing location entry:' + row.path)
+            LOGGER.debug("Removing location entry: %s", row.path)
             self.box.remove(row)
 
             try:

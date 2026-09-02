@@ -17,7 +17,7 @@ for progname in ['rmlint']:
 if 'install' in COMMAND_LINE_TARGETS:
     env.Alias(
         'install',
-        env.InstallPerm('$PREFIX/bin', programs, 0o755)
+        env.InstallPerm('$staged_prefix/bin', programs, 0o755)
     )
 
 

@@ -2,14 +2,14 @@
 This is a rather generic interface for building a settings view
 from a GSettingsSchema, which is (usually) defined as XML File.
 
-For shredder this file is `org.gnome.Shredder.gschema.xml` and contains a
-description of all keys used by Shredder.  Keys are typed in GSettings, so
-depending on the type a suitable widget is constructed.  Changes from outside
+For shredder this file is `io.github.sahib.rmlint.Shredder.gschema.xml` and
+contains a description of all keys used by Shredder. Keys are typed in GSettings,
+so depending on the type a suitable widget is constructed. Changes from outside
 are displayed by the widget and changes of the widget cause a change of the
 key's value.
 
 For reference, keys can be changed on the commandline too:
-$ gsettings --schemadir ~/.glib-schemas set org.gnome.Shredder traverse-depth 2
+$ gsettings --schemadir ~/.glib-schemas set io.github.sahib.rmlint.Shredder traverse-depth 2
 """
 
 import logging
@@ -19,7 +19,15 @@ from operator import itemgetter
 
 from gi.repository import GLib, Gtk
 
-from shredder.util import DestructiveButton, FileSizeRange, MultipleChoiceButton, SuggestedButton, View
+from shredder.i18n import _
+from shredder.util import (
+    DestructiveButton,
+    FileSizeRange,
+    MultipleChoiceButton,
+    SuggestedButton,
+    View,
+)
+
 
 LOGGER = logging.getLogger('settings')
 
@@ -120,10 +128,10 @@ VARIANT_TO_WIDGET = {
 
 
 class SettingsView(View):
-    """Generic GSettingsView in a modern Gnome like appearance."""
+    """Generic GSettingsView in a Gnome-like appearance."""
     def __init__(self, app):
-        View.__init__(
-            self, app, sub_title='Configure how duplicates are searched'
+        super().__init__(
+            app, sub_title=_('Configure how duplicates are searched')
         )
 
         self._grid = Gtk.Grid()
@@ -142,7 +150,7 @@ class SettingsView(View):
         self.metadata = {}
 
         self.appy_btn = SuggestedButton()
-        self.deny_btn = DestructiveButton('Reset to defaults')
+        self.deny_btn = DestructiveButton(_('Reset to defaults'))
 
         self.appy_btn.connect('clicked', self.on_apply_settings)
         self.deny_btn.connect('clicked', self.on_reset_to_defaults)
@@ -187,8 +195,8 @@ class SettingsView(View):
         summary: A short summary to show.
         desc: A longer description.
         """
-        desc_label = Gtk.Label(desc or '')
-        summ_label = Gtk.Label(summary or '')
+        desc_label = Gtk.Label(label=desc or '')
+        summ_label = Gtk.Label(label=summary or '')
 
         desc_label.get_style_context().add_class(
             Gtk.STYLE_CLASS_DIM_LABEL
@@ -232,16 +240,18 @@ class SettingsView(View):
 
     def reset_to_defaults(self):
         """Reset whole view and keys to their defaults"""
-        for key_name in self.app.settings.list_keys():
+        schema = self.app.settings.props.settings_schema
+        for key_name in schema.list_keys():
             self.app.settings.reset(key_name)
 
     def build(self):
         """Built all entries and sections"""
         gst = self.app.settings
+        schema = gst.props.settings_schema
         entry_rows = []
 
-        for key_name in gst.list_keys():
-            key = gst.get_property('settings-schema').get_key(key_name)
+        for key_name in schema.list_keys():
+            key = schema.get_key(key_name)
             variant_key = gst.get_value(key_name)
 
             # Try to find a way to render this option:
@@ -262,9 +272,7 @@ class SettingsView(View):
 
             description = key.get_description()
             if description:
-                description = '<small>{desc}</small>'.format(
-                    desc=key.get_description()
-                )
+                description = f'<small>{key.get_description()}</small>'
 
             # Get a fitting, readily prepared configure widget
             val_widget = constructor(gst, key_name, summary, description)
@@ -298,7 +306,7 @@ class SettingsView(View):
             widget.set_sensitive(state)
             widget.set_opacity(1.0 if state else lower)
 
-        for _, metadata in self.metadata.items():
+        for metadata in self.metadata.values():
             section_visible = 0
 
             for key_name, info in metadata.items():

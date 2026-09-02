@@ -176,9 +176,7 @@ def _create_rmlint_process(
 
         if outputs:
             for output, path in outputs or []:
-                extra_options += [
-                    '-o', ':'.join([output, path])
-                ]
+                extra_options += ['-o', f'{output}:{path}']
         else:
             # Default to json parsing.
             extra_options += [
@@ -202,7 +200,7 @@ def _create_rmlint_process(
         if keep_cached_originals:
             cmdline += ['--keep-cached-originals']
 
-        LOGGER.info('Running: ' + ' '.join(cmdline))
+        LOGGER.info("Running: %s", ' '.join(cmdline))
         process = launcher.spawnv(cmdline)
     except GLib.Error as err:
         if err.code == errno.ENOEXEC:
@@ -225,7 +223,7 @@ class Runner(GObject.Object):
     }
 
     def __init__(self, settings, untagged_paths, tagged_paths):
-        GObject.Object.__init__(self)
+        super().__init__()
 
         self.settings = settings
         self.tagged_paths = tagged_paths
@@ -454,7 +452,8 @@ class Script(GObject.Object):
     }
 
     def __init__(self, script_file):
-        GObject.Object.__init__(self)
+        super().__init__()
+
         self._incomplete_chunk = self._process = self._stream = None
         self.script_file = script_file
 
@@ -468,8 +467,7 @@ class Script(GObject.Object):
         return Script(path)
 
     def read(self):
-        """Read the script from disk and return it as string.
-        """
+        """Read the script from disk and return it as string."""
         # Do not reuse the file descriptor, since it is only valid once.
         # Be a bit careful, since the script might contain weird encoding,
         # since there is no path encoding guaranteed in Unix usually:
@@ -518,7 +516,7 @@ class Script(GObject.Object):
 
         line_split = line.split(':', maxsplit=1)
         if len(line_split) < 2:
-            LOGGER.warning('Invalid line fed: ' + line)
+            LOGGER.warning("Invalid line fed: %s", line)
             return
 
         prefix, path = line_split
@@ -546,7 +544,7 @@ class Script(GObject.Object):
 if __name__ == '__main__':
     def main():
         """Stupid test main: Run on /usr."""
-        settings = Gio.Settings.new('org.gnome.Shredder')
+        settings = Gio.Settings.new('io.github.sahib.rmlint.Shredder')
         loop = GLib.MainLoop()
 
         runner = Runner(settings, ['/usr/'], [])

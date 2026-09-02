@@ -8,23 +8,9 @@ Some options are processed immediately however.
 import argparse
 import logging
 import os
-import sys
 
-from gi.repository import Gio
-
-
-def show_version():
-    """Print the version as shown by `rmlint --version`"""
-    proc = Gio.Subprocess.new(
-        ['rmlint', '--version'],
-        Gio.SubprocessFlags.STDERR_PIPE
-    )
-    *_, data = proc.communicate_utf8()
-
-    # Shredder version is always the same as rmlint.
-    # So, let's just replace `rmlint` with `Shredder` :-)
-    print(data.replace('rmlint', 'Shredder', 1), end='')
-    sys.exit(-1)
+from shredder.i18n import _
+from shredder.version import get_version
 
 
 def adjust_loglevel(root_logger, count):
@@ -42,10 +28,9 @@ def adjust_loglevel(root_logger, count):
 
 def parse_arguments(root_logger):
     """Parse the cmdline options using argparse."""
-    sys.argv[0] = 'shredder'
     parser = argparse.ArgumentParser(
         prog='shredder',
-        description="A gui frontend to rmlint.",
+        description=_("A GUI frontend to rmlint"),
     )
     parser.add_argument(
         "-a", "--add-location",
@@ -100,7 +85,8 @@ def parse_arguments(root_logger):
 
     args = parser.parse_args()
     if args.show_version:
-        show_version()
+        print(f'Shredder {get_version()}')
+        raise SystemExit
 
     adjust_loglevel(
         root_logger,
@@ -113,11 +99,6 @@ def parse_arguments(root_logger):
     for path in filter(None, (args.tagged or []) + (args.untagged or []) + [args.script]):
         if not os.path.exists(path):
             root_logger.error('`%s` does not exist.', path)
-            sys.exit(-1)
+            raise SystemExit(1)
 
     return args
-
-
-if __name__ == '__main__':
-    LOGGER = logging.getLogger('test-cmdline')
-    print(parse_arguments(LOGGER))
