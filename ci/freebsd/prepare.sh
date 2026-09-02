@@ -4,9 +4,9 @@ set -eu
 cd "$(dirname "$0")/../.."
 export ASSUME_ALWAYS_YES=yes
 
-PACKAGES="rsync git py312-sphinx"
-PACKAGES_BUILD="scons-py312 pkgconf glib json-glib libblkid gettext"
-PACKAGES_TEST="bash dash py312-pip"
+PACKAGES="rsync git python3"
+PACKAGES_BUILD="scons-py312 pkgconf gettext py312-sphinx glib json-glib libblkid"
+PACKAGES_TEST="py312-pip bash dash"
 
 echo "==> pkg install: $PACKAGES"
 

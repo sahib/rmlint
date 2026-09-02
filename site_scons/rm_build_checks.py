@@ -237,10 +237,13 @@ def check_posix_fadvise(context):
 def check_xattr(context):
     rc = 1
 
-    for func in ['getxattr', 'setxattr', 'removexattr', 'listxattr']:
-        if tests.CheckFunc(context, func):
-            rc = 0
-            break
+    if tests.CheckHeader(context, 'sys/xattr.h', header='#include <sys/types.h>'):
+        rc = 0
+    else:
+        for func in ('getxattr', 'setxattr', 'removexattr', 'listxattr'):
+            if tests.CheckFunc(context, func):
+                rc = 0
+                break
 
     context.sconf.env['HAVE_XATTR'] = rc
 
@@ -253,12 +256,38 @@ def check_xattr(context):
 def check_lxattr(context):
     rc = 1
 
-    for func in ['lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr']:
-        if tests.CheckFunc(context, func):
-            rc = 0
-            break
+    if tests.CheckHeader(context, 'sys/xattr.h', header='#include <sys/types.h>'):
+        rc = 0
+    else:
+        for func in ('lgetxattr', 'lsetxattr', 'lremovexattr', 'llistxattr'):
+            if tests.CheckFunc(context, func):
+                rc = 0
+                break
 
     context.sconf.env['HAVE_LXATTR'] = rc
+
+    context.did_show_result = True
+    context.Result(rc)
+    return rc
+
+
+@custom_test
+def check_extattr(context):
+    """Check for BSD extended attributes support"""
+    rc = 1
+
+    if tests.CheckHeader(context, 'sys/extattr.h', header='#include <sys/types.h>'):
+        rc = 0
+    else:
+        for func in ('extattr_get_file', 'extattr_set_file',
+                     'extattr_list_file', 'extattr_delete_file',
+                     'extattr_get_link', 'extattr_set_link',
+                     'extattr_list_link', 'extattr_delete_link'):
+            if tests.CheckFunc(context, func):
+                rc = 0
+                break
+
+    context.sconf.env['HAVE_EXTATTR'] = rc
 
     context.did_show_result = True
     context.Result(rc)

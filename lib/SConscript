@@ -16,8 +16,8 @@ ENV_KEYS = (
     # headers
     'HAVE_LINUX_LIMITS', 'HAVE_LINUX_FS_H', 'HAVE_BTRFS_H', 'HAVE_SYSMACROS_H',
     # syscalls / filesystem features
-    'HAVE_FIEMAP', 'HAVE_XATTR', 'HAVE_LXATTR', 'HAVE_POSIX_FADVISE',
-    'HAVE_SYSBLOCK', 'HAVE_UNAME',
+    'HAVE_FIEMAP', 'HAVE_XATTR', 'HAVE_LXATTR', 'HAVE_EXTATTR',
+    'HAVE_POSIX_FADVISE', 'HAVE_SYSBLOCK', 'HAVE_UNAME',
     # large file support
     'HAVE_BIGFILES', 'HAVE_BIG_OFF_T', 'HAVE_STAT64',
     # cpu extensions

@@ -150,11 +150,11 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ doas pkg install git scons-py311 pkgconf glib gettext json-glib
-    # Optional dependencies for more features:
-    $ doas pkg install libelf
-    # Optional dependencies for building documentation:
-    $ doas pkg install py311-sphinx py311-pydata-sphinx-theme
+    $ doas pkg install scons-py312 pkgconf gettext py312-sphinx glib json-glib
+    # Optional dependency for more features:
+    $ doas pkg install libblkid
+    # Optional dependency for building documentation:
+    $ doas pkg install py312-sphinx
     # Optional dependencies for the GUI:
     $ doas pkg install gtksourceview4 librsvg2 py312-colorlog
 
