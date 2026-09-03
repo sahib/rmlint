@@ -206,6 +206,7 @@ def run_rmlint_once(*args,
 
     cmd.extend(args_tokens)
 
+    # TODO: maybe use .rmlint.json if uses_py_formatter=True
     if with_json:
         cmd.extend(('-o', 'json:' + os.path.join(get_testdir(), 'out.json'), '-c', 'json:oneline'))
 
@@ -231,7 +232,7 @@ def run_rmlint_once(*args,
 
     if uses_py_formatter:
         # The py formatter writes its JSON document to `.rmlint.json` in
-        # rmlint's CWD and only once the traversal is over.If present from
+        # rmlint's CWD and only once the traversal is over. If present from
         # the previousrun remove it so it does not get in the way on this run.
         with contextlib.suppress(FileNotFoundError):
             os.unlink(os.path.join(get_testdir(), '.rmlint.json'))

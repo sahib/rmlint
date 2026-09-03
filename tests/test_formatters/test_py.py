@@ -21,6 +21,7 @@ def run_py_script(interpreter):
     ).decode('utf-8')
 
 
+# TODO: test for different Python3 versions
 @pytest.mark.parametrize("interpreter", ("python3",))
 def test_paranoia(interpreter):
     if not _check_interpreter(interpreter):
@@ -74,3 +75,26 @@ def test_paranoia(interpreter):
     assert footer['total_lint_size'] == 0
     assert footer['total_files'] == 4 # + 1
     assert footer['duplicates'] == 1
+
+
+@pytest.mark.parametrize("interpreter", ("python3",))
+def test_no_progress(interpreter):
+    """Check that the Python script doesn't chock on missing progress"""
+    if not _check_interpreter(interpreter):
+        pytest.skip(f"Interpreter {interpreter} does not seem to be working, skipping test")
+
+    create_file('', 'dir/empty_a')
+    create_file('', 'dir/empty_b')
+
+    _, *data, _ = run_rmlint(
+        f'-T "none +ef" -o py:{get_testdir()}/rmlint.py',
+        dir_suffix='dir', uses_py_formatter=True
+    )
+    assert len(data) == 2
+
+    # XXX: for now rmlint output per-file progress only
+    # for duplicates. We should not have any here.
+    assert not any('progress' in item for item in data)
+
+    # just check that the script does not chock on missing progress
+    assert 'Deleting empty file:' in run_py_script(interpreter)

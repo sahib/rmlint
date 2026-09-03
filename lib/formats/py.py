@@ -33,13 +33,12 @@ import argparse
 import filecmp
 import json
 import os
-import pwd
 import shutil
 import subprocess
 import sys
 
 CURRENT_UID = os.geteuid()
-CURRENT_GID = pwd.getpwuid(CURRENT_UID).pw_gid
+CURRENT_GID = os.getegid()
 
 USE_COLOR = sys.stdout.isatty() and sys.stderr.isatty()
 COLORS = {
@@ -64,7 +63,7 @@ def original_check(path, original, be_paranoid=True):
                   '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
 
-        if be_paranoid and not filecmp.cmp(path, original):
+        if be_paranoid and not filecmp.cmp(path, original, shallow=False):
             print('{c[red]}Content differs; ignoring:{c[reset]} '
                   '{o} <=> {p}'.format(c=COLORS, o=original, p=path))
             return False
@@ -189,8 +188,10 @@ def main(args, data):
         sys.stdin.read(1)
 
     for item in data:
-        progress_prefix = '{c[blue]}[{p:3}%]{c[reset]} '.format(
-            c=COLORS, p=item['progress'])
+        progress_prefix = (
+            f"{COLORS['blue']}[{item['progress']:3}%]{COLORS['reset']} "
+            if 'progress' in item else ' ' * 7
+        )
 
         if item['is_original']:
             msg_template = MESSAGES.get(item['type'])
