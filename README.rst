@@ -115,7 +115,7 @@ LICENSE
 `rmlint` is licensed under the conditions of the
 `GPLv3 <https://www.gnu.org/licenses/quick-guide-gplv3.html.en>`_.
 See the
-`COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`
+`COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`_
 file distributed along the source for details.
 
 DONATIONS
