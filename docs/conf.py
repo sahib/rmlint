@@ -42,6 +42,9 @@ html_theme_options = {
     'dark_css_variables': RMLINT_CSS,
 }
 
+# -- Options for misc formats output -------------------------------------------
+epub_exclude_files = ['_static/benchmarks/found_items.html']
+
 # -- Options for manual page output --------------------------------------------
 
 # One entry per manual page. List of tuples

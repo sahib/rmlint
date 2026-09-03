@@ -33,7 +33,7 @@ FROM alpine:3 AS run
 LABEL \
     org.opencontainers.image.title="rmlint" \
     org.opencontainers.image.source="https://github.com/sahib/rmlint" \
-    org.opencontainers.image.documentation="https://rmlint.readthedocs.io/" \
+    org.opencontainers.image.documentation="https://rmlint.rtfd.org/" \
     org.opencontainers.image.licenses="GPL-3.0-or-later"
 RUN apk add --no-cache glib json-glib libelf
 COPY --from=build /rmlint/rmlint /opt
