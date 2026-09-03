@@ -276,6 +276,12 @@ gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b) {
 gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b) {
     gint diff = file_a->depth - file_b->depth;
     RETURN_IF_NONZERO(diff);
+
+    /* a file named directly from arguments or stdin is of zero depth.
+     * compare basenames like we would have if they were not top-level. */
+    if (!file_a->depth)
+        return rm_rank_basenames(file_a, file_b);
+
     RmNode* node_a = file_a->node;
     RmNode* node_b = file_b->node;
 
