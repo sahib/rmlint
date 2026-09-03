@@ -57,6 +57,9 @@ to remove it. It is able to find:
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
+.. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint/develop
+   :target: https://github.com/sahib/rmlint/commits/develop/
+
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
 
@@ -124,18 +127,11 @@ Authors
 Additional thanks to:
 
 .. hlist::
-    :columns: 3
+    :columns: 1
 
-    - `vvs-`_ (Scalability testing)
     - *Attila* Toth 
     - All sane bugreporters (there are not many)
     - All packagers, porters and patchers.
-
-
-.. _qitta: https://github.com/qitta
-.. _dieterbe: https://github.com/Dieterbe
-.. _`My cats`: http://imgur.com/gallery/rims0yl
-.. _`vvs-`: https://github.com/vvs-?tab=activity
 
 License
 -------
@@ -143,31 +139,4 @@ License
 ``rmlint`` is licensed under the terms of GPLv3_.
 
 .. _GPLv3: http://www.gnu.org/copyleft/gpl.htm
-.. _sahib: https://github.com/sahib
-.. _SeeSpotRun: https://github.com/SeeSpotRun
 
-Donations
----------
-
-If you think rmlint saved [*]_ you some serious time and/or space, you might
-consider a donation. You can donate via *PayPal*:
-
-.. raw:: html
-
-   <div style="text-align: center">
-        <form action="https://www.paypal.com/donate" method="post" target="_top">
-            <input type="hidden" name="business" value="ZZFE8WTYKT2KW" />
-            <input type="hidden" name="item_name" value="Save the world one duplicate at a time" />
-            <input type="hidden" name="currency_code" value="AUD" />
-            <input type="image" src="https://www.paypalobjects.com/en_AU/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-            <img alt="" border="0" src="https://www.paypal.com/en_AU/i/scr/pixel.gif" width="1" height="1" />
-        </form>
-   </div>
-
-Or just buy us a beer if we ever meet. Nice emails are okay too.
-
-.. [*] If it freed you from your beloved data: *Sorry.* [*]_
-.. [*] Please file a bug or read the source and provide a patch. [*]_
-.. [*] For more than 100GB of data loss we owe you one beer. [*]_
-.. [*] If you don't like beer or there's only Budweiser available, you can order
-   a Club Mate.
