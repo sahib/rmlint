@@ -386,6 +386,12 @@ Traversal Options
     extension. For example: ``banana.png`` and ``Banana.jpeg`` would be considered dupes,
     while ``apple.png`` and ``peach.png`` won't. The comparison is case-sensitive.
 
+:``--match-dirname``:
+
+    Only consider files as dupes whose parent directory have the same name (not the whole path,
+    only the parent). The comparison of every component is case-sensitive, unless
+    ``--case-insensitive`` is set.
+
 :``--match-relative-path``:
 
     Only consider files as dupes that have the same path, including the filename, relative
