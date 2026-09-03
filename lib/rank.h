@@ -32,17 +32,17 @@
  * @brief Compare basenames of two files
  * @retval 0 if basenames match.
  */
-gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b);
+gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b, bool ignore_case);
 
-gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b);
+gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b, bool ignore_case);
 
-gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b);
+gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b, bool ignore_case);
 
 /**
  * @brief Compare relative paths of two files
  * @retval true if relative paths match.
  */
-gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b);
+gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b, bool ignore_case);
 
 /**
  * @brief Compare two files in order to find out which file is the

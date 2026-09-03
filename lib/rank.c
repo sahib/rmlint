@@ -168,8 +168,16 @@ static int rm_rank_criterion(unsigned char criterion, const RmFile *a, const RmF
 
 
 ///////////////////////////////
-//     API Implementatin     //
+//     API Implementation    //
 ///////////////////////////////
+
+static inline gint rm_match_strcmp(const gchar* s1, const gchar* s2, bool ignore_case) {
+    return ignore_case ? g_ascii_strcasecmp(s1, s2) : strcmp(s1, s2);
+}
+
+static inline gint rm_match_strncmp(const gchar* s1, const gchar* s2, gsize n, bool ignore_case) {
+    return ignore_case ? g_ascii_strncasecmp(s1, s2, n) : strncmp(s1, s2, n);
+}
 
 /*--------------------------------------------------------------------*/
 /*  --match-basename, --match-extension and --match-without-extension */
@@ -178,12 +186,12 @@ static int rm_rank_criterion(unsigned char criterion, const RmFile *a, const RmF
  * eg comparing "/path1/foo.c" vs "/path2/bar.c" should return 0 (both .c)
  * Used for --match-extension option.
  */
-gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b) {
+gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
     const char *ext_a = rm_util_path_extension(file_a->node->basename);
     const char *ext_b = rm_util_path_extension(file_b->node->basename);
 
     if(ext_a && ext_b) {
-        return g_ascii_strcasecmp(ext_a, ext_b);
+        return rm_match_strcmp(ext_a, ext_b, ignore_case);
     } else {
         /* file with an extension outranks one without */
         return (!!ext_a - !!ext_b);
@@ -193,7 +201,7 @@ gint rm_rank_with_extension(const RmFile *file_a, const RmFile *file_b) {
 /* Compare func to sort two RmFiles in order of filename excluding extension,
  * eg comparing "/path1/foo.c" vs "/path2/foo.h" should return 0 (both foo)
  * Used for --match-without-extension option */
-gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b) {
+gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
     const char *basename_a = file_a->node->basename;
     const char *basename_b = file_b->node->basename;
 
@@ -206,7 +214,7 @@ gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b) {
 
     RETURN_IF_NONZERO(SIGN_DIFF(a_len, b_len));
 
-    return g_ascii_strncasecmp(basename_a, basename_b, a_len);
+    return rm_match_strncmp(basename_a, basename_b, a_len, ignore_case);
 }
 
 
@@ -251,14 +259,15 @@ gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
     RETURN_IF_NONZERO(SIGN_DIFF(file_a->is_symlink, file_b->is_symlink));
 
     RmCfg *cfg = file_a->session->cfg;
+    bool ignore_case = file_a->session->cfg->case_insensitive;
 
-    RETURN_IF_NONZERO(cfg->match_basename && rm_rank_basenames(file_a, file_b));
+    RETURN_IF_NONZERO(cfg->match_basename && rm_rank_basenames(file_a, file_b, ignore_case));
 
-    RETURN_IF_NONZERO(cfg->match_relative_path && rm_rank_relative_path(file_a, file_b));
+    RETURN_IF_NONZERO(cfg->match_with_extension && rm_rank_with_extension(file_a, file_b, ignore_case));
 
-    RETURN_IF_NONZERO(cfg->match_with_extension && rm_rank_with_extension(file_a, file_b));
+    RETURN_IF_NONZERO(cfg->match_without_extension && rm_rank_without_extension(file_a, file_b, ignore_case));
 
-    return cfg->match_without_extension && rm_rank_without_extension(file_a, file_b);
+    return cfg->match_relative_path && rm_rank_relative_path(file_a, file_b, ignore_case);
 }
 
 /* GCompareDataFunc wrapper around rm_rank_group */
@@ -267,20 +276,18 @@ gint rm_rank_group_gcmp(gconstpointer file_a, gconstpointer file_b,
     return rm_rank_group(file_a, file_b);
 }
 
-
-
-gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b) {
-    return g_ascii_strcasecmp(file_a->node->basename, file_b->node->basename);
+gint rm_rank_basenames(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
+    return rm_match_strcmp(file_a->node->basename, file_b->node->basename, ignore_case);
 }
 
-gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b) {
+gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
     gint diff = file_a->depth - file_b->depth;
     RETURN_IF_NONZERO(diff);
 
     /* a file named directly from arguments or stdin is of zero depth.
      * compare basenames like we would have if they were not top-level. */
     if (!file_a->depth)
-        return rm_rank_basenames(file_a, file_b);
+        return rm_rank_basenames(file_a, file_b, ignore_case);
 
     RmNode* node_a = file_a->node;
     RmNode* node_b = file_b->node;
@@ -289,7 +296,7 @@ gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b) {
         g_assert(node_a);
         g_assert(node_b);
 
-        diff = g_ascii_strcasecmp(node_a->basename, node_b->basename);
+        diff = rm_match_strcmp(node_a->basename, node_b->basename, ignore_case);
         RETURN_IF_NONZERO(diff);
 
         node_a = node_a->parent;
