@@ -363,27 +363,39 @@ Traversal Options
     they're inside duplicate directories (see ``--merge-directories``) and will
     be deleted as part of it.
 
-:``-b --match-basename``:
-
-    Only consider those files as dupes that have the same basename. See also
-    ``man 1 basename``. The comparison of the basenames is case-insensitive.
-
 :``-B --unmatched-basename``:
 
     Only consider those files as dupes that do not share the same basename.
-    See also ``man 1 basename``. The comparison of the basenames is case-insensitive.
+    See also ``man 1 basename``. The comparison is basenames case-insensitive.
+
+:``-b --match-basename``:
+
+    Only consider those files as dupes that have the same basename. See also
+    ``man 1 basename``. The comparison of the basenames is case-sensitive.
 
 :``-e --match-extension`` / ``-E --no-match-extension`` (**default**):
 
     Only consider those files as dupes that have the same file extension. For
     example two photos would only match if they are a ``.png``. The extension is
-    compared case-insensitive, so ``.PNG`` is the same as ``.png``.
+    compared case-sensitive. Use with ``--case-insensitive`` so that ``.PNG`` and
+    ``.png`` are matching.
 
 :``-i --match-without-extension`` / ``-I --no-match-without-extension`` (**default**):
 
     Only consider those files as dupes that have the same basename minus the file
     extension. For example: ``banana.png`` and ``Banana.jpeg`` would be considered dupes,
-    while ``apple.png`` and ``peach.png`` won't. The comparison is case-insensitive.
+    while ``apple.png`` and ``peach.png`` won't. The comparison is case-sensitive.
+
+:``--match-relative-path``:
+
+    Only consider files as dupes that have the same path, including the filename, relative
+    to the given path. The comparison of every component is case-sensitive, unless
+    ``--case-insensitive`` is set.
+
+:``--case-insensitive``:
+
+    Make the ``--match-`` options above become case-insensitive for ASCII characters
+    (and only them, other characters still must match exactly).
 
 :``-n --newer-than-stamp=<timestamp_filename>`` / ``-N --newer-than=<iso8601_timestamp_or_unix_timestamp>``:
 

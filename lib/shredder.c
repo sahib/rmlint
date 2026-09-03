@@ -905,13 +905,12 @@ static RmFile *rm_shred_group_push_file(RmShredGroup *shred_group, RmFile *file,
             if(shred_group->num_files == 0) {
                 shred_group->unique_basename = file;
             } else if(shred_group->unique_basename &&
-                      rm_rank_basenames(file, shred_group->unique_basename) != 0) {
+                      rm_rank_basenames(file, shred_group->unique_basename, true) != 0) {
                 shred_group->unique_basename = NULL;
             }
             if(file->cluster) {
                 for(GList *iter = file->cluster->head; iter; iter = iter->next) {
-                    if(rm_rank_basenames(iter->data, shred_group->unique_basename) !=
-                       0) {
+                    if(rm_rank_basenames(iter->data, shred_group->unique_basename, true) != 0) {
                         shred_group->unique_basename = NULL;
                         break;
                     }
@@ -1414,7 +1413,7 @@ static RmShredGroup *rm_shred_basename_rejects(RmShredGroup *group, RmShredTag *
             iter = next) {
             next = iter->next;
             RmFile *curr = iter->data;
-            if(rm_rank_basenames(curr, headfile) == 0) {
+            if(rm_rank_basenames(curr, headfile, true) == 0) {
                 if(!rejects) {
                     rejects = rm_shred_create_rejects(group, curr);
                 }
