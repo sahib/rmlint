@@ -7,12 +7,10 @@ dependencies beside ``gtk+`` :math:`\geq 3.14` and ``PyGObject``.
 
 .. raw:: html
 
-   <center>
+   <div style="text-align: center">
     <iframe src="https://player.vimeo.com/video/139999878" width="780"
-    height="450"
-    frameborder="0" webkitallowfullscreen mozallowfullscreen
-    allowfullscreen></iframe>
-   </center>
+    height="450" style="border: 0" allow="fullscreen"></iframe>
+   </div>
 
 
 .. warning::

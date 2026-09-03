@@ -1,0 +1,19 @@
+{% extends "!sidebar/brand.html" %}
+
+{% block brand_content %}
+  {%- if theme_light_logo and theme_dark_logo %}
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="{{ pathto('_static/' + theme_light_logo, 1) }}"/>
+    <img class="sidebar-logo only-dark" src="{{ pathto('_static/' + theme_dark_logo, 1) }}"/>
+  </div>
+  {%- endif %}
+  {#- TODO: remove centered once https://github.com/pradyunsg/furo/pull/942 is merged.
+            Or use super(), set theme_sidebar_hide_name to False and append to brand_content. -#}
+  {%- if not theme_sidebar_hide_name %}
+  <span class="sidebar-brand-text centered">
+    {{ project }} {{ version }}<br />
+    <em>{{ codename }}</em><br />
+    {{ _('documentation') }}
+  </span>
+  {%- endif %}
+{% endblock brand_content %}

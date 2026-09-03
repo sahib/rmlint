@@ -83,19 +83,14 @@ They show you the basic principles and most of the advanced options:
    cautions
    faq
 
-If you have usage questions or find weird behaviour, you can also try to reach
-us via *IRC* in ``#rmlint`` on ``irc.freenode.net``.
-
 Since version ``2.4.0`` we also feature an optional graphical user interface:
 
 .. raw:: html
 
-   <center>
+   <div style="text-align: center">
     <iframe src="https://player.vimeo.com/video/139999878" width="780"
-    height="450"
-    frameborder="0" webkitallowfullscreen mozallowfullscreen
-    allowfullscreen></iframe>
-   </center>
+    height="450" style="border: 0" allow="fullscreen"></iframe>
+   </div>
 
 Informative reference
 ---------------------
@@ -157,17 +152,11 @@ Donations
 ---------
 
 If you think rmlint saved [*]_ you some serious time and/or space, you might
-consider a donation. You can donate either via *Flattr* or via *PayPal*:
-
-.. image:: http://api.flattr.com/button/flattr-badge-large.png
-   :target: https://flattr.com/@SeeSpotRun
-   :align: center
-   :width: 9%
+consider a donation. You can donate via *PayPal*:
 
 .. raw:: html
 
-   <br />
-   <center>
+   <div style="text-align: center">
         <form action="https://www.paypal.com/donate" method="post" target="_top">
             <input type="hidden" name="business" value="ZZFE8WTYKT2KW" />
             <input type="hidden" name="item_name" value="Save the world one duplicate at a time" />
@@ -175,8 +164,7 @@ consider a donation. You can donate either via *Flattr* or via *PayPal*:
             <input type="image" src="https://www.paypalobjects.com/en_AU/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
             <img alt="" border="0" src="https://www.paypal.com/en_AU/i/scr/pixel.gif" width="1" height="1" />
         </form>
-   </center>
-   <br />
+   </div>
 
 Or just buy us a beer if we ever meet. Nice emails are okay too.
 

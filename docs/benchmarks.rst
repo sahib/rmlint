@@ -3,7 +3,7 @@
 Benchmarks
 ==========
 
-This page contains the images that our _`benchmark suite` renders for the current
+This page contains the images that our `benchmark suite`_ renders for the current
 release. Inside the benchmark suite, ``rmlint`` is *challenged* against other
 popular and some less known duplicate finders. Apart from that a very dumb
 duplicate finder called ``baseline.py`` is used to see how slow a program would
