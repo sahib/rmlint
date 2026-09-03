@@ -253,21 +253,38 @@ int rm_rank_orig_criteria(const RmFile *a, const RmFile *b, const RmSession *ses
  * each other.  The sorted list can then be split into groups of potential
  * duplicates by splitting whereever rm_rank_group(a, b) != 0 */
 gint rm_rank_group(const RmFile *file_a, const RmFile *file_b) {
-    RETURN_IF_NONZERO(SIGN_DIFF(file_a->actual_file_size, file_b->actual_file_size));
+    gint rank;
+
+    rank = SIGN_DIFF(file_a->actual_file_size, file_b->actual_file_size);
+    RETURN_IF_NONZERO(rank)
 
     /* --see-symlinks should not let regular files match symlinks */
-    RETURN_IF_NONZERO(SIGN_DIFF(file_a->is_symlink, file_b->is_symlink));
+    rank = SIGN_DIFF(file_a->is_symlink, file_b->is_symlink);
+    RETURN_IF_NONZERO(rank)
 
     RmCfg *cfg = file_a->session->cfg;
-    bool ignore_case = file_a->session->cfg->case_insensitive;
 
-    RETURN_IF_NONZERO(cfg->match_basename && rm_rank_basenames(file_a, file_b, ignore_case));
+    if (cfg->match_basename) {
+        rank = rm_rank_basenames(file_a, file_b, cfg->case_insensitive);
+        RETURN_IF_NONZERO(rank)
+    }
 
-    RETURN_IF_NONZERO(cfg->match_with_extension && rm_rank_with_extension(file_a, file_b, ignore_case));
+    if (cfg->match_with_extension) {
+        rank = rm_rank_with_extension(file_a, file_b, cfg->case_insensitive);
+        RETURN_IF_NONZERO(rank)
+    }
 
-    RETURN_IF_NONZERO(cfg->match_without_extension && rm_rank_without_extension(file_a, file_b, ignore_case));
+    if (cfg->match_without_extension) {
+        rank = rm_rank_without_extension(file_a, file_b, cfg->case_insensitive);
+        RETURN_IF_NONZERO(rank)
+    }
 
-    return cfg->match_relative_path && rm_rank_relative_path(file_a, file_b, ignore_case);
+    if (cfg->match_relative_path) {
+        rank = rm_rank_relative_path(file_a, file_b, cfg->case_insensitive);
+        RETURN_IF_NONZERO(rank)
+    }
+
+    return 0;
 }
 
 /* GCompareDataFunc wrapper around rm_rank_group */
