@@ -45,6 +45,9 @@ to remove it. It is able to find:
 
     <center>
 
+.. image:: https://img.shields.io/github/v/release/sahib/rmlint?include_prereleases&display_name=release
+   :target: https://github.com/sahib/rmlint/releases
+
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: http://rmlint.rtfd.org
 
@@ -54,14 +57,8 @@ to remove it. It is able to find:
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
-.. image:: https://img.shields.io/github/release/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/releases
-
 .. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
    :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
-
-.. image:: https://badges.gitter.im/rmlint/community.svg
-   :target: https://gitter.im/rmlint/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 
 
 .. raw:: html
