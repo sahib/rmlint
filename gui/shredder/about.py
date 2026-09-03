@@ -7,6 +7,7 @@ MAIN_AUTHORS = [
     'Christopher Pahl <sahib@online.de>',
     'Daniel Thomas <thomas_d_j@yahoo.com.au>',
     'Cebtenzzre <cebtenzzre@gmail.com>',
+    'Vassili Tchersky <vt+rmlint@vbcy.org>'
 ]
 
 # Change when needed.
