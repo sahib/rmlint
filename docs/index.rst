@@ -48,8 +48,8 @@ to remove it. It is able to find:
 .. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
    :target: http://rmlint.rtfd.org
 
-.. image:: https://img.shields.io/travis/sahib/rmlint/develop.svg?style=flat
-   :target: https://travis-ci.org/sahib/rmlint
+.. image:: https://github.com/sahib/rmlint/actions/workflows/build-and-test.yml/badge.svg
+   :target: https://github.com/sahib/rmlint/actions
 
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues

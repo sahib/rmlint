@@ -143,7 +143,7 @@ Rules
         assert random.choice([True, False]):
 
 * Unresolved issues can be marked with the ``known_issue`` attribute to avoid
-  failing automated travis testing.
+  failing automated CI testing.
 
 Container
 ~~~~~~~~~

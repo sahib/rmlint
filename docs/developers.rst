@@ -58,12 +58,12 @@ Here are some other things to check before submitting your contribution:
       $ clang-format -style=file -i $(find lib src -iname '*.[ch]')
 
 - Do all tests run? Go to the `test documentation`_ for more info.
-  Also after opening the pull request, your code will be checked via `TravisCI`_.
+  Also after opening the pull request, your code will be checked via `GitHub workflows`_.
 - Is your commit message descriptive? `whatthecommit.com`_ has some good
   examples how they should **not** look like.
 - Is ``rmlint`` running okay inside of ``valgrind`` (i.e. no leaks and no memory violations)?
 
-.. _`TravisCI`: https://travis-ci.com/sahib/rmlint
+.. _`GitHub workflows`: https://docs.github.com/en/actions/get-started/continuous-integration
 
 .. _`test documentation`: https://github.com/sahib/rmlint/blob/develop/tests/README.rst
 
