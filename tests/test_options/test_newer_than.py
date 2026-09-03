@@ -39,7 +39,7 @@ def test_simple():
     for offset, expect in [(1, 3), (8, 0)]:
         iso_time = time.strftime(
             "%Y-%m-%dT%H:%M:%S%z",
-            time.gmtime(now + offset)
+            time.localtime(now + offset)
         )
 
         _, *data, _ = run_rmlint_once('-S a -N ' + iso_time)
