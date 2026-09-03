@@ -1,10 +1,11 @@
 """Configuration file for the Sphinx documentation builder."""
+from datetime import date
 from pathlib import Path
 
 # -- Project information -----------------------------------------------------
 project = 'rmlint'
-copyright = '2010-2026, Christopher Pahl, Daniel Thomas, Vassili Tchersky and Cebtenzzre'
-author = 'Christopher Pahl, Daniel Thomas and Cebtenzzre'
+author = 'Christopher Pahl, Daniel Thomas, Vassili Tchersky and Cebtenzzre'
+copyright = f'2010-{date.today().year}, {author}'
 
 release = (Path(__file__).parent.parent / '.version').read_text().strip()
 version, _, codename = release.partition(' ')
@@ -47,7 +48,7 @@ html_theme_options = {
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('rmlint.1', 'rmlint', 'find duplicate files and other space waste efficiently',
-     ['Christopher Pahl', 'Daniel Thomas', 'Cebtenzzre'], 1)
+     ['Christopher Pahl', 'Daniel Thomas', 'Vassili Tchersky', 'Cebtenzzre'], 1)
 ]
 
 # If true, show URL addresses after external links.

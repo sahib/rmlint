@@ -100,6 +100,7 @@ Here's a list of developers to blame:
 *Christopher Pahl*   https://github.com/sahib      2010-2017
 *Daniel Thomas*      https://github.com/SeeSpotRun 2014-2021
 *Cebtenzzre*         https://github.com/Cebtenzzre 2021-2023
+*Vassili Tchersky*   https://github.com/vassilit   2025-
 =================== ============================== =========
 
 There are some other people that helped us of course.
@@ -111,7 +112,7 @@ LICENSE
 `rmlint` is licensed under the conditions of the
 `GPLv3 <https://www.gnu.org/licenses/quick-guide-gplv3.html.en>`_.
 See the
-`COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`
+`COPYING <https://raw.githubusercontent.com/sahib/rmlint/master/COPYING>`_
 file distributed along the source for details.
 
 DONATIONS
