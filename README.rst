@@ -16,6 +16,9 @@ offers to remove it.
 .. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
    :target: https://github.com/sahib/rmlint/issues
 
+.. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint/master
+   :target: https://github.com/sahib/rmlint/commits/master/
+
 .. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint/develop
    :target: https://github.com/sahib/rmlint/commits/develop/
 
