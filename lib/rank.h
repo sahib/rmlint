@@ -44,8 +44,6 @@ gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b, bool 
  */
 gint rm_rank_relative_path(const RmFile *file_a, const RmFile *file_b, bool ignore_case);
 
-gint rm_rank_dirname(const RmFile *file_a, const RmFile *file_b, bool);
-
 /**
  * @brief Compare two files in order to find out which file is the
  * higher ranked (ie original).

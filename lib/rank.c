@@ -217,12 +217,14 @@ gint rm_rank_without_extension(const RmFile *file_a, const RmFile *file_b, bool 
     return rm_match_strncmp(basename_a, basename_b, a_len, ignore_case);
 }
 
-gint rm_rank_dirname(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
-    if (!file_a->node->parent || !file_b->node->parent)
+static gint rm_rank_dirname(const RmFile *file_a, const RmFile *file_b, bool ignore_case) {
+    const RmNode *const parent_a = file_a->node->parent;
+    const RmNode *const parent_b = file_b->node->parent;
+
+    if (!parent_a || !parent_b)
         return 0;
 
-    return rm_match_strcmp(file_a->node->parent->basename, file_b->node->parent->basename,
-                           ignore_case);
+    return rm_match_strcmp(parent_a->basename, parent_b->basename, ignore_case);
 }
 
 

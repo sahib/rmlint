@@ -78,11 +78,11 @@ typedef struct RmCfg {
     gboolean filter_mtime;
     gboolean case_insensitive;
     gboolean match_basename;
-    gboolean match_dirname;
-    gboolean match_relative_path;
     gboolean unmatched_basenames;
     gboolean match_with_extension;
     gboolean match_without_extension;
+    gboolean match_dirname;
+    gboolean match_relative_path;
     gboolean merge_directories;
     gboolean honour_dir_layout;
     gboolean write_cksum_to_xattr;

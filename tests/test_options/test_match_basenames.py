@@ -1,6 +1,6 @@
 import os
 
-from tests.utils import create_file, run_rmlint, get_testdir
+from tests.utils import create_file, get_testdir, run_rmlint
 
 
 def test_negative_with_basename():
