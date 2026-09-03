@@ -89,14 +89,22 @@ def check_sysmacro_h(context):
 @custom_test
 def check_libelf(context):
     rc = 1
-
     if GetOption('with_libelf') is False:
         rc = 0
 
-    if rc and tests.CheckHeader(context, 'libelf.h', header="#include <stdlib.h>"):
-        rc = 0
+    LIBELF_PROBE = dedent('''\
+    #include <libelf.h>
+    #include <gelf.h>
 
-    if rc and tests.CheckLib(context, ['libelf']):
+    _Static_assert(sizeof(((Elf_Data *)0)->d_off) == 8,
+                   "libelf Elf_Data.d_off is not 64-bit");
+    ''')
+
+    # gelf_getchdr first appeared in elfutils 0.165 and postdates incompatible
+    # Riepe 0.8.13 (devel/libelf on FreeBSD).
+    if rc and tests.CheckLib(context, ['libelf'],
+                             header=LIBELF_PROBE,
+                             call='gelf_getchdr(0, 0);'):
         rc = 0
 
     context.sconf.env['HAVE_LIBELF'] = rc
@@ -154,27 +162,6 @@ def check_fiemap(context):
         rc = 0
 
     context.sconf.env['HAVE_FIEMAP'] = rc
-
-    context.did_show_result = True
-    context.Result(rc)
-    return rc
-
-
-@custom_test
-def check_bigfiles(context):
-    off_t_is_big_enough = True
-
-    if tests.CheckTypeSize(context, 'off_t', header='#include <sys/types.h>') < 8:
-        off_t_is_big_enough = False
-
-    have_stat64 = True
-    if tests.CheckFunc(context, 'stat64'):
-        have_stat64 = False
-
-    rc = int(off_t_is_big_enough or have_stat64)
-    context.sconf.env['HAVE_BIG_OFF_T'] = int(off_t_is_big_enough)
-    context.sconf.env['HAVE_STAT64'] = int(have_stat64)
-    context.sconf.env['HAVE_BIGFILES'] = rc
 
     context.did_show_result = True
     context.Result(rc)

@@ -18,8 +18,6 @@ ENV_KEYS = (
     # syscalls / filesystem features
     'HAVE_FIEMAP', 'HAVE_XATTR', 'HAVE_LXATTR', 'HAVE_EXTATTR',
     'HAVE_POSIX_FADVISE', 'HAVE_SYSBLOCK', 'HAVE_UNAME',
-    # large file support
-    'HAVE_BIGFILES', 'HAVE_BIG_OFF_T', 'HAVE_STAT64',
     # cpu extensions
     'HAVE_MM_CRC32_U64', 'HAVE_BUILTIN_CPU_SUPPORTS',
     # language features
