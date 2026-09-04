@@ -203,8 +203,7 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr ""
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
 msgstr ""
 
 #: lib/formats/summary.c
@@ -1167,6 +1166,18 @@ msgstr ""
 
 #: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
 msgid "Duplicates must have twins in tagged directories"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Only find twins with same dirname"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Only find twins with same relative path"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
 msgstr ""
 
 #, c-format

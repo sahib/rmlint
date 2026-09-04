@@ -203,11 +203,10 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Arrêt prématuré, tous les doublons n'ont peut-être pas été trouvés\n"
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
 msgstr ""
 "Note: S'il vous plaît, utilisez le script enregistré ci-dessous pour l'enlèvement, pas la sortie "
-"ci-dessus."
+"ci-dessus.\n"
 
 #: lib/formats/summary.c
 #, c-format
@@ -1201,6 +1200,18 @@ msgstr "Il doit y avoir un doublon dans le répertoire marqué"
 #: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
 msgid "Duplicates must have twins in tagged directories"
 msgstr "Il doit y avoir un doublon dans le répertoire marqué"
+
+#: lib/cmdline.c
+msgid "Only find twins with same dirname"
+msgstr "Chercher uniquement les doublons qui partagent le même nom de répertoire parent"
+
+#: lib/cmdline.c
+msgid "Only find twins with same relative path"
+msgstr "Chercher uniquement les doublons dont le chemin relatif correspond"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr "Les options --match sont traitées sans distinction entre majuscules et minuscules"
 
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"

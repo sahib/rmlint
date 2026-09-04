@@ -51,29 +51,26 @@ static void rm_fmt_prog(RmSession *session,
     if(session->total_files <= 1) {
         ARROW fprintf(out, "%s%d%s", MAYBE_RED(out, session), session->total_files,
                       MAYBE_RESET(out, session));
-        fprintf(out, _(" file(s) after investigation, nothing to search through.\n"));
+        fputs(_(" file(s) after investigation, nothing to search through.\n"), out);
         return;
     }
 
     if(rm_session_was_aborted() || session->equal_exit_code == EXIT_FAILURE) {
         /* Clear the whole terminal line.
-         * Progressbar might leave some junk.
-         */
+         * Progressbar might leave some junk. */
         struct winsize terminal;
         ioctl(fileno(out), TIOCGWINSZ, &terminal);
-        for(int i = 0; i < terminal.ws_col; ++i) {
-            fprintf(out, " ");
-        }
+        for(int i = 0; i < terminal.ws_col; ++i)
+            fputc(' ', out);
 
-        fprintf(out, "\n");
-        ARROW fprintf(out, _("Early shutdown, probably not all lint was found.\n"));
+        fputc('\n', out);
+        ARROW fputs(_("Early shutdown, probably not all lint was found.\n"), out);
     }
 
     if(rm_fmt_has_formatter(session->formats, "pretty") &&
        rm_fmt_has_formatter(session->formats, "sh")) {
-        ARROW fprintf(out, _("Note: Please use the saved script below for removal, not "
-                             "the above output."));
-        fprintf(out, "\n");
+        ARROW fputs(_("Note: Please use the saved script below for removal, not "
+                      "the above output.\n"), out);
     }
 
     char numbers[3][512];
@@ -103,8 +100,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(session->cfg->replay) {
-        ARROW fprintf(out,
-                      _("This run was a replay from a previous run. No I/O done!\n"));
+        ARROW fputs(_("This run was a replay from a previous run. No I/O done!\n"), out);
     }
 
     gdouble elapsed = g_timer_elapsed(session->timer_since_proc_start, NULL);
@@ -141,7 +137,7 @@ static void rm_fmt_prog(RmSession *session,
         }
 
         if(first_print_flag) {
-            fprintf(out, "\n");
+            fputc('\n', out);
             first_print_flag = false;
         }
 

@@ -205,9 +205,8 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Früher Abbruch, vermutlich wurde nicht alles gefunden.\n"
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
-msgstr "Beachte: Bitte benutze das Skript unten zum Löschen, nicht die Ausgabe."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
+msgstr "Beachte: Bitte benutze das Skript unten zum Löschen, nicht die Ausgabe.\n"
 
 #: lib/formats/summary.c
 #, c-format
@@ -1242,6 +1241,20 @@ msgstr "Duplikat braucht einen Zwilling im markierten Verzeichnis"
 #, fuzzy
 msgid "Duplicates must have twins in tagged directories"
 msgstr "Duplikat braucht einen Zwilling im markierten Verzeichnis"
+
+#: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same dirname"
+msgstr "Finde nur Duplikate mit selben Dateinamen"
+
+#: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same relative path"
+msgstr "Finde nur Duplikate mit selben Dateinamen"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
 
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"

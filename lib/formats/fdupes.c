@@ -95,9 +95,8 @@ static void rm_fmt_prog(RmSession *session,
             (rm_fmt_get_config_value(session->formats, "fdupes", "sameline") != NULL);
     }
 
-    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-        fprintf(out, "\n");
-    }
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN)
+        fputc('\n', out);
 }
 
 static RmFmtHandlerFdupes FDUPES_HANDLER_IMPL = {

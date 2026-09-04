@@ -88,7 +88,7 @@ static void rm_fmt_json_open(RmSession *session, RmFmtHandlerJSON *self, FILE *o
     self->id_set = g_hash_table_new(NULL, NULL);
 
     // write the start of the json array
-    g_output_stream_printf(self->stream, NULL, NULL, NULL, "[\n");
+    g_output_stream_write_all(self->stream, "[\n", 2, NULL, NULL, NULL);
 }
 
 static void rm_fmt_json_close(RmFmtHandlerJSON *self) {
@@ -97,7 +97,7 @@ static void rm_fmt_json_close(RmFmtHandlerJSON *self) {
     g_object_unref(self->generator);
 
     // write the end of the json array
-    g_output_stream_printf(self->stream, NULL, NULL, NULL, "]\n");
+    g_output_stream_write_all(self->stream, "]\n", 2, NULL, NULL, NULL);
     g_object_unref(self->stream);
 
     g_hash_table_unref(self->id_set);

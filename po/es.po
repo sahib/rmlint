@@ -203,9 +203,8 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Apagado prematuro, probablemente no toda la pelusa fué encontrada.\n"
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
-msgstr "Nota: Por favor use el script guardado abajo para eliminar, no la respuesta de arriba."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
+msgstr "Nota: Por favor use el script guardado abajo para eliminar, no la respuesta de arriba.\n"
 
 #: lib/formats/summary.c
 #, c-format
@@ -1221,6 +1220,20 @@ msgstr "Debe tener gemelo en directorio etiquetado"
 #, fuzzy
 msgid "Duplicates must have twins in tagged directories"
 msgstr "Debe tener gemelo en directorio etiquetado"
+
+#: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same dirname"
+msgstr "Sólo encuentra gemelos con el mismo nombre base"
+
+#: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same relative path"
+msgstr "Sólo encuentra gemelos con el mismo nombre base"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
 
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"
