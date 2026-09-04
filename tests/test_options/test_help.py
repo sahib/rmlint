@@ -4,6 +4,8 @@ Well, actually it's to increase coverage to be honest.
 """
 import subprocess
 
+import pytest
+
 from tests.utils import RMLINT_BINARY
 
 
@@ -17,6 +19,7 @@ def test_help():
     assert '--show-man' in yelp
 
 
+@pytest.mark.manpage
 def test_man():
     yelp = subprocess.check_output(
         (RMLINT_BINARY, '--show-man'),

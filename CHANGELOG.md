@@ -34,6 +34,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT``
   are honoured when installing the GUI.
 * ``scons --show-config`` shows features and build in one run.
+* Tests: new markers for tests with special needs (reflink, xattr, manpage).
+* Build target test understands a new SCons variable: ``PYTEST_ARGS``.
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
 * FreeBSD: support for xattr checksum cache (#800).
 

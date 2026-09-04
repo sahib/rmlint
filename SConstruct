@@ -104,6 +104,12 @@ vars.Add(
     validator=lambda _key, value, _env: not Path(value).is_absolute(),
 )
 
+vars.Add(
+    'PYTEST_ARGS',
+    help="extra pytest arguments",
+    default='',
+)
+
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
