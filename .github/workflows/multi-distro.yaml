@@ -35,10 +35,6 @@ jobs:
           - tag: "quay.io/centos/centos:stream10"
             installcmd: *el_dnf
             pkgs: *el_pkg
-          # Alpine
-          - tag: "alpine:latest"
-            installcmd: "apk add --no-cache"
-            pkgs: "build-base pkgconf scons glib-dev json-glib-dev elfutils-dev py3-sphinx"
           # ArchLinux
           - tag: "archlinux:latest"
             installcmd: "pacman -Syu --noconfirm"

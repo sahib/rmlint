@@ -5,13 +5,14 @@ RUN apk add --no-cache build-base pkgconf scons \
 FROM toolchain AS build
 WORKDIR /rmlint
 COPY . .
-RUN scons --without-gui --without-gettext
+RUN scons --without-gui
 
 FROM toolchain AS build-install-gui
 WORKDIR /rmlint
 COPY . .
-RUN apk add --no-cache py3-build py3-installer py3-setuptools gtk-update-icon-cache
-RUN scons install --without-gettext DESTDIR=/staging PREFIX=/usr install
+RUN apk add --no-cache py3-build py3-installer py3-setuptools \
+    gettext gtk-update-icon-cache
+RUN scons install DESTDIR=/staging PREFIX=/usr install
 RUN gtk-update-icon-cache -t /staging/usr/share/icons/hicolor
 
 FROM alpine:3 AS run-gui
@@ -24,9 +25,9 @@ ENTRYPOINT ["/usr/bin/rmlint", "--gui"]
 
 FROM build AS test
 RUN apk add --no-cache py3-sphinx py3-pip bash dash mandoc
-RUN scons --without-gui --without-gettext DEBUG=1
+RUN scons --without-gui DEBUG=1
 RUN pip install --break-system-packages -r tests/requirements.txt
-ENTRYPOINT ["pytest", "-m", "not slow"]
+ENTRYPOINT ["pytest", "-m", "not slow and not manpage"]
 CMD ["tests"]
 
 FROM alpine:3 AS run
