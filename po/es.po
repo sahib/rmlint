@@ -203,9 +203,8 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Apagado prematuro, probablemente no toda la pelusa fué encontrada.\n"
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
-msgstr "Nota: Por favor use el script guardado abajo para eliminar, no la respuesta de arriba."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
+msgstr "Nota: Por favor use el script guardado abajo para eliminar, no la respuesta de arriba.\n"
 
 #: lib/formats/summary.c
 #, c-format

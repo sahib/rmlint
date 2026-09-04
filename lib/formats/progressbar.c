@@ -252,11 +252,9 @@ static void rm_fmt_progress_format_text(RmSession *session,
 }
 
 static void rm_fmt_progress_print_text(RmFmtHandlerProgress *self, int width, FILE *out) {
-    if(self->text_len < (unsigned)width) {
-        for(guint32 i = 0; i < width - self->text_len; ++i) {
-            fprintf(out, " ");
-        }
-    }
+    if(self->text_len < (unsigned)width)
+        for(guint32 i = 0; i < width - self->text_len; ++i)
+            fputc(' ', out);
 
     fprintf(out, "%s", self->text_buf);
 }
@@ -421,13 +419,13 @@ static void rm_fmt_prog(RmSession *session,
             self->update_interval = 50; /* milliseconds */
         }
 
-        fprintf(out, "\033[?25l"); /* Hide the cursor */
+        fputs("\033[?25l", out); /* Hide the cursor */
         fflush(out);
         return;
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN || rm_session_was_aborted()) {
-        fprintf(out, "\033[?25h"); /* show the cursor */
+        fputs("\033[?25h", out); /* show the cursor */
         fflush(out);
 
         if(rm_session_was_aborted()) {
@@ -466,7 +464,7 @@ static void rm_fmt_prog(RmSession *session,
             }
 
             rm_fmt_progress_print_text(self, text_width, out);
-            fprintf(out, "\n");
+            fputc('\n', out);
         }
 
         g_timer_start(self->timer);
@@ -503,7 +501,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN) {
-        fprintf(out, "\n\n");
+        fputs("\n\n", out);
         g_timer_destroy(self->timer);
         rm_running_mean_unref(&self->diff_mean);
         rm_running_mean_unref(&self->took_mean);

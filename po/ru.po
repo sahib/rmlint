@@ -203,8 +203,7 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr ""
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
 msgstr ""
 
 #: lib/formats/summary.c

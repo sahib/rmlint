@@ -137,14 +137,14 @@ static void rm_fmt_elem(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
         break;
     case RM_LINT_TYPE_DUPE:
         if(file->is_original) {
-            fprintf(out, "ls");
+            fputs("ls", out);
         } else {
             fprintf(out, "%s", format);
         }
         break;
     case RM_LINT_TYPE_DUPE_DIR:
         if(file->is_original) {
-            fprintf(out, "ls -la");
+            fputs("ls -la", out);
         } else {
             fprintf(out, "%s", format);
         }
@@ -163,9 +163,8 @@ static void rm_fmt_prog(_UNUSED RmSession *session, RmFmtHandler *parent, FILE *
                         RmFmtProgressState state) {
     RmFmtHandlerProgress *self = (RmFmtHandlerProgress *)parent;
 
-    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->elems_written) {
-        fprintf(out, "\n");
-    }
+    if(state == RM_PROGRESS_STATE_PRE_SHUTDOWN && self->elems_written)
+        fputc('\n', out);
 }
 
 static RmFmtHandlerProgress PRETTY_HANDLER_IMPL = {

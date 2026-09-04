@@ -203,11 +203,10 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Arrêt prématuré, tous les doublons n'ont peut-être pas été trouvés\n"
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
 msgstr ""
 "Note: S'il vous plaît, utilisez le script enregistré ci-dessous pour l'enlèvement, pas la sortie "
-"ci-dessus."
+"ci-dessus.\n"
 
 #: lib/formats/summary.c
 #, c-format

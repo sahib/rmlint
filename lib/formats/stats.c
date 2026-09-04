@@ -49,7 +49,7 @@ static void rm_fmt_prog(RmSession *session,
     }
 
     if(session->duplicate_bytes == 0 && session->shred_bytes_read == 0) {
-        fprintf(out, _("No shred stats.\n"));
+        fputs(_("No shred stats.\n"), out);
         return;
     }
 
@@ -59,11 +59,10 @@ static void rm_fmt_prog(RmSession *session,
          */
         struct winsize terminal;
         ioctl(fileno(out), TIOCGWINSZ, &terminal);
-        for(int i = 0; i < terminal.ws_col; ++i) {
-            fprintf(out, " ");
-        }
+        for(int i = 0; i < terminal.ws_col; ++i)
+            fputc(' ', out);
 
-        fprintf(out, "\n");
+        fputc('\n', out);
     }
 
     char numbers[64];

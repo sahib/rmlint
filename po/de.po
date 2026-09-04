@@ -205,9 +205,8 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Früher Abbruch, vermutlich wurde nicht alles gefunden.\n"
 
 #: lib/formats/summary.c
-#, c-format
-msgid "Note: Please use the saved script below for removal, not the above output."
-msgstr "Beachte: Bitte benutze das Skript unten zum Löschen, nicht die Ausgabe."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
+msgstr "Beachte: Bitte benutze das Skript unten zum Löschen, nicht die Ausgabe.\n"
 
 #: lib/formats/summary.c
 #, c-format
