@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.11.0 Evolving Echidna -- unreleased]
+## [2.11.0-dev Evolving Echidna -- unreleased]
 
 ### Fixed
 

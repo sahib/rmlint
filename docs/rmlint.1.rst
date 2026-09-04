@@ -6,9 +6,6 @@ rmlint
 find duplicate files and other space waste efficiently
 ------------------------------------------------------
 
-.. NOTE: Stuff in curly braces gets replaced by SCons
-..       Use something like {{this}} to escape curly braces.
-
 SYNOPSIS
 ========
 

@@ -25,15 +25,19 @@ from rm_build_support import (
     link_program_message,
     link_shared_library_message,
     ranlib_library_message,
-    read_version,
     write_compile_flags,
 )
+from rm_version import VersionError, read_version
 
 DEFAULT_PREFIX = '/usr/local'
 PREFIX_RECORD_FILE = Path('.prefix.txt')
 
-VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_NAME, _ = read_version()
-Export('VERSION_MAJOR VERSION_MINOR VERSION_PATCH VERSION_NAME')
+try:
+    VERSION = read_version()
+except (OSError, VersionError) as err:
+    raise UserError(err) from err
+
+Export('VERSION')
 Export('create_uninstall_target')
 Export('find_sphinx_binary')
 
@@ -436,45 +440,13 @@ env.Clean(compile_flags, '.clang_complete')
 env.Clean(library, ('compile_commands.json', 'compile_flags.txt', '.clang_complete'))
 
 
-def build_tar_gz(target=None, source=None, env=None):
-    tarball = f'rmlint-{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}.tar.gz'
+def build_tar_gz(target, source, env):
+    tarball = f'rmlint-{VERSION}.tar.gz'
     subprocess.call(['git', 'archive', 'HEAD', '-9', '--format', 'tar.gz', '-o', tarball])
     print('Wrote tarball to ./' + tarball)
 
-
 if 'dist' in COMMAND_LINE_TARGETS:
     env.Command('dist', None, Action(build_tar_gz, "Building release tarball..."))
-
-
-if 'release' in COMMAND_LINE_TARGETS:
-    def replace_version_strings(target=None, source=None, env=None):
-        print('Patching .version file...')
-        with open('.version', 'r', encoding='utf-8') as handle:
-            text = handle.read().strip()
-
-        if '@' not in text:
-            with open('.version', 'w', encoding='utf-8') as handle:
-                handle.write(f"{text}@{conf.env['gitrev']}\n")
-
-            # Commit the .version change, so git archive can see it.
-            subprocess.check_call(
-                'git add .version && git commit -m ".version bump; you should not see this commit."',
-                shell=True
-            )
-
-        # Build the .tgz on the current state
-        build_tar_gz()
-
-        # We do not want lots of temp commits, so revert the latest one.
-        if '@' not in text:
-            subprocess.check_call('git reset --hard HEAD^', shell=True)
-            with open('.version', 'w', encoding='utf-8') as handle:
-                handle.write(text + '\n')
-
-    release = env.Command(
-        'release', None, Action(replace_version_strings, "Bumping version...")
-    )
-    env.Depends(release, env.Alias('gettext'))
 
 
 if GetOption('show_config'):
@@ -541,8 +513,7 @@ if GetOption('show_config'):
         locale=yesno(env['HAVE_LIBINTL']),
         msgfmt=yesno(env['HAVE_MSGFMT']),
 
-        version=f'{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH} '
-                f'"{VERSION_NAME}" (rev {env.get("gitrev", "unknown")})',
+        version=f'{VERSION.with_rev(env['gitrev'])} "{VERSION.name}"',
         compiler=env['CC'],
         prefix=env['PREFIX'],
         dest_dir=env['DESTDIR'],

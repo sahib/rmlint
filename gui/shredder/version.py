@@ -16,7 +16,8 @@ def _guess_rmlint_version() -> str:
     if result and data:
         import re
 
-        match = re.search(r'version (\d+\.\d+\.\d+)', data)
+        match = re.search(
+            r'version (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)', data)
         if match:
             return match.group(1)
 

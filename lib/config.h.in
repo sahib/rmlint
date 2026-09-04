@@ -31,20 +31,13 @@
 /* define here so rmlint and hash utility can both access */
 #define RM_DEFAULT_DIGEST RM_DIGEST_BLAKE2B
 
-#define RM_VERSION "{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_PATCH}"
+#define RM_VERSION "{VERSION}"
 #define RM_VERSION_MAJOR {VERSION_MAJOR}
 #define RM_VERSION_MINOR {VERSION_MINOR}
 #define RM_VERSION_PATCH {VERSION_PATCH}
 #define RM_VERSION_NAME  "{VERSION_NAME}"
-#define RM_VERSION_GIT_REVISION "{VERSION_GIT_REVISION}"
-
-/* Might come in useful */
-#define RM_CHECK_VERSION(X,Y,Z) (0  \
-    || X <= RM_VERSION_MAJOR        \
-    || Y <= RM_VERSION_MINOR        \
-    || Z <= RM_VERSION_MICRO        \
-)
-
+#define RM_VERSION_GIT_REV "{VERSION_GIT_REV}"
+#define RM_VERSION_FULL "{VERSION_FULL}"
 
 #if HAVE_LINUX_LIMITS
 #include <linux/limits.h>

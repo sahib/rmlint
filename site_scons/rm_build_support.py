@@ -17,20 +17,6 @@ PKG_CONFIG = os.getenv('PKG_CONFIG', 'pkg-config')
 OPTIONAL_FLAGS = ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-schemas']
 
 
-def read_version():
-    with open('.version', 'r') as handle:
-        version_string = handle.read()
-
-    static_git_rev = None
-    version_numbers, release_name = version_string.split(' ', 1)
-    if '@' in release_name:
-        release_name, static_git_rev = release_name.split('@', 1)
-        static_git_rev = static_git_rev.strip()
-
-    major, minor, patch = (int(v) for v in version_numbers.split('.'))
-    return major, minor, patch, release_name.strip(), static_git_rev
-
-
 ###########################################################################
 #                                 Colo(u)rs!                              #
 ###########################################################################
