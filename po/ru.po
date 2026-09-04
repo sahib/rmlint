@@ -1168,6 +1168,18 @@ msgstr ""
 msgid "Duplicates must have twins in tagged directories"
 msgstr ""
 
+#: lib/cmdline.c
+msgid "Only find twins with same dirname"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Only find twins with same relative path"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
+
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"
 #~ msgstr "Прерывание из-за фатальной ошибки. (получен сигнал: %s)"

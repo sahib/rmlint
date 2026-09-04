@@ -1186,7 +1186,7 @@ bool rm_cmd_parse_args(int argc, char **argv, RmSession *session) {
         {"match-extension"          , 'e'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_with_extension     , _("Only find twins with same extension")                                  , NULL}     ,
         {"match-relative-path"      , 0    , HIDDEN    , G_OPTION_ARG_NONE      , &cfg->match_relative_path      , _("Only find twins with same relative path")                              , NULL}     ,
         {"match-without-extension"  , 'i'  , 0         , G_OPTION_ARG_NONE      , &cfg->match_without_extension  , _("Only find twins with same basename minus extension")                   , NULL}     ,
-        {"case-insensitive"         , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->case_insensitive         , _("--(un)match options are treated case-insensitively")                   , NULL}     ,
+        {"case-insensitive"         , 0    , 0         , G_OPTION_ARG_NONE      , &cfg->case_insensitive         , _("--match options are treated case-insensitively")                       , NULL}     ,
         {"merge-directories"        , 'D'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(merge_directories)        , _("Find duplicate directories")                                           , NULL}     ,
         {"honour-dir-layout"        , 'j'  , EMPTY     , G_OPTION_ARG_CALLBACK  , FUNC(honour_dir_layout)        , _("Only find directories with same file layout")                          , NULL}     ,
         {"perms"                    , 'z'  , OPTIONAL  , G_OPTION_ARG_CALLBACK  , FUNC(permissions)              , _("Only use files with certain permissions")                              , "[RWX]+"} ,

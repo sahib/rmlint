@@ -1221,6 +1221,20 @@ msgstr "Debe tener gemelo en directorio etiquetado"
 msgid "Duplicates must have twins in tagged directories"
 msgstr "Debe tener gemelo en directorio etiquetado"
 
+#: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same dirname"
+msgstr "Sólo encuentra gemelos con el mismo nombre base"
+
+#: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same relative path"
+msgstr "Sólo encuentra gemelos con el mismo nombre base"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
+
 #, c-format
 #~ msgid "Aborting due to a fatal error. (signal received: %s)"
 #~ msgstr "Abortando debido a un error fatal. (señal recibida: %s)"

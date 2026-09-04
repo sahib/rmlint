@@ -732,6 +732,18 @@ msgid "Only find twins with same basename minus extension"
 msgstr ""
 
 #: lib/cmdline.c
+msgid "Only find twins with same dirname"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "Only find twins with same relative path"
+msgstr ""
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
+
+#: lib/cmdline.c
 msgid "Find duplicate directories"
 msgstr ""
 
