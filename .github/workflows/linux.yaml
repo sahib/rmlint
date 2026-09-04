@@ -3,13 +3,14 @@ name: Linux
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip_static
+      - '**.md'
+      - '.gitignore'
   push:
     branches:
       - master
       - develop
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
+    paths-ignore: *skip_static
   workflow_dispatch:
 
 jobs:

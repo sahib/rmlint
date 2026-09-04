@@ -3,10 +3,14 @@ name: macOS
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip
+      - '**.md'
+      - '.gitignore'
   push:
     branches:
       - master
       - develop
+    paths-ignore: *skip
   workflow_dispatch:
 
 jobs:
