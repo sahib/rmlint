@@ -6,7 +6,7 @@ export ASSUME_ALWAYS_YES=yes
 
 PACKAGES="rsync git python3"
 PACKAGES_BUILD="scons-py312 pkgconf gettext py312-sphinx glib json-glib libblkid"
-PACKAGES_TEST="py312-pip bash dash"
+PACKAGES_TEST="py312-pip py312-blake3 bash dash"
 
 echo "==> pkg install: $PACKAGES"
 
