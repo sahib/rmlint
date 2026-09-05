@@ -36,10 +36,6 @@
 #include <sys/xattr.h>
 #endif
 
-#ifndef ENODATA
-#define ENODATA ENOMSG
-#endif
-
 #if RM_IS_LINUX
 #define RM_XATTR_USR_PREFIX "user."
 #elif RM_IS_APPLE
@@ -223,9 +219,12 @@ static int rm_xattr_is_fail(const char *name, char *path, bool warn, int rc) {
         return 0;
     }
 
-    if(errno == ENOTSUP || errno == ENODATA) {
+    if(errno == ENOTSUP
+#ifdef ENODATA
+        || errno == ENODATA
+#endif
+    )
         return 0;
-    }
 
 #ifdef ENOATTR
     /* Mac OS X, *BSD, etc. */
