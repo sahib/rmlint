@@ -2,24 +2,31 @@ Import('env')
 Import('programs')
 
 import os
+import shlex
 import shutil
 import subprocess
+
+from SCons.Errors import BuildError
 
 
 def run_tests(target=None, source=None, env=None):
     pytest = shutil.which('pytest')
     if not pytest:
-        print('Unable to find pytest in PATH')
-        Exit(1)
+        raise BuildError('Unable to find pytest in PATH')
 
-    test_env = dict(os.environ, RM_TS_DIR='/tmp/rmlint-tests')
-    Exit(subprocess.call(pytest, env=test_env))
+    test_dir = os.environ.get('RM_TS_DIR', '/tmp/rmlint-tests')
+    os.makedirs(test_dir, exist_ok=True)
+
+    test_env = dict(os.environ, RM_TS_DIR=test_dir)
+    command = (pytest, *shlex.split(env['PYTEST_ARGS']))
+
+    if status := subprocess.call(command, env=test_env):
+        Exit(status)
 
 
-if 'test' in COMMAND_LINE_TARGETS:
-    env.Alias('test',
-        env.Depends(
-            env.Command('run_tests', None, Action(run_tests, "Running tests")),
-            programs
-        )
+env.Alias('test',
+    env.Depends(
+        env.Command('run_tests', None, Action(run_tests, "Running tests")),
+        programs
     )
+)

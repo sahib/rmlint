@@ -1,0 +1,73 @@
+name: Cygwin
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip
+      - "docs/**"
+      - "gui/**"
+      - "tests/**"
+      - '**.md'
+      - '**.rst'
+      - '.gitignore'
+  push:
+    branches:
+      - master
+      - develop
+    paths-ignore: *skip
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -o igncr -eo pipefail '{0}'
+    steps:
+      - shell: pwsh
+        run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v7
+
+      - name: Prepare build environment
+        uses: cygwin/cygwin-install-action@v6
+        with:
+          install-dir: C:\cygwin
+          packages: >-
+            gcc-core
+            scons
+            pkg-config
+            gettext-devel
+            git
+            libglib2.0-devel
+            libjson-glib1.0-devel
+            libblkid-devel
+
+      - name: Build
+        run: scons --show-config --without-gui VERBOSE=1 DEBUG=1 O=release
+
+      - name: Run
+        run: |
+          ./rmlint.exe --version
+
+          mkdir -p tst/path
+          echo xxx > tst/a
+          echo xxx > tst/path/b
+          echo aaa > tst/c
+
+          echo "==> equal verbose test"
+
+          if ./rmlint.exe -v -v --equal -a blake3 tst/a tst/c; then
+            echo "--equal failed"
+            exit 1
+          fi
+
+          echo "==> dup test"
+
+          ./rmlint.exe -O csv:test.csv tst
+          dups=$(grep -c '^duplicate_file' test.csv || true)
+          if [ "${dups}" != 2 ]; then
+            echo "expected 2 duplicates, got ${dups}"
+            exit 1
+          fi
