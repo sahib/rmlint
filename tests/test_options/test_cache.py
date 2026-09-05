@@ -2,8 +2,10 @@ import hashlib
 import os
 import subprocess
 import sys
+from functools import cache
 from typing import Final
 
+import blake3
 import pytest
 import xattr
 
@@ -16,12 +18,20 @@ from tests.utils import (
     run_rmlint_once,
 )
 
+if skip_msg := check_xattr_capable():
+    pytest.skip(skip_msg, allow_module_level=True)
+
 RMLINT_XATTR_PREFIX: Final[str] = (
     'io.github.sahib.rmlint.' if sys.platform == 'darwin' else 'user.rmlint.'
 )
 
-if skip_msg := check_xattr_capable():
-    pytest.skip(skip_msg, allow_module_level=True)
+CKSUM_ALGOS = {
+    "sha1": hashlib.sha1,
+    "sha256": hashlib.sha256,
+    "sha512": hashlib.sha512,
+    "blake2b": hashlib.blake2b,
+    "blake3": blake3.blake3,
+}
 
 
 def get_all_xattr(path):
@@ -32,6 +42,11 @@ def get_rmlint_xattr(path):
     """Read the extended rmlint attributes of «path»."""
     return {k: v for k, v in get_all_xattr(path)
             if k.startswith(RMLINT_XATTR_PREFIX)}
+
+
+@cache
+def expected_cksum(algorithm, data):
+    return CKSUM_ALGOS[algorithm](data).hexdigest().encode("ascii")
 
 
 def create_files():
@@ -98,21 +113,36 @@ def test_xattr_basic():
         _, *data, _ = run_rmlint_once('-D -S pa --xattr-clear')
 
 
-BLAKE2B = {
-    s: hashlib.blake2b(s).hexdigest().encode("ascii")
-    for s in (b'abc', b'def', b'longer')
-}
-BLAKE2_XATTR_KEY = RMLINT_XATTR_PREFIX + 'blake2b.cksum'
+
+
+
+@pytest.mark.usefixtures("needs_xattr_fs")
+@pytest.mark.parametrize("algorithm", tuple(CKSUM_ALGOS))
+def test_xattr_write_checksum(algorithm):
+    """Check xattr cache with different algorithms."""
+    # probably one of the most tested string on earth :)
+    content = "The quick brown fox jumps over the lazy dog"
+
+    # Two identical files, rmlint hashes them.
+    paths = [create_file(content, name) for name in ("a", "b")]
+
+    run_rmlint_once(f"-a {algorithm} --xattr-write")
+
+    expected = expected_cksum(algorithm, content.encode())
+    for path in paths:
+        assert get_rmlint_xattr(path)[f"{RMLINT_XATTR_PREFIX}{algorithm}.cksum"] == expected
 
 
 @pytest.mark.usefixtures("needs_xattr_fs")
 @pytest.mark.parametrize("extra_opts", ["", "-D"])
 def test_xattr_detail(extra_opts):
+    # We might want to change this alongside changing the default algorithm
+    algo = "blake2b"
+    cksum_key = f"{RMLINT_XATTR_PREFIX}{algo}.cksum"
+
     xattr_path = create_dirs("xattr_tests")
 
-    # Keep the checksum fixed, if we change the default we don't want to
-    # break this test (although I'm sure some tests will break)
-    base_options = extra_opts + " -T df -S pa -a blake2b "
+    base_options = f"{extra_opts} -T df -S pa -a {algo} "
 
     path_1 = os.path.join(xattr_path, "1")
     path_2 = os.path.join(xattr_path, "2")
@@ -136,7 +166,7 @@ def test_xattr_detail(extra_opts):
     xattr_2 = get_rmlint_xattr(path_2)
     xattr_3 = get_rmlint_xattr(path_3)
     xattr_4 = get_rmlint_xattr(path_4)
-    assert xattr_1[BLAKE2_XATTR_KEY] == BLAKE2B[b'abc']
+    assert xattr_1[cksum_key] == expected_cksum(algo, b'abc')
     assert xattr_1 == xattr_2
 
     # no --hash-unatched given.
@@ -155,12 +185,12 @@ def test_xattr_detail(extra_opts):
         xattr_2 = get_rmlint_xattr(path_2)
         xattr_3 = get_rmlint_xattr(path_3)
         xattr_4 = get_rmlint_xattr(path_4)
-        assert xattr_1[BLAKE2_XATTR_KEY] == BLAKE2B[b'abc']
+        assert xattr_1[cksum_key] == expected_cksum(algo, b'abc')
         assert xattr_1 == xattr_2
 
         # size-twin with --hash-unmatched.
         xattr_3 = get_rmlint_xattr(path_3)
-        assert xattr_3[BLAKE2_XATTR_KEY] == BLAKE2B[b'def']
+        assert xattr_3[cksum_key] == expected_cksum(algo, b'def')
 
         # unique-length file which was not hashed -> does not need to be touched.
         assert not xattr_4
@@ -181,16 +211,16 @@ def test_xattr_detail(extra_opts):
         xattr_2 = get_rmlint_xattr(path_2)
         xattr_3 = get_rmlint_xattr(path_3)
         xattr_4 = get_rmlint_xattr(path_4)
-        assert xattr_1[BLAKE2_XATTR_KEY] == BLAKE2B[b'abc']
+        assert xattr_1[cksum_key] == expected_cksum(algo, b'abc')
         assert xattr_1 == xattr_2
 
         # size-twin with --hash-unmatched.
         xattr_3 = get_rmlint_xattr(path_3)
-        assert xattr_3[BLAKE2_XATTR_KEY] == BLAKE2B[b'def']
+        assert xattr_3[cksum_key] == expected_cksum(algo, b'def')
 
         # unique file which was not hashed -> does not need to be touched.
         xattr_4 = get_rmlint_xattr(path_4)
-        assert xattr_4[BLAKE2_XATTR_KEY] == BLAKE2B[b'longer']
+        assert xattr_4[cksum_key] == expected_cksum(algo, b'longer')
 
     # Try clearing the attributes:
     _, *data, _ = run_rmlint(base_options + '--xattr-clear')

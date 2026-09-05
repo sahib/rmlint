@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-dev libjson-glib-dev libblkid-dev libelf-dev \
         gettext python3-sphinx man-db \
         python3-pytest python3-pytest-xdist \
-        python3-psutil python3-xattr \
+        python3-psutil python3-xattr python3-blake3 \
     && rm -rf /var/lib/apt/lists/*
 
 FROM toolchain AS build-and-test

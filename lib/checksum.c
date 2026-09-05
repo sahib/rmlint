@@ -162,7 +162,7 @@ static XXH64_state_t *rm_digest_xxhash_new(void) {
 
 static XXH64_state_t *rm_digest_xxhash_copy(XXH64_state_t *state) {
     XXH64_state_t *copy = XXH64_createState();
-    memcpy(copy, state, sizeof(XXH64_state_t));
+    XXH64_copyState(copy, state);
     return copy;
 }
 
@@ -728,7 +728,7 @@ static const RmDigestInterface ext_interface = {
 static RmParanoid *rm_digest_paranoid_new(void) {
     RmParanoid *paranoid = g_slice_new0(RmParanoid);
     paranoid->incoming_twin_candidates = g_async_queue_new();
-    paranoid->shadow_hash = rm_digest_new(RM_DIGEST_XXHASH, 0);
+    paranoid->shadow_hash = rm_digest_new(RM_PARANOID_DIGEST, 0);
     return paranoid;
 }
 

@@ -116,7 +116,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for installing the GUI:
     $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
-    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr
+    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr python3-blake3
 
 .. _Debian: https://packages.debian.org/rmlint
 .. _Ubuntu: https://packages.ubuntu.com/rmlint
