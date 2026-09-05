@@ -14,3 +14,9 @@ blake3/
 	Imported: - all .c, .h. and .S in /c/* but main.c, example* and *tbb*
 	          - /LICENSE_*
 	Modified:  no
+xxhash/
+	Upstream:  https://github.com/Cyan4973/xxHash
+	Version:   tag v0.8.3 (2024-12-30)
+	Imported: - /xxhash.c and /xxhash.h
+	          - /LICENSE
+	Modified:  no

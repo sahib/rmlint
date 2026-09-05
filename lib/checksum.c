@@ -162,7 +162,7 @@ static XXH64_state_t *rm_digest_xxhash_new(void) {
 
 static XXH64_state_t *rm_digest_xxhash_copy(XXH64_state_t *state) {
     XXH64_state_t *copy = XXH64_createState();
-    memcpy(copy, state, sizeof(XXH64_state_t));
+    XXH64_copyState(copy, state);
     return copy;
 }
 
