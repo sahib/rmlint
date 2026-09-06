@@ -81,7 +81,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for the GUI:
     $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg python-colorlog
     # Optional dependencies for tests:
-    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil btrfs-progs
+    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil python-xxhash btrfs-progs
 
   There is also git packages in AUR, from the ``master`` branch: `rmlint-git`_, `rmlint-shredder-git`_ ; and the ``develop`` branch: `rmlint-develop-git`_, `rmlint-shredder-develop-git`_.
 
@@ -116,7 +116,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for installing the GUI:
     $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
-    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr python3-blake3
+    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr python3-blake3 python3-xxhash
 
 .. _Debian: https://packages.debian.org/rmlint
 .. _Ubuntu: https://packages.ubuntu.com/rmlint

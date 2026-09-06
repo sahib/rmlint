@@ -1,5 +1,6 @@
 import hashlib
 import os
+import struct
 import subprocess
 import sys
 from functools import cache
@@ -8,6 +9,7 @@ from typing import Final
 import blake3
 import pytest
 import xattr
+import xxhash
 
 from tests.utils import (
     check_xattr_capable,
@@ -25,12 +27,23 @@ RMLINT_XATTR_PREFIX: Final[str] = (
     'io.github.sahib.rmlint.' if sys.platform == 'darwin' else 'user.rmlint.'
 )
 
+class XXH64HostOrder:
+    """XXH64, serialised the way rmlint stores it,
+       i.e. without endian canonalisation."""
+
+    def __init__(self, data):
+        self._data = data
+
+    def hexdigest(self):
+        return struct.pack("=Q", xxhash.xxh64_intdigest(self._data)).hex()
+
 CKSUM_ALGOS = {
     "sha1": hashlib.sha1,
     "sha256": hashlib.sha256,
     "sha512": hashlib.sha512,
     "blake2b": hashlib.blake2b,
     "blake3": blake3.blake3,
+    "xxhash": XXH64HostOrder,
 }
 
 
