@@ -296,7 +296,7 @@ case it uses MD5 only.
 
 If you use ``rmlint``'s ``sha1`` hash features, which features 160 bit output,
 you need at least :math:`5.4\times10^{22}` files before you get a :math:`0.1\%`
-probability of collision.  ``rmlint``'s ``-p`` option uses ``SHA512``
+probability of collision.  ``rmlint``'s ``-a sha512`` uses ``SHA512``
 (:math:`5.2\times10^{75}` files for :math:`0.1\%` risk), while ``rmlint``'s
 ``-p`` option uses direct file comparison to eliminate the risk altogether.
 Refer to the :ref:`benchmark_ref` chapter for speed and memory overhead

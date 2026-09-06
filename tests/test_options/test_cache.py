@@ -27,15 +27,19 @@ RMLINT_XATTR_PREFIX: Final[str] = (
     'io.github.sahib.rmlint.' if sys.platform == 'darwin' else 'user.rmlint.'
 )
 
-class XXH3HostOrder:
-    """XXH64, serialised the way rmlint stores it,
-       i.e. without endian canonalisation."""
-
+class RmLintHash:
     def __init__(self, data):
         self._data = data
 
+class XXH3HostOrder(RmLintHash):
+    """XXH64, serialised the way rmlint stores it,
+       i.e. without endian canonalisation."""
     def hexdigest(self):
         return struct.pack("=Q", xxhash.xxh3_64_intdigest(self._data)).hex()
+
+class Blake3_512(RmLintHash):
+    def hexdigest(self):
+        return blake3.blake3(self._data).hexdigest(length=64)
 
 CKSUM_ALGOS = {
     "sha1": hashlib.sha1,
@@ -43,6 +47,7 @@ CKSUM_ALGOS = {
     "sha512": hashlib.sha512,
     "blake2b": hashlib.blake2b,
     "blake3": blake3.blake3,
+    "blake3_512": Blake3_512,
     "xxhash": XXH3HostOrder,
 }
 

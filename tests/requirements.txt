@@ -2,5 +2,6 @@ psutil==7.*
 xattr==1.*
 blake3==1.*
 xxhash==4.*
+py-cpuinfo==9.*
 pytest==9.*
 pytest-xdist==3.*

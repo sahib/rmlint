@@ -46,7 +46,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for the GUI:
     $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog
     # Optional dependencies for tests:
-    $ sudo dnf install python3-pytest-xdist+psutil python3-xattr
+    $ sudo dnf install python3-pytest-xdist+psutil python3-xattr python3-cpuinfo
 
   There are also pre-built packages on `Fedora Copr`_:
 
@@ -81,7 +81,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for the GUI:
     $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg python-colorlog
     # Optional dependencies for tests:
-    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil python-xxhash btrfs-progs
+    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil python-xxhash python-py-cpuinfo btrfs-progs
 
   There is also git packages in AUR, from the ``master`` branch: `rmlint-git`_, `rmlint-shredder-git`_ ; and the ``develop`` branch: `rmlint-develop-git`_, `rmlint-shredder-develop-git`_.
 
@@ -116,7 +116,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for installing the GUI:
     $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
-    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr python3-blake3 python3-xxhash
+    $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr python3-blake3 python3-xxhash py-cpuinfo
 
 .. _Debian: https://packages.debian.org/rmlint
 .. _Ubuntu: https://packages.ubuntu.com/rmlint
@@ -157,6 +157,8 @@ Here's a list of readily prepared commands for known operating systems:
     $ doas pkg install py312-sphinx py312-furo
     # Optional dependencies for the GUI:
     $ doas pkg install gtksourceview4 librsvg2 py312-colorlog
+    # Optional dependancies for the testing suite:
+    $ doas pkg install py312-pip py312-blake3 py312-xxhash py312-py-cpuinfo bash dash
 
 .. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
 .. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint

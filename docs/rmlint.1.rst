@@ -167,11 +167,11 @@ General Options
 
     The full list of hash functions (in decreasing order of checksum length) is:
 
-    512-bit: **blake2b**, **blake2bp**, **sha3-512**, **sha512**
+    512-bit: **blake2b**, **blake2bp**, **blake3_512**, **sha3-512**, **sha512**
 
     384-bit: **sha3-384**,
 
-    256-bit: **blake2s**, **blake2sp**, **sha3-256**, **sha256**, **highway256**, **metro256**, **metrocrc256**
+    256-bit: **blake2s**, **blake2sp**, **blake3**, **sha3-256**, **sha256**, **highway256**, **metro256**, **metrocrc256**
 
     160-bit: **sha1**
 

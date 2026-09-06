@@ -36,6 +36,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * ``scons --show-config`` shows features and build in one run.
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
 * FreeBSD: support for xattr checksum cache (#800).
+* blake3 and blake3_512 digests.
 
 ### Changed
 
