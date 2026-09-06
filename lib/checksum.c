@@ -154,29 +154,36 @@ typedef struct RmDigestInterface {
 //   xxhash interface    //
 ///////////////////////////
 
-static XXH64_state_t *rm_digest_xxhash_new(void) {
-    XXH64_state_t *state = XXH64_createState();
-    XXH64_reset(state, 0);
+static XXH3_state_t *rm_digest_xxhash_alloc(void) {
+    XXH3_state_t *state = XXH3_createState();
+    if(state == NULL)
+        g_error("xxhash: out of memory allocating XXH3 state");
     return state;
 }
 
-static XXH64_state_t *rm_digest_xxhash_copy(XXH64_state_t *state) {
-    XXH64_state_t *copy = XXH64_createState();
-    XXH64_copyState(copy, state);
+static XXH3_state_t *rm_digest_xxhash_new(void) {
+    XXH3_state_t *state = rm_digest_xxhash_alloc();
+    XXH3_64bits_reset(state);
+    return state;
+}
+
+static XXH3_state_t *rm_digest_xxhash_copy(XXH3_state_t *state) {
+    XXH3_state_t *copy = rm_digest_xxhash_alloc();
+    XXH3_copyState(copy, state);
     return copy;
 }
 
 static void rm_digest_xxhash_steal(gpointer state, guint8 *result) {
-    *(unsigned long long *)result = XXH64_digest(state);
+    *(unsigned long long *)result = XXH3_64bits_digest(state);
 }
 
 static void rm_digest_xxhash_free(gpointer state) {
-    XXH64_freeState(state);
+    XXH3_freeState(state);
 }
 
 static void rm_digest_xxhash_update(gpointer state, const unsigned char *data,
                                     size_t size) {
-    XXH64_update(state, data, size);
+    XXH3_64bits_update(state, data, size);
 }
 
 static const RmDigestInterface xxhash_interface = {
