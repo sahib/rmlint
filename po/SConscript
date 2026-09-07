@@ -1,6 +1,7 @@
 Import('env')
 Import('create_uninstall_target')
 Import('VERSION')
+Import('installing')
 
 import os
 import subprocess
@@ -16,8 +17,9 @@ if env['HAVE_MSGFMT']:
 
         path = f'share/locale/{lang}/LC_MESSAGES/rmlint.mo'
 
-        if 'install' in COMMAND_LINE_TARGETS:
-            env.Alias('install', env.InstallAs('$staged_prefix/' + path, mo))
+        if installing:
+            env.Alias(['install', 'install-cli'],
+                      env.InstallAs('$staged_prefix/' + path, mo))
 
         if 'uninstall' in COMMAND_LINE_TARGETS:
             create_uninstall_target(env, '$PREFIX/' + path)

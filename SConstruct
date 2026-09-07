@@ -32,6 +32,7 @@ from rm_version import VersionError, read_version
 DEFAULT_PREFIX = '/usr/local'
 PREFIX_RECORD_FILE = Path('.prefix.txt')
 
+
 try:
     VERSION = read_version()
 except (OSError, VersionError) as err:
@@ -218,7 +219,11 @@ if env['STRIP'] and env['SYMBOLS']:
 
 #==============================================================================#
 
-if 'install' in COMMAND_LINE_TARGETS and not env['DESTDIR']:
+# XXX: install-lib is a special case.
+installing = bool({'install', 'install-cli', 'install-gui'} & set(COMMAND_LINE_TARGETS))
+Export('installing')
+
+if installing and not env['DESTDIR']:
     # record the installation prefix for later uninstall
     PREFIX_RECORD_FILE.write_text(str(env['PREFIX']), encoding='utf-8')
 
@@ -434,13 +439,13 @@ SetOption('num_jobs', get_cpu_count())
 print(f"Running with --jobs={GetOption('num_jobs')}")
 
 library = SConscript('lib/SConscript')
-programs = SConscript('src/SConscript', exports='library')
+program = SConscript('src/SConscript', exports='library')
 env.Default(library)
 
 if conf.env['STRIP'] and conf.env['IS_APPLE']:
-    env.AddPostAction(programs, Action('strip $TARGET', 'Stripping $TARGET'))
+    env.AddPostAction(program, Action('strip $TARGET', 'Stripping $TARGET'))
 
-SConscript('tests/SConscript', exports='programs')
+SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
 if GetOption('with_gui'):

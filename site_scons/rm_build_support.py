@@ -61,17 +61,15 @@ link_shared_library_message = \
 
 def InstallPerm(env, dest, files, perm):
     obj = env.Install(dest, files)
-    for i in obj:
-        env.AddPostAction(i, Chmod(str(i), perm))
+    env.AddPostAction(obj, Chmod(obj, perm))
     return dest
 
 
-def create_uninstall_target(env, path: str|Path):
+def create_uninstall_target(env, path: str|Path, target='uninstall'):
     path = str(path)
-    cmd = env.Command('uninstall-' + path, path, [
-        Delete('$SOURCE'),
-    ])
-    env.Alias('uninstall', 'uninstall-' + path)
+    cmd = env.Command('uninstall-' + path, path, Delete('$SOURCE'))
+    env.AlwaysBuild(cmd)
+    env.Alias(target, cmd)
     return cmd
 
 

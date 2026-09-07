@@ -11,6 +11,7 @@ from SCons.Errors import UserError
 Import('env')
 Import('VERSION')
 Import('create_uninstall_target')
+Import('installing')
 
 GUI_DIR = 'gui'
 genv = env.Clone()
@@ -186,7 +187,7 @@ env.Default(wheel)
 #                                   install                                    #
 #==============================================================================#
 
-if 'install' in COMMAND_LINE_TARGETS:
+if installing:
     err_externally_managed()
 
     install_cmd = f'{PYTHON} -m installer'
@@ -203,14 +204,14 @@ if 'install' in COMMAND_LINE_TARGETS:
         env.InstallAs(str(DESTDIR / dest), src)
         for dest, src in DATA_FILES
     ]
-    env.Alias('install', [wheel_install] + data_installs)
+    env.Alias(['install', 'install-gui'], [wheel_install] + data_installs)
 
     if COMPILE_SCHEMAS and not DESTDIR:
         compile_schemas = env.Command(
             'shredder.gschemas', GSCHEMA_SOURCE,
             f'glib-compile-schemas "{PREFIX / GSCHEMA_DIR_SUFFIX}"'
         )
-        env.Alias('install', compile_schemas)
+        env.Alias(['install', 'install-gui'], compile_schemas)
     else:
         print('==> Not compiling glib schemas (--without-compile-glib-schemas).')
         print('==> You may need to run this after installing:')

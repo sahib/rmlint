@@ -114,8 +114,8 @@ Variables
 :LIBDIR=<libdir>:
 
     This applies only to the static library ``librmlint.a`` installation,
-    which is not installed by default (override in lib/SConscript).
-    Some distributions use separate libdirectories for 64/32 bit.
+    which is not installed by default (use ``scons install-lib``).
+    Some distributions use separate lib directories for 64/32 bit.
     If this happens, you should set the correct one for 64 bit with
     ``LIBDIR=lib64``.
 
@@ -237,6 +237,15 @@ Notable targets
 :install:
 
     Install all program parts system-wide.
+
+:install-core:
+
+    Install only the binary, its manpage and the translations.
+
+:install-gui:
+
+    Install only the Shredder GUI: the Python package, the desktop file,
+    the icon and eventually the GSettings schema.
 
 :man:
 

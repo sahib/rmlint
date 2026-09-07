@@ -84,23 +84,18 @@ library = env.Library(
 headers = Glob('*.h')
 env.Depends(library, [config, *payloads])
 
-# Disable this for now until someone
-# announces interest in this.
-INSTALL_LIBRARY = False
+libdir = env['staged_prefix'] / env['LIBDIR']
+includedir = env['staged_prefix'] / 'include' / 'rmlint'
 
-if INSTALL_LIBRARY:
-    libdir = env['staged_prefix'] / env['LIBDIR']
-    includedir = env['staged_prefix'] / 'include' / 'rmlint'
+if 'install-lib' in COMMAND_LINE_TARGETS:
+    env.Alias('install-lib', env.Install(str(libdir), [library]))
+    for header in headers:
+        env.Alias('install-lib', env.Install(str(includedir), [header]))
 
-    if 'install' in COMMAND_LINE_TARGETS:
-        env.Alias('install', env.Install(str(libdir), [library]))
-        for header in headers:
-            env.Alias('install', env.Install(str(includedir), [header]))
+if 'uninstall-lib' in COMMAND_LINE_TARGETS:
+    create_uninstall_target(env, libdir / Path(str(library[0])).name, target='uninstall-lib')
 
-    if 'uninstall' in COMMAND_LINE_TARGETS:
-        create_uninstall_target(env, libdir / Path(str(library[0])).name)
-
-        for header in headers:
-            create_uninstall_target(env, includedir / str(header))
+    for header in headers:
+        create_uninstall_target(env, includedir / str(header))
 
 Return('library')

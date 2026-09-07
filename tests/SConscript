@@ -1,5 +1,5 @@
 Import('env')
-Import('programs')
+Import('program')
 
 import os
 import shlex
@@ -23,10 +23,9 @@ def run_tests(target=None, source=None, env=None):
     if status := subprocess.call(command, env=test_env):
         Exit(status)
 
-
 env.Alias('test',
     env.Depends(
         env.Command('run_tests', None, Action(run_tests, "Running tests")),
-        programs
+        program
     )
 )
