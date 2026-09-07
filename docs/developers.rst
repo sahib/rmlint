@@ -141,7 +141,7 @@ Variables
     as usual.
 
     Note that setting ``DEBUG=1`` does not enable the production of
-    debugger symbols; to enable those, use ``SYMBOLS=1`` or ``GDB=1``.
+    debugger symbols; to enable those, use ``SYMBOLS=1``.
 
     This should always be enabled during development.
 
@@ -154,12 +154,6 @@ Variables
     a program's functions and variables, etc. Note, though, that this
     information becomes obscured by optimizations, so make sure to set
     the optimization level appropriately.
-
-:GDB=1:
-
-    Enable options that help a debugger (such as ``gdb``).
-
-    This option is equivalent to ``DEBUG=1 SYMBOLS=1``.
 
 :VERBOSE=1:
 
@@ -177,15 +171,15 @@ Variables
 
     This command-line variable makes it possible to override an option in
     this list by supplying customized command-line options to be appended.
-    For example: ``GDB=1 CCFLAGS=-g1``.
+    For example: ``DEBUG=1 CCFLAGS=-g1``.
 
     The string that is supplied as the value for this variable is parsed as
     per a POSIX shell command line, and so it may include shell quoting if
     necessary.
 
-:STRIP=0:
+:STRIP=1:
 
-    Override the default binary stripping of ``O=release``.
+    Strip symbols while linking (or after linking on macOS).
 
 :SANITISE=<1,address,thread,memory,undefined,…>:
 

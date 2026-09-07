@@ -30,7 +30,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``-c json:traversed`` to include list of fully-traversed dirs in json output
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
-* For packagers: ``STRIP=`` scons build variable to opt out of link-time stripping.
+* Build no longer strip at link time unless explicitly asked with ``STRIP=1`` (or ``=yes``, ``=true``).
 * For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT``
   are honoured when installing the GUI.
 * ``scons --show-config`` shows features and build in one run.

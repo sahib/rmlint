@@ -104,6 +104,24 @@ vars.Add(
     validator=lambda _key, value, _env: not Path(value).is_absolute(),
 )
 
+vars.Add(BoolVariable(
+    'DEBUG',
+    help='enable run-time assertions and extra checks',
+    default=False,
+))
+
+vars.Add(BoolVariable(
+    'SYMBOLS',
+    help='compile with debugging symbols (-g3)',
+    default=False,
+))
+
+vars.Add(BoolVariable(
+    'STRIP',
+    help='strip symbols',
+    default=False,
+))
+
 vars.Add(
     'PYTEST_ARGS',
     help="extra pytest arguments",
@@ -149,6 +167,9 @@ env['staged_prefix'] = (
     if env['DESTDIR']
     else env['PREFIX']
 )
+
+if env['STRIP'] and env['SYMBOLS']:
+    raise UserError('STRIP and SYMBOLS are incompatible options')
 
 #==============================================================================#
 
@@ -309,9 +330,6 @@ if ARGUMENTS.get('VERBOSE') != '1':
 else:
     conf.env.Append(CCFLAGS=['-Wno-error=deprecated-declarations'])
 
-if ARGUMENTS.get('GDB') == '1':
-    ARGUMENTS['DEBUG'] = '1'
-    ARGUMENTS['SYMBOLS'] = '1'
 
 # sanitisers
 SANITISERS_EXCLUSIVE  = ['address', 'thread', 'memory']
@@ -344,7 +362,7 @@ O_DEBUG   = 'g' # The optimisation level for a debug   build
 O_RELEASE = '2' # The optimisation level for a release build
 
 # build modes
-if ARGUMENTS.get('DEBUG') == "1":
+if conf.env['DEBUG']:
     print("Compiling in debug mode")
     conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-fno-inline'])
     O_value = ARGUMENTS.get('O', O_DEBUG)
@@ -362,7 +380,7 @@ cc_O_option = '-O' + O_value
 print(f"Using compiler optimisation {cc_O_option} (to change, run scons with O=[0|1|2|3|s|fast])")
 conf.env.Append(CCFLAGS=[cc_O_option])
 
-if ARGUMENTS.get('SYMBOLS') == '1':
+if conf.env['SYMBOLS']:
     print("Compiling with debugging symbols")
     conf.env.Append(CCFLAGS='-g3')
 
@@ -371,20 +389,11 @@ if sanitisers:
     print('Compiling with sanitisers: ' + ', '.join(sanitisers))
     conf.env.Append(CCFLAGS=[fsan, '-fno-omit-frame-pointer'])
     conf.env.Append(LINKFLAGS=[fsan])
-    if ARGUMENTS.get('SYMBOLS') != '1':   # SYMBOLS=1 already added -g3
+    if not conf.env['SYMBOLS']:  # SYMBOLS=1 already added -g3
         conf.env.Append(CCFLAGS=['-g'])
 
 # symbol stripping
-# Release strips by default, use STRIP=0 to ship a separate debuginfo package.
-if (strip_arg := ARGUMENTS.get('STRIP')) is not None:
-    if strip_arg not in ('0', '1'):
-        print(f"Error: STRIP must be 0 or 1, got '{strip_arg}'.")
-        Exit(1)
-    strip = strip_arg == '1'
-else:
-    strip = ARGUMENTS.get('DEBUG') != '1' and not sanitisers
-
-if strip and not conf.env['IS_APPLE']:
+if conf.env['STRIP'] and not conf.env['IS_APPLE']:
     conf.env.Append(LINKFLAGS=['-s'])
 
 value = ARGUMENTS.get('CCFLAGS')
@@ -418,7 +427,7 @@ library = SConscript('lib/SConscript')
 programs = SConscript('src/SConscript', exports='library')
 env.Default(library)
 
-if strip and conf.env['IS_APPLE']:
+if conf.env['STRIP'] and conf.env['IS_APPLE']:
     env.AddPostAction(programs, Action('strip $TARGET', 'Stripping $TARGET'))
 
 SConscript('tests/SConscript', exports='programs')
@@ -525,10 +534,10 @@ if GetOption('show_config'):
         dest_dir=env['DESTDIR'],
         staged_prefix=env['staged_prefix'],
         verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
-        debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
-        symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
+        debug=yesno(env['DEBUG']),
+        symbols=yesno(env['SYMBOLS']),
         sanitisers = color(', '.join(sanitisers), 'green') if sanitisers else color('none', 'red'),
-        strip=yesno(strip),
+        strip=yesno(env['STRIP']),
         compile_glib_schemas=yesno(GetOption('with_compile-glib-schemas')),
 
         trailer="\nType 'scons' to actually compile rmlint now. Good luck.\n"
