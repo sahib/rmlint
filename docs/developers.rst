@@ -181,9 +181,10 @@ Variables
 
     Strip symbols while linking (or after linking on macOS).
 
-:SANITISE=<1,address,thread,memory,undefined,…>:
+:SANITISE=<comma-separated list>:
 
-    Compile with sanitisers enabled. ``SANITISE=1`` means ``=address,undefined``.
+    Compile with sanitisers enabled. Good to associate with ``SYMBOLS=1``.
+    ``SANITISE=1`` means ``=address,undefined,leak``.
 
 Arguments
 ~~~~~~~~~

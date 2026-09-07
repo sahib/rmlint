@@ -104,6 +104,16 @@ vars.Add(
     validator=lambda _key, value, _env: not Path(value).is_absolute(),
 )
 
+#==============================================================================#
+#                                  Variables                                   #
+#==============================================================================#
+
+vars.Add(BoolVariable(
+    'VERBOSE',
+    help='print compiler and linker command lines and Glib depreciations',
+    default=False,
+))
+
 vars.Add(BoolVariable(
     'DEBUG',
     help='enable run-time assertions and extra checks',
@@ -128,6 +138,24 @@ vars.Add(
     default='',
 )
 
+SANITISE_TRUE=('address', 'undefined', 'leak')
+def shorthand_sanitisers(value):
+    match value:
+        case '1' | 'yes' | 'true':
+            return SANITISE_TRUE
+        case '' | '0' | 'no' | 'false' | 'none':
+            return ()
+        case _:
+            return tuple(dict.fromkeys(value.lower().replace(',', ' ').split()))
+
+vars.Add(
+    'SANITISE',
+    help="sanitisers to compile with, "
+         f"1 is shorthand for {','.join(SANITISE_TRUE)}",
+    default='',
+    converter=shorthand_sanitisers,
+)
+
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
@@ -143,10 +171,6 @@ options = dict(
                  if key in ['PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH']
               ])
 )
-
-if ARGUMENTS.get('VERBOSE') == "1":
-    del options['CCCOMSTR']
-    del options['LINKCOMSTR']
 
 #==============================================================================#
 #                                 Environment                                  #
@@ -167,6 +191,10 @@ env['staged_prefix'] = (
     if env['DESTDIR']
     else env['PREFIX']
 )
+
+if env['VERBOSE']:
+    del env['CCCOMSTR']
+    del env['LINKCOMSTR']
 
 if env['STRIP'] and env['SYMBOLS']:
     raise UserError('STRIP and SYMBOLS are incompatible options')
@@ -322,41 +350,13 @@ if ARGUMENTS.get('FORCE') != '1':
     conf.env.Append(CCFLAGS=['-Werror'])
 
 # XXX: after -Werror
-if ARGUMENTS.get('VERBOSE') != '1':
+if not conf.env['VERBOSE']:
     conf.env.Append(CCFLAGS=[
         '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_74',
         '-DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_74',
     ])
 else:
     conf.env.Append(CCFLAGS=['-Wno-error=deprecated-declarations'])
-
-
-# sanitisers
-SANITISERS_EXCLUSIVE  = ['address', 'thread', 'memory']
-SANITISERS_CLANG_ONLY = ['memory']
-
-sanitise_arg = ARGUMENTS.get('SANITISE', '')
-if sanitise_arg == '1':
-    sanitisers = ['address', 'undefined']
-else:
-    sanitisers = [t.strip().lower()
-                  for t in sanitise_arg.replace(',', ' ').split() if t.strip()]
-
-deduped = []
-for s in sanitisers:
-    if s not in deduped:
-        deduped.append(s)
-sanitisers = deduped
-
-needs_clang = [s for s in sanitisers if s in SANITISERS_CLANG_ONLY]
-if needs_clang and not conf.env['IS_CLANG']:
-    raise UserError(f"Error: sanitiser(s) {', '.join(needs_clang)} "
-                     "require clang; re-run with CC=clang.")
-
-exclusive = [s for s in sanitisers if s in SANITISERS_EXCLUSIVE]
-if len(exclusive) > 1:
-    raise UserError(f"Error: sanitisers {', '.join(exclusive)}, cannot "
-                     "be combined; pick one of address/thread/memory.")
 
 O_DEBUG   = 'g' # The optimisation level for a debug   build
 O_RELEASE = '2' # The optimisation level for a release build
@@ -384,7 +384,7 @@ if conf.env['SYMBOLS']:
     print("Compiling with debugging symbols")
     conf.env.Append(CCFLAGS='-g3')
 
-if sanitisers:
+if sanitisers := conf.env['SANITISE']:
     fsan = '-fsanitize=' + ','.join(sanitisers)
     print('Compiling with sanitisers: ' + ', '.join(sanitisers))
     conf.env.Append(CCFLAGS=[fsan, '-fno-omit-frame-pointer'])
@@ -533,7 +533,7 @@ if GetOption('show_config'):
         prefix=env['PREFIX'],
         dest_dir=env['DESTDIR'],
         staged_prefix=env['staged_prefix'],
-        verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
+        verbose=yesno(env['VERBOSE']),
         debug=yesno(env['DEBUG']),
         symbols=yesno(env['SYMBOLS']),
         sanitisers = color(', '.join(sanitisers), 'green') if sanitisers else color('none', 'red'),
