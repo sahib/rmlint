@@ -50,6 +50,20 @@ def pytest_configure(config):
     config.option.basetemp = basetemp
 
 
+FEATURE_MARKERS = {
+    'needs_reflink_fs': 'reflink',
+    'needs_xattr_fs': 'xattr',
+}
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        fixtures = getattr(item, 'fixturenames', ())
+        for fixture, marker in FEATURE_MARKERS.items():
+            if fixture in fixtures:
+                item.add_marker(marker)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _check_basetemp(tmp_path_factory):
     """Fail loudly if the tests are not running under RM_TS_DIR after all.

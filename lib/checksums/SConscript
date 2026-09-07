@@ -27,7 +27,7 @@ blake3_dispatch_flags = []
 
 if env['IS_X86_64']:
     print('Compiling BLAKE3 using x86_64 SIMD assembly')
-    flavor = 'windows_gnu' if env['IS_WINDOWS'] else 'unix'
+    flavor = 'windows_gnu' if env['IS_WINDOWS'] or env['IS_CYGWIN'] else 'unix'
     blake3 += [
         File('blake3/blake3_%s_x86-64_%s.S' % (isa, flavor))
         for isa in ('sse2', 'sse41', 'avx2', 'avx512')

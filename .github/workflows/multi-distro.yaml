@@ -3,9 +3,18 @@ name: Multi-distro
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip
+      - "docs/**"
+      - "gui/**"
+      - "tests/**"
+      - '**.md'
+      - '**.rst'
+      - '.gitignore'
   push:
     branches:
       - master
+      - develop
+    paths-ignore: *skip
   workflow_dispatch:
 
 jobs:
@@ -21,51 +30,47 @@ jobs:
         build:
           # Enterprise Linux
           - tag: "almalinux:10"
-            installcmd: "dnf install -y epel-release && dnf install -y"
-            pkgs: "gcc python3-scons glib2-devel json-glib-devel"
+            installcmd: &el_dnf "dnf install -y epel-release && dnf install -y"
+            pkgs: &el_pkg "gcc python3-scons glib2-devel json-glib-devel"
           - tag: "quay.io/centos/centos:stream10"
-            installcmd: "dnf install -y epel-release && dnf install -y"
-            pkgs: "gcc python3-scons glib2-devel json-glib-devel"
-          # Alpine
-          - tag: "alpine:latest"
-            installcmd: "apk add --no-cache"
-            pkgs: "build-base pkgconf scons glib-dev json-glib-dev elfutils-dev py3-sphinx"
+            installcmd: *el_dnf
+            pkgs: *el_pkg
           # ArchLinux
           - tag: "archlinux:latest"
             installcmd: "pacman -Syu --noconfirm"
             pkgs: "base-devel json-glib scons"
           # Debian
           - tag: "debian:stable"
-            env: "DEBIAN_FRONTEND=noninteractive"
-            installcmd: "apt-get update && apt-get install -y --no-install-recommends"
-            pkgs: "gcc scons pkg-config gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-sphinx"
+            env: &deb_env "DEBIAN_FRONTEND=noninteractive"
+            installcmd: &deb_apt "apt-get update && apt-get install -y --no-install-recommends"
+            pkgs: &deb_pkg "gcc scons pkg-config gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-sphinx"
           - tag: "debian:testing"
-            env: "DEBIAN_FRONTEND=noninteractive"
-            installcmd: "apt-get update && apt-get install -y --no-install-recommends"
-            pkgs: "gcc scons pkg-config gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-sphinx"
+            env: *deb_env
+            installcmd: *deb_apt
+            pkgs: *deb_pkg
           # Fedora
           - tag: "fedora:latest"
-            installcmd: "dnf install -y"
-            pkgs: "gcc python3-scons pkgconf-pkg-config glib2-devel json-glib-devel"
+            installcmd: &fedora_dnf "dnf install -y"
+            pkgs: &fedora_pkg "gcc python3-scons pkgconf-pkg-config glib2-devel json-glib-devel"
           - tag: "fedora:rawhide"
-            installcmd: "dnf install -y"
-            pkgs: "gcc python3-scons pkgconf-pkg-config glib2-devel json-glib-devel"
+            installcmd: *fedora_dnf
+            pkgs: *fedora_pkg
           # OpenSUSE
           - tag: "opensuse/leap:latest"
-            installcmd: "zypper -n install"
-            pkgs: "gcc scons pkgconf glib2-devel json-glib-devel libelf-devel libblkid-devel"
+            installcmd: &suse_zyp "zypper -n install"
+            pkgs: &suse_pkg "gcc scons pkgconf glib2-devel json-glib-devel libelf-devel libblkid-devel"
           - tag: "opensuse/tumbleweed:latest"
-            installcmd: "zypper -n install"
-            pkgs: "gcc scons pkgconf glib2-devel json-glib-devel libelf-devel libblkid-devel"
+            installcmd: *suse_zyp
+            pkgs: *suse_pkg
           # Ubuntu
           - tag: "ubuntu:resolute"
-            env: "DEBIAN_FRONTEND=noninteractive"
-            installcmd: "apt-get update && apt-get install -y --no-install-recommends"
-            pkgs: "gcc scons pkg-config gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-sphinx"
+            env: *deb_env
+            installcmd: *deb_apt
+            pkgs: *deb_pkg
           - tag: "ubuntu:rolling"
-            env: "DEBIAN_FRONTEND=noninteractive"
-            installcmd: "apt-get update && apt-get install -y --no-install-recommends"
-            pkgs: "gcc scons pkg-config gettext libblkid-dev libelf-dev libffi-dev libglib2.0-dev libjson-glib-dev python3-sphinx"
+            env: *deb_env
+            installcmd: *deb_apt
+            pkgs: *deb_pkg
     steps:
       - uses: actions/checkout@v7
 

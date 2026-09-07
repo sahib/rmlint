@@ -204,7 +204,7 @@ msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "ნაადრევი გამორთვა. ალბათ, ყველა lint აღმოჩენილი არაა.\n"
 
 #: lib/formats/summary.c
-msgid "Note: Please use the saved script below for removal, not the above output."
+msgid "Note: Please use the saved script below for removal, not the above output.\n"
 msgstr "შენიშვნა: გამოიყენეთ შენახული სკრიპტი ქვემოთ წასაშლელად და არა ზემოთა გამოტანა.\n"
 
 #: lib/formats/summary.c

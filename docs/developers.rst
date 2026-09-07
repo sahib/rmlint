@@ -254,6 +254,13 @@ Notable targets
 
         $ RM_TS_USE_VALGRIND=1 pytest
 
+    ``PYTEST_ARGS=`` passes extra arguments.
+
+    .. code-block:: bash
+
+        $ scons test PYTEST_ARGS='-m reflink'
+        $ scons test PYTEST_ARGS="-m 'not slow and not manpage'"
+
 :xgettext:
 
     Extract a gettext ``.pot`` template from the source.

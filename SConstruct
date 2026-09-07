@@ -104,6 +104,12 @@ vars.Add(
     validator=lambda _key, value, _env: not Path(value).is_absolute(),
 )
 
+vars.Add(
+    'PYTEST_ARGS',
+    help="extra pytest arguments",
+    default='',
+)
+
 # General Environment
 options = dict(
     CXXCOMSTR=compile_source_message,
@@ -298,7 +304,7 @@ if ARGUMENTS.get('FORCE') != '1':
 if ARGUMENTS.get('VERBOSE') != '1':
     conf.env.Append(CCFLAGS=[
         '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_74',
-        '-DGLIB_VERSION_MAX_REQUIRED=GLIB_VERSION_2_74',
+        '-DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_74',
     ])
 else:
     conf.env.Append(CCFLAGS=['-Wno-error=deprecated-declarations'])

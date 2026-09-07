@@ -7,4 +7,7 @@ python_files = ["test_*.py"]
 tmp_path_retention_policy = "failed"
 markers = [
 	"slow: slow tests",
+	"reflink",
+	"xattr",
+	"manpage",
 ]

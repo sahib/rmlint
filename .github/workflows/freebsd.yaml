@@ -2,13 +2,18 @@ name: FreeBSD
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip
+      - "docs/**"
+      - "gui/**"
+      - '**.md'
+      - '**.rst'
+      - '.gitignore'
   push:
-    branches: [master]
+    branches:
+      - master
+      - develop
+    paths-ignore: *skip
   workflow_dispatch:
 
 jobs:

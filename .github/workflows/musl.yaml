@@ -1,0 +1,33 @@
+name: musl
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip
+      - "docs/**"
+      - "gui/**"
+      - '**.md'
+      - '**.rst'
+      - '.gitignore'
+  push:
+    branches:
+      - master
+      - develop
+    paths-ignore: *skip
+  workflow_dispatch:
+
+jobs:
+  alpine:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: docker build -f Containerfile --target test -t rmlint/test .
+
+      - name: Test
+        run: docker run --rm --privileged rmlint/test
+
+      - name: Build GUI
+        run: docker build -f Containerfile --target build-install-gui -t rmlint/gui .
