@@ -199,7 +199,7 @@ if installing:
     # DEBIAN_OK implies PREFIX=/usr/local
     # and Debian installs to /usr/local without prefix
     if not DEBIAN_OK:
-        install_cmd += f' --destdir "{DESTDIR}"'
+        install_cmd += f' --prefix "{PREFIX}"'
     install_cmd += ' $SOURCE'
     wheel_install = genv.Command('shredder.install', wheel[0], install_cmd)
 
