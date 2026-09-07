@@ -33,7 +33,7 @@ STAGED_PREFIX = env['staged_prefix']
 GSCHEMA_DIR_SUFFIX = 'share/glib-2.0/schemas'
 RESOURCE_DIR = 'shredder/resources'
 GRESOURCE = RESOURCE_DIR + '/shredder.gresource'
-GRESOURCE_XML = RESOURCE_DIR + '/shredder.gresource.xml'
+GRESOURCE_XML = genv.File(RESOURCE_DIR + '/shredder.gresource.xml')
 COMPILE_SCHEMAS = GetOption('with_compile-glib-schemas')
 
 GSCHEMA_SOURCE = 'schemas/io.github.sahib.rmlint.Shredder.gschema.xml'
@@ -160,19 +160,25 @@ if 'uninstall' in COMMAND_LINE_TARGETS:
 #                                    wheel                                     #
 #==============================================================================#
 
-resource_deps = subprocess.check_output(
-    ['glib-compile-resources', '--sourcedir', RESOURCE_DIR,
-    '--generate-dependencies', GRESOURCE_XML],
-    text=True,
-).split()
+def scan_gresource(node, env, _path):
+    if node != GRESOURCE_XML:
+        return []
+    resource_deps = subprocess.check_output(
+        ['glib-compile-resources',
+            '--sourcedir', node.dir.get_abspath(),
+            '--generate-dependencies', node.get_abspath()],
+            text=True,
+    )
+    return [env.File(path) for path in resource_deps.split()]
 
 sources = ([node for node in Glob('shredder/*.py') if node.name != '_version.py']
            + Glob('shredder/views/*.py'))
 wheel = genv.Command(
     f'dist/shredder-{VERSION.pep440}-py3-none-any.whl',
-    ['pyproject.toml', 'setup.py', '../.version']
-    + sources + [GRESOURCE_XML] + resource_deps,
-    f'cd {GUI_DIR} && {PYTHON} -m build --no-isolation --wheel --outdir dist .'
+    ['pyproject.toml', 'setup.py', '../.version', genv.Value('$gitrev')]
+    + sources + [GRESOURCE_XML],
+    f'cd {GUI_DIR} && {PYTHON} -m build --no-isolation --wheel --outdir dist .',
+    source_scanner=Scanner(function=scan_gresource),
 )
 
 env.Clean(wheel, [
