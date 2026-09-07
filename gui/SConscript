@@ -15,11 +15,8 @@ Import('installing')
 
 GUI_DIR = 'gui'
 genv = env.Clone()
-genv['ENV'].update(
-    (key, os.environ[key])
-    for key in ('SOURCE_DATE_EPOCH', 'DEB_PYTHON_INSTALL_LAYOUT')
-    if key in os.environ
-)
+if 'DEB_PYTHON_INSTALL_LAYOUT' in os.environ:
+    genv['ENV']['DEB_PYTHON_INSTALL_LAYOUT'] = os.environ['DEB_PYTHON_INSTALL_LAYOUT']
 
 # Written by the old setup.py-based install; still honoured on uninstall.
 # TODO: Keep it until 2.12.0

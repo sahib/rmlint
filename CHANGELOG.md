@@ -31,8 +31,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
 * Build no longer strip at link time unless explicitly asked with ``STRIP=1`` (or ``=yes``, ``=true``).
-* For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT``
-  are honoured when installing the GUI.
+* For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT`` (GUI)
+  are honoured.
 * ``CFLAGS`` and ``LDFLAGS`` from the environment are now appending to our flags,
   so that they could override ours.
 * ``scons --show-config`` shows features and build in one run.

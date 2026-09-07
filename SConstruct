@@ -175,20 +175,22 @@ vars.Add(
 )
 
 # General Environment
-options = dict(
-    CXXCOMSTR=compile_source_message,
-    CCCOMSTR=compile_source_message,
-    SHCCCOMSTR=compile_shared_source_message,
-    SHCXXCOMSTR=compile_shared_source_message,
-    ARCOMSTR=link_library_message,
-    RANLIBCOMSTR=ranlib_library_message,
-    SHLINKCOMSTR=link_shared_library_message,
-    LINKCOMSTR=link_program_message,
-    ENV = dict([ (key, os.environ[key])
-                 for key in os.environ
-                 if key in ['PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH']
-              ])
-)
+options = {
+    'CXXCOMSTR': compile_source_message,
+    'CCCOMSTR': compile_source_message,
+    'SHCCCOMSTR': compile_shared_source_message,
+    'SHCXXCOMSTR': compile_shared_source_message,
+    'ARCOMSTR': link_library_message,
+    'RANLIBCOMSTR': ranlib_library_message,
+    'SHLINKCOMSTR': link_shared_library_message,
+    'LINKCOMSTR': link_program_message,
+    'ENV': {
+        key: os.environ[key]
+        for key in ('PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH',
+                    'SOURCE_DATE_EPOCH')
+        if key in os.environ
+    } | {'TZ': 'UTC'},
+}
 
 #==============================================================================#
 #                                 Environment                                  #
