@@ -132,10 +132,15 @@ vars.Add(BoolVariable(
     default=False,
 ))
 
+O_DEBUG   = 'g' # The optimisation level for a debug build
+O_RELEASE = '2' # The optimisation level for a release build
 vars.Add(
-    'PYTEST_ARGS',
-    help="extra pytest arguments",
+    'O',
+    help=f"optimisation level; special values are 'debug' (-{O_DEBUG}) "
+         f"and 'release' (-{O_RELEASE}). Empty picks the default depending "
+         "on DEBUG=.",
     default='',
+    converter= lambda o: {'debug': O_DEBUG, 'release': O_RELEASE}.get(o, o),
 )
 
 SANITISE_TRUE=('address', 'undefined', 'leak')
@@ -154,6 +159,18 @@ vars.Add(
          f"1 is shorthand for {','.join(SANITISE_TRUE)}",
     default='',
     converter=shorthand_sanitisers,
+)
+
+vars.Add(BoolVariable(
+    'FORCE',
+    help='keep building when the compiler warns (drops -Werror)',
+    default=False,
+))
+
+vars.Add(
+    'PYTEST_ARGS',
+    help="extra pytest arguments",
+    default='',
 )
 
 # General Environment
@@ -346,7 +363,7 @@ if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
 # NB: After checks so they don't fail
-if ARGUMENTS.get('FORCE') != '1':
+if not conf.env['FORCE']:
     conf.env.Append(CCFLAGS=['-Werror'])
 
 # XXX: after -Werror
@@ -358,26 +375,19 @@ if not conf.env['VERBOSE']:
 else:
     conf.env.Append(CCFLAGS=['-Wno-error=deprecated-declarations'])
 
-O_DEBUG   = 'g' # The optimisation level for a debug   build
-O_RELEASE = '2' # The optimisation level for a release build
 
 # build modes
 if conf.env['DEBUG']:
     print("Compiling in debug mode")
     conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-fno-inline'])
-    O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
-    O_value = ARGUMENTS.get('O', O_RELEASE)
 
-if O_value == 'debug':
-    O_value = O_DEBUG
-elif O_value == 'release':
-    O_value = O_RELEASE
+cc_O_option = '-O' + (conf.env['O'] or
+                      (O_DEBUG if conf.env['DEBUG'] else O_RELEASE))
 
-cc_O_option = '-O' + O_value
-
-print(f"Using compiler optimisation {cc_O_option} (to change, run scons with O=[0|1|2|3|s|fast])")
+print(f"Using compiler optimisation {cc_O_option} "
+      f"(to change, run scons with O=<level>, or O=(release|debug)")
 conf.env.Append(CCFLAGS=[cc_O_option])
 
 if conf.env['SYMBOLS']:
@@ -500,6 +510,7 @@ if GetOption('show_config'):
     Install prefix       : {prefix}
     Staging directory    : {dest_dir}
     Staged prefix        : {staged_prefix}
+    Optimisation level   : {optimisation}
     Verbose building     : {verbose}
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
@@ -533,6 +544,7 @@ if GetOption('show_config'):
         prefix=env['PREFIX'],
         dest_dir=env['DESTDIR'],
         staged_prefix=env['staged_prefix'],
+        optimisation=cc_O_option,
         verbose=yesno(env['VERBOSE']),
         debug=yesno(env['DEBUG']),
         symbols=yesno(env['SYMBOLS']),

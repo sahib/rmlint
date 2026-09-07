@@ -131,6 +131,9 @@ Variables
     that the optimization level should be whatever the build system currently
     defines to be the default for the associated build mode.
 
+    Leaving it unset follows the build mode: ``-Og`` under ``DEBUG=1``,
+    ``-O2`` otherwise.
+
 :DEBUG=1:
 
     Enable a debugging build.
@@ -159,6 +162,10 @@ Variables
 
     Print the exact compiler and linker commands. Useful for troubleshooting
     build errors.
+
+:FORCE=1:
+
+    Keep building even if the compiler emit warnings, i.e. bypass ``-Werror``.
 
 :CCFLAGS=<command line options>:
 
