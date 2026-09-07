@@ -23,25 +23,6 @@ LOGGER = logging.getLogger('runner')
 ASCII_COLOR_REGEX = re.compile(r'\x1B\[\d+(.*?)m')
 
 
-class AlgorithmType(Enum):
-    """Key: computation-algorithm"""
-    SPOOKY, CITY, SHA1, SHA256, SHA512, SHA3, MD5, \
-       BLAKE2B, BLAKE2S, PARANOID = range(1, 11)
-
-    MAPPING = {
-        SPOOKY:   ['--algorithm', 'spooky'],
-        CITY:     ['--algorithm', 'city'],
-        SHA1:     ['--algorithm', 'sha1'],
-        SHA256:   ['--algorithm', 'sha256'],
-        SHA512:   ['--algorithm', 'sha512'],
-        SHA3:     ['--algorithm', 'sha3'],
-        MD5:      ['--algorithm', 'md5'],
-        BLAKE2B:  ['--algorithm', 'blake2b'],
-        BLAKE2S:  ['--algorithm', 'blake2sp'],
-        PARANOID: ['--algorithm', 'paranoid']
-    }
-
-
 class MatchType(Enum):
     """Key: traverse-match"""
     NONE, BASENAME, EXTENSION, WITHOUT_EXTENSION = range(1, 5)
@@ -157,8 +138,8 @@ def _create_rmlint_process(
                     cfg.get_boolean('general-find-hardlinks')),
             map_cfg(CrossMountType,
                     cfg.get_boolean('traverse-cross-mounts')),
-            map_cfg(AlgorithmType,
-                    cfg.get_enum('computation-algorithm'))
+
+            ['--algorithm', cfg.get_string('computation-algorithm')]
         ]
 
         # Flatten list:

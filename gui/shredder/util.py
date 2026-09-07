@@ -673,9 +673,16 @@ class MultipleChoiceButton(Gtk.Button):
         self.listbox.set_activate_on_single_click(True)
         self.listbox.connect('row-activated', self.on_update_value, popover)
 
+        # The hash algorithms list can be quite long, allow scrolling.
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_propagate_natural_height(True)
+        scrolled.set_max_content_height(600)
+        scrolled.add(self.listbox)
+
         # Add a decorative frame:
         frame = Gtk.Frame()
-        frame.add(self.listbox)
+        frame.add(scrolled)
         frame.set_border_width(5)
         popover.add(frame)
 
