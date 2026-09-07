@@ -109,7 +109,7 @@ A template for a testcase looks like this:
         create_file('xxx', 'a')
         create_file('xxx', 'b')
 
-        head, *data, footer = run_rmlint('-a city -S a')
+        head, *data, footer = run_rmlint('-a blake3 -S a')
 
         assert footer['duplicate_sets'] == 1
         assert footer['total_lint_size'] == 3

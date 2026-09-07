@@ -38,6 +38,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Build target test understands a new SCons variable: ``PYTEST_ARGS``.
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
 * FreeBSD: support for xattr checksum cache (#800).
+* blake3 and blake3_512 digests.
 
 ### Changed
 

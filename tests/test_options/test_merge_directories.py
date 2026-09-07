@@ -417,7 +417,7 @@ def test_equal_content_different_layout():
     # Test all checksum types, even outside of pedantic mode.
     # That allows us to test for regressions in the cumulative digest.
     options = ['-p']
-    if not get_env_flag('RM_TS_PEDANTIC'):
+    if not get_env_flag('pedantic'):
         for cksum_type in CKSUM_TYPES:
             options.append('--algorithm=' + cksum_type)
 

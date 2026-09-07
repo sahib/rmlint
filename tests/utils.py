@@ -16,6 +16,7 @@ from collections.abc import Iterable
 from functools import cache
 from typing import Final
 
+import cpuinfo
 import psutil
 import pytest
 import xattr
@@ -42,7 +43,6 @@ LINT_TYPE_SWITCHES: Final[frozenset[str]] = frozenset({"-T", "--types"})
 CKSUM_TYPES = [
     'murmur',
     'metro', 'metro256',
-    # 'metrocrc', 'metrocrc256'
     'md5',
     'sha1',
     'sha256', 'sha512',
@@ -54,6 +54,11 @@ CKSUM_TYPES = [
     # 'cumulative', 'ext',
     'paranoid',
 ]
+
+if struct.calcsize('P') == 8:
+    info = cpuinfo.get_cpu_info()
+    if info.get('arch') == 'X86_64' and 'sse4_2' in info.get('flags', []):
+        CKSUM_TYPES.extend(['metrocrc', 'metrocrc256'])
 
 
 def set_testdir(path):

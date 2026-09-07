@@ -36,10 +36,6 @@
 #include <sys/xattr.h>
 #endif
 
-#ifndef ENODATA
-#define ENODATA ENOMSG
-#endif
-
 #if RM_IS_LINUX
 #define RM_XATTR_USR_PREFIX "user."
 #elif RM_IS_APPLE
@@ -118,7 +114,7 @@ static int rm_sys_listxattr(const char *path, char *out, size_t out_size,
 
 #elif RM_IS_APPLE
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
+static ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
     int flags = 0;
     if(!follow_link) {
@@ -128,7 +124,7 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size, 0, flags);
 }
 
-ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+static ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
                         size_t size, int flags, bool follow_link) {
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -137,7 +133,7 @@ ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
     return setxattr(path, name, value, size, 0, flags);
 }
 
-int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+static int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     int flags = 0;
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -146,7 +142,7 @@ int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     return removexattr(path, name, flags);
 }
 
-int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
+static int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
     int flags = 0;
     if(!follow_link) {
         flags |= XATTR_NOFOLLOW;
@@ -157,7 +153,7 @@ int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_l
 
 #else /* Linux */
 
-ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
+static ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t size,
                         bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
@@ -168,7 +164,7 @@ ssize_t rm_sys_getxattr(const char *path, const char *name, void *value, size_t 
     return getxattr(path, name, value, size);
 }
 
-ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
+static ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
                         size_t size, int flags, bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
@@ -179,7 +175,7 @@ ssize_t rm_sys_setxattr(const char *path, const char *name, const void *value,
     return setxattr(path, name, value, size, flags);
 }
 
-int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
+static int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
         return lremovexattr(path, name);
@@ -189,7 +185,7 @@ int rm_sys_removexattr(const char *path, const char *name, bool follow_link) {
     return removexattr(path, name);
 }
 
-int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
+static int rm_sys_listxattr(const char *path, char *out, size_t out_size, bool follow_link) {
     if(!follow_link) {
 #if HAVE_LXATTR
         return llistxattr(path, out, out_size);
@@ -210,7 +206,7 @@ static int rm_xattr_build_key(RmSession *session,
 
     const char *digest_name = rm_digest_type_to_string(session->cfg->checksum_type);
     if(session->cfg->checksum_type == RM_DIGEST_PARANOID) {
-        digest_name = rm_digest_type_to_string(RM_DEFAULT_DIGEST);
+        digest_name = rm_digest_type_to_string(RM_PARANOID_DIGEST);
     }
 
     g_assert(suffix);
@@ -218,25 +214,17 @@ static int rm_xattr_build_key(RmSession *session,
                     suffix) < 0;
 }
 
-static int rm_xattr_build_cksum(RmFile *file, char *buf, size_t buf_size) {
-    g_assert(file);
-    g_assert(file->digest);
-
-    g_assert(buf);
-    memset(buf, '0', buf_size);
-    buf[buf_size - 1] = 0;
-
-    return rm_digest_hexstring(file->digest, buf);
-}
-
 static int rm_xattr_is_fail(const char *name, char *path, bool warn, int rc) {
     if(rc != -1) {
         return 0;
     }
 
-    if(errno == ENOTSUP || errno == ENODATA) {
+    if(errno == ENOTSUP
+#ifdef ENODATA
+        || errno == ENODATA
+#endif
+    )
         return 0;
-    }
 
 #ifdef ENOATTR
     /* Mac OS X, *BSD, etc. */
@@ -301,7 +289,7 @@ int rm_xattr_write_hash(RmFile *file, RmSession *session) {
 
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_build_key(session, "mtime", mtime_key, sizeof(mtime_key)) ||
-       rm_xattr_build_cksum(file, cksum_hex_str, sizeof(cksum_hex_str)) <= 0 ||
+       rm_digest_hexstring(file->digest, cksum_hex_str) == 0 ||
        rm_xattr_set(file, cksum_key, cksum_hex_str, strlen(cksum_hex_str), follow) ||
        rm_xattr_set(file, mtime_key, timestamp, strlen(timestamp), follow)) {
         return errno;
@@ -325,9 +313,6 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
     char cksum_key[64] = {0}, mtime_key[64] = {0}, mtime_buf[64] = {0},
          cksum_hex_str[512] = {0};
 
-    memset(cksum_hex_str, 0, sizeof(cksum_hex_str));
-    cksum_hex_str[sizeof(cksum_hex_str) - 1] = 0;
-
     bool follow = session->cfg->follow_symlinks;
     if(rm_xattr_build_key(session, "cksum", cksum_key, sizeof(cksum_key)) ||
        rm_xattr_get(file, cksum_key, cksum_hex_str, sizeof(cksum_hex_str) - 1, follow) ||
@@ -340,7 +325,7 @@ gboolean rm_xattr_read_hash(RmFile *file, RmSession *session) {
         return FALSE;
     }
 
-    gdouble xattr_mtime = g_strtod(mtime_buf, NULL);
+    gdouble xattr_mtime = g_ascii_strtod(mtime_buf, NULL);
     if(FLOAT_SIGN_DIFF(xattr_mtime, file->mtime, MTIME_TOL) != 0) {
         /* Data is too old and not useful, autoclean it */
         RM_DEFINE_PATH(file);
@@ -395,8 +380,7 @@ int rm_xattr_clear_hash(RmFile *file, RmSession *session) {
 #if RM_HAVE_XATTR
 
 static GHashTable *rm_xattr_list(const char *path, bool follow_symlinks) {
-    const size_t buf_size = 4096;
-    const size_t val_size = 1024;
+    enum { buf_size = 4096, val_size = 1024 };
     const char prefix[] = RM_XATTR_USR_PREFIX "rmlint.";
 
     char buf[buf_size];
@@ -482,11 +466,12 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks) {
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to check dedupe state of %s: %s", path,
                             g_strerror(errno));
-        return EXIT_FAILURE;
+        return true; /* XXX: skip dedupe attempt on a file we cannot stat */
     }
 
     bool result = false;
     char *key = NULL, *value = NULL;
+
     GHashTable *map = rm_xattr_list(path, follow_symlinks);
     GHashTableIter iter;
 
@@ -539,10 +524,10 @@ int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks) {
     if(rm_sys_stat(path, &stat_buf) < 0) {
         rm_log_warning_line("failed to mark dedupe state of %s: %s", path,
                             g_strerror(errno));
-        return EXIT_FAILURE;
+        return -1;
     }
 
-    int result = EXIT_FAILURE;
+    int result = -1;
     char *key = NULL, *value = NULL;
     GHashTable *map = rm_xattr_list(path, follow_symlinks);
     GHashTableIter iter;

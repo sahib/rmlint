@@ -79,7 +79,7 @@ bool rm_xattr_is_deduplicated(const char *path, bool follow_symlinks);
  *
  * @param res The result from rm_xattr_is_deduplicated;
  *
- * @return 0 on success, some errno on failure.
+ * @return 0 on success, -1 or some errno on failure.
  */
 int rm_xattr_mark_deduplicated(const char *path, bool follow_symlinks);
 
