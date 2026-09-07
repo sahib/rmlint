@@ -33,6 +33,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Build no longer strip at link time unless explicitly asked with ``STRIP=1`` (or ``=yes``, ``=true``).
 * For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT``
   are honoured when installing the GUI.
+* ``CFLAGS`` and ``LDFLAGS`` from the environment are now appending to our flags,
+  so that they could override ours.
 * ``scons --show-config`` shows features and build in one run.
 * Tests: new markers for tests with special needs (reflink, xattr, manpage).
 * Build target test understands a new SCons variable: ``PYTEST_ARGS``.

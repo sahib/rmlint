@@ -245,13 +245,20 @@ if 'CC' in os.environ:
     conf.env.Replace(CC=os.environ['CC'])
     print(">> Using compiler: " + os.environ['CC'])
 
-if 'CFLAGS' in os.environ:
-    conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
-    print(">> Appending custom build flags : " + os.environ['CFLAGS'])
+ENV_FLAGS = {
+    'CCFLAGS': shlex.split(os.environ.get('CFLAGS', '')),
+    'LINKFLAGS': shlex.split(os.environ.get('LDFLAGS', '')),
+}
 
-if 'LDFLAGS' in os.environ:
-    conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
-    print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
+def merge_env_flags(msg=False):
+    for key, flags in ENV_FLAGS.items():
+        if flags:
+            conf.env.MergeFlags({key: flags})
+            if msg:
+                print(f"Merging custom flags into {key}: {' '.join(flags)}")
+
+# first pass: use environement flags for our checks
+merge_env_flags(msg=True)
 
 if 'AR' in os.environ:
     conf.env.Replace(AR=os.environ['AR'])
@@ -410,6 +417,9 @@ if sanitisers := conf.env['SANITISE']:
 # symbol stripping
 if conf.env['STRIP'] and not conf.env['IS_APPLE']:
     conf.env.Append(LINKFLAGS=['-s'])
+
+# second pass: move the environment flags after ours
+merge_env_flags()
 
 value = ARGUMENTS.get('CCFLAGS')
 if value:
