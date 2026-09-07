@@ -1,15 +1,29 @@
 <schemalist>
+    <!-- nicks must match algorithm names used in rmlint -a exactly. -->
     <enum id="io.github.sahib.rmlint.Shredder.AlgorithmType">
-        <value nick="spooky" value="1"/>
-        <value nick="city" value="2"/>
-        <value nick="sha1" value="3"/>
-        <value nick="sha256" value="4"/>
-        <value nick="sha512" value="5"/>
-        <value nick="sha3" value="6"/>
-        <value nick="MD5" value="7"/>
-        <value nick="blake2b" value="8"/>
-        <value nick="blake2s" value="9"/>
-        <value nick="byte-by-byte" value="10"/>
+        <value nick="paranoid" value="1"/>
+        <value nick="blake2b" value="21"/>
+        <value nick="blake2bp" value="22"/>
+        <value nick="blake3" value="31"/>
+        <value nick="blake3_512" value="32"/>
+        <value nick="blake2s" value="23"/>
+        <value nick="blake2sp" value="24"/>
+        <value nick="sha3-512" value="41"/>
+        <value nick="sha3-384" value="42"/>
+        <value nick="sha3-256" value="43"/>
+        <value nick="sha512" value="51"/>
+        <value nick="sha256" value="52"/>
+        <value nick="sha1" value="53"/>
+        <value nick="highway256" value="61"/>
+        <value nick="highway128" value="62"/>
+        <value nick="highway64" value="63"/>
+        <value nick="md5" value="71"/>
+        <value nick="metro256" value="81"/>
+        <value nick="metrocrc256" value="82"/>
+        <value nick="metro" value="83"/>
+        <value nick="metrocrc" value="84"/>
+        <value nick="murmur" value="91"/>
+        <value nick="xxhash" value="101"/>
     </enum>
     <enum id="io.github.sahib.rmlint.Shredder.MatchType">
         <value nick="No limitation" value="1"/>
