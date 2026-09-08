@@ -108,3 +108,7 @@ def archival_rev():
         value = value.strip()
         return value[:GIT_REV_LENGTH] if not value.startswith('$Format:') else None
     return None
+
+
+def revision() -> str | None:
+    return head_rev() or archival_rev() or None
