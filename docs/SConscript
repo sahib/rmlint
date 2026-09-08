@@ -1,6 +1,7 @@
 Import('env')
 Import('create_uninstall_target')
 Import('find_sphinx_binary')
+Import('installing')
 
 import os
 import glob
@@ -41,13 +42,13 @@ if SPHINX_BINARY:
     env.Default(manpage)
     env.Alias('man', manpage)
 
-    if 'install' in COMMAND_LINE_TARGETS:
+    if installing:
         man_install = env.InstallPerm(
             '$staged_prefix/share/man/man1',
             [manpage],
             0o644,
         )
-        env.Alias('install', [manpage, man_install])
+        env.Alias(['install', 'install-cli'], [manpage, man_install])
 
     if 'docs' in COMMAND_LINE_TARGETS:
         sources = glob.glob('*.rst')

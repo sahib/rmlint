@@ -6,7 +6,7 @@ from pathlib import Path
 
 LOGGER = logging.getLogger('i18n')
 DOMAIN = 'rmlint'
-INSTALL_PREFIX = Path(__file__).resolve().parents[3]
+INSTALL_PREFIX = Path(__file__).resolve().parents[4]
 LOCALE_DIR = os.environ.get('TEXTDOMAINDIR',
                             INSTALL_PREFIX / 'share' / 'locale')
 

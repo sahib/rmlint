@@ -58,8 +58,8 @@ static const int RM_PARANOIA_NORMAL = 3;  /*  must be index of RM_DEFAULT_DIGEST
 static const int RM_PARANOIA_MAX = 5;
 
 NORETURN static void rm_cmd_show_version(void) {
-    fprintf(stderr, "version %s compiled: %s at [%s] \"%s\"\n", RM_VERSION_FULL,
-            __DATE__, __TIME__, RM_VERSION_NAME);
+    fprintf(stderr, "version %s \"%s\"\nbuilt %s at %s UTC\n", RM_VERSION_FULL,
+            RM_VERSION_NAME, __DATE__, __TIME__);
 
     /* Make a list of all supported features from the macros in config.h */
     /* clang-format off */

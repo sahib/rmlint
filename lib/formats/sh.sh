@@ -323,7 +323,7 @@ original_cmd() {
 ##################
 
 ask() {
-    cat << EOF
+    cat << 'EOF'
 
 This script will delete certain files rmlint found.
 It is highly advisable to view the script first!

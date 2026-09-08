@@ -114,8 +114,8 @@ Variables
 :LIBDIR=<libdir>:
 
     This applies only to the static library ``librmlint.a`` installation,
-    which is not installed by default (override in lib/SConscript).
-    Some distributions use separate libdirectories for 64/32 bit.
+    which is not installed by default (use ``scons install-lib``).
+    Some distributions use separate lib directories for 64/32 bit.
     If this happens, you should set the correct one for 64 bit with
     ``LIBDIR=lib64``.
 
@@ -131,6 +131,9 @@ Variables
     that the optimization level should be whatever the build system currently
     defines to be the default for the associated build mode.
 
+    Leaving it unset follows the build mode: ``-Og`` under ``DEBUG=1``,
+    ``-O2`` otherwise.
+
 :DEBUG=1:
 
     Enable a debugging build.
@@ -141,7 +144,7 @@ Variables
     as usual.
 
     Note that setting ``DEBUG=1`` does not enable the production of
-    debugger symbols; to enable those, use ``SYMBOLS=1`` or ``GDB=1``.
+    debugger symbols; to enable those, use ``SYMBOLS=1``.
 
     This should always be enabled during development.
 
@@ -155,16 +158,14 @@ Variables
     information becomes obscured by optimizations, so make sure to set
     the optimization level appropriately.
 
-:GDB=1:
-
-    Enable options that help a debugger (such as ``gdb``).
-
-    This option is equivalent to ``DEBUG=1 SYMBOLS=1``.
-
 :VERBOSE=1:
 
     Print the exact compiler and linker commands. Useful for troubleshooting
     build errors.
+
+:FORCE=1:
+
+    Keep building even if the compiler emit warnings, i.e. bypass ``-Werror``.
 
 :CCFLAGS=<command line options>:
 
@@ -177,19 +178,20 @@ Variables
 
     This command-line variable makes it possible to override an option in
     this list by supplying customized command-line options to be appended.
-    For example: ``GDB=1 CCFLAGS=-g1``.
+    For example: ``DEBUG=1 CCFLAGS=-g1``.
 
     The string that is supplied as the value for this variable is parsed as
     per a POSIX shell command line, and so it may include shell quoting if
     necessary.
 
-:STRIP=0:
+:STRIP=1:
 
-    Override the default binary stripping of ``O=release``.
+    Strip symbols while linking (or after linking on macOS).
 
-:SANITISE=<1,address,thread,memory,undefined,…>:
+:SANITISE=<comma-separated list>:
 
-    Compile with sanitisers enabled. ``SANITISE=1`` means ``=address,undefined``.
+    Compile with sanitisers enabled. Good to associate with ``SYMBOLS=1``.
+    ``SANITISE=1`` means ``=address,undefined,leak``.
 
 Arguments
 ~~~~~~~~~
@@ -235,6 +237,15 @@ Notable targets
 :install:
 
     Install all program parts system-wide.
+
+:install-core:
+
+    Install only the binary, its manpage and the translations.
+
+:install-gui:
+
+    Install only the Shredder GUI: the Python package, the desktop file,
+    the icon and eventually the GSettings schema.
 
 :man:
 

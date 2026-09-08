@@ -32,6 +32,7 @@ from rm_version import VersionError, read_version
 DEFAULT_PREFIX = '/usr/local'
 PREFIX_RECORD_FILE = Path('.prefix.txt')
 
+
 try:
     VERSION = read_version()
 except (OSError, VersionError) as err:
@@ -104,6 +105,69 @@ vars.Add(
     validator=lambda _key, value, _env: not Path(value).is_absolute(),
 )
 
+#==============================================================================#
+#                                  Variables                                   #
+#==============================================================================#
+
+vars.Add(BoolVariable(
+    'VERBOSE',
+    help='print compiler and linker command lines and Glib depreciations',
+    default=False,
+))
+
+vars.Add(BoolVariable(
+    'DEBUG',
+    help='enable run-time assertions and extra checks',
+    default=False,
+))
+
+vars.Add(BoolVariable(
+    'SYMBOLS',
+    help='compile with debugging symbols (-g3)',
+    default=False,
+))
+
+vars.Add(BoolVariable(
+    'STRIP',
+    help='strip symbols',
+    default=False,
+))
+
+O_DEBUG   = 'g' # The optimisation level for a debug build
+O_RELEASE = '2' # The optimisation level for a release build
+vars.Add(
+    'O',
+    help=f"optimisation level; special values are 'debug' (-{O_DEBUG}) "
+         f"and 'release' (-{O_RELEASE}). Empty picks the default depending "
+         "on DEBUG=.",
+    default='',
+    converter= lambda o: {'debug': O_DEBUG, 'release': O_RELEASE}.get(o, o),
+)
+
+SANITISE_TRUE=('address', 'undefined', 'leak')
+def shorthand_sanitisers(value):
+    match value:
+        case '1' | 'yes' | 'true':
+            return SANITISE_TRUE
+        case '' | '0' | 'no' | 'false' | 'none':
+            return ()
+        case _:
+            return tuple(dict.fromkeys(value.lower().replace(',', ' ').split()))
+
+vars.Add(
+    'SANITISE',
+    help="sanitisers to compile with, "
+         f"1 is shorthand for {','.join(SANITISE_TRUE)}",
+    default='',
+    converter=shorthand_sanitisers,
+)
+
+vars.Add(BoolVariable(
+    'FORCE',
+    help='keep building when the compiler warns (drops -Werror)',
+    default=False,
+))
+
 vars.Add(
     'PYTEST_ARGS',
     help="extra pytest arguments",
@@ -111,24 +175,22 @@ vars.Add(
 )
 
 # General Environment
-options = dict(
-    CXXCOMSTR=compile_source_message,
-    CCCOMSTR=compile_source_message,
-    SHCCCOMSTR=compile_shared_source_message,
-    SHCXXCOMSTR=compile_shared_source_message,
-    ARCOMSTR=link_library_message,
-    RANLIBCOMSTR=ranlib_library_message,
-    SHLINKCOMSTR=link_shared_library_message,
-    LINKCOMSTR=link_program_message,
-    ENV = dict([ (key, os.environ[key])
-                 for key in os.environ
-                 if key in ['PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH']
-              ])
-)
-
-if ARGUMENTS.get('VERBOSE') == "1":
-    del options['CCCOMSTR']
-    del options['LINKCOMSTR']
+options = {
+    'CXXCOMSTR': compile_source_message,
+    'CCCOMSTR': compile_source_message,
+    'SHCCCOMSTR': compile_shared_source_message,
+    'SHCXXCOMSTR': compile_shared_source_message,
+    'ARCOMSTR': link_library_message,
+    'RANLIBCOMSTR': ranlib_library_message,
+    'SHLINKCOMSTR': link_shared_library_message,
+    'LINKCOMSTR': link_program_message,
+    'ENV': {
+        key: os.environ[key]
+        for key in ('PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH',
+                    'SOURCE_DATE_EPOCH')
+        if key in os.environ
+    } | {'TZ': 'UTC'},
+}
 
 #==============================================================================#
 #                                 Environment                                  #
@@ -150,9 +212,20 @@ env['staged_prefix'] = (
     else env['PREFIX']
 )
 
+if env['VERBOSE']:
+    del env['CCCOMSTR']
+    del env['LINKCOMSTR']
+
+if env['STRIP'] and env['SYMBOLS']:
+    raise UserError('STRIP and SYMBOLS are incompatible options')
+
 #==============================================================================#
 
-if 'install' in COMMAND_LINE_TARGETS and not env['DESTDIR']:
+# XXX: install-lib is a special case.
+installing = bool({'install', 'install-cli', 'install-gui'} & set(COMMAND_LINE_TARGETS))
+Export('installing')
+
+if installing and not env['DESTDIR']:
     # record the installation prefix for later uninstall
     PREFIX_RECORD_FILE.write_text(str(env['PREFIX']), encoding='utf-8')
 
@@ -174,13 +247,20 @@ if 'CC' in os.environ:
     conf.env.Replace(CC=os.environ['CC'])
     print(">> Using compiler: " + os.environ['CC'])
 
-if 'CFLAGS' in os.environ:
-    conf.env.Append(CCFLAGS=os.environ['CFLAGS'])
-    print(">> Appending custom build flags : " + os.environ['CFLAGS'])
+ENV_FLAGS = {
+    'CCFLAGS': shlex.split(os.environ.get('CFLAGS', '')),
+    'LINKFLAGS': shlex.split(os.environ.get('LDFLAGS', '')),
+}
 
-if 'LDFLAGS' in os.environ:
-    conf.env.Append(LINKFLAGS=os.environ['LDFLAGS'])
-    print(">> Appending custom link flags : " + os.environ['LDFLAGS'])
+def merge_env_flags(msg=False):
+    for key, flags in ENV_FLAGS.items():
+        if flags:
+            conf.env.MergeFlags({key: flags})
+            if msg:
+                print(f"Merging custom flags into {key}: {' '.join(flags)}")
+
+# first pass: use environement flags for our checks
+merge_env_flags(msg=True)
 
 if 'AR' in os.environ:
     conf.env.Replace(AR=os.environ['AR'])
@@ -297,11 +377,11 @@ if conf.env['HAVE_LIBELF']:
     conf.env.Append(_LIBFLAGS=['-lelf'])
 
 # NB: After checks so they don't fail
-if ARGUMENTS.get('FORCE') != '1':
+if not conf.env['FORCE']:
     conf.env.Append(CCFLAGS=['-Werror'])
 
 # XXX: after -Werror
-if ARGUMENTS.get('VERBOSE') != '1':
+if not conf.env['VERBOSE']:
     conf.env.Append(CCFLAGS=[
         '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_74',
         '-DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_74',
@@ -309,83 +389,39 @@ if ARGUMENTS.get('VERBOSE') != '1':
 else:
     conf.env.Append(CCFLAGS=['-Wno-error=deprecated-declarations'])
 
-if ARGUMENTS.get('GDB') == '1':
-    ARGUMENTS['DEBUG'] = '1'
-    ARGUMENTS['SYMBOLS'] = '1'
-
-# sanitisers
-SANITISERS_EXCLUSIVE  = ['address', 'thread', 'memory']
-SANITISERS_CLANG_ONLY = ['memory']
-
-sanitise_arg = ARGUMENTS.get('SANITISE', '')
-if sanitise_arg == '1':
-    sanitisers = ['address', 'undefined']
-else:
-    sanitisers = [t.strip().lower()
-                  for t in sanitise_arg.replace(',', ' ').split() if t.strip()]
-
-deduped = []
-for s in sanitisers:
-    if s not in deduped:
-        deduped.append(s)
-sanitisers = deduped
-
-needs_clang = [s for s in sanitisers if s in SANITISERS_CLANG_ONLY]
-if needs_clang and not conf.env['IS_CLANG']:
-    raise UserError(f"Error: sanitiser(s) {', '.join(needs_clang)} "
-                     "require clang; re-run with CC=clang.")
-
-exclusive = [s for s in sanitisers if s in SANITISERS_EXCLUSIVE]
-if len(exclusive) > 1:
-    raise UserError(f"Error: sanitisers {', '.join(exclusive)}, cannot "
-                     "be combined; pick one of address/thread/memory.")
-
-O_DEBUG   = 'g' # The optimisation level for a debug   build
-O_RELEASE = '2' # The optimisation level for a release build
 
 # build modes
-if ARGUMENTS.get('DEBUG') == "1":
+if conf.env['DEBUG']:
     print("Compiling in debug mode")
     conf.env.Append(CCFLAGS=['-DRM_DEBUG', '-fno-inline'])
-    O_value = ARGUMENTS.get('O', O_DEBUG)
 else:
     conf.env.Append(CCFLAGS=['-DG_DISABLE_ASSERT', '-DNDEBUG'])
-    O_value = ARGUMENTS.get('O', O_RELEASE)
 
-if O_value == 'debug':
-    O_value = O_DEBUG
-elif O_value == 'release':
-    O_value = O_RELEASE
+cc_O_option = '-O' + (conf.env['O'] or
+                      (O_DEBUG if conf.env['DEBUG'] else O_RELEASE))
 
-cc_O_option = '-O' + O_value
-
-print(f"Using compiler optimisation {cc_O_option} (to change, run scons with O=[0|1|2|3|s|fast])")
+print(f"Using compiler optimisation {cc_O_option} "
+      f"(to change, run scons with O=<level>, or O=(release|debug)")
 conf.env.Append(CCFLAGS=[cc_O_option])
 
-if ARGUMENTS.get('SYMBOLS') == '1':
+if conf.env['SYMBOLS']:
     print("Compiling with debugging symbols")
     conf.env.Append(CCFLAGS='-g3')
 
-if sanitisers:
+if sanitisers := conf.env['SANITISE']:
     fsan = '-fsanitize=' + ','.join(sanitisers)
     print('Compiling with sanitisers: ' + ', '.join(sanitisers))
     conf.env.Append(CCFLAGS=[fsan, '-fno-omit-frame-pointer'])
     conf.env.Append(LINKFLAGS=[fsan])
-    if ARGUMENTS.get('SYMBOLS') != '1':   # SYMBOLS=1 already added -g3
+    if not conf.env['SYMBOLS']:  # SYMBOLS=1 already added -g3
         conf.env.Append(CCFLAGS=['-g'])
 
 # symbol stripping
-# Release strips by default, use STRIP=0 to ship a separate debuginfo package.
-if (strip_arg := ARGUMENTS.get('STRIP')) is not None:
-    if strip_arg not in ('0', '1'):
-        print(f"Error: STRIP must be 0 or 1, got '{strip_arg}'.")
-        Exit(1)
-    strip = strip_arg == '1'
-else:
-    strip = ARGUMENTS.get('DEBUG') != '1' and not sanitisers
-
-if strip and not conf.env['IS_APPLE']:
+if conf.env['STRIP'] and not conf.env['IS_APPLE']:
     conf.env.Append(LINKFLAGS=['-s'])
+
+# second pass: move the environment flags after ours
+merge_env_flags()
 
 value = ARGUMENTS.get('CCFLAGS')
 if value:
@@ -415,13 +451,13 @@ SetOption('num_jobs', get_cpu_count())
 print(f"Running with --jobs={GetOption('num_jobs')}")
 
 library = SConscript('lib/SConscript')
-programs = SConscript('src/SConscript', exports='library')
+program = SConscript('src/SConscript', exports='library')
 env.Default(library)
 
-if strip and conf.env['IS_APPLE']:
-    env.AddPostAction(programs, Action('strip $TARGET', 'Stripping $TARGET'))
+if conf.env['STRIP'] and conf.env['IS_APPLE']:
+    env.AddPostAction(program, Action('strip $TARGET', 'Stripping $TARGET'))
 
-SConscript('tests/SConscript', exports='programs')
+SConscript('tests/SConscript', exports='program')
 SConscript('po/SConscript')
 SConscript('docs/SConscript')
 if GetOption('with_gui'):
@@ -491,6 +527,7 @@ if GetOption('show_config'):
     Install prefix       : {prefix}
     Staging directory    : {dest_dir}
     Staged prefix        : {staged_prefix}
+    Optimisation level   : {optimisation}
     Verbose building     : {verbose}
     Adding debug checks  : {debug}
     Adding debug symbols : {symbols}
@@ -524,11 +561,12 @@ if GetOption('show_config'):
         prefix=env['PREFIX'],
         dest_dir=env['DESTDIR'],
         staged_prefix=env['staged_prefix'],
-        verbose=yesno(ARGUMENTS.get('VERBOSE') == '1'),
-        debug=yesno(ARGUMENTS.get('DEBUG') == '1'),
-        symbols=yesno(ARGUMENTS.get('SYMBOLS') == '1'),
+        optimisation=cc_O_option,
+        verbose=yesno(env['VERBOSE']),
+        debug=yesno(env['DEBUG']),
+        symbols=yesno(env['SYMBOLS']),
         sanitisers = color(', '.join(sanitisers), 'green') if sanitisers else color('none', 'red'),
-        strip=yesno(strip),
+        strip=yesno(env['STRIP']),
         compile_glib_schemas=yesno(GetOption('with_compile-glib-schemas')),
 
         trailer="\nType 'scons' to actually compile rmlint now. Good luck.\n"

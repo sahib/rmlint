@@ -40,7 +40,6 @@ __RCSID("$NetBSD: fts.c,v 1.48 2015/01/29 15:55:21 manu Exp $");
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fcntl.h>
 #include <glib.h>       // g_assert
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +64,8 @@ static int fts_palloc(FTS *, size_t);
 static void fts_padjust(FTS *, FTSENT *);
 static FTSENT *fts_sort(FTS *, FTSENT *, size_t);
 static unsigned short fts_stat(FTS *, FTSENT *, int);
-static int fts_safe_changedir(const FTS *, const FTSENT *, int, const char *);
+static int fts_safe_changedir_fd(const FTS *, const FTSENT *, int);
+static int fts_safe_changedir(const FTS *, const FTSENT *, const char *);
 
 #if defined(ALIGNBYTES) && defined(ALIGN)
 #define FTS_ALLOC_ALIGNED 1
@@ -395,7 +395,7 @@ FTSENT *fts_read(FTS *sp) {
          * FTS_STOP or the fts_info field of the node.
          */
         if(sp->fts_child) {
-            if(fts_safe_changedir(sp, p, -1, p->fts_accpath)) {
+            if(fts_safe_changedir(sp, p, p->fts_accpath)) {
                 p->fts_errno = errno;
                 p->fts_flags |= FTS_DONTCHDIR;
                 for(p = sp->fts_child; p; p = p->fts_link)
@@ -503,7 +503,7 @@ next:
         }
         (void)close(p->fts_symfd);
     } else if(!(p->fts_flags & FTS_DONTCHDIR) &&
-              fts_safe_changedir(sp, p->fts_parent, -1, "..")) {
+              fts_safe_changedir(sp, p->fts_parent, "..")) {
         SET(FTS_STOP);
         return (NULL);
     }
@@ -691,7 +691,7 @@ static FTSENT *fts_build(FTS *sp, int type) {
      */
     cderrno = 0;
     if(nlinks || type == BREAD) {
-        if(fts_safe_changedir(sp, cur, dirfd(dirp), NULL)) {
+        if(fts_safe_changedir_fd(sp, cur, dirfd(dirp))) {
             if(nlinks && type == BREAD)
                 cur->fts_errno = errno;
             cur->fts_flags |= FTS_DONTCHDIR;
@@ -869,7 +869,7 @@ static FTSENT *fts_build(FTS *sp, int type) {
     if(descend && (type == BCHILD || !nitems) &&
        (cur->fts_level == FTS_ROOTLEVEL
             ? FCHDIR(sp, sp->fts_rfd)
-            : fts_safe_changedir(sp, cur->fts_parent, -1, ".."))) {
+            : fts_safe_changedir(sp, cur->fts_parent, ".."))) {
         cur->fts_info = FTS_ERR;
         SET(FTS_STOP);
         return (NULL);
@@ -1164,31 +1164,36 @@ static size_t fts_maxarglen(const char *const *argv) {
  * tricked by someone changing the world out from underneath us.
  * Assumes p->fts_dev and p->fts_ino are filled in.
  */
-static int fts_safe_changedir(const FTS *sp, const FTSENT *p, int fd, const char *path) {
-    int oldfd = fd, ret = -1;
+static int fts_safe_changedir_fd(const FTS *sp, const FTSENT *p, int fd) {
     __fts_stat_t sb;
 
     if(ISSET(FTS_NOCHDIR))
         return 0;
 
-    if(oldfd < 0 && (fd = open(path, O_RDONLY | O_CLOEXEC)) == -1)
-        return -1;
-
     if(fstat(fd, &sb) == -1)
-        goto bail;
+        return -1;
 
     if(sb.st_ino != p->fts_ino || sb.st_dev != p->fts_dev) {
         errno = ENOENT;
-        goto bail;
+        return -1;
     }
 
-    ret = fchdir(fd);
+    return fchdir(fd);
+}
 
-bail:
-    if(oldfd < 0) {
-        int save_errno = errno;
-        (void)close(fd);
-        errno = save_errno;
-    }
+static int fts_safe_changedir(const FTS *sp, const FTSENT *p, const char *path) {
+    int fd, ret, save_errno;
+
+    if(ISSET(FTS_NOCHDIR))
+        return 0;
+
+    if((fd = open(path, O_RDONLY | O_CLOEXEC)) == -1)
+        return -1;
+
+    ret = fts_safe_changedir_fd(sp, p, fd);
+
+    save_errno = errno;
+    (void)close(fd);
+    errno = save_errno;
     return ret;
 }

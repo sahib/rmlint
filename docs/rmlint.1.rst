@@ -1048,7 +1048,7 @@ You can build a debug build of ``rmlint`` like this:
 
 * ``git clone git@github.com:sahib/rmlint.git``
 * ``cd rmlint``
-* ``scons GDB=1 DEBUG=1``
+* ``scons DEBUG=1 SYMBOLS=1``
 * ``sudo scons install  # Optional``
 
 LICENSE
