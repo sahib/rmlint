@@ -106,7 +106,7 @@ class Application(Gtk.Application):
             'settings', lambda *_: self.win.views.switch('settings')
         ))
         self.add_action(_create_action(
-            'about', lambda *_: AboutDialog(self.win).show_all()
+            'about', lambda *_: AboutDialog(self.win).show()
         ))
         self.add_action(_create_action(
             'search', lambda *_: self.win.views.set_search_mode(True)

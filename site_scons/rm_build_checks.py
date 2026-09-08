@@ -7,7 +7,7 @@ import SCons.Conftest as tests
 from SCons.Script import ARGUMENTS, Exit, GetOption
 
 from rm_build_support import OPTIONAL_FLAGS, PKG_CONFIG
-from rm_version import REPO_ROOT, archival_rev, head_rev
+from rm_version import REPO_ROOT, revision
 
 
 CUSTOM_TESTS = {}  # Passed to Configure(); the SConstruct calls these as conf.<name>().
@@ -55,7 +55,7 @@ def check_pkg(context, name, varname, required=True):
 @custom_test
 def check_git_rev(context):
     context.Message('Checking for git revision... ')
-    rev = head_rev() or archival_rev() or None
+    rev = revision()
     context.sconf.env['gitrev'] = rev
     context.Result(rev)
     return rev

@@ -19,6 +19,7 @@ class AboutDialog(Gtk.AboutDialog):
     def __init__(self, app_win):
         super().__init__()
 
+        self.connect('response', AboutDialog._on_response)
         self.set_transient_for(app_win)
         self.set_modal(True)
         self.set_license_type(Gtk.License.GPL_3_0)
@@ -31,6 +32,11 @@ class AboutDialog(Gtk.AboutDialog):
         self.set_website('https://rmlint.rtfd.org')
         self.set_website_label('rmlint.rtfd.org')
         self.set_logo(None)
+
+    def _on_response(self, response_id):
+        if response_id in (Gtk.ResponseType.DELETE_EVENT,
+                           Gtk.ResponseType.CLOSE):
+            self.destroy()
 
 
 if __name__ == '__main__':

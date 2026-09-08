@@ -27,8 +27,8 @@ def _guess_rmlint_version() -> str:
 def get_version() -> str:
     """Return Shredder version"""
     try:
-        from ._version import __version__
+        from ._version import __version__, __revision__
     except ImportError:
         return _guess_rmlint_version()
 
-    return __version__
+    return  f"{__version__} (rev {__revision__})" if __revision__ else __version__
