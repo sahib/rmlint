@@ -81,7 +81,8 @@ NORETURN static void rm_cmd_show_version(void) {
     }
 
     fputs(_("\n\n"
-            "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n"
+            "rmlint was written by Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas.\n"
+            "<Cebtenzzre> and Vassili <vassilit> Tchersky.\n"
             "The code at https://github.com/sahib/rmlint is licensed under the "
             "terms of the GPLv3.\n"),
           stderr);

@@ -1063,7 +1063,9 @@ PROGRAM AUTHORS
 
 ``rmlint`` was written by:
 
-* Christopher <sahib> Pahl 2010-2021 (https://github.com/sahib)
-* Daniel <SeeSpotRun> T.   2014-2021 (https://github.com/SeeSpotRun)
+* Christopher <sahib> Pahl    2010-2021 (https://github.com/sahib)
+* Daniel <SeeSpotRun> T.      2014-2021 (https://github.com/SeeSpotRun)
+* Cebtenzzre                  2021-2023 (https://github.com/Cebtenzzre)
+* Vassili <vassilit> Tchersky 2025-     (https://github.com/vassilit)
 
 Also see https://rmlint.rtfd.org for other people that helped us.
