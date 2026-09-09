@@ -37,36 +37,7 @@ to remove it. It is able to find:
 
 ----
 
-.. .. image:: https://raw.githubusercontent.com/sahib/rmlint/develop/docs/_static/logo.png
-..    :align: left 
-..    :width: 150
-
-.. raw:: html
-
-    <center>
-
-.. image:: https://img.shields.io/github/v/release/sahib/rmlint?include_prereleases&display_name=release
-   :target: https://github.com/sahib/rmlint/releases
-
-.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: http://rmlint.rtfd.org
-
-.. image:: https://github.com/sahib/rmlint/actions/workflows/build-and-test.yml/badge.svg
-   :target: https://github.com/sahib/rmlint/actions
-
-.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/issues
-
-.. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint/develop
-   :target: https://github.com/sahib/rmlint/commits/develop/
-
-.. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
-   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
-
-
-.. raw:: html
-
-    </center>
+.. include:: _badges.rst
 
 User manual
 -----------
@@ -139,4 +110,3 @@ License
 ``rmlint`` is licensed under the terms of GPLv3_.
 
 .. _GPLv3: http://www.gnu.org/copyleft/gpl.htm
-
