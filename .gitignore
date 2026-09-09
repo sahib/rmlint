@@ -5,6 +5,9 @@ rmlint.json
 /rmlint.*.json
 /.rmlint.json
 
+# locale testing
+locale/
+
 # release tarball
 /rmlint-*.tar.gz
 
