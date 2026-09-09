@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.11.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-28 00:00+0000\n"
+"POT-Creation-Date: 2026-09-09 20:16+0200\n"
 "PO-Revision-Date: 2026-03-23 06:32+0100\n"
 "Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
 "Language-Team: Georgian <(nothing)>\n"
@@ -26,106 +26,122 @@ msgstr "შეწყდა ფატალური შეცდომის გ
 msgid "Please file a bug report (See rmlint -h)\n"
 msgstr "მოგვწერეთ ამ შეცდომის შესახებ (იხილეთ rmlint -h)\n"
 
-#: lib/formats/pretty.c
-msgid "Bad symlink(s)"
-msgstr "ცუდი სიმბმულ(ებ)-ი"
-
-#: lib/formats/pretty.c
-msgid "Empty dir(s)"
-msgstr "ცარიელი საქაღალდე(ები)"
-
-#: lib/formats/pretty.c
-msgid "Non stripped binarie(s)"
-msgstr "არაგაშიშვლებული გამშვები ფაილ(ებ)ი"
-
-#: lib/formats/pretty.c
-msgid "Bad UID(s)"
-msgstr "არასწორი UID(ები)"
-
-#: lib/formats/pretty.c
-msgid "Bad GID(s)"
-msgstr "არასწორი GID(ები)"
-
-#: lib/formats/pretty.c
-msgid "Bad UID and GID(s)"
-msgstr "არასწორი UID და GID(ები)"
-
-#: lib/formats/pretty.c
-msgid "Empty file(s)"
-msgstr "ცარიელი ფაილ(ებ)-ი"
-
-#: lib/formats/pretty.c
+#: lib/replay.c
 #, fuzzy
-msgid "Duplicate candidates(s)"
-msgstr "დუბლიკატი საქაღალდე(ები)"
+msgid "lint type of node not recognised"
+msgstr "lint ტიპით '%s' უცნობია"
 
-#: lib/formats/pretty.c
-#, fuzzy
-msgid "Duplicate dir candidate(s)"
-msgstr "დუბლიკატი საქაღალდე(ები)"
+#: lib/replay.c
+#, c-format
+msgid "modification time of `%s` changed. Ignoring."
+msgstr "`%s`-ის ცვლილების დრო შეიცვალა. გამოტოვება."
 
-#: lib/formats/pretty.c
-msgid "Duplicate(s)"
-msgstr "დუბლიკატ(ებ)-ი"
+#: lib/replay.c
+#, c-format
+msgid "Loading json-results `%s'"
+msgstr "იტვირთება json-შედეგები `%s'"
 
-#: lib/formats/pretty.c
-msgid "Duplicate Directorie(s)"
-msgstr "დუბლიკატი საქაღალდე(ები)"
+#: lib/replay.c
+msgid "No valid json cache (no array in /)"
+msgstr "არასწორი json-ის კეში (/-ში მასივი არაა)"
 
-#: lib/formats/progressbar.c
-msgid "reduces files to"
-msgstr "ამცირებს ფაილებს"
+#: lib/replay.c
+msgid "No valid .json files given, aborting."
+msgstr "გადმოცემული .json ფაილები არასწორია. მუშაობა შეწყდება."
 
-#: lib/formats/progressbar.c
-msgid "Traversing"
-msgstr "კვეთა"
+#: lib/hash-utility.c lib/cmdline.c
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr "უცნობი ჰეშის ალგორითმი: '%s'"
 
-#: lib/formats/progressbar.c
-msgid "usable files"
-msgstr "გამოყენებადი ფაილები"
+#: lib/hash-utility.c
+msgid "Digest type [BLAKE2B]"
+msgstr "დაიჯესტის ტიპი [BLAKE2B]"
 
-#: lib/formats/progressbar.c
-msgid "ignored files / folders"
-msgstr "გამოტოვებული ფაილები / საქაღალდეები"
+#: lib/hash-utility.c
+msgid "Number of hashing threads [8]"
+msgstr "ჰეშინგის ნაკადების რაოდენობა [8]"
 
-#: lib/formats/progressbar.c
-msgid "Preprocessing"
-msgstr "პრეპროცესინგი"
+#: lib/hash-utility.c
+msgid "Megabytes read buffer [256 MB]"
+msgstr "წაკითხვის ბუფერი მეგაბაიტებში [256 მბ]"
 
-#: lib/formats/progressbar.c
-msgid "found"
-msgstr "ნაპოვნია"
+#: lib/hash-utility.c
+msgid "bytes to hash at a time [4096]"
+msgstr "ბაიტები ერთდროულად დასაჰეშად [4096]"
 
-#: lib/formats/progressbar.c
-msgid "other lint"
-msgstr "სხვა lint"
+#: lib/hash-utility.c
+msgid "Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr "ჰეშების გამოტანა დასრულების მიხედვით და არა შეყვანის (ამცირებს მეხსიერების გამოყენებას)"
 
-#: lib/formats/progressbar.c
-msgid "Matching"
-msgstr "დამთხვევები"
+#: lib/hash-utility.c
+msgid "Space-separated list of files"
+msgstr "ჰარეთი გამოყოფილი ფაილების სია"
 
-#: lib/formats/progressbar.c
-msgid "dupes of"
-msgstr "დუბლიკატი რისი"
+#: lib/hash-utility.c
+msgid "Hash a list of files"
+msgstr "ფაილების სიის ჰეში"
 
-#: lib/formats/progressbar.c
-msgid "originals"
-msgstr "ორიგინალები"
+#: lib/hash-utility.c
+#, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"  Cryptographic:\n"
+"    %s\n"
+"\n"
+"  Non-cryptographic:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+"მრავალნაკადიანი ფაილის დაიჯესტის (ჰეშის) გამომთვლელი.\n"
+"\n"
+"  ხელმისაწვდომი დაიჯესტის ტიპებია:\n"
+"  კრიპტოგრაფიული\n"
+"     %s\n"
+"\n"
+"  არაკრიპტოგრაფიული:\n"
+"     %s\n"
+"\n"
+"  მხარდაჭერილია, მაგრამ არა სასარგებლო:\n"
+"     %s\n"
 
-#: lib/formats/progressbar.c
-msgid "to scan in"
-msgstr "სკანირებისთვის სად"
+#: lib/hash-utility.c
+msgid "No valid paths given"
+msgstr "სწორი ბილიკები მოწოდებული არაა"
 
-#: lib/formats/progressbar.c
-msgid "files"
-msgstr "ფაილები"
+#: lib/hash-utility.c lib/cfg.c
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "ვერ გავხსენი საქაღალდე, ან ფაილი \"%s\": %s"
 
-#: lib/formats/progressbar.c
-msgid "Merging files into directories (stand by...)"
-msgstr "ფაილების შერწყმა საქაღალდეებში (მოითმინეთ...)"
+#: lib/hash-utility.c
+#, c-format
+msgid "Directories are not supported: %s"
+msgstr "საქაღალდეები მხარდაჭერილი არაა: %s"
+
+#: lib/hash-utility.c
+#, c-format
+msgid "%s: Unknown file type"
+msgstr "%s: უცნობი ფაილის ტიპი"
+
+#: lib/session.c
+msgid "Received interrupt; stopping..."
+msgstr "მიღებულია შეწყვეტის სიგნალი. გამოსვლა..."
+
+#: lib/session.c
+msgid "Received second interrupt; stopping hard."
+msgstr "მიღებულია მეორე წყვეტა. მყარი გაჩერება."
+
+#: lib/hasher.c
+#, fuzzy, c-format
+msgid "Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
+msgstr "%s-ის კითხვისას რაღაც არასწორად წავიდა. მოველოდი %li ბაიტს და მივიღე %li; გამოტოვება"
 
 #: lib/formats/stats.c
-#, c-format
 msgid "No shred stats.\n"
 msgstr "სტატისტიკა არ წაიშლება.\n"
 
@@ -194,12 +210,10 @@ msgid "%s%15s%s Algorithm efficiency on duplicate file basis\n"
 msgstr "%s%15s%s ალგორიტმის ეფექტურობა დუბლირებული ფაილებისთვის\n"
 
 #: lib/formats/summary.c
-#, c-format
 msgid " file(s) after investigation, nothing to search through.\n"
 msgstr " ფაილი ძიების შემდეგ. მოსაძებნი არაფერია.\n"
 
 #: lib/formats/summary.c
-#, c-format
 msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "ნაადრევი გამორთვა. ალბათ, ყველა lint აღმოჩენილი არაა.\n"
 
@@ -223,7 +237,6 @@ msgid "other suspicious item(s) found, which may vary in size.\n"
 msgstr "აღმოჩენილია სხვა საეჭვო ელემენტ(ებ)-ი, რომლების ზომაც ცვლადია.\n"
 
 #: lib/formats/summary.c
-#, c-format
 msgid "This run was a replay from a previous run. No I/O done!\n"
 msgstr ""
 
@@ -237,88 +250,157 @@ msgstr "სკანირებას სულ დასჭირდა %s%s%s
 msgid "Wrote a %s%s%s file to: %s%s%s\n"
 msgstr "ჩაწერილია %s%s%s ფაილი სად: %s%s%s\n"
 
+#: lib/formats/progressbar.c
+msgid "reduces files to"
+msgstr "ამცირებს ფაილებს"
+
+#: lib/formats/progressbar.c
+msgid "Traversing"
+msgstr "კვეთა"
+
+#: lib/formats/progressbar.c
+msgid "usable files"
+msgstr "გამოყენებადი ფაილები"
+
+#: lib/formats/progressbar.c
+msgid "ignored files / folders"
+msgstr "გამოტოვებული ფაილები / საქაღალდეები"
+
+#: lib/formats/progressbar.c
+msgid "Preprocessing"
+msgstr "პრეპროცესინგი"
+
+#: lib/formats/progressbar.c
+msgid "found"
+msgstr "ნაპოვნია"
+
+#: lib/formats/progressbar.c
+msgid "other lint"
+msgstr "სხვა lint"
+
+#: lib/formats/progressbar.c
+msgid "Matching"
+msgstr "დამთხვევები"
+
+#: lib/formats/progressbar.c
+msgid "dupes of"
+msgstr "დუბლიკატი რისი"
+
+#: lib/formats/progressbar.c
+msgid "originals"
+msgstr "ორიგინალები"
+
+#: lib/formats/progressbar.c
+msgid "to scan in"
+msgstr "სკანირებისთვის სად"
+
+#: lib/formats/progressbar.c
+msgid "files"
+msgstr "ფაილები"
+
+#: lib/formats/progressbar.c
+msgid "Merging files into directories (stand by...)"
+msgstr "ფაილების შერწყმა საქაღალდეებში (მოითმინეთ...)"
+
+#: lib/formats/pretty.c
+msgid "Bad symlink(s)"
+msgstr "ცუდი სიმბმულ(ებ)-ი"
+
+#: lib/formats/pretty.c
+msgid "Empty dir(s)"
+msgstr "ცარიელი საქაღალდე(ები)"
+
+#: lib/formats/pretty.c
+msgid "Non stripped binarie(s)"
+msgstr "არაგაშიშვლებული გამშვები ფაილ(ებ)ი"
+
+#: lib/formats/pretty.c
+msgid "Bad UID(s)"
+msgstr "არასწორი UID(ები)"
+
+#: lib/formats/pretty.c
+msgid "Bad GID(s)"
+msgstr "არასწორი GID(ები)"
+
+#: lib/formats/pretty.c
+msgid "Bad UID and GID(s)"
+msgstr "არასწორი UID და GID(ები)"
+
+#: lib/formats/pretty.c
+msgid "Empty file(s)"
+msgstr "ცარიელი ფაილ(ებ)-ი"
+
+#: lib/formats/pretty.c
+#, fuzzy
+msgid "Duplicate candidates(s)"
+msgstr "დუბლიკატი საქაღალდე(ები)"
+
+#: lib/formats/pretty.c
+#, fuzzy
+msgid "Duplicate dir candidate(s)"
+msgstr "დუბლიკატი საქაღალდე(ები)"
+
+#: lib/formats/pretty.c
+msgid "Duplicate(s)"
+msgstr "დუბლიკატ(ებ)-ი"
+
+#: lib/formats/pretty.c
+msgid "Duplicate Directorie(s)"
+msgstr "დუბლიკატი საქაღალდე(ები)"
+
 #: lib/formats/sh.c
 #, c-format
 msgid "%s is an invalid handler."
 msgstr "%s არასწორი დამმუშავებელია."
 
-#: lib/logger.h
-msgid "ERROR"
-msgstr "ERROR"
+#: lib/cfg.c
+#, c-format
+msgid "Can't get real path for directory or file \"%s\": %s"
+msgstr "რეალური ბილიკის მიღება შეუძლებელია ქაღალდისთვის, ან ფაილისთვის \"%s\": %s"
 
-#: lib/logger.h
-msgid "WARNING"
-msgstr "გაფრთხილება"
+#: lib/treemerge.c
+msgid "Failed to allocate memory. Out of memory?"
+msgstr "მეხსიერების გამოყოფის შეცდომა. არასაკმარისი მეხსიერება?"
 
-#: lib/logger.h
-msgid "INFO"
-msgstr "ინფო"
+#: lib/traverse.c
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr "%s-ზე აღმოჩენილია ფაილური სისტემის მარყუჟი (გამოტოვება)"
 
-#: lib/logger.h
-msgid "DEBUG"
-msgstr "გამართვა"
+#: lib/traverse.c
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr "ვერ წავიკითხე საქაღალდე %s: %s"
 
-#: lib/hasher.c
+#: lib/traverse.c
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr "შეცდომა %d fts_read-ში %s-ისთვის (გამოტოვება)"
+
+#: lib/traverse.c
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr "უცნობი fts_info-ის ალამი %d ფაილისთვის %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "Added big file %s"
+msgstr "დაემატა დიდი ფაილი %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr "აღმოჩენის შეცდომა ფაილისთვის %s (გამოტოვება)"
+
+#: lib/traverse.c
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr "'%s': fts_read ჩავარდა ფაილზე %s"
+
+#: lib/traverse.c
 #, fuzzy, c-format
-msgid "Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
-msgstr "%s-ის კითხვისას რაღაც არასწორად წავიდა. მოველოდი %li ბაიტს და მივიღე %li; გამოტოვება"
-
-#: lib/rank.c
-msgid "Pattern has to start with `<`"
-msgstr "ნიმუში უნდა იწყებოდეს სიმბოლოთი `<`"
-
-#: lib/rank.c
-#, c-format
-msgid "`<` or `>` imbalance: %d"
-msgstr "`<`-ის, ან `>`-ის ბალანსი დარღვეულია: %d"
-
-#: lib/rank.c
-msgid "empty pattern"
-msgstr "ცარიელი ნიმუში"
-
-#: lib/rank.c
-msgid "no pattern given in <> after 'r' or 'x'"
-msgstr "<>-ში 'r'-ის, ან 'x'-ის შემდეგ ნიმუში მითითებული არაა"
-
-#: lib/rank.c
-#, c-format
-msgid "Cannot add more than %lu regex patterns."
-msgstr "%lu-ზე მეტ რეგგამოსის ნიმუშს ვერ დაამატებთ."
-
-#: lib/rank.c
-msgid "Error while parsing sortcriteria patterns: "
-msgstr "შეცდომა დალაგების პირობის ნიმუშების დამუშავებისას: "
-
-#: lib/replay.c
-#, fuzzy
-msgid "lint type of node not recognised"
-msgstr "lint ტიპით '%s' უცნობია"
-
-#: lib/replay.c
-#, c-format
-msgid "modification time of `%s` changed. Ignoring."
-msgstr "`%s`-ის ცვლილების დრო შეიცვალა. გამოტოვება."
-
-#: lib/replay.c
-#, c-format
-msgid "Loading json-results `%s'"
-msgstr "იტვირთება json-შედეგები `%s'"
-
-#: lib/replay.c
-msgid "No valid json cache (no array in /)"
-msgstr "არასწორი json-ის კეში (/-ში მასივი არაა)"
-
-#: lib/replay.c
-msgid "No valid .json files given, aborting."
-msgstr "გადმოცემული .json ფაილები არასწორია. მუშაობა შეწყდება."
-
-#: lib/session.c
-msgid "Received interrupt; stopping..."
-msgstr "მიღებულია შეწყვეტის სიგნალი. გამოსვლა..."
-
-#: lib/session.c
-msgid "Received second interrupt; stopping hard."
-msgstr "მიღებულია მეორე წყვეტა. მყარი გაჩერება."
+msgid "Unable to process path %s"
+msgstr "დამუშავების შეცდომა წანაცვლებისთვის \"%s\": "
 
 #: lib/reflink.c
 msgid "Check extended attributes to see if the file is already deduplicated"
@@ -444,10 +526,6 @@ msgstr ""
 msgid "`%s`: No such file or directory"
 msgstr ""
 
-#: lib/treemerge.c
-msgid "Failed to allocate memory. Out of memory?"
-msgstr "მეხსიერების გამოყოფის შეცდომა. არასაკმარისი მეხსიერება?"
-
 #: lib/formats.c
 #, c-format
 msgid "Old result `%s` already exists."
@@ -472,63 +550,24 @@ msgstr "ასეთი new_handler ამ სახელით არ არ�
 msgid "Unable to open file for writing: %s"
 msgstr "ფაილის ჩასაწერად გახსნა შეუძლებელია: %s"
 
-#: lib/traverse.c
-#, c-format
-msgid "filesystem loop detected at %s (skipping)"
-msgstr "%s-ზე აღმოჩენილია ფაილური სისტემის მარყუჟი (გამოტოვება)"
-
-#: lib/traverse.c
-#, c-format
-msgid "cannot read directory %s: %s"
-msgstr "ვერ წავიკითხე საქაღალდე %s: %s"
-
-#: lib/traverse.c
-#, c-format
-msgid "error %d in fts_read for %s (skipping)"
-msgstr "შეცდომა %d fts_read-ში %s-ისთვის (გამოტოვება)"
-
-#: lib/traverse.c
-#, c-format
-msgid "Unknown fts_info flag %d for file %s"
-msgstr "უცნობი fts_info-ის ალამი %d ფაილისთვის %s"
-
-#: lib/traverse.c
-#, c-format
-msgid "Added big file %s"
-msgstr "დაემატა დიდი ფაილი %s"
-
-#: lib/traverse.c
-#, c-format
-msgid "cannot stat file %s (skipping)"
-msgstr "აღმოჩენის შეცდომა ფაილისთვის %s (გამოტოვება)"
-
-#: lib/traverse.c
-#, c-format
-msgid "'%s': fts_read failed on %s"
-msgstr "'%s': fts_read ჩავარდა ფაილზე %s"
-
-#: lib/traverse.c
-#, fuzzy, c-format
-msgid "Unable to process path %s"
-msgstr "დამუშავების შეცდომა წანაცვლებისთვის \"%s\": "
-
 #: lib/cmdline.c
-#, c-format
 msgid "compiled with:"
 msgstr "აგებულია რით:"
 
 #: lib/cmdline.c
-#, fuzzy
+#, fuzzy, c-format
 msgid ""
 "\n"
 "\n"
-"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n"
-"The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3.\n"
+"rmlint was written by Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,\n"
+"<Cebtenzzre> and Vassili <vassilit> Tchersky.\n"
+"The code at %s is licensed under the terms of the GPLv3.\n"
 msgstr ""
 "\n"
 "\n"
-"rmlint-ის ავტორებია: Christopher <sahib> Pahl და Daniel <SeeSpotRun> Thomas.კოდი მისამართზე "
-"https://github.com/sahib/rmlint ვრცელდება ლიცენზიით GPLv3."
+"rmlint-ის ავტორებია: Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,<Cebtenzzre> და Vassili "
+"<vassilit> Tchersky.\n"
+"კოდი მისამართზე https://github.com/sahib/rmlint ვრცელდება ლიცენზიით GPLv3."
 
 #: lib/cmdline.c
 msgid "You seem to have no manpage for rmlint."
@@ -614,11 +653,6 @@ msgstr "მისამართზე `%s` შტამპის ფაილ�
 #, c-format
 msgid "Only up to -%.*s or down to -%.*s flags allowed"
 msgstr "დაშვებულია ალმები %.*s-მდე მაქს., ან %.*s-მდე მინ"
-
-#: lib/cmdline.c lib/hash-utility.c
-#, c-format
-msgid "Unknown hash algorithm: '%s'"
-msgstr "უცნობი ჰეშის ალგორითმი: '%s'"
 
 #: lib/cmdline.c
 #, c-format
@@ -745,12 +779,24 @@ msgid "Only find twins with same basename"
 msgstr "მხოლოდ, იგივე საბაზისო სახელის მქონე ტყუპების პოვნა"
 
 #: lib/cmdline.c
+msgid "Only find twins with same dirname"
+msgstr ""
+
+#: lib/cmdline.c
 msgid "Only find twins with same extension"
 msgstr "მხოლოდ, იგივე გაფართოების მქონე ტყუპების პოვნა"
 
 #: lib/cmdline.c
+msgid "Only find twins with same relative path"
+msgstr ""
+
+#: lib/cmdline.c
 msgid "Only find twins with same basename minus extension"
 msgstr "მხოლოდ, იგივე საბაზისო სახელის, მინუს გაფართოება, ტყუპების პოვნა"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
 
 #: lib/cmdline.c
 msgid "Find duplicate directories"
@@ -897,85 +943,6 @@ msgstr "საქაღალდეების შერწყმისთვ�
 msgid "Not enough files for --equal (need at least two to compare)"
 msgstr "არასაკმარისი ფაილები პარამეტრისთვის --equal (შესადარებლად საჭიროა, სულ ცოტა, 2)"
 
-#: lib/cfg.c lib/hash-utility.c
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr "ვერ გავხსენი საქაღალდე, ან ფაილი \"%s\": %s"
-
-#: lib/cfg.c
-#, c-format
-msgid "Can't get real path for directory or file \"%s\": %s"
-msgstr "რეალური ბილიკის მიღება შეუძლებელია ქაღალდისთვის, ან ფაილისთვის \"%s\": %s"
-
-#: lib/hash-utility.c
-msgid "Digest type [BLAKE2B]"
-msgstr "დაიჯესტის ტიპი [BLAKE2B]"
-
-#: lib/hash-utility.c
-msgid "Number of hashing threads [8]"
-msgstr "ჰეშინგის ნაკადების რაოდენობა [8]"
-
-#: lib/hash-utility.c
-msgid "Megabytes read buffer [256 MB]"
-msgstr "წაკითხვის ბუფერი მეგაბაიტებში [256 მბ]"
-
-#: lib/hash-utility.c
-msgid "bytes to hash at a time [4096]"
-msgstr "ბაიტები ერთდროულად დასაჰეშად [4096]"
-
-#: lib/hash-utility.c
-msgid "Print hashes in order completed, not in order entered (reduces memory usage)"
-msgstr "ჰეშების გამოტანა დასრულების მიხედვით და არა შეყვანის (ამცირებს მეხსიერების გამოყენებას)"
-
-#: lib/hash-utility.c
-msgid "Space-separated list of files"
-msgstr "ჰარეთი გამოყოფილი ფაილების სია"
-
-#: lib/hash-utility.c
-msgid "Hash a list of files"
-msgstr "ფაილების სიის ჰეში"
-
-#: lib/hash-utility.c
-#, c-format
-msgid ""
-"Multi-threaded file digest (hash) calculator.\n"
-"\n"
-"  Available digest types:\n"
-"  Cryptographic:\n"
-"    %s\n"
-"\n"
-"  Non-cryptographic:\n"
-"    %s\n"
-"\n"
-"  Supported, but not useful:\n"
-"    %s\n"
-msgstr ""
-"მრავალნაკადიანი ფაილის დაიჯესტის (ჰეშის) გამომთვლელი.\n"
-"\n"
-"  ხელმისაწვდომი დაიჯესტის ტიპებია:\n"
-"  კრიპტოგრაფიული\n"
-"     %s\n"
-"\n"
-"  არაკრიპტოგრაფიული:\n"
-"     %s\n"
-"\n"
-"  მხარდაჭერილია, მაგრამ არა სასარგებლო:\n"
-"     %s\n"
-
-#: lib/hash-utility.c
-msgid "No valid paths given"
-msgstr "სწორი ბილიკები მოწოდებული არაა"
-
-#: lib/hash-utility.c
-#, c-format
-msgid "Directories are not supported: %s"
-msgstr "საქაღალდეები მხარდაჭერილი არაა: %s"
-
-#: lib/hash-utility.c
-#, c-format
-msgid "%s: Unknown file type"
-msgstr "%s: უცნობი ფაილის ტიპი"
-
 #: lib/utilities.c
 msgid "Input size is empty"
 msgstr "შეყვანის ზომა ცარიელია"
@@ -1093,22 +1060,47 @@ msgstr ""
 msgid "Files have inline extents"
 msgstr ""
 
-#: gui/shredder/views/settings.py
-msgid "Configure how duplicates are searched"
-msgstr ""
+#: lib/logger.h
+msgid "ERROR"
+msgstr "ERROR"
 
-#: gui/shredder/views/settings.py
-msgid "Reset to defaults"
-msgstr ""
+#: lib/logger.h
+msgid "WARNING"
+msgstr "გაფრთხილება"
 
-#: gui/shredder/__init__.py
-#, fuzzy
-msgid "Find & clean duplicate files"
-msgstr "დამალული ფაილების, მხოლოდ, დუბლირებულ საქაღალდეებში ძებნა"
+#: lib/logger.h
+msgid "INFO"
+msgstr "ინფო"
 
-#: gui/shredder/cmdline.py
-msgid "A GUI frontend to rmlint"
-msgstr ""
+#: lib/logger.h
+msgid "DEBUG"
+msgstr "გამართვა"
+
+#: lib/rank.c
+msgid "Pattern has to start with `<`"
+msgstr "ნიმუში უნდა იწყებოდეს სიმბოლოთი `<`"
+
+#: lib/rank.c
+#, c-format
+msgid "`<` or `>` imbalance: %d"
+msgstr "`<`-ის, ან `>`-ის ბალანსი დარღვეულია: %d"
+
+#: lib/rank.c
+msgid "empty pattern"
+msgstr "ცარიელი ნიმუში"
+
+#: lib/rank.c
+msgid "no pattern given in <> after 'r' or 'x'"
+msgstr "<>-ში 'r'-ის, ან 'x'-ის შემდეგ ნიმუში მითითებული არაა"
+
+#: lib/rank.c
+#, c-format
+msgid "Cannot add more than %lu regex patterns."
+msgstr "%lu-ზე მეტ რეგგამოსის ნიმუშს ვერ დაამატებთ."
+
+#: lib/rank.c
+msgid "Error while parsing sortcriteria patterns: "
+msgstr "შეცდომა დალაგების პირობის ნიმუშების დამუშავებისას: "
 
 #: gui/shredder/window.py
 msgid "Settings"
@@ -1124,6 +1116,23 @@ msgstr ""
 
 #: gui/shredder/window.py
 msgid "Quit"
+msgstr ""
+
+#: gui/shredder/cmdline.py
+msgid "A GUI frontend to rmlint"
+msgstr ""
+
+#: gui/shredder/__init__.py
+#, fuzzy
+msgid "Find & clean duplicate files"
+msgstr "დამალული ფაილების, მხოლოდ, დუბლირებულ საქაღალდეებში ძებნა"
+
+#: gui/shredder/views/settings.py
+msgid "Configure how duplicates are searched"
+msgstr ""
+
+#: gui/shredder/views/settings.py
+msgid "Reset to defaults"
 msgstr ""
 
 #: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
@@ -1224,134 +1233,3 @@ msgstr "უნდა ჰონდეს ტყუპი ჭდიან სა�
 #, fuzzy
 msgid "Duplicates must have twins in tagged directories"
 msgstr "უნდა ჰონდეს ტყუპი ჭდიან საქაღალდეში"
-
-#: lib/cmdline.c
-msgid "Only find twins with same dirname"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "Only find twins with same relative path"
-msgstr ""
-
-#: lib/cmdline.c
-msgid "--match options are treated case-insensitively"
-msgstr ""
-
-#, c-format
-#~ msgid "Aborting due to a fatal error. (signal received: %s)"
-#~ msgstr "შეწყდა ფატალური შეცდომის გამო. (მიღებულია სიგნალი: %s)"
-
-#~ msgid "Please file a bug report (See rmlint -h)"
-#~ msgstr "მოგვწერეთ ამ შეცდომის შესახებ (იხილეთ rmlint -h)"
-
-#, c-format
-#~ msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
-#~ msgstr "%s-ის კითხვისას რაღაც არასწორად წავიდა. მოველოდი %li ბაიტს და მივიღე %li; გამოტოვება"
-
-#~ msgid "json-glib is needed for using --replay."
-#~ msgstr "--replay-ის გამოყენებისას საჭიროა json-glib."
-
-#~ msgid "Please recompile `rmlint` with it installed."
-#~ msgstr "დააკომპილეთ 'rmlint' თავიდან მაშინ, როცა ის დაყენებული გექნებათ."
-
-#, c-format
-#~ msgid ""
-#~ "Multi-threaded file digest (hash) calculator.\n"
-#~ "\n"
-#~ "  Available digest types:\n"
-#~ "    %s\n"
-#~ "\n"
-#~ "  Versions with different bit numbers:\n"
-#~ "    %s\n"
-#~ "\n"
-#~ "  Supported, but not useful:\n"
-#~ "    %s\n"
-#~ msgstr ""
-#~ "მრავალნაკადიანი ფაილის დაიჯესტის (ჰეშის) გამომთვლელი.\n"
-#~ "\n"
-#~ "  ხელმისაწვდომი დაიჯესტის ტიპებია:\n"
-#~ "     %s\n"
-#~ "\n"
-#~ "  ვერსიები განსხვავებული ბიტების რიცხვით:\n"
-#~ "     %s\n"
-#~ "\n"
-#~ "  მხარდაჭერილია, მაგრამ არა სასარგებლო:\n"
-#~ "     %s\n"
-
-#~ msgid "Usage: rmlint --dedupe [-r] source dest\n"
-#~ msgstr "გამოყენება: rmlint --dedupe [-r] წყარო სამიზნე\n"
-
-#, c-format
-#~ msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
-#~ msgstr "BTRFS_IOC_FILE_EXTENT_SAME-მა დააბრუნა შეცდომა: (%d) %s"
-
-#~ msgid "Need to run as root user to clone to a read-only snapshot"
-#~ msgstr "მხოლოდ წაკითხვადი სწრაფი ასლის დასაკლონად საჭიროა root მომხმარებლით გაშვება"
-
-#, c-format
-#~ msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
-#~ msgstr "BTRFS_IOC_FILE_EXTENT_SAME-მა დააბრუნა სტატუსი %d ფაილისთვის %s"
-
-#~ msgid "Files don't match - not cloned"
-#~ msgstr "ფაილები არ ემთხვევა - დაკლონილი არაა"
-
-#~ msgid "rmlint was not compiled with btrfs support."
-#~ msgstr "rmlint არ იყო აგებული btrfs-ის მხარდაჭერით."
-
-#~ msgid "Negativ sizes are no good idea"
-#~ msgstr "უარყოფითი ზომები კარგი იდეა არაა"
-
-#~ msgid "Given format specifier not found"
-#~ msgstr "მოცემული ფორმატის მიმთითებელი აღმოჩენილი არაა"
-
-#, c-format
-#~ msgid "No format (format:key[=val]) specified in '%s'"
-#~ msgstr "'%s'-ში ფორმატი (ფორმატი:გასაღები[=მნიშვნ]) მითითებული არაა"
-
-#, c-format
-#~ msgid "Missing key (format:key[=val]) in '%s'"
-#~ msgstr "'%s'-ში (ფორმატი:გასაღები[=მნიშვნ]) გასაღები აკლია"
-
-#, c-format
-#~ msgid "Invalid key `%s' for formatter `%s'"
-#~ msgstr "არასწორი გასაღები `%s' დამფორმატებლისთვის `%s'"
-
-#~ msgid "Only up to -pp or down to -PP flags allowed"
-#~ msgstr "დაშვებულია, მხოლოდ, ალმები -pp-დან -PP-მდე"
-
-#~ msgid "Specifiyng both -o and -O is not allowed"
-#~ msgstr "ორივე, -o და -O პარამეტრების მითითება დაშვებული არაა"
-
-#~ msgid "Could not start graphical user interface."
-#~ msgstr "გრაფიკული ინტერფეისის გაშვება შეუძლებელია."
-
-#~ msgid "Clone extents from source to dest, if extents match"
-#~ msgstr "ექსტენტების კლონირება წყაროდან სამიზნეზე, თუ ექსტენტები ემთხვევა"
-
-#, c-format
-#~ msgid "Moving old file to `%s`. Use --no-backup to disable this."
-#~ msgstr "ძველი ფაილი გადატანილი იქნება '%s'-ში. ამის გამოსართავად გამოიყენეთ --no-backup."
-
-#~ msgid "Usage: rmlint --dedupe [-r] [-v|V] source dest\n"
-#~ msgstr "გამოყენება: rmlint --dedupe [-r] [-v|V] წყარო სამიზნე\n"
-
-#~ msgid "Usage: rmlint --is-clone [-v|V] file1 file2\n"
-#~ msgstr "გამოყენება: rmlint --is-clone [-v|V] ფაილი1 ფაილი2\n"
-
-#~ msgid "Do not create backups of previous result files"
-#~ msgstr "წინა შედეგის ფაილების მარქაფები არ შეიქმნება"
-
-#~ msgid "(--dedupe option) even dedupe read-only snapshots (needs root)"
-#~ msgstr ""
-#~ "(--dedupe option) მოხდება მხოლოდ წაკითხვადი სწრაფი ასლების დედუბლიკაციაც (სჭირდება root-ით "
-#~ "გაშვება)"
-
-#~ msgid "--replay (-Y) is incompatible with --dedupe or --is-reflink"
-#~ msgstr "--replay (-Y) პარამეტრებთან --dedupe და --is-reflink თავსებადი არაა"
-
-#, fuzzy
-#~ msgid "Usage: rmlint --is-reflink [-v|V] file1 file2\n"
-#~ msgstr "გამოყენება: rmlint --is-clone [-v|V] ფაილი1 ფაილი2\n"
-
-#~ msgid "Select originals by given  criteria"
-#~ msgstr "ორიგინალების არჩევა მითითებული  პირობით"
