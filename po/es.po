@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: rmlint 2.11.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-28 00:00+0000\n"
+"POT-Creation-Date: 2026-09-09 20:16+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,106 +27,124 @@ msgstr "Abortando debido a un error fatal. (señal recibida: %s)"
 msgid "Please file a bug report (See rmlint -h)\n"
 msgstr "Por favor presente un reporte de error (Ver rmlint -h)"
 
-#: lib/formats/pretty.c
-msgid "Bad symlink(s)"
-msgstr "Enlace(s) simbólico(s) incorrecto(s)"
-
-#: lib/formats/pretty.c
-msgid "Empty dir(s)"
-msgstr "Directorio(s) vacío(s)"
-
-#: lib/formats/pretty.c
-msgid "Non stripped binarie(s)"
-msgstr "Binario(s) sin depurar"
-
-#: lib/formats/pretty.c
-msgid "Bad UID(s)"
-msgstr "UID(s) incorrecta(s)"
-
-#: lib/formats/pretty.c
-msgid "Bad GID(s)"
-msgstr "GID(s) incorrecta(s)"
-
-#: lib/formats/pretty.c
-msgid "Bad UID and GID(s)"
-msgstr "UID y GID(s) incorrecta(s)"
-
-#: lib/formats/pretty.c
-msgid "Empty file(s)"
-msgstr "Archivo(s) vacío(s)"
-
-#: lib/formats/pretty.c
+#: lib/replay.c
 #, fuzzy
-msgid "Duplicate candidates(s)"
-msgstr "Directorio(s) duplicado(s)"
+msgid "lint type of node not recognised"
+msgstr "el tipo de pelusa '%s' no se reconoce"
 
-#: lib/formats/pretty.c
+#: lib/replay.c
+#, c-format
+msgid "modification time of `%s` changed. Ignoring."
+msgstr "el tiempo de modificación de '%s' ha cambiado. Ignorando."
+
+#: lib/replay.c
+#, c-format
+msgid "Loading json-results `%s'"
+msgstr "Cargando json-results '%s'"
+
+#: lib/replay.c
+msgid "No valid json cache (no array in /)"
+msgstr "No hay json en cache válido (no hay arreglo en /)"
+
+#: lib/replay.c
 #, fuzzy
-msgid "Duplicate dir candidate(s)"
-msgstr "Directorio(s) duplicado(s)"
+msgid "No valid .json files given, aborting."
+msgstr "No hay json en cache válido (no hay arreglo en /)"
 
-#: lib/formats/pretty.c
-msgid "Duplicate(s)"
-msgstr "Duplicado(s)"
+#: lib/hash-utility.c lib/cmdline.c
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr "Algoritmo de rastreo desconocido: '%s'"
 
-#: lib/formats/pretty.c
-msgid "Duplicate Directorie(s)"
-msgstr "Directorio(s) duplicado(s)"
+#: lib/hash-utility.c
+msgid "Digest type [BLAKE2B]"
+msgstr "Asimilación tipo [BLAKE2B]"
 
-#: lib/formats/progressbar.c
-msgid "reduces files to"
-msgstr "reduce los archivos a"
+#: lib/hash-utility.c
+msgid "Number of hashing threads [8]"
+msgstr "Número de hilos rastreados [8]"
 
-#: lib/formats/progressbar.c
-msgid "Traversing"
-msgstr "Cruzando"
+#: lib/hash-utility.c
+msgid "Megabytes read buffer [256 MB]"
+msgstr "Almacenamiento temporal de lectura de Megabytes [256]"
 
-#: lib/formats/progressbar.c
-msgid "usable files"
-msgstr "archivos usables"
+#: lib/hash-utility.c
+msgid "bytes to hash at a time [4096]"
+msgstr ""
 
-#: lib/formats/progressbar.c
-msgid "ignored files / folders"
-msgstr "archivos ignorados / carpetas"
+#: lib/hash-utility.c
+msgid "Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr ""
+"Muestra a los rastreos en el orden completado, no en el orden ingresado (reduce el uso de memoria)"
 
-#: lib/formats/progressbar.c
-msgid "Preprocessing"
-msgstr "Procesando"
+#: lib/hash-utility.c
+msgid "Space-separated list of files"
+msgstr "Enlistado de archivos separados-con-espacio"
 
-#: lib/formats/progressbar.c
-msgid "found"
-msgstr "encontrado"
+#: lib/hash-utility.c
+msgid "Hash a list of files"
+msgstr "Rastrea una lista de archivos"
 
-#: lib/formats/progressbar.c
-msgid "other lint"
-msgstr "otra pelusa"
+#: lib/hash-utility.c
+#, fuzzy, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"  Cryptographic:\n"
+"    %s\n"
+"\n"
+"  Non-cryptographic:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+"Calculadora de asimilación de archivos multi-hilo (rastreo).\n"
+"\n"
+"  Asimilación disponible tipos:\n"
+"    %s\n"
+"\n"
+"  Versiones con diferente números de bit:\n"
+"    %s\n"
+"\n"
+"  Soportado, mas no útil:\n"
+"    %s\n"
 
-#: lib/formats/progressbar.c
-msgid "Matching"
-msgstr "Cotejando"
+#: lib/hash-utility.c
+#, fuzzy
+msgid "No valid paths given"
+msgstr "Ubicaciones proporcionadas no son válidas"
 
-#: lib/formats/progressbar.c
-msgid "dupes of"
-msgstr "duplicados de"
+#: lib/hash-utility.c lib/cfg.c
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
 
-#: lib/formats/progressbar.c
-msgid "originals"
-msgstr "originales"
+#: lib/hash-utility.c
+#, c-format
+msgid "Directories are not supported: %s"
+msgstr "Los directorios no son soportados: %s"
 
-#: lib/formats/progressbar.c
-msgid "to scan in"
-msgstr "para escanear en"
+#: lib/hash-utility.c
+#, c-format
+msgid "%s: Unknown file type"
+msgstr "%s: Tipo de archivo desconocido"
 
-#: lib/formats/progressbar.c
-msgid "files"
-msgstr "archivos"
+#: lib/session.c
+msgid "Received interrupt; stopping..."
+msgstr "Interrupción Recibida; deteniendo..."
 
-#: lib/formats/progressbar.c
-msgid "Merging files into directories (stand by...)"
-msgstr "Combinando archivos en directorios (espere...)"
+#: lib/session.c
+msgid "Received second interrupt; stopping hard."
+msgstr "Segunda Interrupción Recibida; deteniendo firmemente."
+
+#: lib/hasher.c
+#, fuzzy, c-format
+msgid "Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
+msgstr "Algo falló leyendo %s; esperados %li bytes, obtenidos %li; ignorando"
 
 #: lib/formats/stats.c
-#, c-format
 msgid "No shred stats.\n"
 msgstr ""
 
@@ -193,12 +211,10 @@ msgid "%s%15s%s Algorithm efficiency on duplicate file basis\n"
 msgstr ""
 
 #: lib/formats/summary.c
-#, c-format
 msgid " file(s) after investigation, nothing to search through.\n"
 msgstr "archivo(s) después de investigar, nada que buscar.\n"
 
 #: lib/formats/summary.c
-#, c-format
 msgid "Early shutdown, probably not all lint was found.\n"
 msgstr "Apagado prematuro, probablemente no toda la pelusa fué encontrada.\n"
 
@@ -222,7 +238,6 @@ msgid "other suspicious item(s) found, which may vary in size.\n"
 msgstr "otro(s) artículo(s) sospechoso(s) encontrado(s), los cuales podrían variar en tamaño.\n"
 
 #: lib/formats/summary.c
-#, c-format
 msgid "This run was a replay from a previous run. No I/O done!\n"
 msgstr ""
 
@@ -236,89 +251,157 @@ msgstr ""
 msgid "Wrote a %s%s%s file to: %s%s%s\n"
 msgstr "Escribió un archivo %s%s%s a: %s%s%s\n"
 
+#: lib/formats/progressbar.c
+msgid "reduces files to"
+msgstr "reduce los archivos a"
+
+#: lib/formats/progressbar.c
+msgid "Traversing"
+msgstr "Cruzando"
+
+#: lib/formats/progressbar.c
+msgid "usable files"
+msgstr "archivos usables"
+
+#: lib/formats/progressbar.c
+msgid "ignored files / folders"
+msgstr "archivos ignorados / carpetas"
+
+#: lib/formats/progressbar.c
+msgid "Preprocessing"
+msgstr "Procesando"
+
+#: lib/formats/progressbar.c
+msgid "found"
+msgstr "encontrado"
+
+#: lib/formats/progressbar.c
+msgid "other lint"
+msgstr "otra pelusa"
+
+#: lib/formats/progressbar.c
+msgid "Matching"
+msgstr "Cotejando"
+
+#: lib/formats/progressbar.c
+msgid "dupes of"
+msgstr "duplicados de"
+
+#: lib/formats/progressbar.c
+msgid "originals"
+msgstr "originales"
+
+#: lib/formats/progressbar.c
+msgid "to scan in"
+msgstr "para escanear en"
+
+#: lib/formats/progressbar.c
+msgid "files"
+msgstr "archivos"
+
+#: lib/formats/progressbar.c
+msgid "Merging files into directories (stand by...)"
+msgstr "Combinando archivos en directorios (espere...)"
+
+#: lib/formats/pretty.c
+msgid "Bad symlink(s)"
+msgstr "Enlace(s) simbólico(s) incorrecto(s)"
+
+#: lib/formats/pretty.c
+msgid "Empty dir(s)"
+msgstr "Directorio(s) vacío(s)"
+
+#: lib/formats/pretty.c
+msgid "Non stripped binarie(s)"
+msgstr "Binario(s) sin depurar"
+
+#: lib/formats/pretty.c
+msgid "Bad UID(s)"
+msgstr "UID(s) incorrecta(s)"
+
+#: lib/formats/pretty.c
+msgid "Bad GID(s)"
+msgstr "GID(s) incorrecta(s)"
+
+#: lib/formats/pretty.c
+msgid "Bad UID and GID(s)"
+msgstr "UID y GID(s) incorrecta(s)"
+
+#: lib/formats/pretty.c
+msgid "Empty file(s)"
+msgstr "Archivo(s) vacío(s)"
+
+#: lib/formats/pretty.c
+#, fuzzy
+msgid "Duplicate candidates(s)"
+msgstr "Directorio(s) duplicado(s)"
+
+#: lib/formats/pretty.c
+#, fuzzy
+msgid "Duplicate dir candidate(s)"
+msgstr "Directorio(s) duplicado(s)"
+
+#: lib/formats/pretty.c
+msgid "Duplicate(s)"
+msgstr "Duplicado(s)"
+
+#: lib/formats/pretty.c
+msgid "Duplicate Directorie(s)"
+msgstr "Directorio(s) duplicado(s)"
+
 #: lib/formats/sh.c
 #, c-format
 msgid "%s is an invalid handler."
 msgstr "%s es un gestor inválido"
 
-#: lib/logger.h
-msgid "ERROR"
-msgstr "ERROR"
-
-#: lib/logger.h
-msgid "WARNING"
-msgstr "ADVERTENCIA"
-
-#: lib/logger.h
-msgid "INFO"
-msgstr "INFO"
-
-#: lib/logger.h
-msgid "DEBUG"
-msgstr "DEPURAR"
-
-#: lib/hasher.c
+#: lib/cfg.c
 #, fuzzy, c-format
-msgid "Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
-msgstr "Algo falló leyendo %s; esperados %li bytes, obtenidos %li; ignorando"
+msgid "Can't get real path for directory or file \"%s\": %s"
+msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
 
-#: lib/rank.c
-msgid "Pattern has to start with `<`"
-msgstr "El patrón debe empezar con `<`"
-
-#: lib/rank.c
-#, c-format
-msgid "`<` or `>` imbalance: %d"
-msgstr "`<` o `>` desequilibran: %d"
-
-#: lib/rank.c
-msgid "empty pattern"
-msgstr "patrón vacío"
-
-#: lib/rank.c
-msgid "no pattern given in <> after 'r' or 'x'"
+#: lib/treemerge.c
+msgid "Failed to allocate memory. Out of memory?"
 msgstr ""
 
-#: lib/rank.c
+#: lib/traverse.c
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr "retroalimentación de sistema de archivos detectada en %s (descartando)"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr "no se puede leer el directorio %s: %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr "error en %d en fts_read para %s (descartando)"
+
+#: lib/traverse.c
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr "Bandera fts_info %d desconocida para archivo %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "Added big file %s"
+msgstr "Archivo grande %s añadido"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr "no se puede obtener informacion del archivo %s (descartando)"
+
+#: lib/traverse.c
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr "'%s': fts_read falló en %s"
+
+#: lib/traverse.c
 #, fuzzy, c-format
-msgid "Cannot add more than %lu regex patterns."
-msgstr "No se puede añadir mas de %ld patrones de expresiones regulares"
-
-#: lib/rank.c
-msgid "Error while parsing sortcriteria patterns: "
-msgstr "Error al analizar los patrones sortcriteria (criterio de órden)"
-
-#: lib/replay.c
-#, fuzzy
-msgid "lint type of node not recognised"
-msgstr "el tipo de pelusa '%s' no se reconoce"
-
-#: lib/replay.c
-#, c-format
-msgid "modification time of `%s` changed. Ignoring."
-msgstr "el tiempo de modificación de '%s' ha cambiado. Ignorando."
-
-#: lib/replay.c
-#, c-format
-msgid "Loading json-results `%s'"
-msgstr "Cargando json-results '%s'"
-
-#: lib/replay.c
-msgid "No valid json cache (no array in /)"
-msgstr "No hay json en cache válido (no hay arreglo en /)"
-
-#: lib/replay.c
-#, fuzzy
-msgid "No valid .json files given, aborting."
-msgstr "No hay json en cache válido (no hay arreglo en /)"
-
-#: lib/session.c
-msgid "Received interrupt; stopping..."
-msgstr "Interrupción Recibida; deteniendo..."
-
-#: lib/session.c
-msgid "Received second interrupt; stopping hard."
-msgstr "Segunda Interrupción Recibida; deteniendo firmemente."
+msgid "Unable to process path %s"
+msgstr "Incapaz de abrir cache tmp: %s"
 
 #: lib/reflink.c
 msgid "Check extended attributes to see if the file is already deduplicated"
@@ -439,10 +522,6 @@ msgstr ""
 msgid "`%s`: No such file or directory"
 msgstr ""
 
-#: lib/treemerge.c
-msgid "Failed to allocate memory. Out of memory?"
-msgstr ""
-
 #: lib/formats.c
 #, c-format
 msgid "Old result `%s` already exists."
@@ -468,64 +547,22 @@ msgstr "No hay tal new_handler con éste nombre: %s"
 msgid "Unable to open file for writing: %s"
 msgstr "Incapaz de abrir archivo para escritura: %s"
 
-#: lib/traverse.c
-#, c-format
-msgid "filesystem loop detected at %s (skipping)"
-msgstr "retroalimentación de sistema de archivos detectada en %s (descartando)"
-
-#: lib/traverse.c
-#, c-format
-msgid "cannot read directory %s: %s"
-msgstr "no se puede leer el directorio %s: %s"
-
-#: lib/traverse.c
-#, c-format
-msgid "error %d in fts_read for %s (skipping)"
-msgstr "error en %d en fts_read para %s (descartando)"
-
-#: lib/traverse.c
-#, c-format
-msgid "Unknown fts_info flag %d for file %s"
-msgstr "Bandera fts_info %d desconocida para archivo %s"
-
-#: lib/traverse.c
-#, c-format
-msgid "Added big file %s"
-msgstr "Archivo grande %s añadido"
-
-#: lib/traverse.c
-#, c-format
-msgid "cannot stat file %s (skipping)"
-msgstr "no se puede obtener informacion del archivo %s (descartando)"
-
-#: lib/traverse.c
-#, c-format
-msgid "'%s': fts_read failed on %s"
-msgstr "'%s': fts_read falló en %s"
-
-#: lib/traverse.c
-#, fuzzy, c-format
-msgid "Unable to process path %s"
-msgstr "Incapaz de abrir cache tmp: %s"
-
 #: lib/cmdline.c
-#, c-format
 msgid "compiled with:"
 msgstr "compilado con:"
 
 #: lib/cmdline.c
-#, fuzzy
+#, fuzzy, c-format
 msgid ""
 "\n"
 "\n"
-"rmlint was written by Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas.\n"
+"rmlint was written by Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,\n"
 "<Cebtenzzre> and Vassili <vassilit> Tchersky.\n"
-"The code at https://github.com/sahib/rmlint is licensed under the "
-"terms of the GPLv3.\n"
+"The code at %s is licensed under the terms of the GPLv3.\n"
 msgstr ""
 "\n"
 "\n"
-"rmlint fue escrito por Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas.\n"
+"rmlint fue escrito por Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,\n"
 "<Cebtenzzre> y Vassili <vassilit> Tchersky.\n"
 "El código en https://github.com/sahib/rmlint tiene licencia bajo los términos de el GPLv3."
 
@@ -613,11 +650,6 @@ msgstr ""
 #, fuzzy, c-format
 msgid "Only up to -%.*s or down to -%.*s flags allowed"
 msgstr "Sólo banderas hasta -pp o menores a -PP está permitido"
-
-#: lib/cmdline.c lib/hash-utility.c
-#, c-format
-msgid "Unknown hash algorithm: '%s'"
-msgstr "Algoritmo de rastreo desconocido: '%s'"
 
 #: lib/cmdline.c
 #, c-format
@@ -744,12 +776,26 @@ msgid "Only find twins with same basename"
 msgstr "Sólo encuentra gemelos con el mismo nombre base"
 
 #: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same dirname"
+msgstr "Sólo encuentra gemelos con el mismo nombre base"
+
+#: lib/cmdline.c
 msgid "Only find twins with same extension"
 msgstr "Sólo encuentra gemelos con la misma extensión"
 
 #: lib/cmdline.c
+#, fuzzy
+msgid "Only find twins with same relative path"
+msgstr "Sólo encuentra gemelos con el mismo nombre base"
+
+#: lib/cmdline.c
 msgid "Only find twins with same basename minus extension"
 msgstr "Sólo encuentra gemelos con el mismo nombre base menos la extensión"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr ""
 
 #: lib/cmdline.c
 msgid "Find duplicate directories"
@@ -899,86 +945,6 @@ msgstr ""
 msgid "Not enough files for --equal (need at least two to compare)"
 msgstr ""
 
-#: lib/cfg.c lib/hash-utility.c
-#, c-format
-msgid "Can't open directory or file \"%s\": %s"
-msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
-
-#: lib/cfg.c
-#, fuzzy, c-format
-msgid "Can't get real path for directory or file \"%s\": %s"
-msgstr "No se puede abrir el directorio o archivo \"%s\": %s"
-
-#: lib/hash-utility.c
-msgid "Digest type [BLAKE2B]"
-msgstr "Asimilación tipo [BLAKE2B]"
-
-#: lib/hash-utility.c
-msgid "Number of hashing threads [8]"
-msgstr "Número de hilos rastreados [8]"
-
-#: lib/hash-utility.c
-msgid "Megabytes read buffer [256 MB]"
-msgstr "Almacenamiento temporal de lectura de Megabytes [256]"
-
-#: lib/hash-utility.c
-msgid "bytes to hash at a time [4096]"
-msgstr ""
-
-#: lib/hash-utility.c
-msgid "Print hashes in order completed, not in order entered (reduces memory usage)"
-msgstr ""
-"Muestra a los rastreos en el orden completado, no en el orden ingresado (reduce el uso de memoria)"
-
-#: lib/hash-utility.c
-msgid "Space-separated list of files"
-msgstr "Enlistado de archivos separados-con-espacio"
-
-#: lib/hash-utility.c
-msgid "Hash a list of files"
-msgstr "Rastrea una lista de archivos"
-
-#: lib/hash-utility.c
-#, fuzzy, c-format
-msgid ""
-"Multi-threaded file digest (hash) calculator.\n"
-"\n"
-"  Available digest types:\n"
-"  Cryptographic:\n"
-"    %s\n"
-"\n"
-"  Non-cryptographic:\n"
-"    %s\n"
-"\n"
-"  Supported, but not useful:\n"
-"    %s\n"
-msgstr ""
-"Calculadora de asimilación de archivos multi-hilo (rastreo).\n"
-"\n"
-"  Asimilación disponible tipos:\n"
-"    %s\n"
-"\n"
-"  Versiones con diferente números de bit:\n"
-"    %s\n"
-"\n"
-"  Soportado, mas no útil:\n"
-"    %s\n"
-
-#: lib/hash-utility.c
-#, fuzzy
-msgid "No valid paths given"
-msgstr "Ubicaciones proporcionadas no son válidas"
-
-#: lib/hash-utility.c
-#, c-format
-msgid "Directories are not supported: %s"
-msgstr "Los directorios no son soportados: %s"
-
-#: lib/hash-utility.c
-#, c-format
-msgid "%s: Unknown file type"
-msgstr "%s: Tipo de archivo desconocido"
-
 #: lib/utilities.c
 msgid "Input size is empty"
 msgstr "El tamaño de ingreso está vacío"
@@ -1096,22 +1062,47 @@ msgstr ""
 msgid "Files have inline extents"
 msgstr ""
 
-#: gui/shredder/views/settings.py
-msgid "Configure how duplicates are searched"
+#: lib/logger.h
+msgid "ERROR"
+msgstr "ERROR"
+
+#: lib/logger.h
+msgid "WARNING"
+msgstr "ADVERTENCIA"
+
+#: lib/logger.h
+msgid "INFO"
+msgstr "INFO"
+
+#: lib/logger.h
+msgid "DEBUG"
+msgstr "DEPURAR"
+
+#: lib/rank.c
+msgid "Pattern has to start with `<`"
+msgstr "El patrón debe empezar con `<`"
+
+#: lib/rank.c
+#, c-format
+msgid "`<` or `>` imbalance: %d"
+msgstr "`<` o `>` desequilibran: %d"
+
+#: lib/rank.c
+msgid "empty pattern"
+msgstr "patrón vacío"
+
+#: lib/rank.c
+msgid "no pattern given in <> after 'r' or 'x'"
 msgstr ""
 
-#: gui/shredder/views/settings.py
-msgid "Reset to defaults"
-msgstr ""
+#: lib/rank.c
+#, fuzzy, c-format
+msgid "Cannot add more than %lu regex patterns."
+msgstr "No se puede añadir mas de %ld patrones de expresiones regulares"
 
-#: gui/shredder/__init__.py
-#, fuzzy
-msgid "Find & clean duplicate files"
-msgstr "Encuentra archivos ocultos en carpetas duplicadas únicamente"
-
-#: gui/shredder/cmdline.py
-msgid "A GUI frontend to rmlint"
-msgstr ""
+#: lib/rank.c
+msgid "Error while parsing sortcriteria patterns: "
+msgstr "Error al analizar los patrones sortcriteria (criterio de órden)"
 
 #: gui/shredder/window.py
 msgid "Settings"
@@ -1127,6 +1118,23 @@ msgstr ""
 
 #: gui/shredder/window.py
 msgid "Quit"
+msgstr ""
+
+#: gui/shredder/cmdline.py
+msgid "A GUI frontend to rmlint"
+msgstr ""
+
+#: gui/shredder/__init__.py
+#, fuzzy
+msgid "Find & clean duplicate files"
+msgstr "Encuentra archivos ocultos en carpetas duplicadas únicamente"
+
+#: gui/shredder/views/settings.py
+msgid "Configure how duplicates are searched"
+msgstr ""
+
+#: gui/shredder/views/settings.py
+msgid "Reset to defaults"
 msgstr ""
 
 #: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
@@ -1227,152 +1235,3 @@ msgstr "Debe tener gemelo en directorio etiquetado"
 #, fuzzy
 msgid "Duplicates must have twins in tagged directories"
 msgstr "Debe tener gemelo en directorio etiquetado"
-
-#: lib/cmdline.c
-#, fuzzy
-msgid "Only find twins with same dirname"
-msgstr "Sólo encuentra gemelos con el mismo nombre base"
-
-#: lib/cmdline.c
-#, fuzzy
-msgid "Only find twins with same relative path"
-msgstr "Sólo encuentra gemelos con el mismo nombre base"
-
-#: lib/cmdline.c
-msgid "--match options are treated case-insensitively"
-msgstr ""
-
-#, c-format
-#~ msgid "Aborting due to a fatal error. (signal received: %s)"
-#~ msgstr "Abortando debido a un error fatal. (señal recibida: %s)"
-
-#~ msgid "Please file a bug report (See rmlint -h)"
-#~ msgstr "Por favor presente un reporte de error (Ver rmlint -h)"
-
-#, c-format
-#~ msgid "Something went wrong reading %s; expected %li bytes, got %li; ignoring"
-#~ msgstr "Algo falló leyendo %s; esperados %li bytes, obtenidos %li; ignorando"
-
-#~ msgid "Please recompile `rmlint` with it installed."
-#~ msgstr "Por favor recompile 'rmlint' con ello instalado."
-
-#, c-format
-#~ msgid ""
-#~ "Multi-threaded file digest (hash) calculator.\n"
-#~ "\n"
-#~ "  Available digest types:\n"
-#~ "    %s\n"
-#~ "\n"
-#~ "  Versions with different bit numbers:\n"
-#~ "    %s\n"
-#~ "\n"
-#~ "  Supported, but not useful:\n"
-#~ "    %s\n"
-#~ msgstr ""
-#~ "Calculadora de asimilación de archivos multi-hilo (rastreo).\n"
-#~ "\n"
-#~ "  Asimilación disponible tipos:\n"
-#~ "    %s\n"
-#~ "\n"
-#~ "  Versiones con diferente números de bit:\n"
-#~ "    %s\n"
-#~ "\n"
-#~ "  Soportado, mas no útil:\n"
-#~ "    %s\n"
-
-#, c-format
-#~ msgid "rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas."
-#~ msgstr "rmlint fué escrito por Christopher <sahib> Pahl y Daniel <SeeSpotRun> Thomas."
-
-#, c-format
-#~ msgid "The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3."
-#~ msgstr ""
-#~ "El código en https://github.com/sahib/rmlint tiene licencia bajo los términos de el GPLv3."
-
-#, fuzzy
-#~ msgid "Usage: rmlint --dedupe [-r] source dest\n"
-#~ msgstr "Uso: rmlint --dedupe fuente dest\n"
-
-#, c-format
-#~ msgid "BTRFS_IOC_FILE_EXTENT_SAME returned error: (%d) %s"
-#~ msgstr "BTRFS_IOC_FILE_EXTENT_SAME regresó un error: (%d) %s"
-
-#, c-format
-#~ msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status %d for file %s"
-#~ msgstr "BTRFS_IOC_FILE_EXTENT_SAME regresó un estatus %d para el archivo %s"
-
-#~ msgid "Files don't match - not cloned"
-#~ msgstr "Los archivos no son iguales - no se clonó"
-
-#~ msgid "rmlint was not compiled with btrfs support."
-#~ msgstr "rmlint no fué compilado con soporte para btrfs"
-
-#~ msgid "Negativ sizes are no good idea"
-#~ msgstr "Tamaños negativos no son una buena idea"
-
-#~ msgid "Given format specifier not found"
-#~ msgstr "Dicho especificador de formato no fué encontrado"
-
-#, c-format
-#~ msgid "No format (format:key[=val]) specified in '%s'"
-#~ msgstr "Sin formato (format:key[=val]) especificado en '%s'"
-
-#, c-format
-#~ msgid "Missing key (format:key[=val]) in '%s'"
-#~ msgstr "Llave perdida (format:key[=val]) en '%s'"
-
-#, c-format
-#~ msgid "Invalid key `%s' for formatter `%s'"
-#~ msgstr "Llave inválida '%s' para el formateador '%s'"
-
-#~ msgid "Only up to -pp or down to -PP flags allowed"
-#~ msgstr "Sólo banderas hasta -pp o menores a -PP está permitido"
-
-#~ msgid "Specifiyng both -o and -O is not allowed"
-#~ msgstr "Especificar -o y -O no está permitido"
-
-#~ msgid "Could not start graphical user interface."
-#~ msgstr "No se pudo iniciar la interfase de usuario gráfica."
-
-#~ msgid "Clone extents from source to dest, if extents match"
-#~ msgstr "Clona los alcances de la fuente al destino, si los alcances coinciden"
-
-#, fuzzy
-#~ msgid "Usage: rmlint --dedupe [-r] [-v|V] source dest\n"
-#~ msgstr "Uso: rmlint --dedupe fuente dest\n"
-
-#, fuzzy
-#~ msgid "Usage: rmlint --is-clone [-v|V] file1 file2\n"
-#~ msgstr "Uso: rmlint --dedupe fuente dest\n"
-
-#, fuzzy
-#~ msgid "Usage: rmlint --is-reflink [-v|V] file1 file2\n"
-#~ msgstr "Uso: rmlint --dedupe fuente dest\n"
-
-#~ msgid "Select originals by given  criteria"
-#~ msgstr "Seleccionar los originales de acuerdo a el criterio dado"
-
-#~ msgid "Loading json-cache `%s'"
-#~ msgstr "Cargando json-cache '%s"
-
-#~ msgid "FAILED: %s\n"
-#~ msgstr "FALLO: %s\n"
-
-#~ msgid "BTRFS_IOC_FILE_EXTENT_SAME returned status -22 - you probably need kernel > 4.2"
-#~ msgstr ""
-#~ "BTRFS_IOC_FILE_EXTENT_SAME regresó el estatus -22 - probablemente necesitas un kernel > 4.2"
-
-#~ msgid "--replay given; --with-metadata-cache will be ignored."
-#~ msgstr "--replay dado; --with-metadata-cache será ignorado."
-
-#~ msgid "Unable to create cache attr `%s`: %s"
-#~ msgstr "Incapaz de crear cache attr '%s': %s"
-
-#~ msgid "Add json cache file"
-#~ msgstr "Añadir un archivo de cache json"
-
-#~ msgid "cannot create metadata cache (see above)"
-#~ msgstr "no se puede crear cache de metainformación (ver arriba)"
-
-#~ msgid "Cannot close tmp cache: %s\n"
-#~ msgstr "No se puede cerrar el cache temporal: %s\n"
