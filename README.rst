@@ -10,20 +10,36 @@ offers to remove it.
 .. image:: https://img.shields.io/github/v/release/sahib/rmlint?include_prereleases&display_name=release
    :target: https://github.com/sahib/rmlint/releases
 
-.. image:: https://github.com/sahib/rmlint/actions/workflows/build-and-test.yml/badge.svg
-   :target: https://github.com/sahib/rmlint/actions
-
-.. image:: https://readthedocs.org/projects/rmlint/badge/?version=latest
-   :target: http://rmlint.rtfd.org
-
-.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg?style=flat
-   :target: https://github.com/sahib/rmlint/issues
-
 .. image:: https://img.shields.io/github/commit-activity/m/sahib/rmlint/develop
    :target: https://github.com/sahib/rmlint/commits/develop/
 
-.. image:: http://img.shields.io/badge/license-GPLv3-4AC51C.svg?style=flat
-   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html.en
+.. image:: https://img.shields.io/github/issues/sahib/rmlint.svg
+   :target: https://github.com/sahib/rmlint/issues
+
+.. image:: https://img.shields.io/github/issues-pr/sahib/rmlint.svg
+   :target: https://github.com/sahib/rmlint/pulls
+
+.. image:: https://img.shields.io/github/license/sahib/rmlint.svg
+   :target: https://www.gnu.org/licenses/quick-guide-gplv3.html
+
+   .. raw:: html
+
+      <br>
+
+.. image:: https://github.com/sahib/rmlint/actions/workflows/linux.yaml/badge.svg
+   :target: https://github.com/sahib/rmlint/actions/workflows/linux.yaml
+
+.. image:: https://github.com/sahib/rmlint/actions/workflows/freebsd.yaml/badge.svg
+   :target: https://github.com/sahib/rmlint/actions/workflows/freebsd.yaml
+
+.. image:: https://github.com/sahib/rmlint/actions/workflows/macos.yaml/badge.svg
+   :target: https://github.com/sahib/rmlint/actions/workflows/macos.yaml
+
+.. image:: https://github.com/sahib/rmlint/actions/workflows/cygwin.yaml/badge.svg
+   :target: https://github.com/sahib/rmlint/actions/workflows/cygwin.yaml
+
+.. image:: https://app.readthedocs.org/projects/rmlint/badge/
+   :target: https://rmlint.rtfd.org/
 
 **Features:**
 

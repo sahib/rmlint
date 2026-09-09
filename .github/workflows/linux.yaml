@@ -42,6 +42,7 @@ jobs:
       - name: Build documentation
         run: |
           scons STRICT=1 docs
+          sphinx-build -T -W -b epub -d docs/_build/doctrees docs docs/_build/epub
 
       - name: Prepare test environment
         # The test suite is seriously disk-intensive. Given that linux
