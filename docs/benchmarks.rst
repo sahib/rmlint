@@ -3,21 +3,27 @@
 Benchmarks
 ==========
 
-This page contains the images that our `benchmark suite`_ renders for the current
-release. Inside the benchmark suite, ``rmlint`` is *challenged* against other
-popular and some less known duplicate finders. Apart from that a very dumb
+.. warning::
+
+    **This page is out of date**
+
+    The performance characteristics of rmlint have improved overall, but
+    so might have other tools and new tools will have emerged too.
+    The ``tests/test_speed`` folder contains the code for the benchmark but it 
+    hasn't been used for a while now, so it needs some TLC.
+    We keep this up as a reference.
+
+    *Help in updating it would be appreciated.*
+
+This page contains the images that our `benchmark suite`_ rendered for the v2.2 
+release (2015-ish). Inside the benchmark suite, ``rmlint`` is *challenged* against 
+other popular and some less known duplicate finders. Apart from that a very dumb
 duplicate finder called ``baseline.py`` is used to see how slow a program would
 be that would blindly hash all files it finds. Luckily none of the programs is
 *that* slow. We'll allow us a few remarks on the plots, although we focus a bit
 on ``rmlint``. You're of course free to interpret something different or re-run_
 the benchmarks on your own machine. The exact version of each program is given
 in the plots.
-
-.. warning::
-
-    This page is a little out of date. Help in updating it would be appreciated.
-    The performance characteristics of rmlint have improved overall, but
-    so might have other tools.
 
 It should be noted that it is very hard to compare these tools, since *each*
 tool investigated a slightly different amount of data and produces different
