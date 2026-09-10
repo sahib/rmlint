@@ -30,19 +30,23 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``-c json:traversed`` to include list of fully-traversed dirs in json output
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
-* Build no longer strip at link time unless explicitly asked with ``STRIP=1`` (or ``=yes``, ``=true``).
-* For packagers: environement variables ``SOURCE_DATE_EPOCH`` and ``DEB_PYTHON_INSTALL_LAYOUT`` (GUI)
-  are honoured.
-* ``CFLAGS`` and ``LDFLAGS`` from the environment are now appending to our flags,
-  so that they could override ours.
-* ``scons --show-config`` shows features and build in one run.
+* FreeBSD: support for xattr checksum cache (#800).
+* blake3 and blake3_512 digests.
+* ``,d`` flag to ``--size`` to skip directories by `st_size`.
 * Tests: new markers for tests with special needs (reflink, xattr, manpage).
+* ``scons --show-config`` shows features and build in one run.
 * Build target test understands a new SCons variable: ``PYTEST_ARGS``.
 * For packagers: build targets ``install-cli`` and ``install-gui``, handy for split-packaging.
   Note that the GUI still depends on the CLI.
-* ``,d`` flag to ``--size`` to skip directories by `st_size`.
-* FreeBSD: support for xattr checksum cache (#800).
-* blake3 and blake3_512 digests.
+* For packagers: environement variable ``SOURCE_DATE_EPOCH`` is honoured.
+* For packagers: environement variables ``PYTHONHASHSEED``, ``PYTHONPATH``,
+  and ``DEB_PYTHON_INSTALL_LAYOUT`` are honoured for the GUI.
+* On Debian, without ``PREFIX=`` and ``DEB_PYTHON_INSTALL_LAYOUT``,
+  ``scons install-gui`` installs to ``/usr/local/lib/python3.YY/dist-packages``.
+* ``CFLAGS`` and ``LDFLAGS`` from the environment are now appending to our flags,
+  so that they could override ours.
+* Build no longer strip at link time unless explicitly asked with ``STRIP=1`` (or ``=yes``, ``=true``).
+
 
 ### Changed
 
@@ -65,7 +69,9 @@ The format follows [keepachangelog.com]. Please stick to it.
 * GUI: remove hard Rsvg dependency.
 * The minimum supported Glib version is now 2.74
 * The default installation prefix is now ``/usr/local``.
-* The build system supports ``PREFIX=`` and ``DESTDIR=`` options.
+* The build system supports ``PREFIX=``, ``DESTDIR=`` and ``LIBDIR=`` variables
+  instead of the old ``--prefix``, ``--actualprefix`` and ``--libdir`` options.
+  Note that ``DESTDIR=`` is not equivalent to ``--actualprefix``.
 * Shredder's GSettings schema is now ``io.github.sahib.rmlint.Shredder``
   instead of ``org.gnome.Shredder`` — Shredder is not a GNOME project. The
   application ID and the GResource prefix changed as well accordingly.
@@ -73,6 +79,7 @@ The format follows [keepachangelog.com]. Please stick to it.
   read using: ``dconf dump /org/gnome/Shredder/``.
 
 ### Removed
+
 * ``--dedupe-xattr``. Use ``--dedupe --xattr``
 * ``--dedupe-readonly``. Use ``--dedupe --readonly``
 * Build target ``config``. Use ``scons --show-config -n``.
@@ -656,4 +663,5 @@ Initial release of the rewrite.
 [2.3.0 Ominous Oscar]: https://github.com/sahib/rmlint/compare/v2.2.2..v2.4.0
 [2.4.0 Myopic Micrathene]: https://github.com/sahib/rmlint/releases/tag/v2.4.0
 [2.4.1 Myopic Micrathene Bugfixes]: https://github.com/sahib/rmlint/releases/tag/v2.4.1
+[2.10.3 Ludicrous Lemur]: https://github.com/sahib/rmlint/releases/tag/v2.10.3
 [keepachangelog.com]: http://keepachangelog.com/
