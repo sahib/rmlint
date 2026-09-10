@@ -1,6 +1,6 @@
 # container to test how scons install (with or without DESTDIR, etc) behave under Debian
 #
-# podman build -t rmlint/ci/install/deb ci/install
+# podman build -f Containerfile.debian -t rmlint/ci/install/deb ci/install
 # podman run --rm -it -v "$PWD":/src:ro,Z rmlint/ci/install/deb
 FROM debian:sid-slim
 
