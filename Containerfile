@@ -27,7 +27,7 @@ FROM build AS test
 RUN apk add --no-cache py3-sphinx py3-pip bash dash mandoc
 RUN scons --without-gui DEBUG=1
 RUN pip install --break-system-packages -r tests/requirements.txt
-ENTRYPOINT ["pytest", "-m", "not slow and not manpage"]
+ENTRYPOINT ["pytest"]
 CMD ["tests"]
 
 FROM alpine:3 AS run
