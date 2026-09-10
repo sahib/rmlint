@@ -270,7 +270,7 @@ Notable targets
     .. code-block:: bash
 
         $ scons test PYTEST_ARGS='-m reflink'
-        $ scons test PYTEST_ARGS="-m 'not slow and not manpage'"
+        $ scons test PYTEST_ARGS="-m 'not slow'"
 
 :xgettext:
 

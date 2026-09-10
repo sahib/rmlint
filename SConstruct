@@ -189,7 +189,7 @@ options = {
         for key in ('PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH',
                     'SOURCE_DATE_EPOCH')
         if key in os.environ
-    } | {'TZ': 'UTC'},
+    } | {'TZ': 'UTC', 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'},
 }
 
 #==============================================================================#
