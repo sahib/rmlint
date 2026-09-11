@@ -20,6 +20,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Fix GUI failing to start with pygobject >= 3.56
 * Make SSE4.2 runtime dispatch works on Clang builds.
 * FreeBSD: ``rmlint.sh``'s RMLINT_BINARY= entry.
+* Fix ``--honour-dir-layout``/``-j`` when filenames and content are the sames, just not
+  at the same place.
 
 ### Added
 

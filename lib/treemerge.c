@@ -433,6 +433,31 @@ static guint rm_directory_hash(const RmDirectory *d) {
     return rm_digest_hash(d->digest) ^ d->dupe_count;
 }
 
+/* Update directory digest with a combined hash of basename and
+ * its digest for -j to respect layout even with identical filenames
+ * in different places or with swapped content. */
+static void rm_directory_add_layout_entry(RmDirectory *directory, const char *name,
+                                          const guint8 *cksum, gsize cksum_bytes) {
+    /* basename and digest are \0-separated */
+    gsize name_len = strlen(name) + 1;
+    gsize buf_len = name_len + cksum_bytes;
+
+    guint8 *buf = g_slice_alloc(buf_len);
+    memcpy(buf, name, name_len);
+    memcpy(buf + name_len, cksum, cksum_bytes);
+
+    gsize entry_cksum_len = 0;
+    /* XXX: BLAKE2B is a good checksum for its size, but should we change it alongside
+     * the default checksum ? */
+    guint8 *entry_cksum =
+        rm_digest_sum(RM_DIGEST_BLAKE2B, buf, buf_len, &entry_cksum_len);
+
+    rm_digest_update(directory->digest, entry_cksum, entry_cksum_len);
+
+    g_slice_free1(entry_cksum_len, entry_cksum);
+    g_slice_free1(buf_len, buf);
+}
+
 static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile *file) {
     g_assert(file);
     g_assert(file->digest);
@@ -452,15 +477,8 @@ static void rm_directory_add(RmTreeMerger *self, RmDirectory *directory, RmFile 
 
     /* Add the path to the checksum if we require the same layout too */
     if(self->session->cfg->honour_dir_layout) {
-        const char *basename = file->node->basename;
-        gsize basename_cksum_len = 0;
-        guint8 *basename_cksum =
-            rm_digest_sum(RM_DIGEST_BLAKE2B,
-                          (const guint8 *)basename,
-                          strlen(basename) + 1, /* include the nul-byte */
-                          &basename_cksum_len);
-        rm_digest_update(directory->digest, basename_cksum, basename_cksum_len);
-        g_slice_free1(basename_cksum_len, basename_cksum);
+        rm_directory_add_layout_entry(directory, file->node->basename, file_digest,
+                                      digest_bytes);
     }
 
     g_slice_free1(digest_bytes, file_digest);
@@ -496,23 +514,16 @@ static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent,
     }
 
     /* Inherit the child's checksum */
-    unsigned char *subdir_cksum = rm_digest_steal(subdir->digest);
+    guint8 *subdir_cksum = rm_digest_steal(subdir->digest);
     rm_digest_update(parent->digest, subdir_cksum, subdir->digest->bytes);
-    g_slice_free1(subdir->digest->bytes, subdir_cksum);
 
     if(self->session->cfg->honour_dir_layout) {
         char *basename = g_path_get_basename(subdir->dirname);
-        gsize basename_cksum_len = 0;
-        guint8 *basename_cksum =
-            rm_digest_sum(RM_DIGEST_BLAKE2B,
-                          (const guint8 *)basename,
-                          strlen(basename) + 1, /* include the nul-byte */
-                          &basename_cksum_len);
-
-        rm_digest_update(parent->digest, basename_cksum, basename_cksum_len);
-        g_slice_free1(basename_cksum_len, basename_cksum);
+        rm_directory_add_layout_entry(parent, basename, subdir_cksum, subdir->digest->bytes);
         g_free(basename);
     }
+
+    g_slice_free1(subdir->digest->bytes, subdir_cksum);
 
     subdir->was_merged = true;
 }
