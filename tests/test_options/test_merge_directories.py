@@ -20,6 +20,18 @@ def filter_part_of_directory(data):
     return data
 
 
+def pedantic_options():
+    # Test all checksum types, even outside of pedantic mode.
+    # That allows us to test for regressions in the cumulative digest,
+    # as digests of different lengths might have side-effects.
+    options = ['-p']
+    if not get_env_flag('pedantic'):
+        for cksum_type in CKSUM_TYPES:
+            options.append('--algorithm=' + cksum_type)
+
+    return options
+
+
 # --write-unfinished variant is a regression test for GitHub issue #562;
 # --hash-unmatched covers its successor
 @pytest.mark.parametrize('extra_opts', [(), ('--write-unfinished',), ('--hash-unmatched',)])
@@ -414,14 +426,7 @@ def test_equal_content_different_layout():
     create_file('xxx', "tree-b/x")
     create_file('yyy', "tree-b/y")
 
-    # Test all checksum types, even outside of pedantic mode.
-    # That allows us to test for regressions in the cumulative digest.
-    options = ['-p']
-    if not get_env_flag('pedantic'):
-        for cksum_type in CKSUM_TYPES:
-            options.append('--algorithm=' + cksum_type)
-
-    for option in options:
+    for option in pedantic_options():
         _, *data, _ = run_rmlint('-D --rank-by a', option)
         data = filter_part_of_directory(data)
 
@@ -452,3 +457,78 @@ def test_nested_content_with_same_layout():
     # just check if those are duplicate files as expected.
     for point in data[2:]:
         assert point["type"] == "duplicate_file"
+
+
+def test_same_content_and_filenames_nested_differently():
+    """Regression test for GitHub issue #742"""
+    create_file('yyy', "aa/bb/yy.txt")
+    create_file('xxx', "aa/xx.txt")
+
+    create_file('xxx', "cc/bb/xx.txt")
+    create_file('yyy', "cc/bb/yy.txt")
+
+    # same data, should mark directories as duplicates
+    _, *data, _ = run_rmlint('-p -D  --rank-by a')
+    data = filter_part_of_directory(data)
+
+    assert data[0]["path"].endswith("aa")
+    assert data[0]["type"] == "duplicate_dir"
+    assert data[1]["path"].endswith("cc")
+    assert data[1]["type"] == "duplicate_dir"
+
+    # different layout, should not mark directories as dupes
+    for option in pedantic_options():
+        _, *data, _ = run_rmlint('-Dj --rank-by a', option)
+        data = filter_part_of_directory(data)
+
+        for point in data:
+            assert point["type"] == "duplicate_file"
+
+
+def test_same_layout_with_swapped_content():
+    # Same names on both sides, but each name holds the other one's content.
+    create_file('xxx', "tree-a/x")
+    create_file('yyy', "tree-a/y")
+
+    create_file('yyy', "tree-b/x")
+    create_file('xxx', "tree-b/y")
+
+    _, *data, _ = run_rmlint('-p -D --rank-by a')
+    data = filter_part_of_directory(data)
+
+    assert data[0]["path"].endswith("tree-a")
+    assert data[0]["type"] == "duplicate_dir"
+    assert data[1]["path"].endswith("tree-b")
+    assert data[1]["type"] == "duplicate_dir"
+
+    for option in pedantic_options():
+        _, *data, _ = run_rmlint('-Dj --rank-by a', option)
+        data = filter_part_of_directory(data)
+
+        for point in data:
+            assert point["type"] == "duplicate_file"
+
+
+def test_xor_cancelling_content():
+    # tree-a and tree-c really hold the same data
+    # tree-b cancels out when content XORed with itself
+    for content, subdir in (('xxx', 'tree-a'), ('yyy', 'tree-b'), ('xxx', 'tree-c')):
+        create_file(content, subdir + '/some/path/x')
+        create_file(content, subdir + '/some/path/y')
+
+    _, *data, _ = run_rmlint('-p -D --rank-by a')
+    data = filter_part_of_directory(data)
+
+    dupe_dirs = [p for p in data if p['type'] == 'duplicate_dir']
+
+    assert len(dupe_dirs) == 2
+    assert dupe_dirs[0]['path'].endswith('tree-a')
+    assert dupe_dirs[0]['is_original'] is True
+    assert dupe_dirs[1]['path'].endswith('tree-c')
+    assert dupe_dirs[1]['is_original'] is False
+
+    # The dupes inside tree-b are still found
+    tree_b_dupes = [p for p in data if p['type'] != 'duplicate_dir']
+
+    assert all(p['type'] == 'duplicate_file' for p in tree_b_dupes)
+    assert 2 == sum('tree-b' in p['path'] for p in tree_b_dupes)
