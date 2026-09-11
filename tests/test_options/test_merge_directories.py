@@ -507,3 +507,28 @@ def test_same_layout_with_swapped_content():
 
         for point in data:
             assert point["type"] == "duplicate_file"
+
+
+def test_xor_cancelling_content():
+    # tree-a and tree-c really hold the same data
+    # tree-b cancels out when content XORed with itself
+    for content, subdir in (('xxx', 'tree-a'), ('yyy', 'tree-b'), ('xxx', 'tree-c')):
+        create_file(content, subdir + '/some/path/x')
+        create_file(content, subdir + '/some/path/y')
+
+    _, *data, _ = run_rmlint('-p -D --rank-by a')
+    data = filter_part_of_directory(data)
+
+    dupe_dirs = [p for p in data if p['type'] == 'duplicate_dir']
+
+    assert len(dupe_dirs) == 2
+    assert dupe_dirs[0]['path'].endswith('tree-a')
+    assert dupe_dirs[0]['is_original'] is True
+    assert dupe_dirs[1]['path'].endswith('tree-c')
+    assert dupe_dirs[1]['is_original'] is False
+
+    # The dupes inside tree-b are still found
+    tree_b_dupes = [p for p in data if p['type'] != 'duplicate_dir']
+
+    assert all(p['type'] == 'duplicate_file' for p in tree_b_dupes)
+    assert 2 == sum('tree-b' in p['path'] for p in tree_b_dupes)

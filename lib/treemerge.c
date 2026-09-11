@@ -508,10 +508,12 @@ static void rm_directory_add_subdir(RmTreeMerger *self, RmDirectory *parent,
 #endif
 
     /* Take over the child's digests */
-    for(GList *iter = subdir->known_files.head; iter; iter = iter->next) {
-        RmFile *file = iter->data;
-        g_hash_table_add(parent->hash_set, file->digest);
-    }
+    GHashTableIter digest_iter;
+    gpointer digest_key;
+
+    g_hash_table_iter_init(&digest_iter, subdir->hash_set);
+    while (g_hash_table_iter_next(&digest_iter, &digest_key, NULL))
+        g_hash_table_add(parent->hash_set, digest_key);
 
     /* Inherit the child's checksum */
     guint8 *subdir_cksum = rm_digest_steal(subdir->digest);

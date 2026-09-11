@@ -22,6 +22,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * FreeBSD: ``rmlint.sh``'s RMLINT_BINARY= entry.
 * Fix ``--honour-dir-layout``/``-j`` when filenames and content are the sames, just not
   at the same place.
+* Add a protection against ``-D`` XOR cancellation
 
 ### Added
 
