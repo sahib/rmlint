@@ -305,7 +305,7 @@ remove_cmd() {
                 while [ -z "$(ls -A -- "$DIR")" ]; do
                     print_progress_prefix 0
                     printf "${COL_GREEN}Deleting resulting empty dir: ${COL_RESET}%%s\n" "$DIR"
-                    rmdir -- "$DIR"
+                    rmdir -- "$DIR" || break
                     DIR=$(dirname "$DIR")
                 done
             fi
