@@ -59,6 +59,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * short option ``-U`` now refers to ``--hash-unmatched`` instead of ``--write-unfinished``.
 * Treat paths beyond ``PATH_MAX`` as a hard error instead of truncating them
 * ``-g --progress`` and ``-G --no-progress`` do not clear outputs anymore (#582).
+* ``rmlint.sh`` sets ``-eu`` by default (#469).
 * The generated ``rmlint.py`` minimum supported Python is now 3.9
 * GUI: the minimum supported Python version is now 3.12
 * GUI: the minimum supported Gtk version is now 3.22
