@@ -49,11 +49,11 @@ STAMPFILE2=
 # GENERAL LINT HANDLER FUNCTIONS #
 ##################################
 
-COL_RED='\e[0;31m'
-COL_BLUE='\e[1;34m'
-COL_GREEN='\e[0;32m'
-COL_YELLOW='\e[0;33m'
-COL_RESET='\e[0m'
+COL_RED=$(printf '\033[0;31m')
+COL_BLUE=$(printf '\033[1;34m')
+COL_GREEN=$(printf '\033[0;32m')
+COL_YELLOW=$(printf '\033[0;33m')
+COL_RESET=$(printf '\033[0m')
 
 exit_cleanup() {
     trap - INT TERM EXIT
@@ -156,18 +156,18 @@ check_for_equality() {
 
 original_check() {
     if [ ! -e "$2" ]; then
-        printf "${COL_RED}^^^^^^ Error: original has disappeared - cancelling.....${COL_RESET}\n"
+        printf '%%s\n' "${COL_RED}^^^^^^ Error: original has disappeared - cancelling.....${COL_RESET}"
         return 1
     fi
 
     if [ ! -e "$1" ]; then
-        printf "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling.....${COL_RESET}\n"
+        printf '%%s\n' "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling.....${COL_RESET}"
         return 1
     fi
 
     # Check they are not the exact same file (hardlinks allowed):
     if [ "$1" = "$2" ]; then
-        printf "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....${COL_RESET}\n"
+        printf '%%s\n' "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....${COL_RESET}"
         return 1
     fi
 
@@ -176,7 +176,7 @@ original_check() {
         return 0
     else
         if ! check_for_equality "$1" "$2"; then
-            printf "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}\n"
+            printf '%%s\n' "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}"
             return 1
         fi
     fi
@@ -339,7 +339,7 @@ EOF
     if [ -z "$eof_check" ]
     then
         # Count Ctrl-D and Enter as aborted too.
-        printf "${COL_RED}Aborted on behalf of the user.${COL_RESET}\n"
+        printf '%%s\n' "${COL_RED}Aborted on behalf of the user.${COL_RESET}"
         exit 1;
     fi
 }
@@ -411,7 +411,7 @@ done
 
 if [ -z $DO_REMOVE ]
 then
-    printf "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}\n"
+    printf '%%s\n' "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}"
 fi
 
 if [ -z $DO_ASK ]
@@ -421,9 +421,9 @@ then
 fi
 
 if [ -n "$DO_DRY_RUN" ]; then
-    printf "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}\n"
-    printf "#${COL_YELLOW} /// ${COL_RESET} This is only a dry run; nothing will be modified! ${COL_YELLOW}///${COL_RESET}\n"
-    printf "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}\n"
+    printf '%%s\n' "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
+    printf '%%s\n' "#${COL_YELLOW} /// ${COL_RESET} This is only a dry run; nothing will be modified! ${COL_YELLOW}///${COL_RESET}"
+    printf '%%s\n' "#${COL_YELLOW} ////////////////////////////////////////////////////////////${COL_RESET}"
 elif [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
     STAMPFILE=$(mktemp "${TMPDIR:-/tmp}/rmlint.stamp.XXXXXXXX")
 fi
