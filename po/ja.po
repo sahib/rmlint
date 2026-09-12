@@ -1,0 +1,1221 @@
+# Japanese translation for rmlint.
+# Copyright (C) 2026 rmlint's authors.
+# This file is distributed under the same license as the rmlint package.
+# AI-generated translation, 2026.
+# Revised with AI assistance; not yet reviewed by the submitting user.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: rmlint 2.11.0.dev0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-28 00:00+0000\n"
+"PO-Revision-Date: 2026-09-10 13:30+0900\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: lib/cfg.c lib/hash-utility.c
+#, c-format
+msgid "Can't open directory or file \"%s\": %s"
+msgstr "ディレクトリまたはファイル「%s」を開けません: %s"
+
+#: lib/cfg.c
+#, c-format
+msgid "Can't get real path for directory or file \"%s\": %s"
+msgstr "ディレクトリまたはファイル「%s」の実パスを取得できません: %s"
+
+#: lib/cmdline.c
+msgid "compiled with:"
+msgstr "ビルド時の機能:"
+
+#: lib/cmdline.c
+msgid ""
+"\n"
+"\n"
+"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n"
+"The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3.\n"
+msgstr ""
+"\n"
+"\n"
+"rmlint の作者は Christopher <sahib> Pahl と Daniel <SeeSpotRun> Thomas です。\n"
+"https://github.com/sahib/rmlint のソースコードは GPLv3 の条件に従って利用できます。\n"
+
+#: lib/cmdline.c
+msgid "You seem to have no manpage for rmlint."
+msgstr "rmlint のマニュアルが見つかりません"
+
+#: lib/cmdline.c
+msgid "Please run rmlint --help to show the regular help."
+msgstr "rmlint --help を実行すると、通常のヘルプを表示できます"
+
+#: lib/cmdline.c
+msgid ""
+"Alternatively, visit https://rmlint.rtfd.org for the online documentation"
+msgstr "オンライン文書は https://rmlint.rtfd.org を参照してください"
+
+#: lib/cmdline.c
+msgid "Max is smaller than min"
+msgstr "最大値が最小値より小さくなっています"
+
+#: lib/cmdline.c
+msgid "cannot parse --size: "
+msgstr "--size を解析できません: "
+
+#: lib/cmdline.c
+#, c-format
+msgid "Adding -o %s as output failed"
+msgstr "出力先 -o %s を追加できませんでした"
+
+#: lib/cmdline.c
+#, c-format
+msgid "No formatter (expect %s) specified in '%s'"
+msgstr "「%2$s」に出力形式が指定されていません（書式: %1$s）"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Missing key (expect %s) in '%s'"
+msgstr "「%2$s」にキーがありません（書式: %1$s）"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Invalid formatter '%s'"
+msgstr "無効な出力形式「%s」"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Invalid key '%s' for formatter '%s'"
+msgstr "キー「%s」は出力形式「%s」では使用できません"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Unable to parse factor \"%s\": error begins at %s"
+msgstr "係数「%s」を解析できません: %s 以降にエラーがあります"
+
+#: lib/cmdline.c
+#, c-format
+msgid "factor value is not in range [0-1]: %f"
+msgstr "係数が 0 以上 1 以下の範囲にありません: %f"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Unable to parse offset \"%s\": "
+msgstr "ファイル先頭からの位置（offset）「%s」を解析できません: "
+
+#: lib/cmdline.c
+#, c-format
+msgid "lint type '%s' not recognised"
+msgstr "不明な検出対象の種類「%s」"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Unable to parse time spec \"%s\""
+msgstr "時刻の指定「%s」を解析できません"
+
+#: lib/cmdline.c
+#, c-format
+msgid "-n %lu is newer than current time (%lu)."
+msgstr "-n %lu は現在の時刻（%lu）より後です"
+
+#: lib/cmdline.c
+#, c-format
+msgid "No stamp file at `%s`, will create one after this run."
+msgstr "日時の記録ファイル「%s」がありません。今回の実行後に作成します"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Only up to -%.*s or down to -%.*s flags allowed"
+msgstr "検査の厳密さを上げる指定は -%.*s まで、下げる指定は -%.*s までです"
+
+#: lib/cmdline.c lib/hash-utility.c
+#, c-format
+msgid "Unknown hash algorithm: '%s'"
+msgstr "不明なハッシュ方式: 「%s」"
+
+#: lib/cmdline.c
+#, c-format
+msgid "Invalid size description \"%s\": "
+msgstr "サイズ「%s」の書式が正しくありません: "
+
+#: lib/cmdline.c
+msgid "Permissions string needs to be one or many of [rwx]"
+msgstr "アクセス権は r、w、x のいずれか、またはその組み合わせで指定してください"
+
+#: lib/cmdline.c
+#, c-format
+msgid "%s may only contain [%s], not `%c`"
+msgstr "%s に使用できるのは [%s] のみです。「%c」は使用できません"
+
+#: lib/cmdline.c
+msgid "Specifying both -o and -O is not allowed"
+msgstr "-o と -O は同時に指定できません"
+
+#: lib/cmdline.c
+msgid "Specify max traversal depth"
+msgstr "ディレクトリを何階層下まで検索するか指定"
+
+#: lib/cmdline.c
+msgid "Select originals by given criteria"
+msgstr "内容が一致するファイルのうち、どれを残すか指定"
+
+#: lib/cmdline.c
+msgid "Sort rmlint output by given criteria"
+msgstr "結果の表示順を指定"
+
+#: lib/cmdline.c
+msgid "Specify lint types"
+msgstr "重複ファイルや空のディレクトリなど、検出する種類を指定"
+
+#: lib/cmdline.c
+msgid "Specify size limits"
+msgstr "対象にするファイルのサイズを指定"
+
+#: lib/cmdline.c
+msgid "Choose hash algorithm"
+msgstr "ファイルの比較に使うハッシュ方式を指定"
+
+#: lib/cmdline.c
+msgid "Add output (override default)"
+msgstr "デフォルトの出力設定を使わず、指定した形式と出力先に出力"
+
+#: lib/cmdline.c
+msgid "Add output (add to defaults)"
+msgstr "デフォルトの出力設定に、指定した形式と出力先を追加"
+
+#: lib/cmdline.c
+msgid "Newer than stamp file"
+msgstr "指定ファイルに記録された日時より後に更新されたファイルを探す"
+
+#: lib/cmdline.c
+msgid "Newer than timestamp"
+msgstr "指定した日時より後に更新されたファイルを探す"
+
+#: lib/cmdline.c
+msgid "Configure a formatter"
+msgstr "出力形式ごとのオプションを設定"
+
+#: lib/cmdline.c
+msgid "Enable xattr based caching"
+msgstr "ファイルのハッシュを拡張属性（xattr）に保存して再利用する"
+
+#: lib/cmdline.c lib/reflink.c
+msgid "Be more verbose (-vv for much more)"
+msgstr "表示する情報を増やす（-vv でさらに増やす）"
+
+#: lib/cmdline.c lib/reflink.c
+msgid "Be less verbose (-VV for much less)"
+msgstr "表示する情報を減らす（-VV でさらに減らす）"
+
+#: lib/cmdline.c
+msgid "Re-output a json file"
+msgstr "JSON ファイルに保存した結果を再出力"
+
+#: lib/cmdline.c
+msgid "Test for equality of PATHS"
+msgstr "指定したファイルやディレクトリの内容が一致するか確認"
+
+#: lib/cmdline.c
+msgid "Enable progressbar"
+msgstr "進捗バーを表示"
+
+#: lib/cmdline.c
+msgid "Be not that colorful"
+msgstr "色を付けずに表示"
+
+#: lib/cmdline.c
+msgid "Find hidden files"
+msgstr "隠しファイルも検索対象にする"
+
+#: lib/cmdline.c lib/reflink.c
+msgid "Follow symlinks"
+msgstr "シンボリックリンクが指すファイルやディレクトリも検索"
+
+#: lib/cmdline.c
+msgid "Ignore symlinks"
+msgstr "シンボリックリンクを検索対象にしない"
+
+#: lib/cmdline.c
+msgid "Use more paranoid hashing"
+msgstr "ファイルの内容を1バイトずつ比較"
+
+#: lib/cmdline.c
+msgid "Do not cross mountpoints"
+msgstr "検索対象内にマウントされた別のファイルシステムは検索しない"
+
+#: lib/cmdline.c
+msgid "Don't abort run if bad path passed to rmlint"
+msgstr "検索対象に無効なパスが含まれていても処理を続ける"
+
+#: lib/cmdline.c
+msgid "Keep all tagged files"
+msgstr "タグ付きファイルをすべて残す"
+
+#: lib/cmdline.c
+msgid "Keep all untagged files"
+msgstr "タグなしファイルをすべて残す"
+
+#: lib/cmdline.c
+msgid "Must have twin in tagged dir"
+msgstr "タグ付きディレクトリ内のファイルと内容が一致する場合だけ検出"
+
+#: lib/cmdline.c
+msgid "Must have twin in untagged dir"
+msgstr "タグなしディレクトリ内のファイルと内容が一致する場合だけ検出"
+
+#: lib/cmdline.c
+msgid "Only find twins with same basename"
+msgstr "ファイル名も一致する重複ファイルだけを検出"
+
+#: lib/cmdline.c
+msgid "Only find twins with same dirname"
+msgstr "親ディレクトリ名も一致する重複ファイルだけを検出"
+
+#: lib/cmdline.c
+msgid "Only find twins with same extension"
+msgstr "拡張子も一致する重複ファイルだけを検出"
+
+#: lib/cmdline.c
+msgid "Only find twins with same relative path"
+msgstr "相対パスも一致する重複ファイルだけを検出"
+
+#: lib/cmdline.c
+msgid "Only find twins with same basename minus extension"
+msgstr "拡張子を除くファイル名も一致する重複ファイルだけを検出"
+
+#: lib/cmdline.c
+msgid "--match options are treated case-insensitively"
+msgstr "--match オプションで大文字と小文字を区別しない"
+
+#: lib/cmdline.c
+msgid "Find duplicate directories"
+msgstr "中のファイルがすべて重複しているディレクトリを検出"
+
+#: lib/cmdline.c
+msgid "Only find directories with same file layout"
+msgstr "ディレクトリ内のファイル名と配置も一致する場合だけ検出"
+
+#: lib/cmdline.c
+msgid "Only use files with certain permissions"
+msgstr "指定のアクセス権を持つファイルだけを対象にする"
+
+#: lib/cmdline.c
+msgid "Ignore hardlink twins"
+msgstr "同じファイルのハードリンクを重複として扱わない"
+
+#: lib/cmdline.c
+msgid "Keep hardlink that are linked to any original"
+msgstr "残すファイルのハードリンクも残す"
+
+#: lib/cmdline.c
+msgid "Find hidden files in duplicate folders only"
+msgstr "ディレクトリの重複判定に隠しファイルも含める"
+
+#: lib/cmdline.c
+msgid "Consider duplicates only equal when mtime differs at max. T seconds"
+msgstr "更新時刻の差が T 秒以内の重複ファイルだけを検出"
+
+#: lib/cmdline.c
+msgid "Read null-separated file list from stdin"
+msgstr "NULL 文字で区切ったファイル一覧を標準入力から読み込む"
+
+#: lib/cmdline.c
+msgid "Do create backups of previous result files"
+msgstr "以前の実行で出力した結果ファイルをバックアップする"
+
+#: lib/cmdline.c lib/reflink.c
+msgid "Dedupe matching extents from source to dest (if filesystem supports)"
+msgstr "同じ内容のデータ領域をコピー元とコピー先で共有（対応ファイルシステムのみ）"
+
+#: lib/cmdline.c lib/reflink.c
+msgid "Test if two files are reflinks (share same data extents)"
+msgstr "2つのファイルがデータ領域を共有しているか検査（reflink）"
+
+#: lib/cmdline.c
+msgid "Show the manpage"
+msgstr "rmlint のマニュアルを開く"
+
+#: lib/cmdline.c
+msgid "Show the version & features"
+msgstr "バージョンと各機能の有効・無効を表示"
+
+#: lib/cmdline.c
+msgid "If installed, start the optional gui with all following args"
+msgstr "GUI を起動する（要インストール）。続く引数は GUI に渡す"
+
+#: lib/cmdline.c
+msgid ""
+"Work like sha1sum for all supported hash algorithms (see also --hash --help)"
+msgstr "ファイルのハッシュを指定の方式で計算（--hash --help も参照）"
+
+#: lib/cmdline.c
+msgid "Report hardlinks as duplicates"
+msgstr "ハードリンクを重複として報告"
+
+#: lib/cmdline.c
+msgid "Cannot set current working directory"
+msgstr "作業ディレクトリを設定できません"
+
+#: lib/cmdline.c
+msgid "Cannot join commandline"
+msgstr "コマンドラインを連結できません"
+
+#: lib/cmdline.c
+msgid "[TARGET_DIR_OR_FILES …] [//] [TAGGED_TARGET_DIR_OR_FILES …] [-]"
+msgstr "[対象ディレクトリまたはファイル …] [//] [タグ付きの対象ディレクトリまたはファイル …] [-]"
+
+#: lib/cmdline.c
+msgid ""
+"rmlint finds space waste and other broken things on your filesystem and offers to remove it.\n"
+"It is especially good at finding duplicates and offers a big variety of options to handle them."
+msgstr ""
+"rmlint は、ディスク容量の無駄やファイルシステム上の問題を検出し、削除方法を提示します。\n"
+"特に重複ファイルの検出に優れ、処理方法をさまざまなオプションで指定できます。"
+
+#: lib/cmdline.c
+msgid ""
+"Only the most important options and options that alter the defaults are shown above.\n"
+"See the manpage (man 1 rmlint or rmlint --show-man) for far more detailed usage information,\n"
+"or http://rmlint.rtfd.org/en/latest/rmlint.1.html for the online manpage.\n"
+"Complementary tutorials can be found at: http://rmlint.rtfd.org"
+msgstr ""
+"上記には、主なオプションとデフォルトの動作を変更するオプションだけを表示しています。\n"
+"詳しい使い方はマニュアル（man 1 rmlint または rmlint --show-man）、\n"
+"またはオンライン版 http://rmlint.rtfd.org/en/latest/rmlint.1.html を参照してください。\n"
+"チュートリアル: http://rmlint.rtfd.org"
+
+#: lib/cmdline.c
+msgid "Not all given paths are valid. Aborting"
+msgstr "検索対象のパスに誤りがあります。処理を中止します"
+
+#: lib/cmdline.c
+msgid ""
+"--honour-dir-layout (-j) makes no sense without --merge-directories (-D)"
+msgstr "-j を使うには、重複検索の対象にディレクトリも含めてください（-D）"
+
+#: lib/cmdline.c
+msgid ""
+"Note that not having duplicate directories enabled as lint type (e.g via -T "
+"df)"
+msgstr "重複ディレクトリを対象から外す指定（例: -T df）があると、"
+
+#: lib/cmdline.c
+msgid "will also disable --merge-directories and trigger this warning."
+msgstr "-D も無効になり、この警告が表示されます"
+
+#: lib/cmdline.c
+msgid "can't specify both --keep-all-tagged and --keep-all-untagged"
+msgstr "--keep-all-tagged と --keep-all-untagged は設定が競合するため、同時に指定できません"
+
+#: lib/cmdline.c
+msgid "-q (--clamp-low) should be lower than -Q (--clamp-top)"
+msgstr "読み取り開始位置（-q）は終了位置（-Q）より前にしてください"
+
+#: lib/cmdline.c
+msgid ""
+"-k and -M should not be specified at the same time (see also: "
+"https://github.com/sahib/rmlint/issues/244)"
+msgstr "-k と -M は同時に指定できません（参照: https://github.com/sahib/rmlint/issues/244）"
+
+#: lib/cmdline.c
+msgid ""
+"-K and -m should not be specified at the same time (see also: "
+"https://github.com/sahib/rmlint/issues/244)"
+msgstr "-K と -m は同時に指定できません（参照: https://github.com/sahib/rmlint/issues/244）"
+
+#: lib/cmdline.c
+msgid "Using -D together with -c sh:clone is currently not possible. Sorry."
+msgstr "ディレクトリの重複検索（-D）とファイルのクローン処理（-c sh:clone）は併用できません"
+
+#: lib/cmdline.c
+msgid "Either do not use -D, or attempt to run again with -Dj."
+msgstr "-D を外すか、-Dj に変更して再実行してください"
+
+#: lib/cmdline.c
+msgid "Failed to complete setup for merging directories"
+msgstr "ディレクトリの重複判定に必要な初期化に失敗しました"
+
+#: lib/cmdline.c
+msgid "Not enough files for --equal (need at least two to compare)"
+msgstr "比較できるファイルが足りません。--equal には2つ以上のファイルが必要です"
+
+#: lib/formats.c
+#, c-format
+msgid "Old result `%s` already exists."
+msgstr "出力先に結果ファイル「%s」が既にあります"
+
+#: lib/formats.c
+#, c-format
+msgid "Moving old file to `%s`. Leave out --backup to disable this."
+msgstr "既存の結果ファイルの名前を「%s」に変更してバックアップします。バックアップしない場合は --backup を外してください"
+
+#: lib/formats.c
+msgid "failed to rename old result file"
+msgstr "既存の結果ファイルの名前を変更できませんでした"
+
+#: lib/formats.c
+#, c-format
+msgid "No such new_handler with this name: %s"
+msgstr "出力形式 %s が見つかりません"
+
+#: lib/formats.c
+#, c-format
+msgid "Unable to open file for writing: %s"
+msgstr "書き込み用にファイルを開けません: %s"
+
+#: lib/formats/pretty.c
+msgid "Bad symlink(s)"
+msgstr "リンク切れのシンボリックリンク"
+
+#: lib/formats/pretty.c
+msgid "Empty dir(s)"
+msgstr "空のディレクトリ"
+
+#: lib/formats/pretty.c
+msgid "Non stripped binarie(s)"
+msgstr "シンボル情報付きバイナリ"
+
+#: lib/formats/pretty.c
+msgid "Bad UID(s)"
+msgstr "所有ユーザ不明のファイル（UID）"
+
+#: lib/formats/pretty.c
+msgid "Bad GID(s)"
+msgstr "所有グループ不明のファイル（GID）"
+
+#: lib/formats/pretty.c
+msgid "Bad UID and GID(s)"
+msgstr "所有ユーザ・グループ不明のファイル（UID/GID）"
+
+#: lib/formats/pretty.c
+msgid "Empty file(s)"
+msgstr "空のファイル"
+
+#: lib/formats/pretty.c
+msgid "Duplicate candidates(s)"
+msgstr "重複ファイル候補"
+
+#: lib/formats/pretty.c
+msgid "Duplicate dir candidate(s)"
+msgstr "重複ディレクトリ候補"
+
+#: lib/formats/pretty.c
+msgid "Duplicate(s)"
+msgstr "重複ファイル"
+
+#: lib/formats/pretty.c
+msgid "Duplicate Directorie(s)"
+msgstr "重複ディレクトリ"
+
+# 進捗表示は端末幅と原文の組み立て順を優先し、以下13項目を英語で維持する。
+#: lib/formats/progressbar.c
+msgid "reduces files to"
+msgstr "reduces files to"
+
+#: lib/formats/progressbar.c
+msgid "Traversing"
+msgstr "Traversing"
+
+#: lib/formats/progressbar.c
+msgid "usable files"
+msgstr "usable files"
+
+#: lib/formats/progressbar.c
+msgid "ignored files / folders"
+msgstr "ignored files / folders"
+
+#: lib/formats/progressbar.c
+msgid "Preprocessing"
+msgstr "Preprocessing"
+
+#: lib/formats/progressbar.c
+msgid "found"
+msgstr "found"
+
+#: lib/formats/progressbar.c
+msgid "other lint"
+msgstr "other lint"
+
+#: lib/formats/progressbar.c
+msgid "Matching"
+msgstr "Matching"
+
+#: lib/formats/progressbar.c
+msgid "dupes of"
+msgstr "dupes of"
+
+#: lib/formats/progressbar.c
+msgid "originals"
+msgstr "originals"
+
+#: lib/formats/progressbar.c
+msgid "to scan in"
+msgstr "to scan in"
+
+#: lib/formats/progressbar.c
+msgid "files"
+msgstr "files"
+
+#: lib/formats/progressbar.c
+msgid "Merging files into directories (stand by...)"
+msgstr "Merging files into directories (stand by...)"
+
+#: lib/formats/sh.c
+#, c-format
+msgid "%s is an invalid handler."
+msgstr "%s は無効な処理方法です"
+
+#: lib/formats/stats.c
+msgid "No shred stats.\n"
+msgstr "照合の統計情報がありません\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid ""
+"%sDuplicate finding stats (includes hardlinks):%s\n"
+"\n"
+msgstr ""
+"%s重複検出の統計（ハードリンクを含む）:%s\n"
+"\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of originals\n"
+msgstr "%s%15s%s バイト: 残すファイル\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of duplicates\n"
+msgstr "%s%15s%s バイト: 重複ファイル\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of non-duplicates\n"
+msgstr "%s%15s%s バイト: 重複していないファイル\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s bytes of files data actually read\n"
+msgstr "%s%15s%s バイト: 読み取り済みデータ\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15d%s Files in total\n"
+msgstr "%s%15d%s ファイル: 合計\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15ld%s Duplicate files\n"
+msgstr "%s%15ld%s ファイル: 重複\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15ld%s Groups in total\n"
+msgstr "%s%15ld%s グループ: 合計\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15ld%s Other lint items\n"
+msgstr "%s%15ld%s 件: その他の問題\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s of time spent scanning\n"
+msgstr "%s%15s%s : 検査時間\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s Algorithm efficiency on total files basis\n"
+msgstr "%s%15s%s : 全ファイルに対するアルゴリズムの効率\n"
+
+#: lib/formats/stats.c
+#, c-format
+msgid "%s%15s%s Algorithm efficiency on duplicate file basis\n"
+msgstr "%s%15s%s : 重複ファイルに対するアルゴリズムの効率\n"
+
+#: lib/formats/summary.c
+msgid " file(s) after investigation, nothing to search through.\n"
+msgstr " ファイルが調査後に残りました。重複を検索する対象がありません\n"
+
+#: lib/formats/summary.c
+msgid "Early shutdown, probably not all lint was found.\n"
+msgstr "処理を途中で終了しました。まだ検出されていない重複や問題がある可能性があります\n"
+
+#: lib/formats/summary.c
+msgid ""
+"Note: Please use the saved script below for removal, not the above output.\n"
+msgstr "削除には、上記の表示ではなく、以下の保存済みスクリプトを使用してください\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "In total %s files, whereof %s are duplicates in %s groups.\n"
+msgstr "全%sファイル中、重複は%sファイル（%sグループ）です\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "This equals %s%s%s of duplicates which could be removed.\n"
+msgstr "削除候補の重複ファイル: 合計%s%s%s\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "other suspicious item(s) found, which may vary in size.\n"
+msgstr "件のその他の問題を検出しました。サイズは項目によって異なります\n"
+
+#: lib/formats/summary.c
+msgid "This run was a replay from a previous run. No I/O done!\n"
+msgstr "以前の結果を再出力しました。ファイルの内容は読み取っていません\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "Scanning took in total %s%s%s.\n"
+msgstr "検査時間: %s%s%s\n"
+
+#: lib/formats/summary.c
+#, c-format
+msgid "Wrote a %s%s%s file to: %s%s%s\n"
+msgstr "%s%s%s形式のファイルを保存しました: %s%s%s\n"
+
+#: lib/hash-utility.c
+msgid "Digest type [BLAKE2B]"
+msgstr "ハッシュ方式［BLAKE2B］"
+
+#: lib/hash-utility.c
+msgid "Number of hashing threads [8]"
+msgstr "ハッシュ計算のスレッド数［8］"
+
+#: lib/hash-utility.c
+msgid "Megabytes read buffer [256 MB]"
+msgstr "読み取りバッファの容量（MB）［256 MB］"
+
+#: lib/hash-utility.c
+msgid "bytes to hash at a time [4096]"
+msgstr "1回にハッシュを計算するデータ量（バイト）［4096］"
+
+#: lib/hash-utility.c
+msgid ""
+"Print hashes in order completed, not in order entered (reduces memory usage)"
+msgstr "入力順ではなく、計算が終わった順にハッシュを出力（メモリ使用量を削減）"
+
+#: lib/hash-utility.c
+msgid "Space-separated list of files"
+msgstr "空白で区切ったファイル一覧"
+
+#: lib/hash-utility.c
+msgid "Hash a list of files"
+msgstr "指定したファイルのハッシュを計算"
+
+#: lib/hash-utility.c
+#, c-format
+msgid ""
+"Multi-threaded file digest (hash) calculator.\n"
+"\n"
+"  Available digest types:\n"
+"  Cryptographic:\n"
+"    %s\n"
+"\n"
+"  Non-cryptographic:\n"
+"    %s\n"
+"\n"
+"  Supported, but not useful:\n"
+"    %s\n"
+msgstr ""
+"複数スレッドでファイルのハッシュを計算します。\n"
+"\n"
+"  使用できる方式:\n"
+"  暗号学的ハッシュ:\n"
+"    %s\n"
+"\n"
+"  非暗号学的ハッシュ:\n"
+"    %s\n"
+"\n"
+"  対応しているものの実用的ではない方式:\n"
+"    %s\n"
+
+#: lib/hash-utility.c
+msgid "No valid paths given"
+msgstr "有効なパスが指定されていません"
+
+#: lib/hash-utility.c
+#, c-format
+msgid "Directories are not supported: %s"
+msgstr "ディレクトリはサポートされていません: %s"
+
+#: lib/hash-utility.c
+#, c-format
+msgid "%s: Unknown file type"
+msgstr "%s: 不明なファイルの種類"
+
+#: lib/hasher.c
+#, c-format
+msgid ""
+"Something went wrong reading %s; expected %lli bytes, got %lli; ignoring"
+msgstr "%s の読み取りに失敗しました。想定は %lli バイト、実際は %lli バイトでした。このファイルを除外します"
+
+#: lib/logger.h
+msgid "ERROR"
+msgstr "エラー"
+
+#: lib/logger.h
+msgid "WARNING"
+msgstr "警告"
+
+#: lib/logger.h
+msgid "INFO"
+msgstr "情報"
+
+#: lib/logger.h
+msgid "DEBUG"
+msgstr "DEBUG"
+
+#: lib/rank.c
+msgid "Pattern has to start with `<`"
+msgstr "パターンは `<` で始めてください"
+
+#: lib/rank.c
+#, c-format
+msgid "`<` or `>` imbalance: %d"
+msgstr "`<` と `>` の数が一致しません: %d"
+
+#: lib/rank.c
+msgid "empty pattern"
+msgstr "パターンが空です"
+
+#: lib/rank.c
+msgid "no pattern given in <> after 'r' or 'x'"
+msgstr "'r' または 'x' の後の <> 内にパターンがありません"
+
+#: lib/rank.c
+#, c-format
+msgid "Cannot add more than %lu regex patterns."
+msgstr "正規表現は %lu 個まで指定できます"
+
+#: lib/rank.c
+msgid "Error while parsing sortcriteria patterns: "
+msgstr "ファイルの選択条件に誤りがあります: "
+
+#: lib/reflink.c
+msgid "Check extended attributes to see if the file is already deduplicated"
+msgstr "拡張属性（xattr）を参照し、データ領域が共有済みかを確認"
+
+#: lib/reflink.c
+msgid "Even dedupe read-only snapshots (needs root)"
+msgstr "読み取り専用スナップショットのデータ領域も共有（root 権限が必要）"
+
+#: lib/reflink.c
+msgid "Try to dedupe files with inline extents"
+msgstr "内容を管理情報内に格納したファイルでもデータ領域の共有を試す（inline extent）"
+
+#: lib/reflink.c
+msgid "Don't use fiemap to check whether files are already reflinked"
+msgstr "データ領域の共有（reflink）の確認に fiemap を使わない"
+
+#: lib/reflink.c
+#, c-format
+msgid ""
+"Error parsing command line:\n"
+"%s"
+msgstr ""
+"コマンドライン引数を読み取れません:\n"
+"%s"
+
+#: lib/reflink.c
+msgid ""
+"must have exactly two files\n"
+"\n"
+msgstr ""
+"ファイルを2つ指定してください\n"
+"\n"
+
+#: lib/reflink.c
+msgid "dedupe: failed to open source file"
+msgstr "dedupe: コピー元ファイルを開けませんでした"
+
+#: lib/reflink.c
+msgid "dedupe: failed to create temp file"
+msgstr "dedupe: 一時ファイルを作成できませんでした"
+
+#: lib/reflink.c
+#, c-format
+msgid "dedupe: error %i: failed to open dest file.%s"
+msgstr "dedupe: エラー %i: コピー先ファイルを開けませんでした。%s"
+
+#: lib/reflink.c
+msgid ""
+"\n"
+"\t(if target is a read-only snapshot then -r option is required)"
+msgstr ""
+"\n"
+"\t（コピー先が読み取り専用スナップショットの場合、-r オプションが必要です）"
+
+#: lib/reflink.c
+#, c-format
+msgid ""
+"dedupe: error %s create clone via FICLONE; original hardlink left unchanged"
+msgstr "dedupe: FICLONE によるクローンの作成中にエラー %s が発生しました。元のハードリンクは変更していません"
+
+#: lib/reflink.c
+msgid ""
+"dedupe: Can't create clone of hardlink because FICLONE not defined on your "
+"system"
+msgstr "dedupe: このシステムには FICLONE がないため、ハードリンクのクローンを作成できません"
+
+#: lib/reflink.c
+#, c-format
+msgid "%s returned error: (%d)"
+msgstr "%s がエラーを返しました: %d"
+
+#: lib/reflink.c
+msgid "Files don't match - not deduped"
+msgstr "ファイルの内容が一致しないため、データ領域を共有しませんでした"
+
+# The upstream template truncates this message before a GLib format macro.
+# Leave untranslated until the complete msgid can be extracted upstream.
+#: lib/reflink.c
+msgid "Only first %"
+msgstr ""
+
+#: lib/reflink.c
+msgid "rmlint was not compiled with file cloning support."
+msgstr "この rmlint はファイルのクローン機能を有効にせずビルドされています"
+
+#: lib/reflink.c
+msgid "Returns 0 if the files are reflinks."
+msgstr "ファイルがデータ領域を共有している場合は 0 を返します（reflink）"
+
+#: lib/reflink.c
+msgid "Other return codes:"
+msgstr "その他の終了コード:"
+
+#: lib/reflink.c
+msgid "must have exactly two files"
+msgstr "ファイルを2つ指定してください"
+
+#: lib/reflink.c
+msgid ""
+"Cannot test for reflinks because rmlint was compiled without fiemap support"
+msgstr "この rmlint は fiemap に対応していないため、データ領域の共有（reflink）を検査できません"
+
+#: lib/reflink.c
+#, c-format
+msgid "`%s`: No such file or directory"
+msgstr "「%s」: そのようなファイルまたはディレクトリはありません"
+
+#: lib/replay.c
+msgid "lint type of node not recognised"
+msgstr "結果データの検出対象の種類を認識できません"
+
+#: lib/replay.c
+#, c-format
+msgid "modification time of `%s` changed. Ignoring."
+msgstr "「%s」の更新時刻が変わっています。このファイルを対象から外します"
+
+#: lib/replay.c
+#, c-format
+msgid "Loading json-results `%s'"
+msgstr "JSON 形式の結果「%s」を読み込んでいます"
+
+#: lib/replay.c
+msgid "No valid json cache (no array in /)"
+msgstr "JSON キャッシュの書式が正しくありません（最上位の要素が配列ではありません）"
+
+#: lib/replay.c
+msgid "No valid .json files given, aborting."
+msgstr "有効な JSON ファイルが指定されていません。処理を中止します"
+
+#: lib/session.c
+msgid "Received interrupt; stopping..."
+msgstr "中断操作を受け付けました。処理を停止しています…"
+
+#: lib/session.c
+msgid "Received second interrupt; stopping hard."
+msgstr "再度の中断操作を受け付けました。処理を強制停止します"
+
+#: lib/traverse.c
+#, c-format
+msgid "filesystem loop detected at %s (skipping)"
+msgstr "%s でファイルシステムの循環を検出しました（スキップ）"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot read directory %s: %s"
+msgstr "ディレクトリ「%s」を読み取れません: %s"
+
+#: lib/traverse.c
+#, c-format
+msgid "error %d in fts_read for %s (skipping)"
+msgstr "%2$s の fts_read でエラー %1$d が発生しました（スキップ）"
+
+#: lib/traverse.c
+#, c-format
+msgid "Unknown fts_info flag %d for file %s"
+msgstr "ファイル %2$s の fts_info に不明なフラグ %1$d があります"
+
+#: lib/traverse.c
+#, c-format
+msgid "Added big file %s"
+msgstr "サイズの大きいファイル %s を追加しました"
+
+#: lib/traverse.c
+#, c-format
+msgid "cannot stat file %s (skipping)"
+msgstr "ファイル %s の情報を取得できません（スキップ）"
+
+#: lib/traverse.c
+#, c-format
+msgid "'%s': fts_read failed on %s"
+msgstr "「%s」: %s の fts_read が失敗しました"
+
+#: lib/traverse.c
+#, c-format
+msgid "Unable to process path %s"
+msgstr "パス %s を処理できません"
+
+#: lib/treemerge.c
+msgid "Failed to allocate memory. Out of memory?"
+msgstr "メモリの確保に失敗しました。メモリ不足の可能性があります"
+
+#: lib/utilities.c
+msgid "Input size is empty"
+msgstr "サイズが入力されていません"
+
+#: lib/utilities.c
+msgid "Size is empty"
+msgstr "サイズが空です"
+
+#: lib/utilities.c
+msgid "Negative sizes are no good idea"
+msgstr "負のサイズは指定できません"
+
+#: lib/utilities.c
+msgid "Given size_format specifier not found"
+msgstr "サイズの単位を認識できません"
+
+#: lib/utilities.c
+msgid "Failed to parse size fraction"
+msgstr "サイズの小数部分の書式が正しくありません"
+
+#: lib/utilities.c
+msgid "Fraction is too big for uint64"
+msgstr "小数部分の値が大きすぎます（uint64 の上限を超えています）"
+
+#: lib/utilities.c
+msgid "This does not look like a number"
+msgstr "数値として認識できません"
+
+#: lib/utilities.c
+msgid "Size is too big for uint64"
+msgstr "サイズが大きすぎます（uint64 の上限を超えています）"
+
+#: lib/utilities.c
+msgid "Size factor would overflow size (max. 2**64 allowed)"
+msgstr "単位の乗算でサイズがオーバーフローします（上限は 2**64）"
+
+#: lib/utilities.c
+#, c-format
+msgid "cannot open file '%s' for nonstripped test: "
+msgstr "シンボル情報を検査するファイル「%s」を開けません: "
+
+#: lib/utilities.c
+msgid "ELF Library is out of date!"
+msgstr "ELF ライブラリが古いため、バイナリファイルを検査できません"
+
+#: lib/utilities.c
+#, c-format
+msgid "`%s` mount detected at %s (#%u); Ignoring all files in it.\n"
+msgstr "「%s」マウントを %s（#%u）で検出しました。その中のファイルをすべて無視します\n"
+
+#: lib/utilities.c
+#, c-format
+msgid "rm_offset_get_fiemap: fd=%d, n_extents=%d, file_offset=%d"
+msgstr "rm_offset_get_fiemap: fd=%d, n_extents=%d, file_offset=%d"
+
+#: lib/utilities.c
+#, c-format
+msgid "rm_offset_get_fiemap: got no fiemap for %d"
+msgstr "rm_offset_get_fiemap: %d の fiemap を取得できませんでした"
+
+# The upstream template truncates this message before a GLib format macro.
+# Leave untranslated until the complete msgid can be extracted upstream.
+#: lib/utilities.c
+msgid "rm_offset_get_fiemap: got no extents for %d at offset %"
+msgstr ""
+
+#: lib/utilities.c
+msgid "Reflink"
+msgstr "データ領域を共有しています（reflink）"
+
+#: lib/utilities.c
+msgid "Not linked"
+msgstr "リンクされていません"
+
+#: lib/utilities.c
+msgid "Not a regular file"
+msgstr "通常ファイル（regular file）ではありません"
+
+#: lib/utilities.c
+msgid "File sizes differ"
+msgstr "ファイルサイズが異なります"
+
+#: lib/utilities.c
+msgid "Maybe a reflink (fiemap data could not be read)"
+msgstr "データ領域を共有している可能性があります（reflink）。fiemap 情報を読み取れないため確認できません"
+
+#: lib/utilities.c
+msgid "Same file and path"
+msgstr "同じファイルでパスも同じです"
+
+#: lib/utilities.c
+msgid "Same file but with different path"
+msgstr "同じファイルですがパスが異なります"
+
+#: lib/utilities.c
+msgid "Hardlink"
+msgstr "ハードリンク"
+
+#: lib/utilities.c
+msgid "Encountered a symlink"
+msgstr "シンボリックリンクが見つかりました"
+
+#: lib/utilities.c
+msgid "Files are on different devices"
+msgstr "ファイルが異なるデバイス上にあります"
+
+#: lib/utilities.c
+msgid "An error occurred during checking"
+msgstr "検査中にエラーが発生しました"
+
+#: lib/utilities.c
+msgid "Files have inline extents"
+msgstr "一方または両方のファイルは、内容をファイルシステムの管理情報内に格納しています（inline extent）"
+
+#: src/rmlint.c
+#, c-format
+msgid "Aborting due to a fatal error. (signal received: %s)\n"
+msgstr "致命的なエラーのため処理を中止します（受信したシグナル: %s）\n"
+
+#: src/rmlint.c
+msgid "Please file a bug report (See rmlint -h)\n"
+msgstr "バグを報告してください（rmlint -h を参照）\n"
+
+#: gui/shredder/__init__.py
+msgid "Find & clean duplicate files"
+msgstr "重複ファイルを検索して整理"
+
+#: gui/shredder/cmdline.py
+msgid "A GUI frontend to rmlint"
+msgstr "rmlint を GUI で操作するアプリケーション"
+
+#: gui/shredder/views/settings.py
+msgid "Configure how duplicates are searched"
+msgstr "重複ファイルの検索方法を設定"
+
+#: gui/shredder/views/settings.py
+msgid "Reset to defaults"
+msgstr "デフォルトに戻す"
+
+#: gui/shredder/window.py
+msgid "Settings"
+msgstr "設定"
+
+#: gui/shredder/window.py
+msgid "About"
+msgstr "Shredder について"
+
+#: gui/shredder/window.py
+msgid "Search"
+msgstr "検索"
+
+#: gui/shredder/window.py
+msgid "Quit"
+msgstr "終了"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Report duplicate hardlinks"
+msgstr "ハードリンクを重複として報告"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Duplicate files might have hardlinked twins"
+msgstr "同じ実体を指すハードリンクも重複に含める"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Symbolic link handling"
+msgstr "シンボリックリンクの扱い"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "What to do with symbolic links?"
+msgstr "シンボリックリンクの扱いを選択"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "How to tackle found duplicates"
+msgstr "検出した重複の処理方法"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Define the handler that will tackle the wasted space"
+msgstr "重複ファイルの処理方法を選択"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Find hidden files and directories"
+msgstr "隠しファイルと隠しディレクトリを検索"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Hidden files and directories begin with a ».«"
+msgstr "隠しファイルや隠しディレクトリは「.」で始まる"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "[2] Size limits"
+msgstr "[2] サイズ制限"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "What size the duplicate files may have"
+msgstr "重複検索の対象にするファイルサイズの範囲を指定"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Traversal depth"
+msgstr "検索するディレクトリの階層"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "»1« is only the current directory's files"
+msgstr "「1」では現在のディレクトリ内だけを検索"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Cross mountpoints"
+msgstr "マウントポイントを越えて検索"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Traverse over mount borders?"
+msgstr "マウント先の別のファイルシステムも検索"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Path limitations"
+msgstr "ファイル名の条件"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Only find twins with a certain limitation"
+msgstr "指定したファイル名の条件に一致する重複だけを検出"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Hash algorithm"
+msgstr "ハッシュ方式"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Which hash algorithm to use"
+msgstr "ハッシュの計算方式を選択"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Keep all tagged"
+msgstr "タグ付きファイルをすべて残す"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Keep all files that lie in tagged directories"
+msgstr "タグ付きディレクトリ内のファイルをすべて残す"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Must match tagged"
+msgstr "タグ付きディレクトリとの一致を必須"
+
+#: gui/schemas/io.github.sahib.rmlint.Shredder.gschema.xml
+msgid "Duplicates must have twins in tagged directories"
+msgstr "タグ付きディレクトリ内にも同じ内容のファイルがある重複だけを検出"
