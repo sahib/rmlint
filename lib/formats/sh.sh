@@ -1,4 +1,5 @@
 #!/bin/sh
+set -eu
 
 PROGRESS_CURR=0
 PROGRESS_TOTAL=0                           
@@ -41,6 +42,12 @@ DO_KEEP_DIR_TIMESTAMPS=
 # Set to true on -i
 DO_ASK_BEFORE_DELETE=
 
+# Set to true on -f
+DO_IGNORE_ERRORS=
+
+# Mark deliberate exit
+CLEAN_EXIT=
+
 # Tempfiles for saving timestamps
 STAMPFILE=
 STAMPFILE2=
@@ -56,6 +63,7 @@ COL_YELLOW=$(printf '\033[0;33m')
 COL_RESET=$(printf '\033[0m')
 
 exit_cleanup() {
+    exit_status=$?
     trap - INT TERM EXIT
     if [ -n "$STAMPFILE" ]; then
         rm -f -- "$STAMPFILE"
@@ -63,10 +71,13 @@ exit_cleanup() {
     if [ -n "$STAMPFILE2" ]; then
         rm -f -- "$STAMPFILE2"
     fi
+    if [ "$exit_status" -ne 0 ] && [ -z "$CLEAN_EXIT" ]; then
+        printf '%%s\n' "${COL_RED}A command failed with status $exit_status.${COL_RESET}" >&2
+    fi
 }
 
 trap exit_cleanup EXIT
-trap exit INT TERM
+trap 'CLEAN_EXIT=true; exit' INT TERM
 
 print_progress_prefix() {
     if [ -n "$DO_SHOW_PROGRESS" ]; then
@@ -112,7 +123,8 @@ handle_unstripped_binary() {
     print_progress_prefix
     printf "${COL_GREEN} Stripping debug symbols of:${COL_RESET} %%s\n" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        strip -s "$1"
+        strip -s "$1" ||
+            printf '%%s\n' "${COL_RED}^^^^^^ Error: strip failed - skipped.${COL_RESET}" >&2
     fi
 }
 
@@ -120,7 +132,8 @@ handle_bad_user_id() {
     print_progress_prefix
     printf "${COL_GREEN}chown %%s${COL_RESET} %%s\n" "$USER" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chown -- "$USER" "$1"
+        chown -- "$USER" "$1" ||
+            printf '%%s\n' "${COL_RED}^^^^^^ Error: chown failed - skipped.${COL_RESET}" >&2
     fi
 }
 
@@ -128,7 +141,8 @@ handle_bad_group_id() {
     print_progress_prefix
     printf "${COL_GREEN}chgrp %%s${COL_RESET} %%s\n" "$GROUP" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chgrp -- "$GROUP" "$1"
+        chgrp -- "$GROUP" "$1" ||
+            printf '%%s\n' "${COL_RED}^^^^^^ Error: chgrp failed - skipped.${COL_RESET}" >&2
     fi
 }
 
@@ -136,7 +150,8 @@ handle_bad_user_and_group_id() {
     print_progress_prefix
     printf "${COL_GREEN}chown %%s:%%s${COL_RESET} %%s\n" "$USER" "$GROUP" "$1"
     if [ -z "$DO_DRY_RUN" ]; then
-        chown -- "$USER:$GROUP" "$1"
+        chown -- "$USER:$GROUP" "$1" ||
+            printf '%%s\n' "${COL_RED}^^^^^^ Error: chown failed - skipped.${COL_RESET}" >&2
     fi
 }
 
@@ -156,18 +171,18 @@ check_for_equality() {
 
 original_check() {
     if [ ! -e "$2" ]; then
-        printf '%%s\n' "${COL_RED}^^^^^^ Error: original has disappeared - cancelling.....${COL_RESET}"
+        printf '%%s\n' "${COL_RED}^^^^^^ Error: original has disappeared - cancelling...${COL_RESET}"
         return 1
     fi
 
     if [ ! -e "$1" ]; then
-        printf '%%s\n' "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling.....${COL_RESET}"
+        printf '%%s\n' "${COL_RED}^^^^^^ Error: duplicate has disappeared - cancelling...${COL_RESET}"
         return 1
     fi
 
     # Check they are not the exact same file (hardlinks allowed):
     if [ "$1" = "$2" ]; then
-        printf '%%s\n' "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling.....${COL_RESET}"
+        printf '%%s\n' "${COL_RED}^^^^^^ Error: original and duplicate point to the *same* path - cancelling...${COL_RESET}"
         return 1
     fi
 
@@ -176,7 +191,7 @@ original_check() {
         return 0
     else
         if ! check_for_equality "$1" "$2"; then
-            printf '%%s\n' "${COL_RED}^^^^^^ Error: files no longer identical - cancelling.....${COL_RESET}"
+            printf '%%s\n' "${COL_RED}^^^^^^ Error: files no longer identical - cancelling...${COL_RESET}"
             return 1
         fi
     fi
@@ -191,11 +206,15 @@ cp_symlink() {
             mv -- "$1" "$1.temp"
             if ln -s "$2" "$1"; then
                 # make the symlink's mtime the same as the original
-                touch -mr "$2" -h "$1"
+                # XXX: -h is not POSIX
+                touch -mr "$2" -h "$1" ||
+                    printf '%%s\n' "${COL_RED}^^^^^^ Error: could not preserve mtime.${COL_RESET}" >&2
                 rm -rf -- "$1.temp"
             else
                # Failed to link file, move back:
                 mv -- "$1.temp" "$1"
+                printf '%%s\n' "${COL_RED}^^^^^^ Error: could not symlink.${COL_RESET}" >&2
+                return 1
             fi
         fi
     fi
@@ -219,6 +238,8 @@ cp_hardlink() {
             else
                # Failed to link file, move back:
                 mv -- "$1.temp" "$1"
+                printf '%%s\n' "${COL_RED}^^^^^^ Error: could not hardlink.${COL_RESET}" >&2
+                return 1
             fi
         fi
     fi
@@ -335,11 +356,13 @@ Rmlint was executed in the following way:
 Execute this script with -d to disable this informational message.
 Type any string to continue; CTRL-C, Enter or CTRL-D to abort immediately
 EOF
-    read -r eof_check
+    eof_check=
+    read -r eof_check || true
     if [ -z "$eof_check" ]
     then
         # Count Ctrl-D and Enter as aborted too.
         printf '%%s\n' "${COL_RED}Aborted on behalf of the user.${COL_RESET}"
+        CLEAN_EXIT=true
         exit 1;
     fi
 }
@@ -360,13 +383,14 @@ OPTIONS:
   -q   Do not show progress.
   -k   Keep the timestamp of directories when removing duplicates.
   -i   Ask before deleting each file
+  -f   Keep going when a command fails.
 EOF
 }
 
 DO_REMOVE=
 DO_ASK=
 
-while getopts "dhxnrpqcki" OPTION
+while getopts "dhxnrpqckif" OPTION
 do
   case $OPTION in
      h)
@@ -403,11 +427,19 @@ do
      i)
        DO_ASK_BEFORE_DELETE=true
        ;;
+     f)
+       DO_IGNORE_ERRORS=true
+       ;;
      *)
        usage
+       CLEAN_EXIT=true
        exit 1
   esac
 done
+
+if [ -n "$DO_IGNORE_ERRORS" ]; then
+    set +e
+fi
 
 if [ -z "$DO_REMOVE" ]
 then
@@ -429,5 +461,4 @@ elif [ -n "$DO_KEEP_DIR_TIMESTAMPS" ]; then
 fi
 
 ######### START OF AUTOGENERATED OUTPUT #########
-
 
