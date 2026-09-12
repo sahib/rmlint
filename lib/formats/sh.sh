@@ -409,12 +409,12 @@ do
   esac
 done
 
-if [ -z $DO_REMOVE ]
+if [ -z "$DO_REMOVE" ]
 then
     printf '%%s\n' "#${COL_YELLOW} ///${COL_RESET}This script will be deleted after it runs${COL_YELLOW}///${COL_RESET}"
 fi
 
-if [ -z $DO_ASK ]
+if [ -z "$DO_ASK" ]
 then
   usage
   ask
