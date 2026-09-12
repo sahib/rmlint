@@ -32,6 +32,7 @@
 
 #include "config.h"
 #include "hasher.h"
+#include "logger.h"
 #include "utilities.h"
 #include "hash-utility.h"
 
@@ -158,7 +159,9 @@ int rm_hasher_main(int argc, const char **argv) {
           "\n    %s\n"
           "\n  Supported, but not useful:"
           "\n    %s\n"),
-        "sha{1,256,512}, sha3-{256,384,512}, blake{2s,2b,2sp,2bp}, highway{64,128,256}",
+        "md5, sha{1,256,512}, sha3-{256,384,512}, "
+        "blake2{s,b,sp,bp}, blake{3, 3_512}, "
+        "highway{64,128,256}",
 #if HAVE_MM_CRC32_U64
         "metrocrc, metrocrc256, "
 #endif
@@ -179,10 +182,14 @@ int rm_hasher_main(int argc, const char **argv) {
         /* read paths from stdin */
         char path_buf[PATH_MAX];
         char *tokbuf = NULL;
-        GPtrArray *paths = g_ptr_array_new();
+        GPtrArray *paths = g_ptr_array_new_null_terminated(0, NULL, TRUE);
 
-        while(fgets(path_buf, PATH_MAX, stdin)) {
+        while(fgets(path_buf, sizeof path_buf, stdin)) {
             char *abs_path = realpath(strtok_r(path_buf, "\n", &tokbuf), NULL);
+            if (!abs_path) {
+                rm_log_warning("invalid path: %s: %s\n", path_buf, g_strerror(errno));
+                continue;
+            }
             g_ptr_array_add(paths, abs_path);
         }
 
