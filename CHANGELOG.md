@@ -8,6 +8,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ### Fixed
 
+* Do not `--backup`-rename special output paths like `/dev/null` (see issue #763)
 * Fix json UTF-encoding issues (see issues #463 and #464)
 * Fix ``rmlint --gui`` ignoring manual tagging of originals (see issue #385)
 * Fix various bugs in ``--replay`` mode (see issue #383)
