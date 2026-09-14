@@ -27,6 +27,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <sys/stat.h>
 
 /* A group of output files.
  * These are only created when caching to the end of the run is requested.
@@ -162,6 +163,17 @@ void rm_fmt_clear(RmFmtTable *self) {
     g_queue_clear(self->handler_order);
 }
 
+/* Only regular files are safe to rename for --backup.
+ * Special paths like /dev/null must not be moved aside (see #763).
+ */
+static bool rm_fmt_path_is_regular_file(const char *path) {
+    struct stat st;
+    if(lstat(path, &st) != 0) {
+        return false;
+    }
+    return S_ISREG(st.st_mode);
+}
+
 void rm_fmt_backup_old_result_file(RmFmtTable *self, const char *old_path) {
     if(self->first_backup_timestamp == NULL) {
         self->first_backup_timestamp = g_date_time_new_now_utc();
@@ -246,7 +258,7 @@ bool rm_fmt_add(RmFmtTable *self, const char *handler_name, const char *path) {
         needs_full_path = true;
         if(access(path, F_OK) == 0) {
             file_existed_already = true;
-            if(self->session->cfg->backup) {
+            if(self->session->cfg->backup && rm_fmt_path_is_regular_file(path)) {
                 rm_fmt_backup_old_result_file(self, path);
             }
         }
