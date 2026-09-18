@@ -281,7 +281,7 @@ Here's the list of currently available formatters and their config options:
     By default it will ask you if you really want to proceed. If you
     do not want that confirmation prompt you can pass the ``-d``. Additionally
     it will delete itself after running, unless you pass the ``-x`` switch to
-    the ``sh`` script.
+    the ``sh`` script. Run it with ``-h`` for the full list of options.
 
     It is enabled by default and writes to ``rmlint.sh``.
 

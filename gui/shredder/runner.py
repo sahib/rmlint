@@ -470,8 +470,10 @@ class Script(GObject.Object):
         """
         flags = Gio.SubprocessFlags
 
+        # TODO: report errors in the GUI and make -f a selectable option
         self._process = Gio.Subprocess.new(
-            [self.script_file, '-d', '-x', '-q', '-p', '-n' if dry_run else ''],
+            [self.script_file, '-d', '-x', '-q', '-p', '-f',
+             '-n' if dry_run else ''],
             flags.STDERR_SILENCE | flags.STDOUT_PIPE
         )
         self._stream = None
