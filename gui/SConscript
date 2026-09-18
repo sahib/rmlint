@@ -15,8 +15,12 @@ Import('installing')
 
 GUI_DIR = 'gui'
 genv = env.Clone()
-if 'DEB_PYTHON_INSTALL_LAYOUT' in os.environ:
-    genv['ENV']['DEB_PYTHON_INSTALL_LAYOUT'] = os.environ['DEB_PYTHON_INSTALL_LAYOUT']
+genv['ENV'].update(
+    (key, os.environ[key])
+    for key in ('SOURCE_DATE_EPOCH', 'PYTHONHASHSEED', 'PYTHONPATH',
+                'DEB_PYTHON_INSTALL_LAYOUT')
+    if key in os.environ
+)
 
 # Written by the old setup.py-based install; still honoured on uninstall.
 # TODO: Keep it until 2.12.0
@@ -216,6 +220,6 @@ if installing:
         )
         env.Alias(['install', 'install-gui'], compile_schemas)
     else:
-        print('==> Not compiling glib schemas (--without-compile-glib-schemas).')
+        print('==> Not compiling glib schemas (--without-compile-glib-schemas or DESTDIR=).')
         print('==> You may need to run this after installing:')
         print(f'==>     glib-compile-schemas {PREFIX / GSCHEMA_DIR_SUFFIX}')

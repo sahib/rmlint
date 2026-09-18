@@ -38,13 +38,15 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ sudo dnf install git pkgconf gcc gettext scons glib2-devel json-glib-devel
+    $ sudo dnf install git pkgconf gcc scons glib2-devel json-glib-devel
     # Optional dependencies for more features:
-    $ sudo dnf install libblkid-devel elfutils-libelf-devel
+    $ sudo dnf install gettext libblkid-devel elfutils-libelf-devel
     # Optional dependencies for building documentation:
     $ sudo dnf install python3-sphinx python3-furo
-    # Optional dependencies for the GUI:
-    $ sudo dnf install python3-devel python3-setuptools gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog
+    # Optional dependencies for building/installing the GUI:
+    $ sudo dnf install python3-build python3-installer python3-setuptools
+    # Optional dependencies for running the GUI:
+    $ sudo dnf install gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog
     # Optional dependencies for tests:
     $ sudo dnf install python3-pytest-xdist+psutil python3-xattr python3-cpuinfo
 
@@ -73,15 +75,18 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ sudo pacman -S pkgconf git scons glib2 gettext json-glib
+    $ sudo pacman -S pkgconf git scons glib2 json-glib
     # Optional dependencies for more features:
-    $ sudo pacman -S util-linux-libs libelf
+    $ sudo pacman -S gettext util-linux-libs libelf
     # Optional dependencies for building documentation:
     $ sudo pacman -S python-sphinx python-sphinx-furo
-    # Optional dependencies for the GUI:
-    $ sudo pacman -S python-setuptools python-gobject python-cairo gtksourceview4 librsvg python-colorlog
+    # Optional dependencies for building/installing the GUI:
+    $ sudo pacman -S python-build python-installer python-setuptools
+    # Optional dependencies for running the GUI:
+    $ sudo pacman -S python-gobject python-cairo gtksourceview4 librsvg python-colorlog
     # Optional dependencies for tests:
-    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil python-xxhash python-py-cpuinfo btrfs-progs
+    $ sudo pacman -S python-pytest python-pytest-xdist python-xattr python-psutil python-xxhash python-py-cpuinfo2 btrfs-progs
+    $ yaourt/yay/paru -S python3-blake3
 
   There is also git packages in AUR, from the ``master`` branch: `rmlint-git`_, `rmlint-shredder-git`_ ; and the ``develop`` branch: `rmlint-develop-git`_, `rmlint-shredder-develop-git`_.
 
@@ -106,15 +111,15 @@ Here's a list of readily prepared commands for known operating systems:
     # Ubuntu-only:
     $ sudo apt install software-properties-common && add-apt-repository universe
 
-    $ sudo apt install git scons pkgconf gettext build-essential libjson-glib-1.0-0 libjson-glib-dev
+    $ sudo apt install git scons pkgconf build-essential libjson-glib-1.0-0 libjson-glib-dev
     # Optional dependencies for more features:
-    $ sudo apt install libelf-dev libglib2.0-dev libblkid-dev
+    $ sudo apt install gettext libelf-dev libglib2.0-dev libblkid-dev
     # Optional dependencies for building documentation:
     $ sudo apt install python3-sphinx furo
+    # Optional dependencies for building/installing the GUI:
+    $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for running the GUI:
     $ sudo apt install python3-gi-cairo gir1.2-gtksource-4 gir1.2-polkit-1.0 librsvg2-common python3-colorlog
-    # Optional dependencies for installing the GUI:
-    $ sudo apt install python3-setuptools python3-build python3-installer
     # Optional dependencies for tests:
     $ sudo apt install python3-pytest python3-pytest-xdist python3-psutil python3-xattr python3-blake3 python3-xxhash py-cpuinfo
 
@@ -150,9 +155,9 @@ Here's a list of readily prepared commands for known operating systems:
 
   .. code-block:: bash
 
-    $ doas pkg install scons-py312 pkgconf gettext py312-sphinx glib json-glib
+    $ doas pkg install scons-py312 pkgconf py312-sphinx glib json-glib
     # Optional dependency for more features:
-    $ doas pkg install libblkid
+    $ doas pkg install gettext libblkid
     # Optional dependency for building documentation:
     $ doas pkg install py312-sphinx py312-furo
     # Optional dependencies for the GUI:
@@ -167,10 +172,10 @@ Here's a list of readily prepared commands for known operating systems:
 
   `GNU Guix`_, `Alpine`_, `Gentoo`_, `NixOS`_, `Void`_, `Slackware`_ and `Solus`_ also provide or used to provide ports or packages.
 
-.. _GNU Guix: https://git.savannah.gnu.org/cgit/guix.git/tree/gnu/packages/disk.scm#n1288
+.. _GNU Guix: https://git.savannah.gnu.org/cgit/guix.git/tree/gnu/packages/disk.scm#n1523
 .. _Alpine: https://gitlab.alpinelinux.org/alpine/aports/-/tree/master/testing/rmlint
 .. _Gentoo: https://gitweb.gentoo.org/repo/gentoo.git/tree/app-misc/rmlint?id=392900cef25d31d5c622e542d636ba37e7a0b71a
-.. _NixOS: https://github.com/NixOS/nixpkgs/tree/master/pkgs/tools/misc/rmlint
+.. _NixOS: https://github.com/NixOS/nixpkgs/tree/master/pkgs/by-name/rm/rmlint
 .. _Void: https://github.com/void-linux/void-packages/tree/master/srcpkgs/rmlint
 .. _Slackware: https://git.slackbuilds.org/slackbuilds/plain/misc/rmlint/
 .. _Solus: https://github.com/getsolus/packages/tree/main/packages/r/rmlint

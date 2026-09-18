@@ -1,0 +1,12 @@
+# container to test how scons install (with or without DESTDIR, etc) behave under Fedora
+#
+# podman build -f Containerfile.fedora -t rmlint/ci/install/fedora ci/install
+# podman run --rm -it -v "$PWD":/src:ro,Z rmlint/ci/install/fedora
+FROM registry.fedoraproject.org/fedora-minimal:rawhide
+
+RUN dnf install -y git rsync gcc python3-scons pkgconf-pkg-config glib2-devel json-glib-devel gettext \
+        python3-build python3-installer python3-setuptools gtksourceview4 gtk3 gdk-pixbuf2 hicolor-icon-theme python3-colorlog \
+        python3-sphinx
+
+WORKDIR /rmlint
+CMD ["bash", "-c", "git -C /src ls-files -c --exclude-standard -z | rsync -a --from0 --files-from=- /src/ /rmlint/ && exec bash"]
