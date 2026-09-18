@@ -22,7 +22,7 @@ RMLINT_VERSION = GUI.parent / '.version'
 SITE_SCONS = GUI.parent / 'site_scons'
 
 
-def _ver_dot_version() -> tuple[str, str, str|None] | None:
+def _ver_dot_version() -> tuple[str, str, str] | None:
     """(SemVer, PEP440) from .version, or None."""
     if str(SITE_SCONS) not in sys.path:
         sys.path.insert(0, str(SITE_SCONS))
