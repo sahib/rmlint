@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
 """
 General purpose logger, used in many python projects by @sahib.
 It has colors and symbols! Enough reasoning.
 """
 import logging
 import logging.handlers
+import os
+import tempfile
 
 COLORED_FORMAT = "%(asctime)s%(reset)s %(log_color)s[logsymbol] \
 %(levelname)-8s%(reset)s \
@@ -23,11 +24,10 @@ UNICODE_ICONS = {
 }
 
 
-def create_logger(name=None, path=None, verbosity=logging.DEBUG):
+def create_logger(name=None, verbosity=logging.DEBUG):
     '''Create a new Logger configured with moosecat's defaults.
 
     :name: A user-define name that describes the logger
-    :path: Path to store a log file.
     :return: A new logger .
     '''
     logger = logging.getLogger(name)
@@ -74,7 +74,7 @@ def create_logger(name=None, path=None, verbosity=logging.DEBUG):
 
     # Rotating File-Handler
     file_stream = logging.handlers.RotatingFileHandler(
-        filename=path or '/tmp/app.log',
+        filename=os.path.join(tempfile.gettempdir(), f'shredder.{os.getpid()}.log'),
         maxBytes=(1024 ** 2 * 10),  # 10 MB
         backupCount=2,
         delay=True
@@ -85,6 +85,7 @@ def create_logger(name=None, path=None, verbosity=logging.DEBUG):
     logger.addHandler(file_stream)
     logger.addHandler(stream)
     logger.setLevel(verbosity)
+
     return logger
 
 
