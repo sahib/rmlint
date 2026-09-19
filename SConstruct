@@ -186,7 +186,9 @@ options = {
     'LINKCOMSTR': link_program_message,
     'ENV': {
         key: os.environ[key]
-        for key in ('PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH',
+        for key in ('PATH', 'TERM', 'HOME',
+                    'PKG_CONFIG_PATH', 'PKG_CONFIG_LIBDIR', 'PKG_CONFIG_SYSROOT_DIR',
+                    'CPATH', 'C_INCLUDE_PATH', 'LIBRARY_PATH',
                     'SOURCE_DATE_EPOCH')
         if key in os.environ
     } | {'TZ': 'UTC', 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'},
@@ -249,6 +251,7 @@ if 'CC' in os.environ:
 
 ENV_FLAGS = {
     'CCFLAGS': shlex.split(os.environ.get('CFLAGS', '')),
+    'CPPFLAGS': shlex.split(os.environ.get('CPPFLAGS', '')),
     'LINKFLAGS': shlex.split(os.environ.get('LDFLAGS', '')),
 }
 
