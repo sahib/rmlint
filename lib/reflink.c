@@ -354,12 +354,13 @@ int rm_dedupe_main(int argc, const char **argv) {
 
         rm_log_debug_line("Cloning using %s", _DEDUPE_IOCTL_NAME);
 
-        struct {
+        /* clever way to reserve space for info[0] */
+        union {
             struct _FILE_DEDUPE_RANGE args;
-            struct _FILE_DEDUPE_RANGE_INFO info;
+            char space[sizeof(struct _FILE_DEDUPE_RANGE) + sizeof(struct _FILE_DEDUPE_RANGE_INFO)];
         } dedupe;
         memset(&dedupe, 0, sizeof(dedupe));
-        dedupe.info._DEST_FD = cloneto_fd;
+        dedupe.args.info[0]._DEST_FD = cloneto_fd;
 
         /* fsync's needed to flush extent mapping */
         if(fsync(source_fd) != 0) {
@@ -367,7 +368,7 @@ int rm_dedupe_main(int argc, const char **argv) {
                                 strerror(errno));
         }
 
-        if(fsync(dedupe.info._DEST_FD) != 0) {
+        if(fsync(dedupe.args.info[0]._DEST_FD) != 0) {
             rm_log_warning_line("Error syncing dest file %s: %s", dest_path,
                                 strerror(errno));
         }
@@ -378,7 +379,7 @@ int rm_dedupe_main(int argc, const char **argv) {
             dedupe.args.dest_count = 1;
             /* TODO: multiple destinations at same time? */
             dedupe.args._SRC_OFFSET = bytes_deduped;
-            dedupe.info._DEST_OFFSET = bytes_deduped;
+            dedupe.args.info[0]._DEST_OFFSET = bytes_deduped;
 
             /* try to dedupe the rest of the file */
             dedupe.args._SRC_LENGTH =
@@ -388,7 +389,7 @@ int rm_dedupe_main(int argc, const char **argv) {
 
             if(ret != 0) {
                 break;
-            } else if(dedupe.info.status == _DATA_DIFFERS) {
+            } else if(dedupe.args.info[0].status == _DATA_DIFFERS) {
                 if(dedupe_chunk != min_dedupe_chunk) {
                     dedupe_chunk = min_dedupe_chunk;
                     rm_log_debug_line("Dropping to %" G_GINT64_FORMAT
@@ -399,15 +400,15 @@ int rm_dedupe_main(int argc, const char **argv) {
                 } else {
                     break;
                 }
-            } else if(dedupe.info.status != 0) {
-                ret = -dedupe.info.status;
+            } else if(dedupe.args.info[0].status != 0) {
+                ret = -dedupe.args.info[0].status;
                 errno = ret;
                 break;
-            } else if(dedupe.info.bytes_deduped == 0) {
+            } else if(dedupe.args.info[0].bytes_deduped == 0) {
                 break;
             }
 
-            bytes_deduped += dedupe.info.bytes_deduped;
+            bytes_deduped += dedupe.args.info[0].bytes_deduped;
         }
         rm_log_debug_line("Bytes deduped: %" G_GINT64_FORMAT, bytes_deduped);
 
