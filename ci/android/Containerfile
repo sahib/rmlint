@@ -1,0 +1,9 @@
+FROM docker.io/termux/termux-docker AS toolchain
+USER 1000:1000
+RUN pkg install -y clang pkg-config glib json-glib libblkid libelf python-pip
+
+FROM toolchain AS build
+SHELL ["sh", "-c"]
+COPY --chown=1000:1000 . .
+RUN pip install --no-cache-dir scons
+RUN scons --without-gui --show-config PREFIX=$PREFIX VERBOSE=1 DEBUG=1 O=release
