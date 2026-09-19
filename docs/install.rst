@@ -168,6 +168,17 @@ Here's a list of readily prepared commands for known operating systems:
 .. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
 .. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint
 
+* **Android** (Termux)
+
+  .. code-block:: bash
+
+    $ pkg install clang pkg-config python-pip glib json-glib
+    $ pip install scons
+    # Optional dependencies for more features:
+    $ pkg install libblkid libelf
+    # Optional dependencies for the testing suite:
+    $ pkg install python-psutil
+
 * **Others**
 
   `GNU Guix`_, `Alpine`_, `Gentoo`_, `NixOS`_, `Void`_, `Slackware`_ and `Solus`_ also provide or used to provide ports or packages.

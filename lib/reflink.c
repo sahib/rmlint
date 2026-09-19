@@ -311,19 +311,20 @@ int rm_dedupe_main(int argc, const char **argv) {
             puttime.modtime = source_stat.st_mtime;
             puttime.actime = source_stat.st_atime;
 
+            /* TODO: migrate to futimens() */
             if(utime(cloneto_path, &puttime)) {
                 rm_log_warning_line("dedupe: failed to preserve times for %s",
                                     source_path);
             }
 
-            if(lchown(cloneto_path, source_stat.st_uid, source_stat.st_gid) != 0) {
+            if(fchown(cloneto_fd, source_stat.st_uid, source_stat.st_gid) != 0) {
                 rm_log_warning_line("dedupe: failed to preserve ownership for %s",
                                     source_path);
                 // try to preserve group ID
                 (void)!lchown(cloneto_path, -1, source_stat.st_gid);
             }
 
-            if(lchmod(cloneto_path, source_stat.st_mode) != 0) {
+            if(fchmod(cloneto_fd, source_stat.st_mode) != 0) {
                 rm_log_warning_line("dedupe: failed to preserve permissions for %s",
                                     source_path);
             }

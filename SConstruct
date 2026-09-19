@@ -520,7 +520,7 @@ if GetOption('show_config'):
         (needs gio-unix-2.0)                              : {gio_unix}
 
     Enable gettext localization                           : {gettext}
-        (needs <locale.h> for compile side support)       : {locale}
+        (needs <locale.h> and <libintl.h>)                : {locale}
         (needs msgfmt to compile .po files)               : {msgfmt}
 
 {grey}The following constants will be used during the build:{end}
