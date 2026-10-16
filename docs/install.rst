@@ -163,7 +163,7 @@ Here's a list of readily prepared commands for known operating systems:
     # Optional dependencies for the GUI:
     $ doas pkg install gtksourceview4 librsvg2 py312-colorlog
     # Optional dependancies for the testing suite:
-    $ doas pkg install py312-pip py312-blake3 py312-xxhash py312-py-cpuinfo bash dash
+    $ doas pkg install py312-pip py312-blake3 py312-xxhash py312-py-cpuinfo2 bash dash
 
 .. _FreeBSD: https://cgit.freebsd.org/ports/tree/sysutils/rmlint
 .. _DragonFlyBSD: https://github.com/DragonFlyBSD/DPorts/tree/master/sysutils/rmlint
