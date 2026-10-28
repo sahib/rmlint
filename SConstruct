@@ -80,6 +80,8 @@ def get_default_prefix():
             return prefix
         except OSError as err:
             print(f'===> Failed to get cached installation prefix: {err}')
+    if 'TERMUX_VERSION' in os.environ:
+        return os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
     return DEFAULT_PREFIX
 
 vars = Variables()
@@ -88,7 +90,7 @@ vars.Add(PathVariable(
     'PREFIX',
     help='installation prefix',
     default=get_default_prefix(),
-    validator=PathVariable.PathIsDir,
+    validator=PathVariable.PathAccept,
 ))
 
 vars.Add(PathVariable(
