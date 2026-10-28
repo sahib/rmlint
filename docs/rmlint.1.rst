@@ -175,7 +175,7 @@ General Options
 
     160-bit: **sha1**
 
-    128-bit: **md5**, **murmur**, **metro**, **metrocrc**
+    128-bit: **md5**, **murmur**, **metro**, **metrocrc**, **xxhash128**
 
     64-bit: **highway64**, **xxhash**.
 
