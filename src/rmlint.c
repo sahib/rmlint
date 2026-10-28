@@ -62,7 +62,13 @@ static void signal_handler(int signum) {
 static void i18n_init(void) {
 #if HAVE_LIBINTL
     /* Tell gettext where to search for .mo files */
+#ifdef RM_DEBUG
+    const char *locale_dir = getenv("TEXTDOMAINDIR");
+    bindtextdomain(RM_GETTEXT_PACKAGE,
+                   locale_dir ? locale_dir : INSTALL_PREFIX "/share/locale");
+#else
     bindtextdomain(RM_GETTEXT_PACKAGE, INSTALL_PREFIX "/share/locale");
+#endif
     bind_textdomain_codeset(RM_GETTEXT_PACKAGE, "UTF-8");
 
     /* Make printing umlauts work */
