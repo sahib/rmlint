@@ -552,7 +552,7 @@ msgid "compiled with:"
 msgstr "compilado con:"
 
 #: lib/cmdline.c
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "\n"
@@ -564,7 +564,7 @@ msgstr ""
 "\n"
 "rmlint fue escrito por Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,\n"
 "<Cebtenzzre> y Vassili <vassilit> Tchersky.\n"
-"El código en https://github.com/sahib/rmlint tiene licencia bajo los términos de el GPLv3."
+"El código en %s tiene licencia bajo los términos de el GPLv3.\n"
 
 #: lib/cmdline.c
 msgid "You seem to have no manpage for rmlint."

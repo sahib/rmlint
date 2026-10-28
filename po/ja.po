@@ -34,16 +34,19 @@ msgid "compiled with:"
 msgstr "ビルド時の機能:"
 
 #: lib/cmdline.c
+#, c-format
 msgid ""
 "\n"
 "\n"
-"rmlint was written by Christopher <sahib> Pahl and Daniel <SeeSpotRun> Thomas.\n"
-"The code at https://github.com/sahib/rmlint is licensed under the terms of the GPLv3.\n"
+"rmlint was written by Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas, \n"
+"<Cebtenzzre> and Vassili <vassilit> Tchersky.\n"
+"The code at %s is licensed under the terms of the GPLv3.\n"
 msgstr ""
 "\n"
 "\n"
-"rmlint の作者は Christopher <sahib> Pahl と Daniel <SeeSpotRun> Thomas です。\n"
-"https://github.com/sahib/rmlint のソースコードは GPLv3 の条件に従って利用できます。\n"
+"rmlint の作者は Christopher <sahib> Pahl、Daniel <SeeSpotRun> Thomas、\n"
+"<Cebtenzzre> と ヴァシーリー <vassilit> チェルスキー です。\n"
+"%s のソースコードは GPLv3 の条件に従って利用できます。\n"
 
 #: lib/cmdline.c
 msgid "You seem to have no manpage for rmlint."

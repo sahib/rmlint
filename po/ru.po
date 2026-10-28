@@ -533,7 +533,7 @@ msgid "compiled with:"
 msgstr ""
 
 #: lib/cmdline.c
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "\n"
@@ -544,8 +544,8 @@ msgstr ""
 "\n"
 "\n"
 "ПО rmlint была разработана Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,\n"
-"<Cebtenzzre> и Vassili <vassilit> Tchersky.\n"
-"Код, размещенный по адресу https://github.com/sahib/rmlint, распространяется на условиях GPLv3.\n"
+"<Cebtenzzre> и Василий <vassilit> Черский.\n"
+"Код, размещенный по адресу %s, распространяется на условиях GPLv3.\n"
 
 #: lib/cmdline.c
 msgid "You seem to have no manpage for rmlint."

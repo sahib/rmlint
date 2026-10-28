@@ -555,7 +555,7 @@ msgid "compiled with:"
 msgstr "აგებულია რით:"
 
 #: lib/cmdline.c
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "\n"
@@ -565,9 +565,9 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"rmlint-ის ავტორებია: Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,<Cebtenzzre> და Vassili "
-"<vassilit> Tchersky.\n"
-"კოდი მისამართზე https://github.com/sahib/rmlint ვრცელდება ლიცენზიით GPLv3."
+"rmlint-ის ავტორებია: Christopher <sahib> Pahl, Daniel <SeeSpotRun> Thomas,\n"
+"<Cebtenzzre> და ვასილი <vassilit> ჩერსკი.\n"
+"კოდი მისამართზე %s ვრცელდება ლიცენზიით GPLv3.\n"
 
 #: lib/cmdline.c
 msgid "You seem to have no manpage for rmlint."
