@@ -37,6 +37,12 @@ class XXH3HostOrder(RmLintHash):
     def hexdigest(self):
         return struct.pack("=Q", xxhash.xxh3_64_intdigest(self._data)).hex()
 
+class XXH3_128HostOrder(RmLintHash):
+    """XXH3-128, serialised the way rmlint stores it."""
+    def hexdigest(self):
+        digest = xxhash.xxh3_128_intdigest(self._data)
+        return struct.pack("=QQ", digest & (2 ** 64 - 1), digest >> 64).hex()
+
 class Blake3_512(RmLintHash):
     def hexdigest(self):
         return blake3.blake3(self._data).hexdigest(length=64)
@@ -49,6 +55,7 @@ CKSUM_ALGOS = {
     "blake3": blake3.blake3,
     "blake3_512": Blake3_512,
     "xxhash": XXH3HostOrder,
+    "xxhash128": XXH3_128HostOrder,
 }
 
 
