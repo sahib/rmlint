@@ -17,7 +17,7 @@ blake3/
 
 xxhash/
 	Upstream: https://github.com/Cyan4973/xxHash
-	Version:  tag v0.8.3 (2024-12-30)
+	Version:  tag v0.8.4 (2026-09-19)
 	Imported: - /xxhash.c and /xxhash.h
 	          - /LICENSE
 	Modified: no
