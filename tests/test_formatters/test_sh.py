@@ -296,7 +296,7 @@ def test_skip_hardlinks(tm_opt):
 
 def test_binary_path_from_path_lookup():
     """Checks that RMLINT_BINARY is the correct absolute path."""
-    if not sys.platform.startswith(("freebsd", "linux", "cygwin")):
+    if not sys.platform.startswith(("linux", "freebsd", "cygwin", "android")):
         pytest.skip("unsupported platform")
 
     create_file('xxx', 'a')

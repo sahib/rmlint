@@ -80,6 +80,8 @@ def get_default_prefix():
             return prefix
         except OSError as err:
             print(f'===> Failed to get cached installation prefix: {err}')
+    if 'TERMUX_VERSION' in os.environ:
+        return os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
     return DEFAULT_PREFIX
 
 vars = Variables()
@@ -88,7 +90,7 @@ vars.Add(PathVariable(
     'PREFIX',
     help='installation prefix',
     default=get_default_prefix(),
-    validator=PathVariable.PathIsDir,
+    validator=PathVariable.PathAccept,
 ))
 
 vars.Add(PathVariable(
@@ -186,7 +188,9 @@ options = {
     'LINKCOMSTR': link_program_message,
     'ENV': {
         key: os.environ[key]
-        for key in ('PATH', 'TERM', 'HOME', 'PKG_CONFIG_PATH',
+        for key in ('PATH', 'TERM', 'HOME',
+                    'PKG_CONFIG_PATH', 'PKG_CONFIG_LIBDIR', 'PKG_CONFIG_SYSROOT_DIR',
+                    'CPATH', 'C_INCLUDE_PATH', 'LIBRARY_PATH',
                     'SOURCE_DATE_EPOCH')
         if key in os.environ
     } | {'TZ': 'UTC', 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'},
@@ -249,6 +253,7 @@ if 'CC' in os.environ:
 
 ENV_FLAGS = {
     'CCFLAGS': shlex.split(os.environ.get('CFLAGS', '')),
+    'CPPFLAGS': shlex.split(os.environ.get('CPPFLAGS', '')),
     'LINKFLAGS': shlex.split(os.environ.get('LDFLAGS', '')),
 }
 
@@ -517,7 +522,7 @@ if GetOption('show_config'):
         (needs gio-unix-2.0)                              : {gio_unix}
 
     Enable gettext localization                           : {gettext}
-        (needs <locale.h> for compile side support)       : {locale}
+        (needs <locale.h> and <libintl.h>)                : {locale}
         (needs msgfmt to compile .po files)               : {msgfmt}
 
 {grey}The following constants will be used during the build:{end}

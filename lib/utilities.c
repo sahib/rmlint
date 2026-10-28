@@ -560,12 +560,14 @@ static int rm_userlist_cmp_ids(gconstpointer a, gconstpointer b, _UNUSED gpointe
 }
 
 RmUserList *rm_userlist_new(void) {
-    struct passwd *node = NULL;
-    struct group *grp = NULL;
-
     RmUserList *self = g_malloc0(sizeof(RmUserList));
     self->users = g_sequence_new(NULL);
     self->groups = g_sequence_new(NULL);
+
+/* TODO: revisit when Termux bump __ANDROID_API__ */
+#if !RM_IS_ANDROID
+    struct passwd *node = NULL;
+    struct group *grp = NULL;
 
     setpwent();
     while((node = getpwent()) != NULL) {
@@ -583,6 +585,7 @@ RmUserList *rm_userlist_new(void) {
     }
 
     endgrent();
+#endif
     g_mutex_init(&self->lock);
     return self;
 }
@@ -599,6 +602,18 @@ bool rm_userlist_contains(RmUserList *self, unsigned long uid, unsigned gid,
                                       rm_userlist_cmp_ids, NULL);
         uid_found = g_sequence_lookup(self->users, GUINT_TO_POINTER(uid),
                                       rm_userlist_cmp_ids, NULL);
+#if RM_IS_ANDROID
+        if(!uid_found && getpwuid(uid) != NULL) {
+            g_sequence_insert_sorted(self->users, GUINT_TO_POINTER(uid),
+                                     rm_userlist_cmp_ids, NULL);
+            uid_found = TRUE;
+        }
+        if(!gid_found && getgrgid(gid) != NULL) {
+            g_sequence_insert_sorted(self->groups, GUINT_TO_POINTER(gid),
+                                     rm_userlist_cmp_ids, NULL);
+            gid_found = TRUE;
+        }
+#endif
     }
     g_mutex_unlock(&self->lock);
 
