@@ -32,7 +32,7 @@ class RmLintHash:
         self._data = data
 
 class XXH3HostOrder(RmLintHash):
-    """XXH64, serialised the way rmlint stores it,
+    """XXH3-64, serialised the way rmlint stores it,
        i.e. without endian canonalisation."""
     def hexdigest(self):
         return struct.pack("=Q", xxhash.xxh3_64_intdigest(self._data)).hex()
