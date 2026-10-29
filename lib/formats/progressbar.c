@@ -224,30 +224,43 @@ static void rm_fmt_progress_format_text(RmSession *session,
         break;
     }
 
-    /* Support unicode messages - translated text might contain some. */
-    self->text_len = g_utf8_strlen(self->text_buf, self->text_len);
-
-    /* Get rid of colors to get the correct length of the text. This is
-     * necessary to correctly guess the length of the displayed text in cells.
+    /* Calculate the display width of the text in terminal cells, ignoring
+     * ANSI color escape sequences. Wide characters count as two cells and
+     * zero-width characters as none.
      */
-    int text_iter = 0;
-    for(char *iter = &self->text_buf[0]; *iter; iter++) {
+    self->text_len = 0;
+    for(char *iter = &self->text_buf[0]; ; iter = g_utf8_next_char(iter)) {
+        // Check the bounds before dereferencing `iter`, so a malformed or
+        // incomplete UTF-8 sequence cannot cause an out-of-bounds read.
+        if(self->text_buf + sizeof(self->text_buf) <= iter) {
+            break;
+        }
+
+        if(*iter == '\0') {
+            break;
+        }
+
         if(*iter == '\x1b') {
-            char *jump = strchr(iter, 'm');
+            char *jump = memchr(iter, 'm', self->text_buf + sizeof(self->text_buf) - iter);
             if(jump != NULL) {
-                self->text_len -= jump - iter + 1;
                 iter = jump;
                 continue;
             }
         }
+        gunichar current_char = g_utf8_get_char(iter);
 
-        if(text_iter >= max_len) {
-            *iter = 0;
-            self->text_len = text_iter;
+        // wide CJK characters as width 2, and combining marks or zero-width marks as width 0.
+        int char_width = 0;
+        if(g_unichar_iszerowidth(current_char))     char_width = 0;
+        else if(g_unichar_iswide_cjk(current_char)) char_width = 2;
+        else char_width = 1;
+
+        if(self->text_len + char_width > (guint32)max_len) {
+            memset(iter, 0, strlen(iter));
             break;
         }
 
-        text_iter++;
+        self->text_len += char_width;
     }
 }
 
