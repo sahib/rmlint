@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
-## [2.11.0-rc.0 Evolving Echidna -- unreleased]
+## [2.11.0 Evolving Echidna -- 2026-11-01]
 
 ### Fixed
 
@@ -35,7 +35,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Option ``--ignore-bad-paths`` to not abort run if one or more bad paths passed
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
 * FreeBSD: support for xattr checksum cache (#800).
-* blake3 and blake3_512 digests.
+* BLAKE3 and its 512-bit extension
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
 * Tests: new markers for tests with special needs (reflink, xattr, manpage).
 * ``scons --show-config`` shows features and build in one run.
@@ -50,6 +50,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * ``CFLAGS`` and ``LDFLAGS`` from the environment are now appending to our flags,
   so that they could override ours.
 * Build no longer strip at link time unless explicitly asked with ``STRIP=1`` (or ``=yes``, ``=true``).
+* Japanese translation
 
 
 ### Changed
@@ -89,6 +90,20 @@ The format follows [keepachangelog.com]. Please stick to it.
 * ``--dedupe-readonly``. Use ``--dedupe --readonly``
 * Build target ``config``. Use ``scons --show-config -n``.
 * Dropped support for Python 2.
+
+## [2.10.4 Ludicrous Lemur] - 2026-10-28
+
+## Added
+
+* Georgian translation.
+
+### Fixed
+
+* Documentation on RTFD
+
+### Removed
+
+* NUL byte at the end of extended attributes cache.
 
 ## [2.10.3 Ludicrous Lemur] - 2025-03-22
 
