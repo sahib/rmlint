@@ -162,7 +162,7 @@ static void check_buffer_bounds(void) {
 }
 
 /* Real translation samples for the progress states, measured with the same
- * GLib rules as the implementation (see .local/width_calculator.c).
+ * GLib rules as the implementation.
  *
  * All strings are written as UTF-8 literals. NFC and NFD spellings look the
  * same in an editor, so every input whose normalization form matters is
