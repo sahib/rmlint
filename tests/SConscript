@@ -23,9 +23,15 @@ def run_tests(target=None, source=None, env=None):
     if status := subprocess.call(command, env=test_env):
         Exit(status)
 
+progressbar_unit = env.Program(
+    'test_formatters/test_progressbar',
+    ['test_formatters/test_progressbar.c'],
+)
+env.Default(progressbar_unit)
+
 env.Alias('test',
     env.Depends(
         env.Command('run_tests', None, Action(run_tests, "Running tests")),
-        program
+        [program, progressbar_unit]
     )
 )
