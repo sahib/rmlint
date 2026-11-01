@@ -165,7 +165,7 @@ int rm_hasher_main(int argc, const char **argv) {
 #if HAVE_MM_CRC32_U64
         "metrocrc, metrocrc256, "
 #endif
-        "metro, metro256, xxhash, murmur",
+        "metro, metro256, xxhash, xxhash128, murmur",
         "cumulative, paranoid, ext");
 
     g_option_group_add_entries(main_group, entries);

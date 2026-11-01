@@ -24,6 +24,7 @@
         <value nick="metrocrc" value="84"/>
         <value nick="murmur" value="91"/>
         <value nick="xxhash" value="101"/>
+        <value nick="xxhash128" value="102"/>
     </enum>
     <enum id="io.github.sahib.rmlint.Shredder.MatchType">
         <value nick="No limitation" value="1"/>

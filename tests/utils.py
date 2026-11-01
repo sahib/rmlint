@@ -49,7 +49,7 @@ CKSUM_TYPES = [
     'sha3-256', 'sha3-384', 'sha3-512',
     'blake2s', 'blake2b', 'blake2sp', 'blake2bp',
     'blake3', 'blake3_512',
-    'xxhash',
+    'xxhash', 'xxhash128',
     'highway64', 'highway128', 'highway256',
     # 'cumulative', 'ext',
     'paranoid',

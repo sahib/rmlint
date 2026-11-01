@@ -174,7 +174,7 @@ static XXH3_state_t *rm_digest_xxhash_copy(XXH3_state_t *state) {
 }
 
 static void rm_digest_xxhash_steal(gpointer state, guint8 *result) {
-    *(unsigned long long *)result = XXH3_64bits_digest(state);
+    *(XXH64_hash_t *)result = XXH3_64bits_digest(state);
 }
 
 static void rm_digest_xxhash_free(gpointer state) {
@@ -195,6 +195,32 @@ static const RmDigestInterface xxhash_interface = {
     .update = rm_digest_xxhash_update,
     .copy = (RmDigestCopyFunc)rm_digest_xxhash_copy,
     .steal = rm_digest_xxhash_steal};
+
+static XXH3_state_t *rm_digest_xxhash128_new(void) {
+    XXH3_state_t *state = rm_digest_xxhash_alloc();
+    XXH3_128bits_reset(state);
+    return state;
+}
+
+G_STATIC_ASSERT(G_ALIGNOF(XXH128_hash_t) <= G_ALIGNOF(max_align_t));
+static void rm_digest_xxhash128_steal(gpointer state, guint8 *result) {
+    *(XXH128_hash_t *)result = XXH3_128bits_digest(state);
+}
+
+static void rm_digest_xxhash128_update(gpointer state, const unsigned char *data,
+                                       size_t size) {
+    XXH3_128bits_update(state, data, size);
+}
+
+static const RmDigestInterface xxhash128_interface = {
+    .name = "xxhash128",
+    .bits = 128,
+    .len = NULL,
+    .new = (RmDigestNewFunc)rm_digest_xxhash128_new,
+    .free = rm_digest_xxhash_free,
+    .update = rm_digest_xxhash128_update,
+    .copy = (RmDigestCopyFunc)rm_digest_xxhash_copy,
+    .steal = rm_digest_xxhash128_steal};
 
 ///////////////////////////
 //        murmur         //
@@ -889,6 +915,7 @@ static const RmDigestInterface *rm_digest_get_interface(RmDigestType type) {
         [RM_DIGEST_CUMULATIVE] = &cumulative_interface,
         [RM_DIGEST_PARANOID] = &paranoid_interface,
         [RM_DIGEST_XXHASH] = &xxhash_interface,
+        [RM_DIGEST_XXHASH128] = &xxhash128_interface,
         [RM_DIGEST_HIGHWAY64] = &highway64_interface,
         [RM_DIGEST_HIGHWAY128] = &highway128_interface,
         [RM_DIGEST_HIGHWAY256] = &highway256_interface,

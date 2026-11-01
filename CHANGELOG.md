@@ -36,6 +36,7 @@ The format follows [keepachangelog.com]. Please stick to it.
 * Exit code 12 for ``rmlint --is-reflink``: inline extents.
 * FreeBSD: support for xattr checksum cache (#800).
 * blake3 and blake3_512 digests.
+* xxHash3-128 digest: still ultra-fast with less collision risks than the 64-bit variant.
 * ``,d`` flag to ``--size`` to skip directories by `st_size`.
 * Tests: new markers for tests with special needs (reflink, xattr, manpage).
 * ``scons --show-config`` shows features and build in one run.
