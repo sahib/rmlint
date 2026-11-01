@@ -82,6 +82,13 @@
 # define RM_IS_CYGWIN 0
 #endif
 
+/* XXX: Android is also Linux. */
+#ifdef __ANDROID__
+# define RM_IS_ANDROID 1
+#else
+# define RM_IS_ANDROID 0
+#endif
+
 #include <glib.h>
 
 /* Printf formatting for large integers */

@@ -129,6 +129,18 @@ def check_gettext(context):
     if rc and tests.CheckHeader(context, 'libintl.h'):
         rc = 0
 
+    GETTEXT_PROBE = dedent('''\
+    #include <libintl.h>
+    #include <stdio.h>
+    void probe(void) { printf(gettext("probe")); }
+    ''')
+
+    if rc:
+        saved = context.env['CCFLAGS'][:]
+        context.env.Append(CCFLAGS=['-Werror=format-security'])
+        rc = int(bool(context.TryCompile(GETTEXT_PROBE, '.c')))
+        context.env.Replace(CCFLAGS=saved)
+
     env['HAVE_LIBINTL'] = rc
     env['HAVE_MSGFMT'] = int(shutil.which('msgfmt') is not None)
     env['HAVE_GETTEXT'] = env['HAVE_MSGFMT'] and env['HAVE_LIBINTL']
@@ -330,7 +342,7 @@ def check_c23_embed(context, payload):
 
     rc = 0
     if ARGUMENTS.get('C23_EMBED') != '0':
-        saved = context.env['CCFLAGS']
+        saved = context.env['CCFLAGS'][:]
         context.env.Replace(CCFLAGS=[
             flag for flag in saved if not str(flag).startswith('-std=')
         ] + ['-std=c23', '-pedantic-errors'])

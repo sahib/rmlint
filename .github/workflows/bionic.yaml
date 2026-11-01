@@ -1,0 +1,30 @@
+name: Termux (Android/Bionic)
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore: &skip
+      - "docs/**"
+      - "gui/**"
+      - '**.md'
+      - '**.rst'
+      - '.gitignore'
+  push:
+    branches:
+      - master
+      - develop
+    paths-ignore: *skip
+  workflow_dispatch:
+
+jobs:
+  termux:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: docker build -f ci/android/Containerfile .
