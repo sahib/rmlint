@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 The format follows [keepachangelog.com]. Please stick to it.
 
+## [2.12.0-dev Sporadic Saiga -- unreleased]
+
 ## [2.11.0 Evolving Echidna -- 2026-11-01]
 
 ### Fixed
