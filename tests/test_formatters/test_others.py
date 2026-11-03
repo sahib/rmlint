@@ -1,7 +1,13 @@
 import os
 import subprocess
 
-from tests.utils import RMLINT_BINARY, create_file, get_testdir, run_rmlint
+from tests.utils import (
+    RMLINT_BINARY,
+    RMLINT_BINARY_DIR,
+    create_file,
+    get_testdir,
+    run_rmlint,
+)
 
 
 def test_just_call_it():
@@ -58,3 +64,13 @@ def test_fdups_and_traversed_dirs_in_summary():
 
     # the empty file is the only valid count, not the directories
     assert '1 other suspicious item(s)' in summary
+
+
+def test_progressbar_format_text_unit():
+    base = os.path.join(
+        RMLINT_BINARY_DIR, 'tests', 'test_formatters', 'test_progressbar'
+    )
+    binary = base + '.exe' if os.path.exists(base + '.exe') else base
+
+    result = subprocess.run([binary], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
