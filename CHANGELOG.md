@@ -10,6 +10,10 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 * For packagers: ``--without-man`` to skip building and installing the man page.
 
+### Fixed
+
+* Do not build or install translations with ``--without-gettext``.
+
 ## [2.11.0 Evolving Echidna -- 2026-11-01]
 
 ### Fixed

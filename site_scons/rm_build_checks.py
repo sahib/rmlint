@@ -142,7 +142,9 @@ def check_gettext(context):
         context.env.Replace(CCFLAGS=saved)
 
     env['HAVE_LIBINTL'] = rc
-    env['HAVE_MSGFMT'] = int(shutil.which('msgfmt') is not None)
+    # .mo files are built even without libintl: the GUI loads them with Python's gettext
+    env['HAVE_MSGFMT'] = int(GetOption('with_gettext') is not False
+                             and shutil.which('msgfmt') is not None)
     env['HAVE_GETTEXT'] = env['HAVE_MSGFMT'] and env['HAVE_LIBINTL']
 
     context.did_show_result = True
