@@ -224,6 +224,10 @@ Arguments
 
     Do not build or install ``shredder`` (GUI).
 
+:--without-man:
+
+    Do not build or install the man page, even if ``sphinx-build`` is found.
+
 :--without-compile-glib-schemas:
 
     Do not (re)compile system Glib schemas on installation/uninstallation.

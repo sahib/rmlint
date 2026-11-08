@@ -39,10 +39,12 @@ if SPHINX_BINARY:
         env.Action(run_sphinx_binary_man, "Building manpage from rst...")
     )
 
-    env.Default(manpage)
     env.Alias('man', manpage)
 
-    if installing:
+    if GetOption('with_man'):
+        env.Default(manpage)
+
+    if installing and GetOption('with_man'):
         man_install = env.InstallPerm(
             '$staged_prefix/share/man/man1',
             [manpage],
@@ -65,5 +67,5 @@ elif {'man', 'docs'} & set(COMMAND_LINE_TARGETS):
     Exit(1)
 
 
-if SPHINX_BINARY and 'uninstall' in COMMAND_LINE_TARGETS:
+if SPHINX_BINARY and GetOption('with_man') and 'uninstall' in COMMAND_LINE_TARGETS:
     create_uninstall_target(env, '$PREFIX/share/man/man1/rmlint.1')

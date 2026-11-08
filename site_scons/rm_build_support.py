@@ -14,7 +14,7 @@ from SCons.Errors import UserError
 PKG_CONFIG = os.getenv('PKG_CONFIG', 'pkg-config')
 
 # Features that can be disabled with --without-<name>:
-OPTIONAL_FLAGS = ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-schemas']
+OPTIONAL_FLAGS = ['libelf', 'gettext', 'fiemap', 'blkid', 'gui', 'compile-glib-schemas', 'man']
 
 
 ###########################################################################
