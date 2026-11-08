@@ -238,7 +238,7 @@ Notable targets
 
     Install all program parts system-wide.
 
-:install-core:
+:install-cli:
 
     Install only the binary, its manpage and the translations.
 
