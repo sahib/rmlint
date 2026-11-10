@@ -224,6 +224,10 @@ Arguments
 
     Do not build or install ``shredder`` (GUI).
 
+:--without-man:
+
+    Do not build or install the man page, even if ``sphinx-build`` is found.
+
 :--without-compile-glib-schemas:
 
     Do not (re)compile system Glib schemas on installation/uninstallation.
@@ -238,7 +242,7 @@ Notable targets
 
     Install all program parts system-wide.
 
-:install-core:
+:install-cli:
 
     Install only the binary, its manpage and the translations.
 

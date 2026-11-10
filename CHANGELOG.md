@@ -6,6 +6,10 @@ The format follows [keepachangelog.com]. Please stick to it.
 
 ## [2.12.0-dev Sporadic Saiga -- unreleased]
 
+### Added
+
+* For packagers: ``--without-man`` to skip building and installing the man page.
+
 ## [2.11.0 Evolving Echidna -- 2026-11-01]
 
 ### Fixed

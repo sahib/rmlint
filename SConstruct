@@ -550,7 +550,7 @@ if GetOption('show_config'):
         blake3_simd_c=yesno(env['IS_X86'] and not env['IS_X86_64']),
         blake3_simd_neon=yesno(env['IS_AARCH64_LE']),
 
-        sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin else yesno(sphinx_bin),
+        sphinx = f"{color('yes, using', 'green')}, {sphinx_bin}" if sphinx_bin and GetOption('with_man') else yesno(False),
         xattr=yesno(env['HAVE_XATTR'] or env['HAVE_EXTATTR']),
 
         nonrotational=yesno(env['HAVE_GIO_UNIX'] & env['HAVE_BLKID']),
