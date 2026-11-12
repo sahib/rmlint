@@ -9,6 +9,8 @@ The format follows [keepachangelog.com]. Please stick to it.
 ### Added
 
 * For packagers: ``--without-man`` to skip building and installing the man page.
+* For packagers: ``CCACHE_*``, ``DISTCC_*``, ``ICECC_*``, ``SCCACHE_*``, ``TMPDIR``,
+  ``XDG_CACHE_HOME`` and ``XDG_CONFIG_HOME`` are forwarded to the build commands.
 
 ### Fixed
 

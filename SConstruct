@@ -191,8 +191,15 @@ options = {
         for key in ('PATH', 'TERM', 'HOME',
                     'PKG_CONFIG_PATH', 'PKG_CONFIG_LIBDIR', 'PKG_CONFIG_SYSROOT_DIR',
                     'CPATH', 'C_INCLUDE_PATH', 'LIBRARY_PATH',
-                    'SOURCE_DATE_EPOCH')
+                    'SOURCE_DATE_EPOCH',
+                    # read by compilers and ccache
+                    'TMPDIR', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME')
         if key in os.environ
+    } | {
+        # allow passing compiler wrapper settings such as CCACHE_DIR or DISTCC_HOSTS
+        key: value
+        for key, value in os.environ.items()
+        if key.startswith(('CCACHE_', 'DISTCC_', 'ICECC_', 'SCCACHE_'))
     } | {'TZ': 'UTC', 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'},
 }
 
